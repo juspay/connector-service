@@ -657,4 +657,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Placetopay<T>
 {
 }
-// SourceVerification implementations for all flows

@@ -15,10 +15,11 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
+        PaymentsSyncData, PaymentsUpdateMetadataData, RedirectDetailsResponse, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
+        WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificAuth,
@@ -64,6 +65,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + MandateRevokeV2
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
+    + UpdateMetadataV2<T>
 {
 }
 
@@ -241,6 +243,16 @@ pub trait RepeatPaymentV2<T: PaymentMethodDataTypes>:
     connector_flow::RepeatPayment,
     PaymentFlowData,
     RepeatPaymentData<T>,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait UpdateMetadataV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::UpdateMetadata,
+    PaymentFlowData,
+    PaymentsUpdateMetadataData<T>,
     PaymentsResponseData,
 >
 {

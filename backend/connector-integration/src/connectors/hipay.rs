@@ -881,5 +881,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Hipay<T>
 {
 }
-
-// SourceVerification implementations for all flows

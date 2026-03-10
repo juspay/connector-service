@@ -219,6 +219,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     connector_types::MandateRevokeV2 for Razorpay<T>
 {
 }
+
 impl<T> Razorpay<T> {
     pub const fn new() -> &'static Self {
         &Self {

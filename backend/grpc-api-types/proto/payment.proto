@@ -190,6 +190,13 @@ enum AuthorizationStatus {
   AUTHORIZATION_UNRESOLVED = 4;
 }
 
+// Status of a update metadata call.
+enum UpdateMetadataStatus {
+  UPDATE_METADATA_STATUS_UNSPECIFIED = 0; // Default value
+  UPDATE_METADATA_SUCCESS = 1;
+  UPDATE_METADATA_FAILURE = 2;
+}
+
 // Status of generic operations (non-payment specific).
 enum OperationStatus {
   OPERATION_STATUS_UNSPECIFIED = 0; // Default value
@@ -1706,6 +1713,38 @@ message MerchantAuthenticationServiceCreateSdkSessionTokenResponse {
   uint32 status_code = 3;
   optional SecretString raw_connector_response = 4;
   optional SecretString raw_connector_request = 5;
+}
+
+// Request message for updating metadata on a payment intent/order.  
+message PaymentServiceUpdateMetadataRequest {  
+  // Identification
+  Identifier connector_transaction_id = 1;
+  Identifier merchant_transaction_id = 2;
+  
+  // Metadata to merge (optional; provided fields are merged into existing values)  
+  optional SecretString metadata = 3;
+  optional SecretString connector_feature_data = 4; // Connector-specific feature data for the transaction
+
+  // Payment method and payment method type
+  optional PaymentMethod payment_method = 5; // Payment method to be used
+  optional PaymentMethodType payment_method_type = 6; // The type of payment method (e.g., apple_pay, google_pay)
+}  
+  
+// Response message for updating metadata on a payment intent/order.  
+message PaymentServiceUpdateMetadataResponse {  
+  // Status Information  
+  UpdateMetadataStatus status = 1; // Status of the update attempt  
+  optional ErrorInfo error = 2;
+  uint32 status_code = 3; // HTTP status code from the connector  
+  map<string, string> response_headers = 4; 
+
+  // Raw Request/Response for debugging
+  optional SecretString raw_connector_request = 5;
+  optional SecretString raw_connector_response = 6; 
+  
+  // Updated metadata (echoed back; may include merged values if connector supports)  
+  optional SecretString metadata = 7; // Updated merchant-defined metadata  
+  optional SecretString connector_feature_data = 8; // Connector-specific feature data for the transaction
 }
 
 // Request message for capturing a payment

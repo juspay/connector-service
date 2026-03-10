@@ -745,7 +745,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Paysafe<T>
 {
 }
-
-// SourceVerification implementations for PaymentMethodToken and PreAuthenticate
-
-// SourceVerification implementations for unsupported flows

@@ -776,5 +776,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Worldpay<T>
 {
 }
-
-// SourceVerification implementations for all flows

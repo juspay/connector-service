@@ -875,5 +875,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Noon<T>
 {
 }
-
-// SourceVerification implementations for authentication flows

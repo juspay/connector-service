@@ -702,5 +702,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Nexinets<T>
 {
 }
-
-// SourceVerification implementations for authentication flows

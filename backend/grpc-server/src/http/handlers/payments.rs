@@ -25,7 +25,8 @@ use grpc_api_types::payments::{
     PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
     PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVerifyRedirectResponseRequest,
+    PaymentServiceSetupRecurringResponse, PaymentServiceUpdateMetadataRequest,
+    PaymentServiceUpdateMetadataResponse, PaymentServiceVerifyRedirectResponseRequest,
     PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RefundResponse,
@@ -177,5 +178,12 @@ http_handler!(
     PaymentServiceVerifyRedirectResponseRequest,
     PaymentServiceVerifyRedirectResponseResponse,
     verify_redirect_response,
+    payments_service
+);
+http_handler!(
+    update_metadata,
+    PaymentServiceUpdateMetadataRequest,
+    PaymentServiceUpdateMetadataResponse,
+    update_metadata,
     payments_service
 );

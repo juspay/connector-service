@@ -684,5 +684,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Nmi<T>
 {
 }
-
-// ===== SOURCE VERIFICATION IMPLEMENTATIONS =====

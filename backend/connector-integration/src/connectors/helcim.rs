@@ -742,5 +742,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Helcim<T>
 {
 }
-
-// SourceVerification implementations for all flows
