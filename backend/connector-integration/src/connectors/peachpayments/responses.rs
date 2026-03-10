@@ -3,6 +3,7 @@ use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsErrorResponse {
     pub error_ref: String,
     pub message: String,
@@ -125,13 +126,13 @@ pub struct PeachpaymentsRefundBalance {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsRefundSyncResponse {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "transactionResult")]
+    pub reference_id: String,
     pub transaction_result: PeachpaymentsRefundStatus,
-    #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
+    pub refund_balance_data: Option<PeachpaymentsRefundBalance>,
 }
 
 pub type PeachpaymentsRsyncResponse = PeachpaymentsRefundSyncResponse;

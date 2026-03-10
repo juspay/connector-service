@@ -238,7 +238,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .router_data
                         .request
                         .capture_method
-                        .map(|cm| {
+                        .and_then(|cm| {
                             if cm == common_enums::CaptureMethod::Manual {
                                 Some(requests::PeachpaymentsPreAuthFlow {
                                     dcc_mode: requests::DccMode::NoDcc,
@@ -251,8 +251,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             } else {
                                 None
                             }
-                        })
-                        .flatten(),
+                        }),
                     cof_data: None,
                 })
             }

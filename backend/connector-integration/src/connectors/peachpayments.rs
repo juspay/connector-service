@@ -258,8 +258,8 @@ macros::macro_connector_implementation!(
             self.build_headers(req)
         }
         fn get_url(&self, req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>) -> CustomResult<String, errors::ConnectorError> {
-            let connector_refund_id = req.request.connector_refund_id.clone();
-            Ok(format!("{}/transactions/by-reference/{}", self.connector_base_url_refunds(req), connector_refund_id))
+            let reference_id = req.resource_common_data.connector_request_reference_id.clone();
+            Ok(format!("{}/transactions/by-reference/{}", self.connector_base_url_refunds(req), reference_id))
         }
     }
 );
