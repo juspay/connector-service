@@ -1,9 +1,10 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositeGetRequest, ConnectorState, CustomerServiceCreateRequest,
+    CompositeAuthorizeRequest, CompositeGetRequest, CompositeRefundGetRequest,
+    CompositeRefundRequest, ConnectorState, CustomerServiceCreateRequest,
     CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceGetRequest,
+    PaymentServiceGetRequest, PaymentServiceRefundRequest, RefundServiceGetRequest,
 };
 
 use crate::utils::{
@@ -197,6 +198,118 @@ impl
             connector_order_reference_id: item.connector_order_reference_id.clone(),
             test_mode: item.test_mode,
             payment_experience: item.payment_experience,
+        }
+    }
+}
+
+impl ForeignFrom<(&CompositeRefundRequest, &ConnectorEnum)>
+    for MerchantAuthenticationServiceCreateAccessTokenRequest
+{
+    fn foreign_from((item, connector): (&CompositeRefundRequest, &ConnectorEnum)) -> Self {
+        Self {
+            merchant_access_token_id: item.merchant_access_token_id.clone(),
+            connector: grpc_connector_from_connector_enum(connector),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            test_mode: item.test_mode,
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositeRefundRequest,
+        Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+    )> for PaymentServiceRefundRequest
+{
+    fn foreign_from(
+        (item, access_token_response): (
+            &CompositeRefundRequest,
+            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        ),
+    ) -> Self {
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+
+        let resolved_state = Some(ConnectorState {
+            access_token,
+            connector_customer_id: None,
+        });
+
+        Self {
+            merchant_refund_id: item.merchant_refund_id.clone(),
+            connector_transaction_id: item.connector_transaction_id.clone(),
+            payment_amount: item.payment_amount,
+            refund_amount: item.refund_amount,
+            reason: item.reason.clone(),
+            webhook_url: item.webhook_url.clone(),
+            merchant_account_id: item.merchant_account_id.clone(),
+            capture_method: item.capture_method,
+            metadata: item.metadata.clone(),
+            refund_metadata: item.refund_metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            browser_info: item.browser_info.clone(),
+            state: resolved_state,
+            test_mode: item.test_mode,
+            payment_method_type: item.payment_method_type,
+            customer_id: item.customer_id.clone(),
+        }
+    }
+}
+
+impl ForeignFrom<(&CompositeRefundGetRequest, &ConnectorEnum)>
+    for MerchantAuthenticationServiceCreateAccessTokenRequest
+{
+    fn foreign_from((item, connector): (&CompositeRefundGetRequest, &ConnectorEnum)) -> Self {
+        Self {
+            merchant_access_token_id: item.merchant_access_token_id.clone(),
+            connector: grpc_connector_from_connector_enum(connector),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            test_mode: item.test_mode,
+        }
+    }
+}
+
+impl
+    ForeignFrom<(
+        &CompositeRefundGetRequest,
+        Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+    )> for RefundServiceGetRequest
+{
+    fn foreign_from(
+        (item, access_token_response): (
+            &CompositeRefundGetRequest,
+            Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        ),
+    ) -> Self {
+        let access_token_from_req = item
+            .state
+            .as_ref()
+            .and_then(|state| state.access_token.clone());
+
+        let access_token = get_access_token(access_token_from_req, access_token_response);
+
+        let resolved_state = Some(ConnectorState {
+            access_token,
+            connector_customer_id: None,
+        });
+
+        Self {
+            merchant_refund_id: item.merchant_refund_id.clone(),
+            connector_transaction_id: item.connector_transaction_id.clone(),
+            refund_id: item.refund_id.clone(),
+            refund_reason: item.refund_reason.clone(),
+            browser_info: item.browser_info.clone(),
+            refund_metadata: item.refund_metadata.clone(),
+            state: resolved_state,
+            test_mode: item.test_mode,
+            payment_method_type: item.payment_method_type,
+            connector_feature_data: item.connector_feature_data.clone(),
         }
     }
 }

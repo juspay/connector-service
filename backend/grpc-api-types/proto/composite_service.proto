@@ -13,4 +13,10 @@ service CompositePaymentService {
 
   // Runs composite get flow.
   rpc CompositeGet(CompositeGetRequest) returns (CompositeGetResponse);
+
+  // Runs composite refund flow.
+  rpc CompositeRefund(CompositeRefundRequest) returns (CompositeRefundResponse);
+
+  // Runs composite refund get/sync flow.
+  rpc CompositeRefundGet(CompositeRefundGetRequest) returns (CompositeRefundGetResponse);
 }

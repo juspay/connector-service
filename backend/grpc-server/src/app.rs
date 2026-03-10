@@ -101,6 +101,7 @@ pub struct Service {
         crate::server::payments::Payments,
         crate::server::payments::MerchantAuthentication,
         crate::server::payments::Customer,
+        crate::server::refunds::Refunds,
     >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
@@ -139,6 +140,7 @@ impl Service {
             payments_service.clone(),
             merchant_authentication_service.clone(),
             customer_service.clone(),
+            crate::server::refunds::Refunds,
         );
 
         Self {

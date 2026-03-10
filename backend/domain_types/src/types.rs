@@ -5580,7 +5580,11 @@ pub fn generate_refund_sync_response(
                 .resource_common_data
                 .get_connector_response_headers_as_map();
             Ok(RefundResponse {
-                connector_transaction_id: Some(grpc_api_types::payments::Identifier::default()),
+                connector_transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        router_data_v2.request.connector_transaction_id.clone(),
+                    )),
+                }),
                 connector_refund_id: response.connector_refund_id.clone(),
                 status: grpc_status as i32,
                 merchant_refund_id: Some(grpc_api_types::payments::Identifier {
@@ -6370,7 +6374,11 @@ pub fn generate_refund_response(
             let grpc_status = grpc_api_types::payments::RefundStatus::foreign_from(status);
 
             Ok(RefundResponse {
-                connector_transaction_id: Some(grpc_api_types::payments::Identifier::default()),
+                connector_transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        router_data_v2.request.connector_transaction_id.clone(),
+                    )),
+                }),
                 connector_refund_id: response.connector_refund_id,
                 status: grpc_status as i32,
                 merchant_refund_id: None,
