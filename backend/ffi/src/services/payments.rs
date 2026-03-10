@@ -41,8 +41,6 @@ use domain_types::{
     },
 };
 
-
-
 // authorize request transformer
 req_transformer!(
     fn_name: authorize_req_transformer,

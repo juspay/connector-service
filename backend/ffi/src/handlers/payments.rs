@@ -4,7 +4,7 @@ pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/producti
 use crate::types::FfiRequestData;
 use domain_types::errors::ConnectorError;
 use domain_types::payment_method_data::DefaultPCIHolder;
-use grpc_api_types::payments::{Environment, ResponseError, RequestError};
+use grpc_api_types::payments::{Environment, RequestError, ResponseError};
 
 fn get_config(
     environment: Option<Environment>,
