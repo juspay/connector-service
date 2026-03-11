@@ -32,15 +32,20 @@ pub enum VaultConfig {
 }
 ```
 
+**Why:** Ensures only one vault provider is active at a time. Uses Serde's `tag = "provider"` for clean TOML syntax: `provider = "vgs"`. Follows existing UCS pattern for config enums.
+
+---
+
 ### 2. Provider Config Structs
 
+```rust
 ```rust
 // VGS Network Proxy
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct VgsConfig {
-    pub tenant_id: String,
-    pub environment: VgsEnvironment,
-    pub ca_certificate: Option<String>,
+    pub tenant_id: String,          // VGS tenant identifier (tntXXX)
+    pub environment: VgsEnvironment,// Sandbox vs Production
+    pub ca_certificate: Option<String>, // Optional custom CA cert
 }
 
 #[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq)]
@@ -50,17 +55,17 @@ pub enum VgsEnvironment { #[default] Sandbox, Production }
 // Evervault Network Proxy
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct EvervaultConfig {
-    pub team_id: String,
-    pub app_id: String,
-    pub api_key: Secret<String>,
+    pub team_id: String,            // Evervault team identifier
+    pub app_id: String,             // App identifier (isolated keys)
+    pub api_key: Secret<String>,    // Relay authentication key
 }
 
 // Hyperswitch Vault Application Proxy
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct HyperswitchVaultConfig {
     pub api_key: Secret<String>,
-    pub profile_id: String,
-    pub proxy_url: String,
+    pub profile_id: String,         // Merchant profile identifier
+    pub proxy_url: String,          // Hyperswitch proxy endpoint
     pub environment: HyperswitchEnvironment,
 }
 
@@ -72,8 +77,8 @@ pub enum HyperswitchEnvironment { #[default] Sandbox, Production }
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct TokenExConfig {
     pub api_key: Secret<String>,
-    pub tokenex_id: String,
-    pub tgapi_url: String,
+    pub tokenex_id: String,         // Organization identifier
+    pub tgapi_url: String,          // TGAPI endpoint
     #[serde(default)]
     pub default_token_scheme: TokenExTokenScheme,
 }
@@ -88,10 +93,12 @@ pub enum TokenExTokenScheme {
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct BasisTheoryConfig {
     pub api_key: Secret<String>,
-    pub proxy_url: String,
-    pub proxy_id: Option<String>,
+    pub proxy_url: String,          // Basis Theory proxy endpoint
+    pub proxy_id: Option<String>,   // Optional pre-configured proxy
 }
 ```
+
+**Why:** Each provider requires different auth credentials and endpoints. `Secret<String>` masks sensitive values in logs. `config_patch_derive::Patch` enables hot-reloading of config. Environments use `#[serde(default)]` for backward compatibility.
 
 ### 3. Update ConnectorParams
 
@@ -119,6 +126,8 @@ pub struct ConnectorParams {
 }
 ```
 
+**Why:** `enable_vault_proxy` (defaults to `false`) ensures backward compatibility—existing configs work without changes. `vault_proxy_override` allows per-connector vault customization (e.g., Stripe uses VGS, Checkout uses Hyperswitch Vault). Naming is explicit to avoid confusion with connector-specific vaults.
+
 ### 4. Update Main Config
 
 **File:** `backend/ucs_env/src/configs.rs`
@@ -134,6 +143,8 @@ pub struct Config {
     // ... existing fields ...
 }
 ```
+
+**Why:** `Option<VaultConfig>` makes vault optional—merchants without vault needs have no config changes. Uses `#[serde(default)]` so missing `[vault]` section doesn't error. Placed alongside `connectors` since vault is a cross-cutting concern for all connectors.
 
 ---
 
