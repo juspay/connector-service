@@ -880,21 +880,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let parts: Vec<&str> = tl_signature.splitn(3, '.').collect();
         let header_b64 = parts
             .first()
-            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .ok_or(errors::ConnectorError::WebhookDecodingFailed)?;
         let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
             .decode(header_b64)
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
         let jws_header: truelayer::JwsHeaderWebhooks = serde_json::from_slice(&header_json)
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
 
         let jku = jws_header
             .jku
-            .ok_or_else(|| errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .ok_or_else(|| errors::ConnectorError::WebhookDecodingFailed)?;
 
         if truelayer::ALLOWED_JKUS.contains(&jku.as_str()) {
             Ok(jku)
         } else {
-            Err(errors::ConnectorError::WebhookSourceVerificationFailed.into())
+            Err(errors::ConnectorError::WebhookDecodingFailed.into())
         }
     }
 
