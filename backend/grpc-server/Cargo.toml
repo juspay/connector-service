@@ -13,20 +13,23 @@ interfaces = { path = "../interfaces" }
 cards = { path = "../cards", package = "ucs_cards" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
+composite-service = { path = "../composite-service" }
 config_patch_derive = { path = "../config_patch_derive" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
 injector = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0" }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
+ucs_env = { path = "../ucs_env" }
+ucs_interface_common = { path = "../ucs_interface_common" }
 
 # Third-party dependencies
 config = "0.14.0"
 error-stack = "0.4.1"
-serde = { version = "1.0.189", features = ["derive"] }
-serde_json = "1.0.107"
+serde = { workspace = true }
+serde_json = { workspace = true }
 serde_path_to_error = "0.1.16"
-thiserror = "1.0.49"
+thiserror = { workspace = true }
 time = { version = "0.3.36", features = ["parsing"] }
-tracing = { version = "0.1.40" }
+tracing = { workspace = true }
 tracing-appender = { version = "0.2.3" }
 tracing-subscriber = { version = "0.3.18", default-features = true, features = [
     "env-filter",
@@ -39,7 +42,7 @@ tokio = { version = "1.48.0", features = [
     "rt-multi-thread",
     "signal",
 ] }
-tonic = "0.13.0"
+tonic = { workspace = true }
 tonic-reflection = "0.13.0"
 hyper = "1.6.0"
 tower-http = { version = "0.6.2", features = ["trace", "request-id"] }

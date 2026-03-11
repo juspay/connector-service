@@ -84,3 +84,14 @@ pub struct Response {
     /// status code
     pub status_code: u16,
 }
+
+#[derive(Debug, Clone)]
+pub struct VerifyWebhookSourceResponseData {
+    pub verify_webhook_status: VerifyWebhookStatus,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum VerifyWebhookStatus {
+    SourceVerified,
+    SourceNotVerified,
+}

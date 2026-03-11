@@ -8,8 +8,8 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -28,13 +28,16 @@ pub struct JpmorganAuthType {
     pub client_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for JpmorganAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for JpmorganAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                client_id: api_key.clone(),
-                client_secret: key1.clone(),
+            ConnectorSpecificAuth::Jpmorgan {
+                client_id,
+                client_secret,
+            } => Ok(Self {
+                client_id: client_id.clone(),
+                client_secret: client_secret.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -46,6 +49,8 @@ impl TryFrom<&ConnectorAuthType> for JpmorganAuthType {
 pub struct JpmorganConnectorMetadataObject {
     pub company_name: Secret<String>,
     pub product_name: Secret<String>,
+    pub merchant_purchase_description: Secret<String>,
+    pub statement_descriptor: Secret<String>,
 }
 
 impl TryFrom<&Option<SecretSerdeValue>> for JpmorganConnectorMetadataObject {
@@ -124,6 +129,33 @@ fn map_capture_method(
     }
 }
 
+/// Extract first name and last name from account holder name or billing info
+fn extract_account_holder_names<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+    _bank_account_holder_name: &Option<Secret<String>>,
+) -> Result<(Secret<String>, Secret<String>), error_stack::Report<errors::ConnectorError>> {
+    // Use billing address first_name and last_name directly (like Forte connector)
+    let first_name = router_data
+        .resource_common_data
+        .get_billing_first_name()
+        .ok()
+        .unwrap_or_else(|| Secret::new("".to_string()));
+
+    let last_name = router_data
+        .resource_common_data
+        .get_optional_billing_last_name()
+        .unwrap_or_else(|| first_name.clone());
+
+    Ok((first_name, last_name))
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
@@ -170,8 +202,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 let merchant = requests::JpmorganMerchant {
                     merchant_software: requests::JpmorganMerchantSoftware {
-                        company_name: connector_metadata.company_name,
-                        product_name: connector_metadata.product_name,
+                        company_name: connector_metadata.company_name.clone(),
+                        product_name: connector_metadata.product_name.clone(),
+                    },
+                    soft_merchant: requests::JpmorganSoftMerchant {
+                        merchant_purchase_description: connector_metadata
+                            .merchant_purchase_description
+                            .clone(),
                     },
                 };
 
@@ -197,12 +234,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     expiry,
                 };
 
-                let payment_method_type = requests::JpmorganPaymentMethodType { card };
+                let payment_method_type = requests::JpmorganPaymentMethodType {
+                    card: Some(card),
+                    ach: None,
+                };
 
                 let amount = JpmorganAmountConvertor::convert(
                     router_data.request.minor_amount,
                     router_data.request.currency,
                 )?;
+
+                // Card payments don't use account_holder or statement_descriptor
+                // Using placeholder values to satisfy mandatory fields
+                let account_holder = requests::JpmorganAccountHolder {
+                    first_name: Secret::new("NA".to_string()),
+                    last_name: Secret::new("NA".to_string()),
+                };
+                let statement_descriptor = Secret::new("Statement Descriptor".to_string());
 
                 Ok(Self {
                     capture_method,
@@ -210,8 +258,84 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     amount,
                     merchant,
                     payment_method_type,
+                    account_holder,
+                    statement_descriptor,
                 })
             }
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_account_holder_name,
+                bank_type,
+                ..
+            }) => {
+                let capture_method = map_capture_method(router_data.request.capture_method)?;
+
+                let connector_metadata = JpmorganConnectorMetadataObject::try_from(
+                    &router_data.request.merchant_account_metadata.clone(),
+                )?;
+
+                let merchant = requests::JpmorganMerchant {
+                    merchant_software: requests::JpmorganMerchantSoftware {
+                        company_name: connector_metadata.company_name.clone(),
+                        product_name: connector_metadata.product_name.clone(),
+                    },
+                    soft_merchant: requests::JpmorganSoftMerchant {
+                        merchant_purchase_description: connector_metadata
+                            .merchant_purchase_description
+                            .clone(),
+                    },
+                };
+
+                // Extract first name and last name from account holder name or billing info
+                let (first_name, last_name) =
+                    extract_account_holder_names(router_data, bank_account_holder_name)?;
+
+                let account_holder = requests::JpmorganAccountHolder {
+                    first_name,
+                    last_name,
+                };
+
+                // Determine account type based on bank_type field, default to Checking
+                let account_type = if let Some(common_enums::BankType::Savings) = bank_type {
+                    requests::JpmorganAchAccountType::Savings
+                } else {
+                    requests::JpmorganAchAccountType::Checking
+                };
+
+                let ach = requests::JpmorganAch {
+                    account_number: account_number.clone(),
+                    financial_institution_routing_number: routing_number.clone(),
+                    account_type,
+                };
+
+                let payment_method_type = requests::JpmorganPaymentMethodType {
+                    card: None,
+                    ach: Some(ach),
+                };
+
+                let amount = JpmorganAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
+
+                // Get statement_descriptor from connector_metadata, fallback to default
+                let statement_descriptor = connector_metadata.statement_descriptor.clone();
+
+                Ok(Self {
+                    capture_method,
+                    currency: router_data.request.currency,
+                    amount,
+                    merchant,
+                    payment_method_type,
+                    account_holder,
+                    statement_descriptor,
+                })
+            }
+            PaymentMethodData::BankDebit(_) => Err(errors::ConnectorError::NotImplemented(
+                "Only ACH Bank Debit is supported".to_string(),
+            )
+            .into()),
             _ => Err(errors::ConnectorError::NotImplemented(
                 "Payment method not supported".to_string(),
             )

@@ -117,10 +117,12 @@ default_impl_verify_webhook_source_v2!(
     RazorpayV2,
     Redsys,
     Revolut,
+    Revolv3,
     Shift4,
     Silverflow,
     Stax,
     Stripe,
+    Truelayer,
     Trustpay,
     Trustpayments,
     Tsys,
@@ -129,5 +131,5 @@ default_impl_verify_webhook_source_v2!(
     Worldpay,
     Worldpayvantiv,
     Worldpayxml,
-    Xendit // Note: PayPal is NOT listed here because it has its own implementation in paypal.rs
 );
+// PayPal has its own implementation in paypal.rs

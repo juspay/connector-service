@@ -28,7 +28,7 @@ use domain_types::{
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -41,8 +41,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as bluesnap, BluesnapAuthorizeResponse, BluesnapCaptureRequest, BluesnapCaptureResponse,
-    BluesnapPSyncResponse, BluesnapPaymentsRequest, BluesnapRefundRequest, BluesnapRefundResponse,
+    self as bluesnap, BluesnapAuthorizeRequest, BluesnapAuthorizeResponse, BluesnapCaptureRequest,
+    BluesnapCaptureResponse, BluesnapPSyncResponse, BluesnapRefundRequest, BluesnapRefundResponse,
     BluesnapRefundSyncResponse, BluesnapVoidRequest, BluesnapVoidResponse,
 };
 
@@ -211,7 +211,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> CustomResult<bool, errors::ConnectorError> {
         let connector_webhook_secret = connector_webhook_secret
             .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
@@ -263,7 +263,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> CustomResult<domain_types::connector_types::EventType, errors::ConnectorError> {
         match serde_urlencoded::from_bytes::<transformers::BluesnapWebhookBody>(&request.body) {
             Ok(webhook_body) => match webhook_body.transaction_type {
@@ -293,7 +293,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, errors::ConnectorError>
     {
         let webhook_body: transformers::BluesnapWebhookBody =
@@ -346,7 +346,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> CustomResult<
         domain_types::connector_types::RefundWebhookDetailsResponse,
         errors::ConnectorError,
@@ -392,7 +392,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: BluesnapPaymentsRequest,
+            request_body: BluesnapAuthorizeRequest,
             response_body: BluesnapAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -462,7 +462,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Bluesnap,
-    curl_request: Json(BluesnapPaymentsRequest),
+    curl_request: Json(BluesnapAuthorizeRequest),
     curl_response: BluesnapAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -483,7 +483,20 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/services/2/transactions", self.connector_base_url_payments(req)))
+            use domain_types::payment_method_data::PaymentMethodData;
+
+            let base_url = self.connector_base_url_payments(req);
+
+            match &req.request.payment_method_data {
+                PaymentMethodData::BankDebit(_) => {
+                    // ACH uses alt-transactions endpoint
+                    Ok(format!("{}/services/2/alt-transactions", base_url))
+                },
+                _ => {
+                    // Cards and wallets use standard transactions endpoint
+                    Ok(format!("{}/services/2/transactions", base_url))
+                },
+            }
         }
     }
 );
@@ -839,7 +852,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = bluesnap::BluesnapAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

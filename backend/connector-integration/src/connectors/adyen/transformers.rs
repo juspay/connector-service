@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use cards::NetworkToken;
+use cards::{CardNumber, NetworkToken};
 use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -23,17 +23,20 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, BankRedirectData, BankTransferData, Card, CardRedirectData,
-        DefaultPCIHolder, GiftCardData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes,
-        RawCardNumber, WalletData,
+        ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
+        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, PayLaterData,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData, VoucherNextStepData,
+        WalletData,
     },
     router_data::{
-        ConnectorAuthType, ConnectorResponseData, ErrorResponse, ExtendedAuthorizationResponseData,
+        ConnectorResponseData, ConnectorSpecificAuth, ErrorResponse,
+        ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
     router_response_types::RedirectForm,
     utils as domain_utils,
+    utils::get_timestamp_in_milliseconds,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, PeekInterface, Secret};
@@ -66,6 +69,26 @@ pub struct Amount {
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenApplePayDecryptData {
+    number: CardNumber,
+    expiry_month: Secret<String>,
+    expiry_year: Secret<String>,
+    brand: String,
+}
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenGooglePayDecryptData {
+    number: CardNumber,
+    expiry_month: Secret<String>,
+    expiry_year: Secret<String>,
+    brand: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum CardBrand {
@@ -85,6 +108,8 @@ pub enum CardBrand {
     Nyce,
     Bcmc,
 }
+
+const GOOGLE_PAY_BRAND: &str = "googlepay";
 
 impl TryFrom<&domain_utils::CardIssuer> for CardBrand {
     type Error = Error;
@@ -181,7 +206,11 @@ pub enum AdyenPaymentMethod<
     NetworkToken(Box<AdyenNetworkTokenData>),
     #[serde(rename = "googlepay")]
     Gpay(Box<AdyenGPay>),
+    #[serde(rename = "scheme")]
+    GooglePayDecrypt(Box<AdyenGooglePayDecryptData>),
     ApplePay(Box<AdyenApplePay>),
+    #[serde(rename = "scheme")]
+    ApplePayDecrypt(Box<AdyenApplePayDecryptData>),
     #[serde(rename = "scheme")]
     BancontactCard(Box<AdyenCard<DefaultPCIHolder>>),
     Bizum,
@@ -235,12 +264,42 @@ pub enum AdyenPaymentMethod<
     Benefit,
     #[serde(rename = "momo_atm")]
     MomoAtm,
+    // Voucher payment methods
+    #[serde(rename = "boletobancario")]
+    BoletoBancario,
+    #[serde(rename = "doku_alfamart")]
+    Alfamart(Box<DokuBankData>),
+    #[serde(rename = "doku_indomaret")]
+    Indomaret(Box<DokuBankData>),
+    #[serde(rename = "oxxo")]
+    Oxxo,
+    #[serde(rename = "econtext_seven_eleven")]
+    SevenEleven(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    Lawson(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    MiniStop(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    FamilyMart(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    Seicomart(Box<JCSVoucherData>),
+    #[serde(rename = "econtext_stores")]
+    PayEasy(Box<JCSVoucherData>),
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BlikRedirectionData {
     blik_code: Secret<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JCSVoucherData {
+    first_name: Secret<String>,
+    last_name: Option<Secret<String>>,
+    shopper_email: common_utils::pii::Email,
+    telephone_number: Secret<String>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -1234,23 +1293,18 @@ pub struct AdyenAuthType {
     pub(super) review_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
+impl TryFrom<&ConnectorSpecificAuth> for AdyenAuthType {
     type Error = errors::ConnectorError;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
-                review_key: None,
-            }),
-            ConnectorAuthType::SignatureKey {
+            ConnectorSpecificAuth::Adyen {
                 api_key,
-                key1,
-                api_secret,
+                merchant_account,
+                review_key,
             } => Ok(Self {
                 api_key: api_key.to_owned(),
-                merchant_account: key1.to_owned(),
-                review_key: Some(api_secret.to_owned()),
+                merchant_account: merchant_account.to_owned(),
+                review_key: review_key.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType),
         }
@@ -1330,29 +1384,71 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let (wallet_data, _item) = value;
         match wallet_data {
             WalletData::GooglePay(data) => {
-                let gpay_data = AdyenGPay {
-                    google_pay_token: Secret::new(
-                        data.tokenization_data
-                            .get_encrypted_google_pay_token()
-                            .change_context(errors::ConnectorError::MissingRequiredField {
-                                field_name: "gpay wallet_token",
-                            })?
-                            .to_owned(),
-                    ),
+                let google_pay_wallet_data = match &data.tokenization_data {
+                    GpayTokenizationData::Decrypted(decrypt_data) => {
+                        let expiry_year = decrypt_data
+                            .get_four_digit_expiry_year()
+                            .change_context(errors::ConnectorError::InvalidDataFormat {
+                                field_name: "expiry_year",
+                            })?;
+
+                        let expiry_month = decrypt_data.get_expiry_month().change_context(
+                            errors::ConnectorError::InvalidDataFormat {
+                                field_name: "expiry_month",
+                            },
+                        )?;
+
+                        let google_pay_decrypt_data = AdyenGooglePayDecryptData {
+                            number: decrypt_data.application_primary_account_number.clone(),
+                            expiry_month,
+                            expiry_year,
+                            brand: GOOGLE_PAY_BRAND.to_string(),
+                        };
+
+                        Self::GooglePayDecrypt(Box::new(google_pay_decrypt_data))
+                    }
+                    GpayTokenizationData::Encrypted(_) => {
+                        let gpay_data = AdyenGPay {
+                            google_pay_token: Secret::new(
+                                data.tokenization_data
+                                    .get_encrypted_google_pay_token()
+                                    .change_context(errors::ConnectorError::InvalidDataFormat {
+                                        field_name: "google_pay_token",
+                                    })?,
+                            ),
+                        };
+
+                        Self::Gpay(Box::new(gpay_data))
+                    }
                 };
-                Ok(Self::Gpay(Box::new(gpay_data)))
+
+                Ok(google_pay_wallet_data)
             }
             WalletData::ApplePay(data) => {
-                let apple_pay_encrypted_data = data
-                    .payment_data
-                    .get_encrypted_apple_pay_payment_data_mandatory()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
-                        field_name: "Apple pay encrypted data",
-                    })?;
-                let apple_pay_data = AdyenApplePay {
-                    apple_pay_token: Secret::new(apple_pay_encrypted_data.to_string()),
+                let apple_pay_wallet_data = match &data.payment_data {
+                    ApplePayPaymentData::Decrypted(decrypt_data) => {
+                        let expiry_year_4_digit = decrypt_data.get_four_digit_expiry_year();
+                        let exp_month = decrypt_data.get_expiry_month();
+
+                        let apple_pay_decrypt_data = AdyenApplePayDecryptData {
+                            number: decrypt_data.application_primary_account_number.clone(),
+                            expiry_month: exp_month,
+                            expiry_year: expiry_year_4_digit,
+                            brand: data.payment_method.network.clone(),
+                        };
+
+                        Self::ApplePayDecrypt(Box::new(apple_pay_decrypt_data))
+                    }
+                    ApplePayPaymentData::Encrypted(encrypted_str) => {
+                        let apple_pay_data = AdyenApplePay {
+                            apple_pay_token: Secret::new(encrypted_str.clone()),
+                        };
+
+                        Self::ApplePay(Box::new(apple_pay_data))
+                    }
                 };
-                Ok(Self::ApplePay(Box::new(apple_pay_data)))
+
+                Ok(apple_pay_wallet_data)
             }
 
             WalletData::PaypalRedirect(_)
@@ -1387,6 +1483,78 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "payment_method".into(),
             ))?,
         }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        &VoucherData,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    )> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(
+        (voucher_data, item): (
+            &VoucherData,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match voucher_data {
+            VoucherData::Boleto(_) => Ok(Self::BoletoBancario),
+            VoucherData::Alfamart(_) => Ok(Self::Alfamart(Box::new(DokuBankData::try_from(item)?))),
+            VoucherData::Indomaret(_) => {
+                Ok(Self::Indomaret(Box::new(DokuBankData::try_from(item)?)))
+            }
+            VoucherData::Oxxo => Ok(Self::Oxxo),
+            VoucherData::SevenEleven(_) => {
+                Ok(Self::SevenEleven(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::Lawson(_) => Ok(Self::Lawson(Box::new(JCSVoucherData::try_from(item)?))),
+            VoucherData::MiniStop(_) => {
+                Ok(Self::MiniStop(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::FamilyMart(_) => {
+                Ok(Self::FamilyMart(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::Seicomart(_) => {
+                Ok(Self::Seicomart(Box::new(JCSVoucherData::try_from(item)?)))
+            }
+            VoucherData::PayEasy(_) => Ok(Self::PayEasy(Box::new(JCSVoucherData::try_from(item)?))),
+            VoucherData::Efecty
+            | VoucherData::PagoEfectivo
+            | VoucherData::RedCompra
+            | VoucherData::RedPagos => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Adyen"),
+            ))?,
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for JCSVoucherData
+{
+    type Error = Error;
+    fn try_from(
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            first_name: item.resource_common_data.get_billing_first_name()?,
+            last_name: item.resource_common_data.get_optional_billing_last_name(),
+            shopper_email: item.resource_common_data.get_billing_email()?,
+            telephone_number: item.resource_common_data.get_billing_phone_number()?,
+        })
     }
 }
 
@@ -1607,6 +1775,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | BankTransferData::Pse {}
             | BankTransferData::LocalBankTransfer { .. }
             | BankTransferData::InstantBankTransfer {}
+            | BankTransferData::IndonesianBankTransfer { .. }
             | BankTransferData::InstantBankTransferFinland {}
             | BankTransferData::InstantBankTransferPoland {} => {
                 Err(errors::ConnectorError::NotImplemented(
@@ -1687,10 +1856,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .unwrap_or(item.resource_common_data.get_billing_full_name()?),
                 })))
             }
-            BankDebitData::BecsBankDebit { .. } => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Adyen"),
-            )
-            .into()),
+            BankDebitData::BecsBankDebit { .. } | BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                Err(errors::ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Adyen"),
+                )
+                .into())
+            }
         }
     }
 }
@@ -1958,7 +2129,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             channel: None,
             shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store,
             splits: None,
             device_fingerprint,
@@ -2021,6 +2192,54 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
         let country_code =
             get_country_code(item.router_data.resource_common_data.get_optional_billing());
+
+        let mpi_data = match wallet_data {
+            WalletData::ApplePay(apple_data) => {
+                if let ApplePayPaymentData::Decrypted(decrypt_data) = &apple_data.payment_data {
+                    Some(AdyenMpiData {
+                        directory_response: common_enums::TransactionStatus::Success,
+                        authentication_response: common_enums::TransactionStatus::Success,
+                        cavv: Some(decrypt_data.payment_data.online_payment_cryptogram.clone()),
+                        token_authentication_verification_value: None,
+                        eci: decrypt_data.payment_data.eci_indicator.clone(),
+                        ds_trans_id: None,
+                        three_ds_version: None,
+                        challenge_cancel: None,
+                        risk_score: None,
+                        cavv_algorithm: None,
+                    })
+                } else {
+                    None
+                }
+            }
+            WalletData::GooglePay(gpay_data) => {
+                if let GpayTokenizationData::Decrypted(decrypt_data) = &gpay_data.tokenization_data
+                {
+                    match (
+                        decrypt_data.cryptogram.clone(),
+                        decrypt_data.eci_indicator.clone(),
+                    ) {
+                        (Some(cryptogram), Some(eci_indicator)) => Some(AdyenMpiData {
+                            directory_response: common_enums::TransactionStatus::Success,
+                            authentication_response: common_enums::TransactionStatus::Success,
+                            cavv: Some(cryptogram),
+                            token_authentication_verification_value: None,
+                            eci: Some(eci_indicator),
+                            ds_trans_id: None,
+                            three_ds_version: None,
+                            challenge_cancel: None,
+                            risk_score: None,
+                            cavv_algorithm: None,
+                        }),
+                        _ => None,
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
         Ok(Self {
             amount,
             merchant_account: auth_type.merchant_account,
@@ -2035,7 +2254,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             recurring_processing_model,
             browser_info: get_browser_info(&item.router_data)?,
             additional_data,
-            mpi_data: None,
+            mpi_data,
             telephone_number: item
                 .router_data
                 .resource_common_data
@@ -2077,7 +2296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store: None,
             splits: None,
             device_fingerprint,
@@ -2198,7 +2417,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store,
             splits,
             device_fingerprint,
@@ -2288,6 +2507,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }),
             BankDebitData::SepaBankDebit { .. }
             | BankDebitData::BacsBankDebit { .. }
+            | BankDebitData::SepaGuaranteedBankDebit { .. }
             | BankDebitData::BecsBankDebit { .. } => billing_address,
         };
 
@@ -2336,7 +2556,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store,
             splits: None,
             device_fingerprint,
@@ -2488,7 +2708,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store,
             splits,
             device_fingerprint,
@@ -2600,7 +2820,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             channel: None,
             shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store,
             splits,
             device_fingerprint,
@@ -2708,7 +2928,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             channel: None,
             shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store: None,
             splits: None,
             device_fingerprint,
@@ -2768,7 +2988,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_payment_billing(),
         )
         .and_then(Result::ok);
-
         let delivery_address = get_address_info(
             item.router_data
                 .resource_common_data
@@ -2829,7 +3048,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             channel: None,
             shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store,
             splits,
             device_fingerprint: adyen_metadata.device_fingerprint.clone(),
@@ -2842,6 +3061,179 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
             session_validity: None,
         })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+        &VoucherData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &VoucherData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, voucher_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((voucher_data, &item.router_data))?,
+        ));
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let return_url = item.router_data.request.get_router_return_url()?;
+
+        let social_security_number = get_social_security_number(voucher_data);
+
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+        let delivery_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .get_optional_shipping(),
+        )
+        .and_then(Result::ok);
+
+        let shopper_name =
+            get_shopper_name(item.router_data.resource_common_data.get_optional_billing());
+        let shopper_email = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_email();
+        let telephone_number = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_phone_number();
+        let (recurring_processing_model, store_payment_method, shopper_reference) =
+            get_recurring_processing_model(&item.router_data)?;
+        let (store, splits) = get_adyen_split_request(
+            &item.router_data.request.metadata,
+            &adyen_metadata.store,
+            item.router_data.request.currency,
+        );
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: get_browser_info(&item.router_data)?,
+            additional_data: get_additional_data(&item.router_data),
+            mpi_data: None,
+            telephone_number,
+            shopper_name,
+            shopper_email,
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number,
+            billing_address,
+            delivery_address,
+            country_code: None,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: get_shopper_statement(&item.router_data),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
+            store,
+            splits,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+/// Validates social_security_number (Brazilian social security number) for Boleto
+/// Rules: exactly 11 digits (0-9)
+fn is_valid_social_security_number(social_security_number: &str) -> bool {
+    match (
+        social_security_number.len() == 11,
+        social_security_number.chars().all(|c| c.is_ascii_digit()),
+    ) {
+        (false, _) => {
+            tracing::warn!(
+                "Invalid social_security_number: must be exactly 11
+  digits, got {}",
+                social_security_number.len()
+            );
+            false
+        }
+        (_, false) => {
+            tracing::warn!(
+                "Invalid social_security_number: must contain
+   only digits (0-9)"
+            );
+            false
+        }
+        (true, true) => true,
+    }
+}
+
+fn get_social_security_number(voucher_data: &VoucherData) -> Option<Secret<String>> {
+    match voucher_data {
+        VoucherData::Boleto(boleto_data) => match &boleto_data.social_security_number {
+            Some(social_security_number)
+                if is_valid_social_security_number(social_security_number.peek()) =>
+            {
+                Some(social_security_number.clone())
+            }
+            _ => None,
+        },
+        VoucherData::Alfamart { .. }
+        | VoucherData::Indomaret { .. }
+        | VoucherData::Efecty
+        | VoucherData::PagoEfectivo
+        | VoucherData::RedCompra
+        | VoucherData::RedPagos
+        | VoucherData::Oxxo
+        | VoucherData::SevenEleven { .. }
+        | VoucherData::Lawson { .. }
+        | VoucherData::MiniStop { .. }
+        | VoucherData::FamilyMart { .. }
+        | VoucherData::Seicomart { .. }
+        | VoucherData::PayEasy { .. } => None,
     }
 }
 
@@ -2920,11 +3312,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::GiftCard(ref gift_card) => {
                     Self::try_from((item, gift_card.as_ref()))
                 }
+                PaymentMethodData::Voucher(ref voucher_data) => {
+                    Self::try_from((item, voucher_data))
+                }
                 PaymentMethodData::PayLater(ref pay_later_data) => {
                     Self::try_from((item, pay_later_data))
                 }
-                PaymentMethodData::Voucher(_)
-                | PaymentMethodData::Crypto(_)
+                PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
                 | PaymentMethodData::RealTimePayment(_)
@@ -3025,9 +3419,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[serde(untagged)]
 pub enum AdyenPaymentResponse {
     Response(Box<AdyenResponse>),
+    PresentToShopper(Box<PresentToShopperResponse>),
     QrCodeResponse(Box<QrCodeResponseResponse>),
     RedirectionResponse(Box<RedirectionResponse>),
-    PresentToShopper(Box<PresentToShopperResponse>),
     RedirectionErrorResponse(Box<RedirectionErrorResponse>),
     WebhookResponse(Box<AdyenWebhookResponse>),
 }
@@ -5184,7 +5578,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .and_then(|descriptor| descriptor.statement_descriptor),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store: None,
             splits: None,
             device_fingerprint,
@@ -5683,7 +6077,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             country_code: None,
             line_items: None,
             channel: None,
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             splits,
             store,
             device_fingerprint,
@@ -6372,13 +6766,105 @@ fn get_line_items<
 }
 
 pub fn get_present_to_shopper_metadata(
-    _response: &PresentToShopperResponse,
+    response: &PresentToShopperResponse,
 ) -> CustomResult<Option<serde_json::Value>, errors::ConnectorError> {
-    // UCS currently only supports Card
-    // For card payments via PresentToShopper flow, no special metadata is needed
-    // For now, UCS doesn't support voucher or bank transfer methods
-    // that would require special metadata, so return None for all cases
-    Ok(None)
+    let reference = response.action.reference.clone();
+    let expires_at = response
+        .action
+        .expires_at
+        .map(|time| get_timestamp_in_milliseconds(&time));
+    match response.action.payment_method_type {
+        // Supported voucher payment methods
+        PaymentType::Alfamart
+        | PaymentType::Indomaret
+        | PaymentType::BoletoBancario
+        | PaymentType::Oxxo => {
+            let voucher_data = VoucherNextStepData {
+                expires_at,
+                reference,
+                download_url: response.action.download_url.clone().map(|u| u.to_string()),
+                instructions_url: response
+                    .action
+                    .instructions_url
+                    .clone()
+                    .map(|u| u.to_string()),
+                entry_date: None,
+                digitable_line: None,
+                qr_code_url: None,
+                barcode: None,
+                expiry_date: None,
+            };
+
+            Some(voucher_data.encode_to_value())
+                .transpose()
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        }
+        // NOTE: Support for other payment methods will be added in future iterations
+        // - Bank transfer methods (PermataBankTransfer, BcaBankTransfer, BniVa, BriVa, CimbVa, DanamonVa, MandiriVa)
+        // - Pay later methods (Affirm, Afterpaytouch, ClearPay, Klarna, Atome, Alma, PayBright, Walley)
+        // - Wallet methods (Alipay, AlipayHk, Applepay, Bizum, Gcash, Googlepay, GoPay, KakaoPay, Mbway, MobilePay, Momo, MomoAtm, PayPal, Samsungpay, TouchNGo, Twint, Vipps, Swish, WeChatPayWeb)
+        // - Other methods (Blik, Dana, Eps, Ideal, Knet, Benefit, Pix, Trustly, SepaDirectDebit, BacsDirectDebit, AchDirectDebit, etc.)
+        // - voucher or bank transfer methods would require special metadata, so return None for all cases
+        // - for vouchers metadata support is added as it needs download url
+        PaymentType::PermataBankTransfer
+        | PaymentType::BcaBankTransfer
+        | PaymentType::BniVa
+        | PaymentType::BriVa
+        | PaymentType::CimbVa
+        | PaymentType::DanamonVa
+        | PaymentType::Giftcard
+        | PaymentType::MandiriVa
+        | PaymentType::Affirm
+        | PaymentType::Afterpaytouch
+        | PaymentType::Alipay
+        | PaymentType::AlipayHk
+        | PaymentType::Alma
+        | PaymentType::Applepay
+        | PaymentType::Bizum
+        | PaymentType::Atome
+        | PaymentType::Blik
+        | PaymentType::ClearPay
+        | PaymentType::Dana
+        | PaymentType::Eps
+        | PaymentType::Gcash
+        | PaymentType::Googlepay
+        | PaymentType::GoPay
+        | PaymentType::Ideal
+        | PaymentType::Klarna
+        | PaymentType::Kakaopay
+        | PaymentType::Mbway
+        | PaymentType::Knet
+        | PaymentType::Benefit
+        | PaymentType::MobilePay
+        | PaymentType::Momo
+        | PaymentType::MomoAtm
+        | PaymentType::OnlineBankingCzechRepublic
+        | PaymentType::OnlineBankingFinland
+        | PaymentType::OnlineBankingPoland
+        | PaymentType::OnlineBankingSlovakia
+        | PaymentType::OnlineBankingFpx
+        | PaymentType::OnlineBankingThailand
+        | PaymentType::OpenBankingUK
+        | PaymentType::PayBright
+        | PaymentType::Paypal
+        | PaymentType::Scheme
+        | PaymentType::NetworkToken
+        | PaymentType::Trustly
+        | PaymentType::TouchNGo
+        | PaymentType::Walley
+        | PaymentType::WeChatPayWeb
+        | PaymentType::AchDirectDebit
+        | PaymentType::SepaDirectDebit
+        | PaymentType::BacsDirectDebit
+        | PaymentType::Samsungpay
+        | PaymentType::Twint
+        | PaymentType::Vipps
+        | PaymentType::Swish
+        | PaymentType::PaySafeCard
+        | PaymentType::SevenEleven
+        | PaymentType::Lawson
+        | PaymentType::Pix => Ok(None),
+    }
 }
 
 impl AdditionalData {
