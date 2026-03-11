@@ -117,6 +117,7 @@ message Customer {
     optional string id = 3;              // Internal customer ID
     optional string connector_customer_id = 4;    // Customer ID in the connector system
     optional string phone_number = 5;    // Customer's phone number
+    optional string phone_country_code = 6;    // Customer's phone country code
 }
 
 // ============================================================================
@@ -486,7 +487,8 @@ enum Connector {
   SIGNIFYD = 86; PLAID = 87; RISKIFIED = 88; XENDIT = 89; ZEN = 90; ZSL = 91;
   PHONEPE = 92; CASHFREE = 93; PAYTM = 94; CALIDA = 95; PAYLOAD = 96; AUTHIPAY = 97;
   SILVERFLOW = 98; CELERO = 99; TRUSTPAYMENTS = 100; PAYSAFE = 101; BARCLAYCARD = 102;
-  WORLDPAYXML = 103; REVOLUT = 104; LOONIO = 105; GIGADAT = 106; HYPERPG = 107; ZIFT = 108; REVOLV3 = 109;   TRUELAYER = 110;
+  WORLDPAYXML = 103; REVOLUT = 104; LOONIO = 105; GIGADAT = 106; HYPERPG = 107; ZIFT = 108; REVOLV3 = 109;   TRUELAYER = 110;  FINIX = 111;
+
 }
 
 // Payment method types
@@ -790,6 +792,61 @@ message NetworkTokenWithNTI {
 message PaymentAddress {
   Address shipping_address = 1;
   Address billing_address = 2;
+}
+
+// Tax status for L2/L3 data.
+enum TaxStatus {
+  TAX_STATUS_UNSPECIFIED = 0; // Default value
+  TAX_STATUS_TAXABLE = 1;     // The order is taxable
+  TAX_STATUS_EXEMPT = 2;      // The order is tax-exempt
+}
+
+// Order-level information for L2/L3 data.
+message OrderInfo {
+  // Date the order was placed (Unix timestamp in seconds)
+  optional int64 order_date = 1;
+
+  // Line items for the order
+  repeated OrderDetailsWithAmount order_details = 2;
+
+  // Merchant's internal reference ID for the order
+  optional string merchant_order_reference_id = 3;
+
+  // Discount applied to the order (in minor currency units)
+  optional int64 discount_amount = 4;
+
+  // Shipping cost for the order (in minor currency units)
+  optional int64 shipping_cost = 5;
+
+  // Duty/customs amount for the order (in minor currency units)
+  optional int64 duty_amount = 6;
+}
+
+// Tax information for L2/L3 data.
+message TaxInfo {
+  // Tax status of the order
+  optional TaxStatus tax_status = 1;
+
+  // Customer's tax registration ID (sensitive)
+  optional SecretString customer_tax_registration_id = 2;
+
+  // Merchant's tax registration ID (sensitive)
+  optional SecretString merchant_tax_registration_id = 3;
+
+  // Tax on the shipping amount (in minor currency units)
+  optional int64 shipping_amount_tax = 4;
+
+  // Total tax amount for the order (in minor currency units)
+  optional int64 order_tax_amount = 5;
+}
+
+// Level 2 / Level 3 data for enhanced payment processing.
+message L2L3Data {
+  // Order-level information
+  optional OrderInfo order_info = 1;
+
+  // Tax information
+  optional TaxInfo tax_info = 2;
 }
 
 // Redirection response data
@@ -1352,6 +1409,8 @@ message PaymentServiceAuthorizeRequest {
   // Payment Method Token
   optional SecretString payment_method_token = 43;
 
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 44; 
 }
 
 // Response message for a payment authorization
@@ -1937,6 +1996,9 @@ message PaymentServiceSetupRecurringRequest {
   optional string locale = 32;  // Locale/language preference for the shopper (e.g., "en-US")
   // Testing Data
   optional SecretString connector_testing_data = 33;  // Connector-specific testing data (JSON stringified)
+
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 34; 
 }
 
 // Response message for a mandate setup operation
@@ -2041,6 +2103,12 @@ message RecurringPaymentServiceChargeRequest {
 
   // Testing Data
   optional SecretString connector_testing_data = 29;
+
+  // Customer Information
+  optional Customer customer = 30;
+
+  // Level 2 / Level 3 data for enhanced payment processing
+  optional L2L3Data l2_l3_data = 31; 
 }
 
 // Response message for repeat payment operation

@@ -95,6 +95,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             id: Some("cust_1233".to_string()),
             connector_customer_id: Some("cust_1233".to_string()),
             phone_number: None,
+            phone_country_code: None,
         }),
         return_url: Some("https://hyperswitch.io/connector-service".to_string()),
         webhook_url: Some("https://hyperswitch.io/connector-service".to_string()),
