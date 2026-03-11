@@ -4,7 +4,7 @@
 ---
 title: Tokenize
 description: Store payment method securely at the processor - replace raw card details with token for one-click payments and recurring billing
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -42,7 +42,7 @@ The `Tokenize` RPC securely stores payment method details at the payment process
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_payment_method_id` | Identifier | Yes | Your unique identifier for this payment method |
+| `merchant_payment_method_id` | string | Yes | Your unique identifier for this payment method |
 | `amount` | Money | Yes | Amount for initial validation (some processors require this) |
 | `payment_method` | PaymentMethod | Yes | Payment method details to tokenize (card, wallet, etc.) |
 | `customer` | Customer | No | Customer information to associate with payment method |
@@ -60,7 +60,7 @@ The `Tokenize` RPC securely stores payment method details at the payment process
 | `error` | ErrorInfo | Error details if tokenization failed |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
 | `response_headers` | map<string,string> | Connector-specific response headers |
-| `merchant_payment_method_id` | Identifier | Your payment method reference (echoed back) |
+| `merchant_payment_method_id` | string | Your payment method reference (echoed back) |
 | `state` | ConnectorState | State to pass to next request in multi-step flow |
 
 ## Example
@@ -71,24 +71,24 @@ The `Tokenize` RPC securely stores payment method details at the payment process
 grpcurl -H "x-connector: stripe" \
   -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
   -d '{
-    "merchant_payment_method_id": {"id": "pm_user_001"},
+    "merchant_payment_method_id": "pm_user_001",
     "amount": {
       "minor_amount": 1000,
       "currency": "USD"
     },
     "payment_method": {
       "card": {
-        "card_number": {"value": "4242424242424242"},
-        "expiry_month": {"value": "12"},
-        "expiry_year": {"value": "2027"},
-        "card_holder_name": {"value": "John Doe"},
-        "cvc": {"value": "123"}
+        "card_number": "4242424242424242",
+        "expiry_month": "12",
+        "expiry_year": "2027",
+        "card_holder_name": "John Doe",
+        "cvc": "123"
       }
     },
     "customer": {
-      "customer_id": {"id": "cust_001"},
+      "customer_id": "cust_001",
       "name": "John Doe",
-      "email": {"value": "john@example.com"}
+      "email": "john@example.com"
     },
     "test_mode": true
   }' \
@@ -101,9 +101,7 @@ grpcurl -H "x-connector: stripe" \
 ```json
 {
   "payment_method_token": "pm_1Oxxx...",
-  "merchant_payment_method_id": {
-    "id": "pm_user_001"
-  },
+  "merchant_payment_method_id": "pm_user_001",
   "status_code": 200
 }
 ```
