@@ -361,6 +361,118 @@ pub struct Connectors {
     pub finix: ConnectorParams,
 }
 
+impl Connectors {
+    /// Get connector parameters by name
+    pub fn get_connector_params(&self, name: &str) -> Option<&ConnectorParams> {
+        match name {
+            "adyen" => Some(&self.adyen),
+            "forte" => Some(&self.forte),
+            "razorpay" => Some(&self.razorpay),
+            "razorpayv2" => Some(&self.razorpayv2),
+            "fiserv" => Some(&self.fiserv),
+            "elavon" => Some(&self.elavon),
+            "xendit" => Some(&self.xendit),
+            "checkout" => Some(&self.checkout),
+            "authorizedotnet" => Some(&self.authorizedotnet),
+            "mifinity" => Some(&self.mifinity),
+            "phonepe" => Some(&self.phonepe),
+            "cashfree" => Some(&self.cashfree),
+            "paytm" => Some(&self.paytm),
+            "fiuu" => Some(&self.fiuu),
+            "payu" => Some(&self.payu),
+            "cashtocode" => Some(&self.cashtocode),
+            "novalnet" => Some(&self.novalnet),
+            "nexinets" => Some(&self.nexinets),
+            "noon" => Some(&self.noon),
+            "braintree" => Some(&self.braintree),
+            "volt" => Some(&self.volt),
+            "calida" => Some(&self.calida),
+            "cryptopay" => Some(&self.cryptopay),
+            "helcim" => Some(&self.helcim),
+            "dlocal" => Some(&self.dlocal),
+            "placetopay" => Some(&self.placetopay),
+            "rapyd" => Some(&self.rapyd),
+            "aci" => Some(&self.aci),
+            "trustpay" => None, // trustpay uses ConnectorParamsWithMoreUrls
+            "stripe" => Some(&self.stripe),
+            "cybersource" => Some(&self.cybersource),
+            "worldpay" => Some(&self.worldpay),
+            "worldpayvantiv" => Some(&self.worldpayvantiv),
+            "multisafepay" => Some(&self.multisafepay),
+            "payload" => Some(&self.payload),
+            "fiservemea" => Some(&self.fiservemea),
+            "paysafe" => Some(&self.paysafe),
+            "datatrans" => Some(&self.datatrans),
+            "bluesnap" => Some(&self.bluesnap),
+            "authipay" => Some(&self.authipay),
+            "bamboraapac" => Some(&self.bamboraapac),
+            "silverflow" => Some(&self.silverflow),
+            "celero" => Some(&self.celero),
+            "paypal" => Some(&self.paypal),
+            "stax" => Some(&self.stax),
+            "billwerk" => Some(&self.billwerk),
+            "hipay" => Some(&self.hipay),
+            "trustpayments" => Some(&self.trustpayments),
+            "globalpay" => Some(&self.globalpay),
+            "nuvei" => Some(&self.nuvei),
+            "iatapay" => Some(&self.iatapay),
+            "jpmorgan" => Some(&self.jpmorgan),
+            "nmi" => Some(&self.nmi),
+            "shift4" => Some(&self.shift4),
+            "paybox" => Some(&self.paybox),
+            "barclaycard" => Some(&self.barclaycard),
+            "redsys" => Some(&self.redsys),
+            "nexixpay" => Some(&self.nexixpay),
+            "mollie" => Some(&self.mollie),
+            "airwallex" => Some(&self.airwallex),
+            "worldpayxml" => Some(&self.worldpayxml),
+            "tsys" => Some(&self.tsys),
+            "bankofamerica" => Some(&self.bankofamerica),
+            "powertranz" => Some(&self.powertranz),
+            "getnet" => Some(&self.getnet),
+            "bambora" => Some(&self.bambora),
+            "payme" => Some(&self.payme),
+            "revolut" => Some(&self.revolut),
+            "gigadat" => Some(&self.gigadat),
+            "loonio" => Some(&self.loonio),
+            "wellsfargo" => Some(&self.wellsfargo),
+            "hyperpg" => Some(&self.hyperpg),
+            "zift" => Some(&self.zift),
+            "revolv3" => Some(&self.revolv3),
+            _ => None,
+        }
+    }
+
+    /// Resolve vault configuration for a connector
+    ///
+    /// Returns the vault config if `enable_vault_proxy` is true.
+    /// Priority:
+    /// 1. `vault_proxy_override` - connector-specific vault config
+    /// 2. `global_vault` - global vault config (passed as parameter)
+    ///
+    /// Returns `None` if vault proxy is not enabled for the connector.
+    ///
+    /// Note: This method clones the vault config when returning an override.
+    /// Since config resolution is not in a hot path, this is acceptable.
+    pub fn resolve_vault(
+        &self,
+        connector_name: &str,
+        global_vault: &Option<VaultConfig>,
+    ) -> Option<VaultConfig> {
+        let params = self.get_connector_params(connector_name)?;
+
+        if !params.enable_vault_proxy {
+            return None;
+        }
+
+        // Priority: connector override > global config
+        params
+            .vault_proxy_override
+            .clone()
+            .or_else(|| global_vault.clone())
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
 pub struct ConnectorParams {
     /// base url
@@ -372,6 +484,12 @@ pub struct ConnectorParams {
     pub secondary_base_url: Option<String>,
     #[serde(default)]
     pub third_base_url: Option<String>,
+    /// When true, routes requests through the global vault proxy
+    #[serde(default)]
+    pub enable_vault_proxy: bool,
+    /// Optional: Use a different vault than the global one
+    #[serde(default)]
+    pub vault_proxy_override: Option<VaultConfig>,
 }
 
 impl ConnectorParams {
@@ -381,6 +499,8 @@ impl ConnectorParams {
             dispute_base_url,
             secondary_base_url: None,
             third_base_url: None,
+            enable_vault_proxy: false,
+            vault_proxy_override: None,
         }
     }
 }
@@ -391,6 +511,122 @@ pub struct ConnectorParamsWithMoreUrls {
     pub base_url: String,
     /// base url for bank redirects
     pub base_url_bank_redirects: String,
+}
+
+// ============================================================================
+// VAULT CONFIGURATION
+// ============================================================================
+
+/// Global vault configuration enum
+/// Only one vault provider can be configured at a time
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
+#[serde(tag = "provider", rename_all = "snake_case")]
+pub enum VaultConfig {
+    /// VGS Network Proxy (Very Good Security)
+    Vgs(VgsConfig),
+    /// Evervault Network Proxy (HTTP CONNECT Relay)
+    Evervault(EvervaultConfig),
+    /// Hyperswitch Vault Application Proxy
+    HyperswitchVault(HyperswitchVaultConfig),
+    /// TokenEx Application Proxy (TGAPI)
+    TokenEx(TokenExConfig),
+    /// Basis Theory Application Proxy
+    BasisTheory(BasisTheoryConfig),
+}
+
+impl Default for VaultConfig {
+    fn default() -> Self {
+        VaultConfig::Vgs(VgsConfig::default())
+    }
+}
+
+/// VGS (Very Good Security) Network Proxy configuration
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct VgsConfig {
+    /// VGS tenant identifier (e.g., "tntSANDBOX123")
+    pub tenant_id: String,
+    /// VGS environment (sandbox or production)
+    pub environment: VgsEnvironment,
+    /// Optional CA certificate for TLS verification
+    pub ca_certificate: Option<String>,
+}
+
+#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+#[serde(rename_all = "lowercase")]
+pub enum VgsEnvironment {
+    #[default]
+    Sandbox,
+    Production,
+}
+
+/// Evervault Network Proxy configuration (HTTP CONNECT Relay)
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct EvervaultConfig {
+    /// Evervault team identifier (e.g., "team_123abc")
+    pub team_id: String,
+    /// Evervault app identifier (e.g., "app_456def")
+    pub app_id: String,
+    /// Evervault API key for Relay authentication
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+}
+
+/// Hyperswitch Vault Application Proxy configuration
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct HyperswitchVaultConfig {
+    /// Hyperswitch API key (dev_xxx or prod_xxx)
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+    /// Hyperswitch Profile ID
+    pub profile_id: String,
+    /// Hyperswitch Proxy endpoint URL
+    pub proxy_url: String,
+    /// Environment (sandbox or production)
+    pub environment: HyperswitchEnvironment,
+}
+
+#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+#[serde(rename_all = "lowercase")]
+pub enum HyperswitchEnvironment {
+    #[default]
+    Sandbox,
+    Production,
+}
+
+/// TokenEx Application Proxy configuration (TGAPI)
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct TokenExConfig {
+    /// TokenEx API key for TGAPI authentication
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+    /// TokenEx organization identifier
+    pub tokenex_id: String,
+    /// TGAPI endpoint URL
+    pub tgapi_url: String,
+    /// Default token scheme for new tokenizations
+    #[serde(default)]
+    pub default_token_scheme: TokenExTokenScheme,
+}
+
+#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+#[serde(rename_all = "snake_case")]
+pub enum TokenExTokenScheme {
+    #[default]
+    TokenFour,
+    Guid,
+    SixTokenFour,
+}
+
+/// Basis Theory Application Proxy configuration
+#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+pub struct BasisTheoryConfig {
+    /// Basis Theory API key (needs token:read, proxy:read permissions)
+    #[patch(ignore)]
+    pub api_key: Secret<String>,
+    /// Basis Theory proxy endpoint URL
+    pub proxy_url: String,
+    /// Optional pre-configured proxy ID
+    pub proxy_id: Option<String>,
 }
 
 // Trait to provide access to connectors field

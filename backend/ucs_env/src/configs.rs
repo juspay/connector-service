@@ -9,7 +9,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::ConnectorEnum,
-    types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch},
+    types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch, VaultConfig, VaultConfigPatch},
 };
 
 use crate::{
@@ -25,6 +25,10 @@ pub struct Config {
     pub log: Log,
     pub proxy: Proxy,
     pub connectors: Connectors,
+    /// Global vault configuration (optional)
+    /// When set, connectors can use enable_vault_proxy to route through this vault
+    #[serde(default)]
+    pub vault: Option<VaultConfig>,
     #[serde(default)]
     pub events: EventConfig,
     #[serde(default)]
