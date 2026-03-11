@@ -4,7 +4,7 @@
 ---
 title: CreateSessionToken
 description: Create session token for payment processing to maintain state across multiple operations
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -40,7 +40,7 @@ The `CreateSessionToken` RPC creates a session token for payment processing. Thi
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_session_id` | Identifier | Yes | Your unique session reference |
+| `merchant_session_id` | string | Yes | Your unique session reference |
 | `amount` | Money | Yes | Payment amount for this session |
 | `metadata` | SecretString | No | Additional metadata for the connector |
 | `connector_feature_data` | SecretString | No | Connector-specific metadata |
@@ -64,7 +64,7 @@ The `CreateSessionToken` RPC creates a session token for payment processing. Thi
 grpcurl -H "x-connector: stripe" \
   -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
   -d '{
-    "merchant_session_id": {"id": "session_001"},
+    "merchant_session_id": "session_001",
     "amount": {
       "minor_amount": 10000,
       "currency": "USD"

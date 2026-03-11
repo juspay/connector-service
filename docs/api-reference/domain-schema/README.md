@@ -4,7 +4,7 @@
 ---
 title: Domain Schema
 description: Complete reference for all domain types, enums, and data structures used across Connector Service services
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/
 auto_generated: false
 reviewed_by: engineering
@@ -58,7 +58,6 @@ Basic building blocks used across all Connector Service services. These fundamen
 |-------------|-------------|---------|---------------|
 | `Money` | Monetary amount with currency. Amounts are in minor units (e.g., 1000 = $10.00). | `{"minor_amount": 1000, "currency": "USD"}` | `Currency` |
 | `ErrorInfo` | Structured error information for API responses. Includes error code and human-readable message. | `{"code": "CARD_DECLINED", "message": "Card was declined", "reason": "INSUFFICIENT_FUNDS"}` | `PaymentStatus` |
-| `Identifier` | Connector transaction ID variants. Used to reference transactions. | `{"id": "pi_1234567890"}` or `{"encoded_data": "abc123=="}` | `Customer` |
 | `Customer` | Customer information including name, email, and unique identifier. | `{"id": "cus_123", "name": "John Doe", "email": "john@example.com", "phone": "+1-555-0123"}` | `Address`, `PaymentMethod` |
 | `Metadata` | Key-value metadata for connectors. Stores additional context about transactions. | `{"order_id": "ORD-123", "source": "mobile_app", "campaign": "spring_sale"}` | `SecretString` |
 | `SecretString` | Sensitive data masked in logs and traces for PCI compliance. | `"***MASKED***"` | `Metadata`, `CardDetails` |
