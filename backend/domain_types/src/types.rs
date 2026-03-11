@@ -487,10 +487,14 @@ pub struct ConnectorParams {
     #[serde(default)]
     pub third_base_url: Option<String>,
     /// When true, routes requests through the global vault proxy
+    /// Note: Changes require restart - vault settings cannot be hot-patched for PCI compliance
     #[serde(default)]
+    #[patch(ignore)]
     pub enable_vault_proxy: bool,
     /// Optional: Use a different vault than the global one
+    /// Note: Changes require restart - vault settings cannot be hot-patched for PCI compliance
     #[serde(default)]
+    #[patch(ignore)]
     pub vault_proxy_override: Option<VaultConfig>,
 }
 
@@ -536,21 +540,28 @@ pub enum VaultConfig {
     BasisTheory(BasisTheoryConfig),
 }
 
-impl Default for VaultConfig {
-    fn default() -> Self {
-        VaultConfig::Vgs(VgsConfig::default())
-    }
-}
-
 /// VGS (Very Good Security) Network Proxy configuration
-#[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
 pub struct VgsConfig {
     /// VGS tenant identifier (e.g., "tntSANDBOX123")
     pub tenant_id: String,
     /// VGS environment (sandbox or production)
+    #[serde(default)]
     pub environment: VgsEnvironment,
-    /// Optional CA certificate for TLS verification
+    /// Reserved: CA certificate for TLS verification with VGS proxy
+    /// Not currently used - will be wired up in HTTP client integration phase
+    #[serde(default)]
     pub ca_certificate: Option<String>,
+}
+
+impl Default for VgsConfig {
+    fn default() -> Self {
+        Self {
+            tenant_id: String::new(),
+            environment: VgsEnvironment::default(),
+            ca_certificate: None,
+        }
+    }
 }
 
 #[derive(
