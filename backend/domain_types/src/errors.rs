@@ -87,6 +87,15 @@ impl ApplicationErrorResponse {
             error_object: None,
         })
     }
+
+    pub fn empty_field_error(field_name: &str) -> Self {
+        Self::BadRequest(ApiError {
+            sub_code: format!("INVALID_{}", field_name.to_uppercase()),
+            error_identifier: 400,
+            error_message: format!("{} cannot be empty", field_name),
+            error_object: None,
+        })
+    }
 }
 
 #[derive(Debug, serde::Serialize, Clone)]

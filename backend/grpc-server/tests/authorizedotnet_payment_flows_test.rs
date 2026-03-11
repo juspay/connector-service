@@ -186,7 +186,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
 
     RecurringPaymentServiceChargeRequest {
         merchant_charge_id: Some(generate_unique_request_ref_id("repeat_req")),
-        mandate_reference_id: Some(mandate_reference),
+        connector_recurring_payment_id: Some(mandate_reference),
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: REPEAT_AMOUNT,
             currency: i32::from(Currency::Usd),
@@ -463,7 +463,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     let refund_metadata_json = serde_json::to_string(&refund_metadata_map).unwrap();
 
     PaymentServiceRefundRequest {
-        merchant_refund_id: generate_unique_request_ref_id("refund"),
+        merchant_refund_id: Some(generate_unique_request_ref_id("refund")),
         connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,
         refund_amount: Some(grpc_api_types::payments::Money {
@@ -799,7 +799,7 @@ async fn test_payment_sync() {
 
         // Verify we have transaction ID in the response
         assert!(
-            get_response.connector_transaction_id.is_some(),
+            !get_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in get response"
         );
     });
@@ -986,7 +986,7 @@ async fn test_register() {
 
         // Verify the response
         assert!(
-            response.connector_registration_id.is_some(),
+            response.connector_recurring_payment_id.is_some(),
             "Registration ID should be present"
         );
 

@@ -298,7 +298,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        merchant_refund_id: format!("refund_{}", get_timestamp_micros()),
+        merchant_refund_id: Some(format!("refund_{}", get_timestamp_micros())),
         connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,
         refund_amount: Some(grpc_api_types::payments::Money {

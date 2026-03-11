@@ -213,7 +213,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        merchant_refund_id: format!("refund_{}", generate_unique_id("test")),
+        merchant_refund_id: Some(format!("refund_{}", generate_unique_id("test"))),
         connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,
         refund_amount: Some(grpc_api_types::payments::Money {
@@ -421,7 +421,7 @@ async fn test_payment_void() {
 
         // Verify the void response
         assert!(
-            void_response.connector_transaction_id.is_some(),
+            !void_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in void response"
         );
 

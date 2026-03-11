@@ -215,7 +215,7 @@ fn create_payment_void_request(transaction_id: &str, amount: i64) -> PaymentServ
 
 fn create_refund_request(transaction_id: &str, amount: i64) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        merchant_refund_id: generate_unique_id("refund"),
+        merchant_refund_id: Some(generate_unique_id("refund")),
         connector_transaction_id: transaction_id.to_string(),
         payment_amount: amount,
         refund_amount: Some(grpc_api_types::payments::Money {
@@ -261,7 +261,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
 
     RecurringPaymentServiceChargeRequest {
         merchant_charge_id: Some(generate_unique_id("repeat")),
-        mandate_reference_id: Some(mandate_reference),
+        connector_recurring_payment_id: Some(mandate_reference),
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: unique_amount,
             currency: i32::from(Currency::Usd),
@@ -410,7 +410,7 @@ async fn test_authorize_psync_void() {
             .into_inner();
 
         assert!(
-            sync_response.connector_transaction_id.is_some(),
+            !sync_response.connector_transaction_id.is_empty(),
             "Sync response should contain transaction ID"
         );
 
@@ -523,7 +523,7 @@ async fn test_authorize_capture_refund_rsync() {
             .into_inner();
 
         assert!(
-            rsync_response.connector_transaction_id.is_some(),
+            !rsync_response.connector_transaction_id.is_empty(),
             "Refund sync response should contain transaction ID"
         );
     });

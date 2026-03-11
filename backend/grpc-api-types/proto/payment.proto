@@ -1490,7 +1490,7 @@ message PaymentServiceGetRequest {
 // Response message for a payment status synchronization
 message PaymentServiceGetResponse {
   // Identification
-  optional string connector_transaction_id = 1;
+  string connector_transaction_id = 1;
 
   // Status Information
   PaymentStatus status = 2;
@@ -1566,7 +1566,7 @@ message PaymentServiceVoidRequest {
 // Response message for a payment void operation
 message PaymentServiceVoidResponse {
   // Identification
-  optional string connector_transaction_id = 1;
+  string connector_transaction_id = 1;
 
   // Status Information
   PaymentStatus status = 2;
@@ -1575,7 +1575,7 @@ message PaymentServiceVoidResponse {
   map<string, string> response_headers = 5;
 
   // Reference
-  optional string merchant_transaction_id = 6;
+  optional string merchant_void_id = 6;
   // State Information
   optional ConnectorState state = 7;
 
@@ -1594,7 +1594,7 @@ message PaymentServiceVoidResponse {
 // Request message for reversing a captured payment if not yet settled (similar to void but for post-capture transactions)
 message PaymentServiceReverseRequest {
   // Identification
-  string merchant_reverse_id = 1;
+  optional string merchant_reverse_id = 1;
   string connector_transaction_id = 2;
 
   // Reverse Details
@@ -1611,7 +1611,7 @@ message PaymentServiceReverseRequest {
 // Response message for reversing a captured payment if not yet settled (similar to void but for post-capture transactions)
 message PaymentServiceReverseResponse {
   // Identification
-  optional string connector_transaction_id = 1;
+  string connector_transaction_id = 1;
 
   // Status Information
   PaymentStatus status = 2;
@@ -1650,7 +1650,7 @@ message MerchantAuthenticationServiceCreateAccessTokenResponse {
 // Request message for creating a session token
 message MerchantAuthenticationServiceCreateSessionTokenRequest {
   // Identification
-  string merchant_session_id = 1;
+  optional string merchant_session_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -1741,7 +1741,7 @@ message PaymentServiceCaptureRequest {
 // Response message for a payment capture operation
 message PaymentServiceCaptureResponse {
   // Identification
-  optional string connector_transaction_id = 1;
+  string connector_transaction_id = 1;
 
   // Status Information
   PaymentStatus status = 2;
@@ -1774,7 +1774,7 @@ message PaymentServiceCaptureResponse {
 // Request message for creating an order
 message PaymentServiceCreateOrderRequest {
   // Identification
-  string merchant_order_id = 1;
+  optional string merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -1820,7 +1820,7 @@ message PaymentServiceCreateOrderResponse {
 // Request message for processing a refund
 message PaymentServiceRefundRequest {
   // Identification
-  string merchant_refund_id = 1;
+  optional string merchant_refund_id = 1;
   string connector_transaction_id = 2;
 
   // Amount Information
@@ -1891,7 +1891,7 @@ message RefundResponse {
 // Request message for creating a dispute
 message PaymentServiceDisputeRequest {
   // Identification
-  string merchant_dispute_id = 1;
+  optional string merchant_dispute_id = 1;
   string connector_transaction_id = 2; // Transaction ID to raise the dispute for
 
   // State Information
@@ -2004,7 +2004,7 @@ message PaymentServiceSetupRecurringRequest {
 // Response message for a mandate setup operation
 message PaymentServiceSetupRecurringResponse {
   // Identification
-  optional string connector_registration_id = 1; // Identifier for the mandate registration
+  optional string connector_recurring_payment_id = 1; // Identifier for the mandate registration
 
   // Status Information
   PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
@@ -2018,7 +2018,7 @@ message PaymentServiceSetupRecurringResponse {
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 7; // Data for redirecting the customer's browser
   optional string network_transaction_id = 8; // Renamed from network_transaction_id
-  optional string merchant_recurring_payment_id = 9;
+  string merchant_recurring_payment_id = 9;
   optional ConnectorResponseData connector_response = 10; // Various data regarding the response from connector
 
   // Authorization Details
@@ -2041,7 +2041,7 @@ message RecurringPaymentServiceChargeRequest {
   optional string merchant_charge_id = 1; // Reference ID for tracking
 
   // Mandate Information (for MIT)
-  optional MandateReference mandate_reference_id = 2; // Reference to existing mandate
+  optional MandateReference connector_recurring_payment_id = 2; // Reference to existing mandate
 
   // Amount Information
   Money amount = 3;
@@ -2147,7 +2147,7 @@ message RecurringPaymentServiceChargeResponse {
 // Request message for a mandate revoke operation
 message RecurringPaymentServiceRevokeRequest {
   // Identification
-  string merchant_revoke_id = 1;
+  optional string merchant_revoke_id = 1;
 
   // Mandate Details
   string mandate_id = 2;
@@ -2178,7 +2178,7 @@ message RecurringPaymentServiceRevokeResponse {
 // Request message for pre-authentication step
 message PaymentMethodAuthenticationServicePreAuthenticateRequest {
   // Payment Identification
-  string merchant_order_id = 1;
+  optional string merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -2242,7 +2242,7 @@ message PaymentMethodAuthenticationServicePreAuthenticateResponse {
 // Request message for authentication step
 message PaymentMethodAuthenticationServiceAuthenticateRequest {
   // Payment Identification
-  string merchant_order_id = 1;
+  optional string merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -2310,7 +2310,7 @@ message PaymentMethodAuthenticationServiceAuthenticateResponse {
 // Request message for post-authentication step
 message PaymentMethodAuthenticationServicePostAuthenticateRequest {
   // Payment Identification
-  string merchant_order_id = 1;
+  optional string merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -2376,7 +2376,7 @@ message PaymentMethodAuthenticationServicePostAuthenticateResponse {
 // Request message for incremental authorization
 message PaymentServiceIncrementalAuthorizationRequest {
   // Identification
-  string merchant_authorization_id = 1;
+  optional string merchant_authorization_id = 1;
   string connector_transaction_id = 2;
 
   // Amount Information
@@ -2409,7 +2409,7 @@ message PaymentServiceIncrementalAuthorizationResponse {
 // Request message for EventService.HandleEvent RPC
 message EventServiceHandleRequest {
   // Identification
-  string merchant_event_id = 1;
+  optional string merchant_event_id = 1;
 
   // Request Details
   RequestDetails request_details = 2;
@@ -2431,7 +2431,7 @@ enum WebhookEventStatus {
 // Request message for VerifyRedirectResponse
 message PaymentServiceVerifyRedirectResponseRequest {
   // Identification
-  string merchant_order_id = 1;
+  optional string merchant_order_id = 1;
 
   // Request Details
   RequestDetails request_details = 2;
@@ -2534,7 +2534,7 @@ message DisputeServiceSubmitEvidenceResponse {
 // Request message for retrieving dispute information
 message DisputeServiceGetRequest {
   // Identification
-  string merchant_dispute_id = 1;
+  optional string merchant_dispute_id = 1;
   optional string dispute_id = 2;
   string connector_dispute_id = 3;
 }
@@ -2542,7 +2542,7 @@ message DisputeServiceGetRequest {
 // Request message for defending a dispute
 message DisputeServiceDefendRequest {
   // Identification
-  string merchant_dispute_id = 1;
+  optional string merchant_dispute_id = 1;
   string connector_transaction_id = 2;
   string dispute_id = 3;
 
@@ -2572,7 +2572,7 @@ message DisputeServiceDefendResponse {
 // Request message for accepting a dispute
 message DisputeServiceAcceptRequest {
   // Identification
-  string merchant_dispute_id = 1;
+  optional string merchant_dispute_id = 1;
   string connector_transaction_id = 2;
   string dispute_id = 3;
 }
@@ -2607,7 +2607,7 @@ message DisputeServiceAcceptResponse {
 // Request message for tokenizing a payment method
 message PaymentMethodServiceTokenizeRequest {
   // Identification
-  string merchant_payment_method_id = 1;
+  optional string merchant_payment_method_id = 1;
 
   // Payment Information
   Money amount = 2;
@@ -2649,7 +2649,7 @@ message PaymentMethodServiceTokenizeResponse {
 // Request message for getting a payment method
 message PaymentMethodServiceGetRequest {
   // Identification
-  string merchant_payment_method_id = 1;
+  optional string merchant_payment_method_id = 1;
   // Payment Method Information
   string payment_method_token = 2;
 
@@ -2716,7 +2716,7 @@ message CustomerServiceCreateResponse {
 // Request message for getting a customer
 message CustomerServiceGetRequest {
   // Identification
-  string merchant_customer_id = 1;
+  optional string merchant_customer_id = 1;
 
   // Customer Information
   string connector_customer_id = 2;
@@ -2739,7 +2739,7 @@ message CustomerServiceGetResponse {
 // Request message for updating a customer
 message CustomerServiceUpdateRequest {
   // Identification
-  string merchant_customer_id = 1;
+  optional string merchant_customer_id = 1;
 
   // Customer Information
   string connector_customer_id = 2;
@@ -2771,7 +2771,7 @@ message CustomerServiceUpdateResponse {
 // Request message for deleting a customer
 message CustomerServiceDeleteRequest {
   // Identification
-  string merchant_customer_id = 1;
+  optional string merchant_customer_id = 1;
 
   // Customer Information
   string connector_customer_id = 2;
