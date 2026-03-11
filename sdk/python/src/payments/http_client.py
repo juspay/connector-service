@@ -4,7 +4,6 @@ import ssl
 import asyncio
 from typing import Optional, Dict, Union, Any
 from dataclasses import dataclass
-from urllib.parse import urlparse
 from .generated import sdk_config_pb2
 
 # Centralized defaults from Protobuf Single Source of Truth
@@ -59,7 +58,7 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
     """
     verify: Union[bool, ssl.SSLContext] = True
     mounts = None
-    
+
     # Resolve Timeouts (Defaults from HttpConfig or Protobuf Constants)
     total_timeout = (http_config.total_timeout_ms / 1000.0) if (http_config and http_config.HasField('total_timeout_ms')) else (Defaults.TOTAL_TIMEOUT_MS / 1000.0)
     connect_timeout = (http_config.connect_timeout_ms / 1000.0) if (http_config and http_config.HasField('connect_timeout_ms')) else (Defaults.CONNECT_TIMEOUT_MS / 1000.0)
@@ -81,27 +80,35 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
         if proxies:
             mounts = {k: httpx.AsyncHTTPTransport(proxy=v) if v else None for k, v in proxies.items()}
 
-    return httpx.AsyncClient(
-        verify=verify,
-        mounts=mounts,
-        http2=True,
-        timeout=httpx.Timeout(
-            total_timeout,
-            connect=connect_timeout,
-            read=read_timeout
+    try:
+        return httpx.AsyncClient(
+            verify=verify,
+            mounts=mounts,
+            http2=True,
+            timeout=httpx.Timeout(
+                total_timeout,
+                connect=connect_timeout,
+                read=read_timeout
+            )
         )
-    )
+    except Exception as e:
+        code = "INVALID_PROXY_CONFIGURATION" if "proxy" in str(e).lower() else "CLIENT_INITIALIZATION"
+        raise ConnectorError(f"Internal HTTP setup failed: {e}", 500, code)
 
 async def execute(
-    request: HttpRequest, 
+    request: HttpRequest,
     client: httpx.AsyncClient,
     http_config: Optional[HttpConfig] = None
 ) -> HttpResponse:
     """
     Standardized stateless execution engine using httpx AsyncClient.
     """
+    try:
+        httpx.URL(request.url)
+    except httpx.InvalidURL:
+        raise ConnectorError(f"Invalid URL: {request.url}", None, "URL_PARSING_FAILED")
     start_time = time.time()
-    
+
     # Per-request timeout override
     timeout = httpx.USE_CLIENT_DEFAULT
     if http_config:
@@ -119,14 +126,19 @@ async def execute(
             timeout=timeout,
             follow_redirects=False
         )
-        
+
         latency = (time.time() - start_time) * 1000
         response_headers = {k.lower(): v for k, v in response.headers.items()}
+
+        try:
+            body = response.content
+        except Exception as e:
+            raise ConnectorError(f"Failed to read response body: {e}", response.status_code, "RESPONSE_DECODING_FAILED")
 
         return HttpResponse(
             status_code=response.status_code,
             headers=response_headers,
-            body=response.content,
+            body=body,
             latency_ms=latency
         )
 

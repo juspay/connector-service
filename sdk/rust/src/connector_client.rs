@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::http_client::{
-    HttpClient, HttpClientError, HttpOptions as NativeHttpOptions, HttpRequest as ClientHttpRequest,
+    merge_http_options, HttpClient, HttpClientError, HttpOptions as NativeHttpOptions,
+    HttpRequest as ClientHttpRequest,
 };
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
@@ -26,7 +27,6 @@ use grpc_api_types::payments::{
 pub struct ConnectorClient {
     http_client: HttpClient,
     config: ConnectorConfig,
-    #[allow(dead_code)] // reserved for merging with per-request RequestConfig (e.g. http)
     defaults: RequestConfig,
 }
 
@@ -67,6 +67,21 @@ impl ConnectorClient {
         }
     }
 
+    /// Merges client defaults with per-request HTTP overrides. Per-request wins per field.
+    fn resolve_http_options(&self, options: Option<&RequestConfig>) -> NativeHttpOptions {
+        let base = self
+            .defaults
+            .http
+            .as_ref()
+            .map(NativeHttpOptions::from)
+            .unwrap_or_default();
+        let override_opts = options
+            .and_then(|o| o.http.as_ref())
+            .map(NativeHttpOptions::from)
+            .unwrap_or_default();
+        merge_http_options(&base, &override_opts)
+    }
+
     /// Authorize a payment flow.
     ///
     /// # Arguments
@@ -81,11 +96,7 @@ impl ConnectorClient {
     ) -> Result<PaymentServiceAuthorizeResponse, Box<dyn Error>> {
         // 1. Resolve final configuration
         let ffi_options = self.resolve_ffi_options(&options);
-
-        let override_opts = options
-            .as_ref()
-            .and_then(|o| o.http.as_ref())
-            .map(NativeHttpOptions::from);
+        let merged_http = self.resolve_http_options(options.as_ref());
 
         let ffi_request = build_ffi_request(request.clone(), metadata, &ffi_options)?;
         let environment = Some(grpc_api_types::payments::Environment::try_from(
@@ -121,7 +132,10 @@ impl ConnectorClient {
             body,
         };
 
-        let http_response = self.http_client.execute(http_req, override_opts).await?;
+        let http_response = self
+            .http_client
+            .execute(http_req, Some(merged_http))
+            .await?;
 
         // 4. Convert HTTP response to domain Response type
         let mut header_map = http::HeaderMap::new();

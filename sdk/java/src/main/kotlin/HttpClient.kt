@@ -61,7 +61,8 @@ object HttpClient {
             
             return builder.build()
         } catch (e: Exception) {
-            throw ConnectorError("Internal HTTP setup failed: ${e.message}", 500, "CLIENT_INITIALIZATION")
+            val code = if (e.message?.lowercase()?.contains("proxy") == true) "INVALID_PROXY_CONFIGURATION" else "CLIENT_INITIALIZATION"
+            throw ConnectorError("Internal HTTP setup failed: ${e.message}", 500, code)
         }
     }
 
@@ -95,13 +96,16 @@ object HttpClient {
      * Executes a request using the provided client, allowing per-call timeout overrides.
      */
     fun execute(request: HttpRequest, config: HttpConfig?, client: OkHttpClient): HttpResponse {
+        val parsedUrl = request.url.toHttpUrlOrNull()
+            ?: throw ConnectorError("Invalid URL: ${request.url}", null, "URL_PARSING_FAILED")
+
         val okHeaders = request.headers?.toHeaders() ?: Headers.Builder().build()
         val mediaType = okHeaders["Content-Type"]?.toMediaTypeOrNull()
         val requestBody = request.body?.toRequestBody(mediaType)
-        
+
         // Build the request
         val okRequest = Request.Builder()
-            .url(request.url)
+            .url(parsedUrl)
             .method(request.method.uppercase(), requestBody)
             .headers(okHeaders)
             .build()
@@ -131,10 +135,16 @@ object HttpClient {
                     responseHeaders[name.lowercase()] = response.header(name) ?: ""
                 }
 
+                val bodyBytes = try {
+                    response.body?.bytes() ?: byteArrayOf()
+                } catch (readEx: IOException) {
+                    throw ConnectorError("Failed to read response body: ${readEx.message}", response.code, "RESPONSE_DECODING_FAILED")
+                }
+
                 return HttpResponse(
                     statusCode = response.code,
                     headers = responseHeaders,
-                    body = response.body?.bytes() ?: byteArrayOf(),
+                    body = bodyBytes,
                     latencyMs = System.currentTimeMillis() - startTime
                 )
             }
