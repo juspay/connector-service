@@ -923,6 +923,7 @@ pub fn get_webhook_event(
         TruelayerWebhookEventType::PaymentExecuted
         | TruelayerWebhookEventType::PaymentAuthorized
         | TruelayerWebhookEventType::PaymentCreditable
+        | TruelayerWebhookEventType::PaymentFundsReceived
         | TruelayerWebhookEventType::PaymentSettlementStalled => {
             domain_types::connector_types::EventType::PaymentIntentProcessing
         }
@@ -941,8 +942,7 @@ pub fn get_webhook_event(
         TruelayerWebhookEventType::PaymentReversed => {
             domain_types::connector_types::EventType::PaymentIntentCancelled
         }
-        TruelayerWebhookEventType::PaymentFundsReceived
-        | TruelayerWebhookEventType::PaymentDisputed
+        TruelayerWebhookEventType::PaymentDisputed
         | TruelayerWebhookEventType::Unknown => {
             domain_types::connector_types::EventType::IncomingWebhookEventUnspecified
         }
@@ -955,13 +955,13 @@ pub fn get_truelayer_payment_webhook_status(
     match event {
         TruelayerWebhookEventType::PaymentAuthorized => Ok(AttemptStatus::Authorized),
         TruelayerWebhookEventType::PaymentCreditable
+        | TruelayerWebhookEventType::PaymentFundsReceived
         | TruelayerWebhookEventType::PaymentSettlementStalled
         | TruelayerWebhookEventType::PaymentExecuted => Ok(AttemptStatus::Pending),
         TruelayerWebhookEventType::PaymentSettled => Ok(AttemptStatus::Charged),
         TruelayerWebhookEventType::PaymentFailed => Ok(AttemptStatus::Failure),
         TruelayerWebhookEventType::PaymentReversed => Ok(AttemptStatus::Voided),
         TruelayerWebhookEventType::PaymentDisputed
-        | TruelayerWebhookEventType::PaymentFundsReceived
         | TruelayerWebhookEventType::Unknown
         | TruelayerWebhookEventType::RefundExecuted
         | TruelayerWebhookEventType::RefundFailed => {
@@ -1085,8 +1085,8 @@ fn build_uncompressed_ec1_point(
 
     let group = EcGroup::from_curve_name(Nid::SECP521R1)
         .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
-    let mut ctx = BigNumContext::new()
-        .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
+    let mut ctx =
+        BigNumContext::new().change_context(errors::ConnectorError::WebhookDecodingFailed)?;
     let point = EcPoint::from_bytes(&group, &sec1, &mut ctx)
         .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
     let ec_key = EcKey::from_public_key(&group, &point)
