@@ -571,26 +571,6 @@ fn validate_last_four_digits<'a>(
     Ok(trimmed.to_string())
 }
 
-/// Creates a validation error for missing required field
-fn missing_field_error(field_name: &str) -> ApplicationErrorResponse {
-    ApplicationErrorResponse::BadRequest(ApiError {
-        sub_code: format!("MISSING_{}", field_name.to_uppercase()),
-        error_identifier: 400,
-        error_message: format!("Samsung Pay {} is required", field_name),
-        error_object: None,
-    })
-}
-
-/// Creates a validation error for empty field
-fn empty_field_error(field_name: &str) -> ApplicationErrorResponse {
-    ApplicationErrorResponse::BadRequest(ApiError {
-        sub_code: format!("INVALID_{}", field_name.to_uppercase()),
-        error_identifier: 400,
-        error_message: format!("Samsung Pay {} cannot be empty", field_name),
-        error_object: None,
-    })
-}
-
 impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
     for SamsungPayWalletCredentials
 {
@@ -600,13 +580,13 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
         credential: grpc_api_types::payments::samsung_wallet::PaymentCredential,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Validate card_last_four_digits
-        let last4_raw = credential
+        let last_four_raw = credential
             .card_last_four_digits
             .as_ref()
             .map(|s| s.clone().expose())
-            .ok_or_else(|| missing_field_error("card_last_four_digits"))?;
+            .ok_or_else(|| ApplicationErrorResponse::missing_required_field("card_last_four_digits"))?;
         
-        let last4 = validate_last_four_digits(&last4_raw, "card_last_four_digits")?;
+        let last_four = validate_last_four_digits(&last_four_raw, "card_last_four_digits")?;
 
         // Validate DPAN last four digits if present
         if let Some(dpan_secret) = credential.dpan_last_four_digits.as_ref() {
@@ -618,19 +598,19 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
         let token_data = credential
             .token_data
             .as_ref()
-            .ok_or_else(|| missing_field_error("token_data"))?;
+            .ok_or_else(|| ApplicationErrorResponse::missing_required_field("token_data"))?;
 
         if trim_and_check_empty(&token_data.version).is_none() {
-            return Err(empty_field_error("token_version").into());
+            return Err(ApplicationErrorResponse::empty_field_error("token_version").into());
         }
 
         let raw_token = token_data
             .data
             .clone()
-            .ok_or_else(|| missing_field_error("token_data"))?;
+            .ok_or_else(|| ApplicationErrorResponse::missing_required_field("token_data"))?;
 
         if trim_and_check_empty(raw_token.peek()).is_none() {
-            return Err(empty_field_error("token_data").into());
+            return Err(ApplicationErrorResponse::empty_field_error("token_data").into());
         }
 
         let card_brand = SamsungPayCardBrand::foreign_try_from(credential.card_brand())?;
@@ -639,7 +619,7 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
             recurring_payment: credential.recurring_payment,
             card_brand,
             dpan_last_four_digits: credential.dpan_last_four_digits.as_ref().map(|s| s.clone().expose()),
-            card_last_four_digits: last4.to_string(),
+            card_last_four_digits: last_four.to_string(),
             token_data: payment_method_data::SamsungPayTokenData {
                 three_ds_type: token_data.r#type.clone(),
                 version: token_data.version.clone(),
