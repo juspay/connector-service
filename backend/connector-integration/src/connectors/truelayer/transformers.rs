@@ -942,8 +942,7 @@ pub fn get_webhook_event(
         TruelayerWebhookEventType::PaymentReversed => {
             domain_types::connector_types::EventType::PaymentIntentCancelled
         }
-        TruelayerWebhookEventType::PaymentDisputed
-        | TruelayerWebhookEventType::Unknown => {
+        TruelayerWebhookEventType::PaymentDisputed | TruelayerWebhookEventType::Unknown => {
             domain_types::connector_types::EventType::IncomingWebhookEventUnspecified
         }
     }
