@@ -102,23 +102,23 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
     match &response.connector_transaction_id {
         Some(id) => {
             if id.is_empty() {
-                if let Some(connector_meta) = &response.connector_feature_data {
-                    if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
-                        connector_meta.as_ref().expose(),
-                    ) {
-                        if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
-                            return preauth_id.clone();
-                        }
-                    }
-                }
-                panic!(
-                    "NoResponseIdMarker found but no preauth_transaction_id in connector metadata"
-                )
+                panic!("Transaction ID is None")
             } else {
                 id.clone()
             }
         }
-        None => panic!("Transaction ID is None"),
+        None => {
+            if let Some(connector_meta) = &response.connector_feature_data {
+                if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
+                    connector_meta.as_ref().expose(),
+                ) {
+                    if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
+                        return preauth_id.clone();
+                    }
+                }
+            }
+            panic!("NoResponseIdMarker found but no preauth_transaction_id in connector metadata")
+        }
     }
 }
 
@@ -379,8 +379,8 @@ async fn test_payment_authorization_manual_capture() {
             .into_inner();
 
         assert!(
-            auth_response.connector_transaction_id.is_some(),
-            "Transaction ID should be present"
+            auth_response.connector_transaction_id.is_none(),
+            "Transaction ID should not be present"
         );
 
         // Extract the transaction ID
