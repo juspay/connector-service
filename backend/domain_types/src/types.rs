@@ -548,7 +548,7 @@ fn trim_and_check_empty(value: &str) -> Option<&str> {
 
 /// Validates a 4-digit string (for card_last_four_digits and dpan_last_four_digits)
 fn validate_last_four_digits<'a>(
-    value: &'a str,
+    value: &str,
     field_name: &str,
 ) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
     let trimmed = value.trim();
@@ -586,8 +586,10 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
             .card_last_four_digits
             .as_ref()
             .map(|s| s.clone().expose())
-            .ok_or_else(|| ApplicationErrorResponse::missing_required_field("card_last_four_digits"))?;
-        
+            .ok_or_else(|| {
+                ApplicationErrorResponse::missing_required_field("card_last_four_digits")
+            })?;
+
         let last_four = validate_last_four_digits(&last_four_raw, "card_last_four_digits")?;
 
         // Validate DPAN last four digits if present
@@ -620,7 +622,10 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
             method: credential.method,
             recurring_payment: credential.recurring_payment,
             card_brand,
-            dpan_last_four_digits: credential.dpan_last_four_digits.as_ref().map(|s| s.clone().expose()),
+            dpan_last_four_digits: credential
+                .dpan_last_four_digits
+                .as_ref()
+                .map(|s| s.clone().expose()),
             card_last_four_digits: last_four.to_string(),
             token_data: payment_method_data::SamsungPayTokenData {
                 three_ds_type: token_data.r#type.clone(),
@@ -631,30 +636,20 @@ impl ForeignTryFrom<grpc_api_types::payments::samsung_wallet::PaymentCredential>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::CardNetwork>
-    for SamsungPayCardBrand
-{
+impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for SamsungPayCardBrand {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::CardNetwork,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::CardNetwork::Visa => {
-                Ok(SamsungPayCardBrand::Visa)
-            }
+            grpc_api_types::payments::CardNetwork::Visa => Ok(SamsungPayCardBrand::Visa),
             grpc_api_types::payments::CardNetwork::Mastercard => {
                 Ok(SamsungPayCardBrand::MasterCard)
             }
-            grpc_api_types::payments::CardNetwork::Amex => {
-                Ok(SamsungPayCardBrand::Amex)
-            }
-            grpc_api_types::payments::CardNetwork::Discover => {
-                Ok(SamsungPayCardBrand::Discover)
-            }
-            _ => {
-                Ok(SamsungPayCardBrand::Unknown)
-            },
+            grpc_api_types::payments::CardNetwork::Amex => Ok(SamsungPayCardBrand::Amex),
+            grpc_api_types::payments::CardNetwork::Discover => Ok(SamsungPayCardBrand::Discover),
+            _ => Ok(SamsungPayCardBrand::Unknown),
         }
     }
 }
