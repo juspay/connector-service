@@ -2,11 +2,7 @@ use super::{requests, responses, PeachpaymentsRouterData};
 
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::{
-    errors::CustomResult,
-    types::{MinorUnit, StringMinorUnitForConnector},
-    AmountConvertor, SecretSerdeValue,
-};
+use common_utils::{errors::CustomResult, types::MinorUnit, SecretSerdeValue};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -19,7 +15,6 @@ use domain_types::{
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::Serialize;
 use std::fmt::Debug;
@@ -195,13 +190,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             &item.router_data.resource_common_data.connector_meta_data,
         )?;
 
-        let amount = StringMinorUnitForConnector
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(errors::ConnectorError::ParsingFailed)?;
-
         let transaction_data = match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card_info) => {
                 requests::PeachpaymentsTransactionData::Card(requests::PeachpaymentsCardData {
@@ -222,7 +210,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         eci: None,
                     },
                     amount: requests::PeachpaymentsAmount {
-                        amount: amount.to_string(),
+                        amount: item.router_data.request.minor_amount,
                         currency_code: item.router_data.request.currency,
                         display_amount: None,
                     },
@@ -271,7 +259,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                                 .transpose()?,
                         },
                         amount: requests::PeachpaymentsAmount {
-                            amount: amount.to_string(),
+                            amount: item.router_data.request.minor_amount,
                             currency_code: item.router_data.request.currency,
                             display_amount: None,
                         },
@@ -291,7 +279,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         Ok(Self {
-            charge_method: "ecommerce_card_payment_only".to_string(),
+            payment_method: requests::PeachpaymentsPaymentMethod::EcommerceCardPaymentOnly,
             reference_id: item
                 .router_data
                 .resource_common_data
@@ -406,16 +394,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = StringMinorUnitForConnector
-            .convert(
-                item.router_data.request.minor_amount_to_capture,
-                item.router_data.request.currency,
-            )
-            .change_context(errors::ConnectorError::ParsingFailed)?;
-
         Ok(Self {
             amount: requests::PeachpaymentsAmount {
-                amount: amount.to_string(),
+                amount: item.router_data.request.minor_amount_to_capture,
                 currency_code: item.router_data.request.currency,
                 display_amount: None,
             },
@@ -472,13 +453,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = item.router_data.request.amount.unwrap_or_default();
         let currency = item.router_data.request.currency.unwrap_or(Currency::ZAR);
 
-        let amount_converted = StringMinorUnitForConnector
-            .convert(amount, currency)
-            .change_context(errors::ConnectorError::ParsingFailed)?;
-
         Ok(Self {
             amount: requests::PeachpaymentsAmount {
-                amount: amount_converted.to_string(),
+                amount,
                 currency_code: currency,
                 display_amount: None,
             },
@@ -532,13 +509,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let refund_amount = StringMinorUnitForConnector
-            .convert(
-                MinorUnit::new(item.router_data.request.refund_amount),
-                item.router_data.request.currency,
-            )
-            .change_context(errors::ConnectorError::ParsingFailed)?;
-
         Ok(Self {
             reference_id: item
                 .router_data
@@ -548,7 +518,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             ecommerce_card_payment_only_transaction_data:
                 requests::PeachpaymentsRefundTransactionData {
                     amount: requests::PeachpaymentsAmount {
-                        amount: refund_amount.to_string(),
+                        amount: MinorUnit::new(item.router_data.request.refund_amount),
                         currency_code: item.router_data.request.currency,
                         display_amount: None,
                     },
