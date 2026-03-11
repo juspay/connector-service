@@ -22,7 +22,7 @@ pub fn create_router(state: AppState) -> Router {
         )
         .route(
             "/composite/refunds/get",
-            post(handlers::composite::payments::refund_get),
+            post(handlers::composite::refunds::refund_get),
         )
         .route("/payments/authorize", post(handlers::payments::authorize))
         // .route(
