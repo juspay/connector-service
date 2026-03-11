@@ -24,8 +24,10 @@ from payments import (
     Environment,
     ConnectorConfig,
     RequestConfig,
+    PaymentStatus,
+    RequestError,
+    ResponseError,
 )
-from payments.generated.sdk_config_pb2 import RequestError, ResponseError
 
 
 async def run_test():
@@ -63,7 +65,7 @@ async def run_test():
 
     # Build a protobuf request
     req = PaymentServiceAuthorizeRequest()
-    req.merchant_transaction_id.id = "test_pack_123"
+    req.merchant_transaction_id = "test_pack_123"
     req.amount.minor_amount = 1000
     req.amount.currency = USD
     req.capture_method = AUTOMATIC
@@ -111,7 +113,7 @@ async def run_test():
         raise Exception(f"Unexpected URL: {result.url}")
     if result.method != "POST":
         raise Exception("Unexpected method")
-    print("  PASSED")
+    print("PASSED")
 
     # --- Test 2: Full round-trip via PaymentClient ---
     print("\n=== Test 2: Full round-trip (PaymentClient.authorize) ===")
@@ -120,25 +122,37 @@ async def run_test():
     else:
         try:
             response = await client.authorize(req)
-            print(f"  Response status: {response.status_code}")
+            print(f"  Response status: {response.status}")
             print(f"  Response type:   {type(response).__name__}")
-            print("  PASSED")
+
+            match response.status:
+                case PaymentStatus.CHARGED:
+                    print(f"  Transaction ID: {response.connector_transaction_id}")
+                    print("  PASSED")
+                case PaymentStatus.FAILURE:
+                    error = response.error
+                    if error.HasField("unified_details"):
+                        code = error.unified_details.code if error.unified_details.HasField("code") else "N/A"
+                        message = error.unified_details.message if error.unified_details.HasField("message") else "Unknown error"
+                        print(f"  Error Code: {code}")
+                        print(f"  Error Message: {message}")
+                    else:
+                        print("  Error: No unified details available")
+                    print("  FAILED")
+                case _:
+                    status_name = PaymentStatus.Name(response.status)
+                    print(f"  {response.error}")
+                    print(f"  Payment status: {status_name}")
+                    print("  PASSED (round-trip completed)")
+
+        except RequestError as e:
+            print(f"  Request error [{e.error_code}]: {e.error_message}")
+            print("  PASSED (round-trip completed, error is from Stripe)")
+        except ResponseError as e:
+            print(f"  Response error [{e.error_code}]: {e.error_message}")
+            print("  PASSED (round-trip completed, error is from Stripe)")
         except RuntimeError as e:
-            # Check for FFI error attached by connector_client
-            if hasattr(e, "ffi_error"):
-                ffi_err = e.ffi_error
-                if isinstance(ffi_err, RequestError):
-                    print(
-                        f"  Request error [{ffi_err.error_code}]: {ffi_err.error_message}"
-                    )
-                elif isinstance(ffi_err, ResponseError):
-                    print(
-                        f"  Response error [{ffi_err.error_code}]: {ffi_err.error_message}"
-                    )
-                else:
-                    print(f"  Unknown FFI error type: {type(ffi_err)}")
-            else:
-                print(f"  Error: {e}")
+            print(f"  Error: {e}")
             print("  PASSED (round-trip completed, error is from Stripe)")
 
     await client.close()

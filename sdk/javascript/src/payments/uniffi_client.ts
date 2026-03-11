@@ -197,21 +197,19 @@ export class UniffiClient {
 
     const result = fn(rbReq, rbOpts, status);
 
-    try {
-      checkCallStatus(this._ffi, status);
-      const bytes = liftBytes(result);
       try {
-        const reqErr = types.RequestError.decode(bytes);
-        if (reqErr.errorMessage) {
-          const err = new Error(reqErr.errorMessage);
-          (err as any).ffiError = reqErr;
-          throw err;
+        checkCallStatus(this._ffi, status);
+        const bytes = liftBytes(result);
+        try {
+          const reqErr = types.RequestError.decode(bytes);
+          if (reqErr.errorMessage) {
+            throw reqErr;
+          }
+        } catch (e) {
+          if (e instanceof types.RequestError) throw e;
+          // decode failed — not an error proto, return bytes as-is
         }
-      } catch (e) {
-        if ((e as any).ffiError) throw e;
-        // decode failed — not an error proto, return bytes as-is
-      }
-      return bytes;
+        return bytes;
     } finally {
       freeRustBuffer(this._ffi, result);
     }
@@ -238,21 +236,19 @@ export class UniffiClient {
 
     const result = fn(rbRes, rbReq, rbOpts, status);
 
-    try {
-      checkCallStatus(this._ffi, status);
-      const bytes = liftBytes(result);
       try {
-        const resErr = types.ResponseError.decode(bytes);
-        if (resErr.errorMessage) {
-          const err = new Error(resErr.errorMessage);
-          (err as any).ffiError = resErr;
-          throw err;
+        checkCallStatus(this._ffi, status);
+        const bytes = liftBytes(result);
+        try {
+          const resErr = types.ResponseError.decode(bytes);
+          if (resErr.errorMessage) {
+            throw resErr;
+          }
+        } catch (e) {
+          if (e instanceof types.ResponseError) throw e;
+          // decode failed — not an error proto, return bytes as-is
         }
-      } catch (e) {
-        if ((e as any).ffiError) throw e;
-        // decode failed — not an error proto, return bytes as-is
-      }
-      return bytes;
+        return bytes;
     } finally {
       freeRustBuffer(this._ffi, result);
     }

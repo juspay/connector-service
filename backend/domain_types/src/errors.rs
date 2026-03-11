@@ -1096,6 +1096,8 @@ macro_rules! impl_report_into {
         impl ReportInto<$target> for error_stack::Report<$source> {
             fn report_into(self) -> $target {
                 let ctx = self.current_context();
+                // Print the error
+                println!("Error: {:?}", ctx);
                 let (message, code, status_code) = $extract(ctx);
 
                 $target {

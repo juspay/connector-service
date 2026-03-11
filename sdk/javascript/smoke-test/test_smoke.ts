@@ -66,7 +66,7 @@ async function testAccessTokenFlow(): Promise<void> {
   console.log("\n--- Step 1: Create Access Token ---");
   const accessTokenRequest: types.IMerchantAuthenticationServiceCreateAccessTokenRequest =
     MerchantAuthenticationServiceCreateAccessTokenRequest.create({
-      merchantAccessTokenId: { id: "access_token_test_" + Date.now() },
+      merchantAccessTokenId: "access_token_test_" + Date.now(),
       connector: Connector.PAYPAL,
       testMode: true,
     });
@@ -104,19 +104,14 @@ async function testAccessTokenFlow(): Promise<void> {
       );
     }
   } catch (e: unknown) {
-    if (e instanceof Error && 'ffiError' in e) {
-      const ffiErr = (e as any).ffiError;
-      // Check the actual proto type using instanceof
-      if (ffiErr instanceof RequestError) {
-        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
-      } else if (ffiErr instanceof ResponseError) {
-        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
-      } else {
-        console.log(`  FFI error: ${e.message}`);
-      }
+    if (e instanceof RequestError) {
+      console.log(`Request error ${e.errorCode} ${e.errorMessage} ${types.PaymentStatus[e.status]} ${e.statusCode} `)
+    } else if (e instanceof ResponseError) {
+      console.log(`Response error ${e.errorCode} ${e.errorMessage} ${types.PaymentStatus[e.status]} ${e.statusCode} `)
+    } else if (e instanceof Error) {
+      console.log(`  Error: ${e.message}`);
     } else {
-      const message = e instanceof Error ? e.message : String(e);
-      console.log(`  Error creating access token: ${message}`);
+      console.log(`  Error creating access token: ${String(e)}`);
     }
     console.log("  This might be expected if credentials are not valid");
     return;
@@ -131,9 +126,9 @@ async function testAccessTokenFlow(): Promise<void> {
   console.log("\n--- Step 2: Authorize with Access Token ---");
   const authorizeRequest: types.IPaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.create({
-      merchantTransactionId: {
-        id: "authorize_with_token_" + Date.now(),
-      },
+      merchantTransactionId:
+        "authorize_with_token_" + Date.now(),
+
       amount: {
         minorAmount: 1000, // $10.00
         currency: Currency.USD,
@@ -171,19 +166,31 @@ async function testAccessTokenFlow(): Promise<void> {
       await paymentClient.authorize(authorizeRequest);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
-    console.log(`  Payment status: ${authorizeResponse.status}`);
-    console.log("  PASSED");
+
+    switch (authorizeResponse.status) {
+      case types.PaymentStatus.CHARGED:
+        console.log(`  Transaction ID: ${authorizeResponse.connectorTransactionId}`);
+        console.log("  PASSED");
+        break;
+
+      case types.PaymentStatus.FAILURE:
+        const error = authorizeResponse.error;
+        console.log(`  Error Code: ${error?.unifiedDetails?.code ?? 'N/A'}`);
+        console.log(`  Error Message: ${error?.unifiedDetails?.message ?? 'Unknown error'}`);
+        console.log("  FAILED");
+        break;
+
+      default:
+        console.log(`  Payment status: ${types.PaymentStatus[authorizeResponse.status]}`);
+        console.log("  PASSED (round-trip completed)");
+    }
   } catch (e: unknown) {
-    if (e instanceof Error && 'ffiError' in e) {
-      const ffiErr = (e as any).ffiError;
-      // Check the actual proto type using instanceof
-      if (ffiErr instanceof RequestError) {
-        console.log(`Request error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
-      } else if (ffiErr instanceof ResponseError) {
-        console.log(`Response error ${ffiErr.errorCode} ${ffiErr.errorMessage} ${types.PaymentStatus[ffiErr.status]} ${ffiErr.statusCode} `)
-      } else {
-        console.log(`  FFI error: ${e.message}`);
-      }
+    if (e instanceof RequestError) {
+      console.log(`Request error ${e.errorCode} ${e.errorMessage} ${types.PaymentStatus[e.status]} ${e.statusCode} `)
+    } else if (e instanceof ResponseError) {
+      console.log(`Response error ${e.errorCode} ${e.errorMessage} ${types.PaymentStatus[e.status]} ${e.statusCode} `)
+    } else if (e instanceof Error) {
+      console.log(`  Error: ${e.message}`);
     } else {
       console.log(`  Error during authorize: ${e}`);
     }

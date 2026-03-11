@@ -20,7 +20,7 @@ import payments.ConnectorConfig
 import payments.RequestConfig
 import payments.Connector
 import payments.Environment
-import payments.FfiTransformerException
+
 import payments.RequestError
 import payments.ResponseError
 import uniffi.connector_service_ffi.UniffiException
@@ -28,7 +28,7 @@ import uniffi.connector_service_ffi.authorizeReqTransformer
 
 fun buildRequest(): PaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionIdBuilder.id = "smoke_test_123"
+        merchantTransactionIdBuilder = "smoke_test_123"
         amountBuilder.apply {
             minorAmount = 1000
             currency = Currency.USD
@@ -141,19 +141,12 @@ fun testFullRoundTrip() {
         val response = client.authorize(buildRequest(), null)
         println("  Response status: ${response.status}")
         println("  PASSED")
-    } catch (e: FfiTransformerException) {
-        // Check ffiError type and print appropriate message
-        when (e.ffiError) {
-            is RequestError -> {
-                val err = e.ffiError as RequestError
-                println("  Request error [${err.errorCode}]: ${err.errorMessage}")
-            }
-            is ResponseError -> {
-                val err = e.ffiError as ResponseError
-                println("  Response error [${err.errorCode}]: ${err.errorMessage}")
-            }
-            else -> println("  Unknown FFI error type: ${e.ffiError.javaClass}")
-        }
+
+    } catch (e: RequestError) {
+        println("  Request error [${e.errorCode}]: ${e.errorMessage}")
+        println("  PASSED (round-trip completed, error from transformer)")
+    } catch (e: ResponseError) {
+        println("  Response error [${e.errorCode}]: ${e.errorMessage}")
         println("  PASSED (round-trip completed, error from transformer)")
     } catch (e: UniffiException) {
         // Round-trip completed — error is from Stripe (e.g. auth failure), not from the SDK

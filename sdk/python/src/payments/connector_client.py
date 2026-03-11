@@ -1,3 +1,4 @@
+
 """
 _ConnectorClientBase — high-level asynchronous wrapper around UniFFI FFI bindings.
 
@@ -13,18 +14,15 @@ To add a new flow: implement a req_transformer in services/payments.rs and run `
 Error Handling:
   FFI transformers return raw bytes that may represent either a success proto or an
   error proto (RequestError for req_transformer, ResponseError for res_transformer).
-  On error, a RuntimeError is raised with an `ffi_error` attribute set to the decoded
-  proto (RequestError or ResponseError instance). Callers can inspect the type:
+  On error, the decoded proto (RequestError or ResponseError) is raised directly.
+  Callers can catch the specific error type:
 
       try:
           response = await client.authorize(request)
-      except RuntimeError as e:
-          if hasattr(e, 'ffi_error'):
-              from payments.generated.sdk_config_pb2 import RequestError, ResponseError
-              if isinstance(e.ffi_error, RequestError):
-                  print(e.ffi_error.error_code, e.ffi_error.error_message)
-              elif isinstance(e.ffi_error, ResponseError):
-                  print(e.ffi_error.error_code, e.ffi_error.error_message)
+      except RequestError as e:
+          print(e.error_code, e.error_message)
+      except ResponseError as e:
+          print(e.error_code, e.error_message)
 """
 
 from typing import Optional, Any
@@ -44,26 +42,13 @@ from .generated.sdk_config_pb2 import (
 )
 
 
-def _raise_ffi_error(error_proto: Any, stage: str) -> None:
-    """
-    Raise a RuntimeError with the decoded error proto attached as `ffi_error`.
-
-    Args:
-        error_proto: Decoded RequestError or ResponseError proto message.
-        stage: Human-readable stage label (e.g. "req_transformer", "res_transformer").
-    """
-    message = getattr(error_proto, "error_message", None) or f"FFI {stage} error"
-    e = RuntimeError(message)
-    e.ffi_error = error_proto  # type: ignore[attr-defined]
-    raise e
-
 
 def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
     """
     Parse FFI req_transformer bytes as either a success proto or a RequestError.
 
     Tries the success type first; on failure parses as RequestError and raises
-    a RuntimeError with `ffi_error` set to the RequestError instance.
+    the RequestError directly.
 
     Args:
         result_bytes: Raw bytes returned by the req_transformer FFI call.
@@ -73,16 +58,15 @@ def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
         Decoded success proto on success.
 
     Raises:
-        RuntimeError: With `.ffi_error` set to a RequestError if the bytes
-            represent a transformer error.
+        RequestError: If the bytes represent a transformer error.
     """
     try:
         return success_cls.FromString(result_bytes)
     except Exception:
-        # Fall back: try parsing as RequestError
+        # Fall back: try parsing as RequestError and raise directly
         error = RequestError()
         error.ParseFromString(result_bytes)
-        _raise_ffi_error(error, "req_transformer")
+        raise error
 
 
 def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
@@ -90,7 +74,7 @@ def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
     Parse FFI res_transformer bytes as either a success proto or a ResponseError.
 
     Tries the success type first; on failure parses as ResponseError and raises
-    a RuntimeError with `ffi_error` set to the ResponseError instance.
+    the ResponseError directly.
 
     Args:
         result_bytes: Raw bytes returned by the res_transformer FFI call.
@@ -100,16 +84,15 @@ def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
         Decoded success proto on success.
 
     Raises:
-        RuntimeError: With `.ffi_error` set to a ResponseError if the bytes
-            represent a transformer error.
+        ResponseError: If the bytes represent a transformer error.
     """
     try:
         return success_cls.FromString(result_bytes)
     except Exception:
-        # Fall back: try parsing as ResponseError
+        # Fall back: try parsing as ResponseError and raise directly
         error = ResponseError()
         error.ParseFromString(result_bytes)
-        _raise_ffi_error(error, "res_transformer")
+        raise error
 
 
 class _ConnectorClientBase:
@@ -161,6 +144,7 @@ class _ConnectorClientBase:
 
         return ffi, http_config
 
+
     async def _execute_flow(
         self,
         flow: str,
@@ -171,8 +155,7 @@ class _ConnectorClientBase:
         """
         Execute a full payment flow round-trip asynchronously.
 
-        Errors from the FFI layer are raised as RuntimeError with an `ffi_error`
-        attribute holding the decoded RequestError or ResponseError proto.
+        Errors from the FFI layer are raised as RequestError or ResponseError directly.
 
         Args:
             flow: Flow name matching the FFI transformer prefix (e.g. "authorize").
@@ -184,8 +167,8 @@ class _ConnectorClientBase:
             Decoded domain response proto.
 
         Raises:
-            RuntimeError: With `.ffi_error` set to RequestError or ResponseError
-                on FFI transformer failures.
+            RequestError: On req_transformer failures.
+            ResponseError: On res_transformer failures.
         """
         req_transformer = getattr(_ffi, f"{flow}_req_transformer")
         res_transformer = getattr(_ffi, f"{flow}_res_transformer")
@@ -226,6 +209,7 @@ class _ConnectorClientBase:
         result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
         return _check_res_error(result_bytes_res, response_cls)
 
+
     def _execute_direct(
         self,
         flow: str,
@@ -237,8 +221,7 @@ class _ConnectorClientBase:
         Execute a single-step flow: FFI transformer called directly, no HTTP round-trip.
 
         Used for inbound flows like webhook processing where the connector sends
-        data to us. Errors are raised as RuntimeError with `.ffi_error` set to
-        a ResponseError proto.
+        data to us. Errors are raised as ResponseError directly.
 
         Args:
             flow: Flow name matching the FFI transformer (e.g. "handle_event").
@@ -250,7 +233,7 @@ class _ConnectorClientBase:
             Decoded domain response proto.
 
         Raises:
-            RuntimeError: With `.ffi_error` set to ResponseError on FFI failures.
+            ResponseError: On FFI transformer failures.
         """
         transformer = getattr(_ffi, f"{flow}_transformer")
 
