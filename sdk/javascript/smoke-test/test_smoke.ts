@@ -82,7 +82,15 @@ function isPlaceholder(value: string): boolean {
 
 function hasValidCredentials(authConfig: AuthConfig): boolean {
   for (const [key, value] of Object.entries(authConfig)) {
-    if (key === "metadata") continue;
+    if (key === "metadata" || key === "_comment") continue;
+    // Check for { value: string } structure (SecretString)
+    if (typeof value === "object" && value !== null && "value" in value) {
+      const val = (value as { value: unknown }).value;
+      if (typeof val === "string" && !isPlaceholder(val)) {
+        return true;
+      }
+    }
+    // Fallback for string values (legacy support)
     if (typeof value === "string" && !isPlaceholder(value)) {
       return true;
     }
@@ -144,9 +152,27 @@ async function testConnector(
       throw new Error(`Unknown connector: ${connectorKey}`);
     }
 
+    // Build auth config - filter out _comment and metadata fields
+    // Convert snake_case to camelCase for protobuf compatibility
+    const authFields: Record<string, any> = {};
+    for (const [key, value] of Object.entries(authConfig)) {
+      if (key !== "_comment" && key !== "metadata") {
+        // Convert snake_case to camelCase
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        authFields[camelKey] = value;
+      }
+    }
+
+    // Build ConnectorAuth with the appropriate oneof field
+    // The key should match the connector name (e.g., 'stripe', 'adyen', 'aci')
+    const connectorAuthKey = connectorKey.toLowerCase();
+    const auth: any = {};
+    auth[connectorAuthKey] = authFields;
+
     const config = ConnectorConfig.create({
       connector: connectorEnum,
       environment: Environment.SANDBOX,
+      auth: auth
     });
 
     // Test 1: Low-level FFI via PaymentClient internals

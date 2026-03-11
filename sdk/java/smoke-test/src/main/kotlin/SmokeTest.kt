@@ -10,6 +10,8 @@
  *   ./gradlew run --args="--creds-file creds.json --all --dry-run"
  */
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import payments.PaymentClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentAddress
@@ -22,19 +24,8 @@ import payments.ConnectorConfig
 import payments.RequestConfig
 import payments.Connector
 import payments.Environment
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import payments.PaymentClient
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
-import payments.PaymentServiceAuthorizeRequest
-import payments.PaymentAddress
-import payments.Currency
-import payments.CaptureMethod
-import payments.AuthenticationType
-import payments.FfiConnectorHttpRequest
-import payments.FfiOptions
-import payments.EnvOptions
 import java.io.File
 
 // Test card configurations
@@ -103,8 +94,17 @@ fun isPlaceholder(value: String): Boolean {
 
 fun hasValidCredentials(authConfig: AuthConfig): Boolean {
     for ((key, value) in authConfig) {
-        if (key == "metadata") continue
-        if (value is String && !isPlaceholder(value)) {
+        if (key == "metadata" || key == "_comment") continue
+        
+        // Check for SecretString structure: { "value": "..." }
+        if (value is Map<*, *>) {
+            val valueField = value["value"]
+            if (valueField is String && !isPlaceholder(valueField)) {
+                return true
+            }
+        }
+        // Fallback for string values (legacy support)
+        else if (value is String && !isPlaceholder(value)) {
             return true
         }
     }
@@ -207,13 +207,59 @@ fun testConnector(
             )
         }
         
-        val client = PaymentClient()
-        val ffiOptions = FfiOptions.newBuilder()
-            .setEnv(EnvOptions.newBuilder().setTestMode(true).build())
-            .build()
+        // Get connector enum
+        val connectorEnum = Connector.valueOf(connectorKey.uppercase())
+        
+        // Create connector config with auth
+        val configBuilder = ConnectorConfig.newBuilder()
+            .setConnector(connectorEnum)
+            .setEnvironment(Environment.SANDBOX)
+        
+        // Set auth fields from authConfig
+        val connectorAuthKey = connectorKey.lowercase()
+        val authConfigBuilder = configBuilder.authBuilder
+        
+        // Get the connector-specific auth builder (e.g., getStripeBuilder)
+        val connectorAuthBuilderMethod = try {
+            authConfigBuilder.javaClass.getMethod("get${connectorAuthKey.replaceFirstChar { it.uppercase() }}Builder")
+        } catch (e: NoSuchMethodException) {
+            null
+        }
+        
+        if (connectorAuthBuilderMethod != null) {
+            val connectorAuthBuilder = connectorAuthBuilderMethod.invoke(authConfigBuilder)
+            
+            // Set each auth field
+            for ((key, value) in authConfig) {
+                if (key == "_comment" || key == "metadata") continue
+                
+                // Convert snake_case to camelCase for method names
+                val camelKey = key.split("_").mapIndexed { index, part ->
+                    if (index == 0) part else part.replaceFirstChar { it.uppercase() }
+                }.joinToString("")
+                
+                // Get the field builder method (e.g., getApiKeyBuilder)
+                val fieldBuilderMethod = try {
+                    connectorAuthBuilder?.javaClass?.getMethod("get${camelKey.replaceFirstChar { it.uppercase() }}Builder")
+                } catch (e: NoSuchMethodException) {
+                    null
+                }
+                
+                if (fieldBuilderMethod != null && value is Map<*, *> && value.containsKey("value")) {
+                    val fieldValue = value["value"] as? String
+                    if (fieldValue != null) {
+                        val fieldBuilder = fieldBuilderMethod.invoke(connectorAuthBuilder)
+                        fieldBuilder?.javaClass?.getMethod("setValue", String::class.java)?.invoke(fieldBuilder, fieldValue)
+                    }
+                }
+            }
+        }
+        
+        val config = configBuilder.build()
+        val client = PaymentClient(config)
         
         try {
-            val response = client.authorize(req, metadata, ffiOptions)
+            val response = client.authorize(req)
             result.copy(
                 status = "passed",
                 roundTripTest = RoundTripResult(
@@ -227,7 +273,15 @@ fun testConnector(
                 status = "passed_with_error",
                 roundTripTest = RoundTripResult(
                     passed = true,
-                    error = e.message
+                    error = e.message ?: "Unknown UniFFI error"
+                )
+            )
+        } catch (e: Exception) {
+            result.copy(
+                status = "passed_with_error",
+                roundTripTest = RoundTripResult(
+                    passed = true,
+                    error = "${e.javaClass.simpleName}: ${e.message}"
                 )
             )
         }

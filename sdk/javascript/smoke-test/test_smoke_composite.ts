@@ -11,8 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { PaymentClient, MerchantAuthenticationClient, payments, configs } from "hyperswitch-payments";
-// @ts-ignore - protobuf generated files might not have types yet
+import { PaymentClient, MerchantAuthenticationClient, types } from "hyperswitch-payments";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -25,41 +24,32 @@ const {
   Connector,
   SecretString,
   AccessToken,
-  FfiOptions,
-  EnvOptions,
   ConnectorState,
-} = payments;
+} = types;
 
-const { FfiOptions, EnvOptions } = configs;
+const { ConnectorConfig, RequestConfig, Environment } = types;
 
 const PAYPAL_CREDS = {
-  client_id:
-    "client_id",
-  client_secret:
-    "client_secret",
+  client_id: "client_id",
+  client_secret: "client_secret",
 };
 
-const metadata: Record<string, string> = {
-  connector: "Paypal",
-  connector_auth_type: JSON.stringify({
-    Paypal: {
-      client_id: PAYPAL_CREDS.client_id,
-      client_secret: PAYPAL_CREDS.client_secret,
-    },
-  }),
-  "x-connector": "Paypal",
-  "x-merchant-id": "test_merchant_123",
-  "x-request-id": "test-pack-001",
-  "x-tenant-id": "public",
-  "x-auth": "body-key",
-  "x-api-key": PAYPAL_CREDS.client_secret,
-  "x-key1": PAYPAL_CREDS.client_id,
-};
 
-// Create FfiOptions with testMode
-const ffiOptions: payments.IFfiOptions = FfiOptions.create({
-  env: EnvOptions.create({ testMode: true }),
+
+// 1. ConnectorConfig (connector, auth, environment)
+const config = ConnectorConfig.create({
+  connector: Connector.PAYPAL,
+  auth: {
+    paypal: {
+      clientId: { value: PAYPAL_CREDS.client_id },
+      clientSecret: { value: PAYPAL_CREDS.client_secret },
+    }
+  },
+  environment: Environment.SANDBOX,
 });
+
+// 2. Optional RequestConfig defaults (http, vault)
+const defaults = RequestConfig.create({});
 
 /**
  * Test the access token flow:
@@ -69,29 +59,25 @@ const ffiOptions: payments.IFfiOptions = FfiOptions.create({
 async function testAccessTokenFlow(): Promise<void> {
   console.log("\n=== Test: PayPal Access Token Flow ===");
 
-  const authClient = new MerchantAuthenticationClient();
-  const paymentClient = new PaymentClient();
+  const authClient = new MerchantAuthenticationClient(config, defaults);
+  const paymentClient = new PaymentClient(config, defaults);
 
   // Step 1: Create Access Token Request
   console.log("\n--- Step 1: Create Access Token ---");
-  const accessTokenRequest: payments.IMerchantAuthenticationServiceCreateAccessTokenRequest =
+  const accessTokenRequest: types.IMerchantAuthenticationServiceCreateAccessTokenRequest =
     MerchantAuthenticationServiceCreateAccessTokenRequest.create({
       merchantAccessTokenId: { id: "access_token_test_" + Date.now() },
       connector: Connector.PAYPAL,
       testMode: true,
     });
 
-  // Make the request via ConnectorClient
-  let accessTokenResponse: payments.MerchantAuthenticationServiceCreateAccessTokenResponse;
+  // Make the request via MerchantAuthenticationClient
+  let accessTokenResponse: types.MerchantAuthenticationServiceCreateAccessTokenResponse;
   let accessTokenValue: string | null = null;
   let tokenTypeValue: string | null = null;
 
   try {
-    accessTokenResponse = await authClient.createAccessToken(
-      accessTokenRequest,
-      metadata,
-      ffiOptions
-    );
+    accessTokenResponse = await authClient.createAccessToken(accessTokenRequest);
     console.log(`  Response type: ${typeof accessTokenResponse}`);
     console.log(`  Response keys: ${Object.keys(accessTokenResponse)}`);
 
@@ -102,8 +88,6 @@ async function testAccessTokenFlow(): Promise<void> {
     ) {
       accessTokenValue = accessTokenResponse.accessToken.value;
       tokenTypeValue = accessTokenResponse.tokenType ?? "Bearer";
-
-      console.log(accessTokenValue);
       console.log(
         `  Access Token received: ${accessTokenValue!.substring(0, 20)}...`
       );
@@ -133,7 +117,7 @@ async function testAccessTokenFlow(): Promise<void> {
 
   // Step 2: Use Access Token in Authorize Request
   console.log("\n--- Step 2: Authorize with Access Token ---");
-  const authorizeRequest: payments.IPaymentServiceAuthorizeRequest =
+  const authorizeRequest: types.IPaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.create({
       merchantTransactionId: {
         id: "authorize_with_token_" + Date.now(),
@@ -171,8 +155,8 @@ async function testAccessTokenFlow(): Promise<void> {
     });
 
   try {
-    const authorizeResponse: payments.PaymentServiceAuthorizeResponse =
-      await paymentClient.authorize(authorizeRequest, metadata, ffiOptions);
+    const authorizeResponse: types.PaymentServiceAuthorizeResponse =
+      await paymentClient.authorize(authorizeRequest);
     console.log(`  Response type: ${typeof authorizeResponse}`);
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
     console.log(`  Payment status: ${authorizeResponse.status}`);
