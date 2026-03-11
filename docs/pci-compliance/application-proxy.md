@@ -291,48 +291,46 @@ curl "https://api.connector-service.juspay.net/payments" \
 
 **Basis Theory:**
 
-```yaml
-vault:
-  provider: basistheory
-  mode: application_proxy
-  api_key: ${BASISTHEORY_API_KEY}
+```toml
+[vault]
+provider = "basis_theory"
+api_key = "${BASISTHEORY_API_KEY}"
+proxy_url = "https://api.basistheory.com/proxy"
 
-connectors:
-  stripe:
-    api_key: ${STRIPE_API_KEY}
-    vault_aware: true
+[connectors.stripe]
+base_url = "https://api.stripe.com"
+api_key = "${STRIPE_API_KEY}"
+enable_vault_proxy = true
 ```
 
 **TokenEx:**
 
-```yaml
-vault:
-  provider: tokenex
-  mode: application_proxy
-  tgapi_url: https://tgapi.tokenex.com
-  tokenex_id: ${TOKENEX_ID}
-  api_key: ${TOKENEX_API_KEY}
+```toml
+[vault]
+provider = "token_ex"
+api_key = "${TOKENEX_API_KEY}"
+tokenex_id = "${TOKENEX_ID}"
+tgapi_url = "https://tgapi.tokenex.com"
 
-connectors:
-  stripe:
-    api_key: ${STRIPE_API_KEY}
-    vault_aware: true
+[connectors.stripe]
+base_url = "https://api.stripe.com"
+api_key = "${STRIPE_API_KEY}"
+enable_vault_proxy = true
 ```
 
 **Hyperswitch Vault:**
 
-```yaml
-vault:
-  provider: hyperswitch
-  mode: application_proxy
-  api_url: https://sandbox.hyperswitch.io/proxy
-  api_key: ${HYPERSWITCH_API_KEY}
-  profile_id: ${HYPERSWITCH_PROFILE_ID}
+```toml
+[vault]
+provider = "hyperswitch_vault"
+api_key = "${HYPERSWITCH_API_KEY}"
+profile_id = "${HYPERSWITCH_PROFILE_ID}"
+proxy_url = "https://sandbox.hyperswitch.io/proxy"
 
-connectors:
-  checkout:
-    api_key: ${CHECKOUT_API_KEY}
-    vault_aware: true
+[connectors.checkout]
+base_url = "https://api.checkout.com"
+api_key = "${CHECKOUT_API_KEY}"
+enable_vault_proxy = true
 ```
 
 ---

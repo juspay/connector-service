@@ -386,29 +386,29 @@ routes:
 
 The key to Network Proxy integration is pointing the connector's `base_url` to the **vault proxy endpoint** instead of the PSP's direct URL:
 
-```yaml
-# UCS config.yaml
+```toml
+# config/development.toml
 
 # The vault section identifies which proxy mode to use
-vault:
-  provider: vgs
-  mode: network_proxy
-  tenant_id: tntSANDBOX123
-  environment: sandbox
+[vault]
+provider = "vgs"
+tenant_id = "tntSANDBOX123"
+environment = "sandbox"
 
 # The connector base_url points to VGS proxy, not Stripe directly
-connectors:
-  stripe:
-    # ❌ Without VGS: base_url would be https://api.stripe.com
-    # ✅ With VGS: base_url is the VGS proxy URL
-    base_url: https://tntSANDBOX123.sandbox.verygoodproxy.com
-    api_key: ${STRIPE_API_KEY}
+[connectors.stripe]
+# ❌ Without VGS: base_url would be https://api.stripe.com
+# ✅ With VGS: base_url is the VGS proxy URL
+base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
+api_key = "${STRIPE_API_KEY}"
+enable_vault_proxy = true
 
-  adyen:
-    # Same VGS proxy can route to multiple PSPs
-    base_url: https://tntSANDBOX123.sandbox.verygoodproxy.com
-    api_key: ${ADYEN_API_KEY}
-    merchant_account: ${ADYEN_MERCHANT_ACCOUNT}
+[connectors.adyen]
+# Same VGS proxy can route to multiple PSPs
+base_url = "https://tntSANDBOX123.sandbox.verygoodproxy.com"
+api_key = "${ADYEN_API_KEY}"
+merchant_account = "${ADYEN_MERCHANT_ACCOUNT}"
+enable_vault_proxy = true
 ```
 
 **How it works:**
@@ -420,24 +420,23 @@ connectors:
 
 ### Evervault Configuration
 
-```yaml
-# UCS config.yaml - Evervault Network Proxy
+```toml
+# config/development.toml - Evervault Network Proxy
 
 # The vault section for Evervault
-vault:
-  provider: evervault
-  mode: network_proxy
-  team_id: team_123
-  app_id: app_456
-  api_key: ${EVERVAULT_API_KEY}
+[vault]
+provider = "evervault"
+team_id = "team_123"
+app_id = "app_456"
+api_key = "${EVERVAULT_API_KEY}"
 
 # For Evervault, base_url remains the PSP's URL
 # Evervault Relay intercepts traffic at the network layer
-connectors:
-  stripe:
-    # base_url is still Stripe's direct URL
-    base_url: https://api.stripe.com
-    api_key: ${STRIPE_API_KEY}
+[connectors.stripe]
+# base_url is still Stripe's direct URL
+base_url = "https://api.stripe.com"
+api_key = "${STRIPE_API_KEY}"
+enable_vault_proxy = true
 ```
 
 **How it works:**
