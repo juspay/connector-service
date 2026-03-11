@@ -62,7 +62,7 @@ pub fn transform_connector_url(
             Ok(config.proxy_url.clone())
         }
         // Evervault and TokenEx don't transform URLs at this level
-        _ => Ok(original_url.to_string()),
+        VaultConfig::Evervault(_) | VaultConfig::TokenEx(_) => Ok(original_url.to_string()),
     }
 }
 
@@ -120,7 +120,7 @@ pub fn get_vault_headers(
             }
         }
         // VGS doesn't add headers, it uses URL transformation
-        _ => {}
+        VaultConfig::Vgs(_) => {}
     }
 
     Ok(headers)
@@ -158,21 +158,25 @@ pub fn get_network_proxy_url(vault_config: &VaultConfig) -> Option<String> {
 /// This is a convenience function that connectors can use in their
 /// `base_url()` method to automatically route through vault when enabled.
 ///
+/// # Security
+/// This function returns a `Result` instead of silently falling back to the
+/// original URL. If vault transformation fails, the error is propagated to
+/// prevent sensitive data from being sent to the wrong destination.
+///
 /// Example usage in a connector:
 /// ```rust,ignore
-/// fn base_url(&self, connectors: &Connectors) -> String {
+/// fn base_url(&self, connectors: &Connectors) -> Result<String, VaultError> {
 ///     let base = connectors.stripe.base_url.clone();
-///     // If vault is enabled, this will be handled by the service layer
-///     base
+///     get_vault_aware_url(&base, vault_config)
 /// }
 /// ```
-pub fn get_vault_aware_url(original_url: &str, vault_config: Option<&VaultConfig>) -> String {
+pub fn get_vault_aware_url(
+    original_url: &str,
+    vault_config: Option<&VaultConfig>,
+) -> Result<String, VaultError> {
     match vault_config {
-        Some(config) => transform_connector_url(original_url, config).unwrap_or_else(|e| {
-            tracing::warn!("Failed to transform URL for vault: {}", e);
-            original_url.to_string()
-        }),
-        None => original_url.to_string(),
+        Some(config) => transform_connector_url(original_url, config),
+        None => Ok(original_url.to_string()),
     }
 }
 

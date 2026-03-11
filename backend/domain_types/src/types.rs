@@ -439,6 +439,8 @@ impl Connectors {
             "hyperpg" => Some(&self.hyperpg),
             "zift" => Some(&self.zift),
             "revolv3" => Some(&self.revolv3),
+            "truelayer" => Some(&self.truelayer),
+            "finix" => Some(&self.finix),
             _ => None,
         }
     }
