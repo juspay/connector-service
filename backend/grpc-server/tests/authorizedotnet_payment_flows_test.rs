@@ -186,7 +186,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
 
     RecurringPaymentServiceChargeRequest {
         merchant_charge_id: Some(generate_unique_request_ref_id("repeat_req")),
-        mandate_reference_id: Some(mandate_reference),
+        connector_recurring_payment_id: Some(mandate_reference),
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: REPEAT_AMOUNT,
             currency: i32::from(Currency::Usd),
@@ -984,7 +984,7 @@ async fn test_register() {
 
         // Verify the response
         assert!(
-            response.connector_registration_id.is_some(),
+            response.connector_recurring_payment_id.is_some(),
             "Registration ID should be present"
         );
 

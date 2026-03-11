@@ -1942,7 +1942,7 @@ message PaymentServiceSetupRecurringRequest {
 // Response message for a mandate setup operation
 message PaymentServiceSetupRecurringResponse {
   // Identification
-  optional string connector_registration_id = 1; // Identifier for the mandate registration
+  optional string connector_recurring_payment_id = 1; // Identifier for the mandate registration
 
   // Status Information
   PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
@@ -1979,7 +1979,7 @@ message RecurringPaymentServiceChargeRequest {
   optional string merchant_charge_id = 1; // Reference ID for tracking
 
   // Mandate Information (for MIT)
-  optional MandateReference mandate_reference_id = 2; // Reference to existing mandate
+  optional MandateReference connector_recurring_payment_id = 2; // Reference to existing mandate
 
   // Amount Information
   Money amount = 3;

@@ -7492,7 +7492,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     });
 
                 PaymentServiceSetupRecurringResponse {
-                    connector_registration_id: Option::foreign_try_from(resource_id)?,
+                    connector_recurring_payment_id: Option::foreign_try_from(resource_id)?,
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
@@ -7567,7 +7567,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
             };
             PaymentServiceSetupRecurringResponse {
-                connector_registration_id: None,
+                connector_recurring_payment_id: None,
                 redirection_data: None,
                 network_transaction_id: None,
                 merchant_recurring_payment_id: extract_connector_request_reference_id(
@@ -8787,7 +8787,7 @@ impl<
         };
 
         // Extract mandate reference_id
-        let mandate_ref = match value.mandate_reference_id {
+        let mandate_ref = match value.connector_recurring_payment_id {
             Some(mandate_reference_id) => match mandate_reference_id.mandate_id_type {
                 Some(grpc_payment_types::mandate_reference::MandateIdType::ConnectorMandateId(
                     cm,

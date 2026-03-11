@@ -80,7 +80,7 @@ The `SetupRecurring` RPC establishes a payment mandate (recurring payment instru
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_registration_id` | string | Identifier for the mandate registration |
+| `connector_recurring_payment_id` | string | Identifier for the mandate registration |
 | `status` | PaymentStatus | Status of the mandate setup attempt |
 | `error` | ErrorInfo | Error details if setup failed |
 | `status_code` | uint32 | HTTP status code from the connector |
@@ -140,7 +140,7 @@ grpcurl -H "x-connector: stripe" \
 
 ```json
 {
-  "connector_registration_id": "seti_3Oxxx...",
+  "connector_recurring_payment_id": "seti_3Oxxx...",
   "status": "AUTHORIZED",
   "status_code": 200,
   "mandate_reference": {

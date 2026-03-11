@@ -260,7 +260,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
 
     RecurringPaymentServiceChargeRequest {
         merchant_charge_id: Some(generate_unique_id("repeat")),
-        mandate_reference_id: Some(mandate_reference),
+        connector_recurring_payment_id: Some(mandate_reference),
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: unique_amount,
             currency: i32::from(Currency::Usd),
