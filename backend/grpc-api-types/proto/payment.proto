@@ -1739,7 +1739,7 @@ message PaymentServiceCreateOrderRequest {
 // Response message for create order operation
 message PaymentServiceCreateOrderResponse {
   // Identification
-  string connector_order_id = 1; // Identifier for the create order response
+  optional string connector_order_id = 1; // Identifier for the create order response
 
   // Status Information
   PaymentStatus status = 2;// Status of the order creation attempt
@@ -1942,7 +1942,7 @@ message PaymentServiceSetupRecurringRequest {
 // Response message for a mandate setup operation
 message PaymentServiceSetupRecurringResponse {
   // Identification
-  string connector_registration_id = 1; // Identifier for the mandate registration
+  optional string connector_registration_id = 1; // Identifier for the mandate registration
 
   // Status Information
   PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
@@ -2214,7 +2214,7 @@ message PaymentMethodAuthenticationServiceAuthenticateRequest {
 // Response message for authentication step
 message PaymentMethodAuthenticationServiceAuthenticateResponse {
   // Identification
-  string connector_transaction_id = 1;
+  optional string connector_transaction_id = 1;
 
   // Status Information
   PaymentStatus status = 2;

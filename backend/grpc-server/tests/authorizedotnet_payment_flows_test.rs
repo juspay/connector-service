@@ -984,7 +984,7 @@ async fn test_register() {
 
         // Verify the response
         assert!(
-            !response.connector_registration_id.is_empty(),
+            response.connector_registration_id.is_some(),
             "Registration ID should be present"
         );
 

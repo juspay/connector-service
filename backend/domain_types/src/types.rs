@@ -3657,7 +3657,7 @@ pub fn generate_create_order_response(
                 .transpose()?;
 
             PaymentServiceCreateOrderResponse {
-                connector_order_id: order_id,
+                connector_order_id: Some(order_id),
                 status: grpc_status.into(),
                 error: None,
                 status_code: 200,
@@ -3669,7 +3669,7 @@ pub fn generate_create_order_response(
             }
         }
         Err(err) => PaymentServiceCreateOrderResponse {
-            connector_order_id: String::new(),
+            connector_order_id: None,
             status: err
                 .attempt_status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
@@ -7463,7 +7463,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     });
 
                 PaymentServiceSetupRecurringResponse {
-                    connector_registration_id: String::foreign_try_from(resource_id)?,
+                    connector_registration_id: Some(String::foreign_try_from(resource_id)?),
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
@@ -7538,7 +7538,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
             };
             PaymentServiceSetupRecurringResponse {
-                connector_registration_id: String::new(),
+                connector_registration_id: None,
                 redirection_data: None,
                 network_transaction_id: None,
                 merchant_recurring_payment_id: err.connector_transaction_id,
@@ -10588,9 +10588,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 status_code,
             } => PaymentMethodAuthenticationServiceAuthenticateResponse {
                 merchant_order_id: connector_response_reference_id,
-                connector_transaction_id: String::foreign_try_from(
-                    resource_id.unwrap_or(ResponseId::NoResponseId),
-                )?,
+                connector_transaction_id: resource_id.map(String::foreign_try_from).transpose()?,
                 redirection_data: redirection_data
                     .map(|form| match *form {
                         router_response_types::RedirectForm::Form {
@@ -10698,7 +10696,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
                 .unwrap_or_default();
             PaymentMethodAuthenticationServiceAuthenticateResponse {
-                connector_transaction_id: "session_created".to_string(),
+                connector_transaction_id: Some("session_created".to_string()),
                 redirection_data: None,
                 network_transaction_id: None,
                 merchant_order_id: None,
