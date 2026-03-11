@@ -273,14 +273,14 @@ service PayoutService {
   // Creates a payout fund transfer.
   rpc Transfer(PayoutTransferRequest) returns (PayoutTransferResponse);
 
-  // Create payout quote.
-  rpc Quote(PayoutQuoteRequest) returns (PayoutQuoteResponse);
-
   // Retrieve payout details.
   rpc Get(PayoutGetRequest) returns (PayoutGetResponse);
 
   // Void a payout.
   rpc Void(PayoutVoidRequest) returns (PayoutVoidResponse);
+
+  // Create payout quote.
+  rpc CreateQuote(PayoutQuoteRequest) returns (PayoutQuoteResponse);
 
   // Create payout recipient.
   rpc CreateRecipient(PayoutCreateRecipientRequest) returns (PayoutCreateRecipientResponse);
