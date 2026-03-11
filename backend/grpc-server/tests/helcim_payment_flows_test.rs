@@ -126,9 +126,10 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 fn extract_void_transaction_id(
     response: &grpc_api_types::payments::PaymentServiceVoidResponse,
 ) -> String {
-    match &response.connector_transaction_id {
-        Some(id) => id.clone(),
-        None => panic!("Transaction ID is None"),
+    if response.connector_transaction_id.is_empty() {
+        panic!("Transaction ID is None")
+    } else {
+        response.connector_transaction_id.clone()
     }
 }
 
@@ -458,7 +459,7 @@ async fn test_payment_void() {
 
         // Verify the void response
         assert!(
-            void_response.connector_transaction_id.is_some(),
+            !void_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in void response"
         );
 
