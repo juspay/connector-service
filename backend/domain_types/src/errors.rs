@@ -3,7 +3,6 @@
 use common_utils::errors::ErrorSwitch;
 // use api_models::errors::types::{ Extra};
 use strum::Display;
-
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
@@ -874,8 +873,8 @@ pub enum ConnectorError {
     FailedToObtainCertificateKey,
     #[error("Failed to verify source of the response")]
     SourceVerificationFailed,
-    #[error("Failed to decode message")]
-    DecodingFailed,
+    #[error("Failed to decode message: {0:?}")]
+    DecodingFailed(Option<String>),
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
@@ -1066,3 +1065,72 @@ impl ErrorSwitch<ApiClientError> for HttpClientError {
         }
     }
 }
+
+// =============================================================================
+// Conversions: Error types → gRPC FFI error types
+// =============================================================================
+
+/// Macro to generate From implementations for both owned and reference variants.
+/// Reduces boilerplate for the 8 nearly identical conversions (2 source types × 2 target types × 2 variants).
+macro_rules! impl_error_conversion {
+    ($src:ty => $dst:ty, $body:expr) => {
+        impl From<$src> for $dst {
+            fn from(e: $src) -> Self {
+                ($body)(&e)
+            }
+        }
+        impl From<&$src> for $dst {
+            fn from(e: &$src) -> Self {
+                ($body)(e)
+            }
+        }
+    };
+}
+
+// TODO: Match on specific ConnectorError variants to return appropriate status codes.
+// Currently all variants default to 500, but many should return 4xx codes:
+// - MissingRequiredField, InvalidDataFormat, MismatchedPaymentData → 400
+// - SourceVerificationFailed, FailedToObtainAuthType → 401
+// - RequestTimeoutReceived → 504
+// - NotImplemented → 501
+// See detailed mapping plan for full variant-to-status-code mapping.
+
+// ConnectorError conversions
+impl_error_conversion!(ConnectorError => grpc_api_types::payments::RequestError, |e: &ConnectorError| {
+    grpc_api_types::payments::RequestError {
+        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+        error_message: Some(e.to_string()),
+        error_code: None,
+        status_code: Some(500),
+    }
+});
+
+impl_error_conversion!(ConnectorError => grpc_api_types::payments::ResponseError, |e: &ConnectorError| {
+    grpc_api_types::payments::ResponseError {
+        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+        error_message: Some(e.to_string()),
+        error_code: None,
+        status_code: Some(500),
+    }
+});
+
+// ApplicationErrorResponse conversions
+impl_error_conversion!(ApplicationErrorResponse => grpc_api_types::payments::RequestError, |e: &ApplicationErrorResponse| {
+    let api_error = e.get_api_error();
+    grpc_api_types::payments::RequestError {
+        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+        error_message: Some(api_error.error_message.clone()),
+        error_code: Some(api_error.sub_code.clone()),
+        status_code: Some(api_error.error_identifier as u32),
+    }
+});
+
+impl_error_conversion!(ApplicationErrorResponse => grpc_api_types::payments::ResponseError, |e: &ApplicationErrorResponse| {
+    let api_error = e.get_api_error();
+    grpc_api_types::payments::ResponseError {
+        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+        error_message: Some(api_error.error_message.clone()),
+        error_code: Some(api_error.sub_code.clone()),
+        status_code: Some(api_error.error_identifier as u32),
+    }
+});

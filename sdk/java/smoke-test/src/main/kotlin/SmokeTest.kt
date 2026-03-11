@@ -7,6 +7,7 @@
  * Exits non-zero on any assertion failure.
  */
 
+import com.google.protobuf.InvalidProtocolBufferException
 import payments.PaymentClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentAddress
@@ -19,6 +20,9 @@ import payments.ConnectorConfig
 import payments.RequestConfig
 import payments.Connector
 import payments.Environment
+import payments.FfiTransformerException
+import payments.RequestError
+import payments.ResponseError
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
 
@@ -92,7 +96,17 @@ fun testLowLevelFfi() {
 
     try {
         val connectorRequestBytes = authorizeReqTransformer(requestBytes, optionsBytes)
-        val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
+        
+        // Try parsing as success first; if that fails, try parsing as RequestError
+        val connectorRequest = try {
+            FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
+        } catch (e: InvalidProtocolBufferException) {
+            // Parse as RequestError to get error details
+            val error = RequestError.parseFrom(connectorRequestBytes)
+            println("  FFI returned error: ${error.errorCode} - ${error.errorMessage}")
+            throw Exception("FFI request transformer failed: ${error.errorCode}")
+        }
+        
         val url = connectorRequest.url
         val method = connectorRequest.method
 
@@ -127,6 +141,20 @@ fun testFullRoundTrip() {
         val response = client.authorize(buildRequest(), null)
         println("  Response status: ${response.status}")
         println("  PASSED")
+    } catch (e: FfiTransformerException) {
+        // Check ffiError type and print appropriate message
+        when (e.ffiError) {
+            is RequestError -> {
+                val err = e.ffiError as RequestError
+                println("  Request error [${err.errorCode}]: ${err.errorMessage}")
+            }
+            is ResponseError -> {
+                val err = e.ffiError as ResponseError
+                println("  Response error [${err.errorCode}]: ${err.errorMessage}")
+            }
+            else -> println("  Unknown FFI error type: ${e.ffiError.javaClass}")
+        }
+        println("  PASSED (round-trip completed, error from transformer)")
     } catch (e: UniffiException) {
         // Round-trip completed — error is from Stripe (e.g. auth failure), not from the SDK
         println("  Response/error received: ${e.message}")

@@ -1,20 +1,20 @@
 pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/development.toml");
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
-use crate::errors::FfiPaymentError;
 use crate::types::FfiRequestData;
+use domain_types::errors::ConnectorError;
 use domain_types::payment_method_data::DefaultPCIHolder;
-use grpc_api_types::payments::Environment;
+use grpc_api_types::payments::{Environment, RequestError, ResponseError};
 
 fn get_config(
     environment: Option<Environment>,
-) -> Result<std::sync::Arc<ucs_env::configs::Config>, FfiPaymentError> {
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, ConnectorError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {
         EMBEDDED_DEVELOPMENT_CONFIG
     };
-    Ok(crate::utils::load_config(config_str)?)
+    crate::utils::load_config(config_str)
 }
 
 /// Generates a `{flow}_req_handler` and `{flow}_res_handler` function pair.
@@ -34,8 +34,8 @@ macro_rules! impl_flow_handlers {
             pub fn [<$flow _req_handler>](
                 request: FfiRequestData<$req_type>,
                 environment: Option<Environment>,
-            ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-                let config = get_config(environment)?;
+            ) -> Result<Option<common_utils::request::Request>, RequestError> {
+                let config = get_config(environment).map_err(RequestError::from)?;
                 $req_svc::<DefaultPCIHolder>(
                     request.payload,
                     &config,
@@ -49,8 +49,8 @@ macro_rules! impl_flow_handlers {
                 request: FfiRequestData<$req_type>,
                 response: domain_types::router_response_types::Response,
                 environment: Option<Environment>,
-            ) -> Result<$res_type, FfiPaymentError> {
-                let config = get_config(environment)?;
+            ) -> Result<$res_type, ResponseError> {
+                let config = get_config(environment).map_err(ResponseError::from)?;
                 $res_svc::<DefaultPCIHolder>(
                     request.payload,
                     &config,
@@ -80,8 +80,8 @@ include!("_generated_flow_registrations.rs");
 pub fn handle_event_handler(
     request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>,
     environment: Option<Environment>,
-) -> Result<grpc_api_types::payments::EventServiceHandleResponse, FfiPaymentError> {
-    let config = get_config(environment)?;
+) -> Result<grpc_api_types::payments::EventServiceHandleResponse, ResponseError> {
+    let config = get_config(environment).map_err(ResponseError::from)?;
     crate::services::payments::handle_event_transformer(
         request.payload,
         &config,

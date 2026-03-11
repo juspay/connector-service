@@ -18,9 +18,9 @@ use grpc_api_types::payments::{
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
+    ResponseError,
 };
 
-use crate::errors::{FfiError, FfiPaymentError};
 use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
@@ -407,36 +407,27 @@ pub fn handle_event_transformer(
     connector: domain_types::connector_types::ConnectorEnum,
     connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
     _metadata: &common_utils::metadata::MaskedMetadata,
-) -> Result<EventServiceHandleResponse, FfiPaymentError> {
+) -> Result<EventServiceHandleResponse, ResponseError> {
+    use domain_types::errors::ConnectorError;
     use domain_types::utils::ForeignTryFrom as _;
 
     let map_app_err = |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        FfiPaymentError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
-            Some(e.to_string()),
-            None,
-            Some(500),
-        )
+        ResponseError::from(e.current_context())
     };
 
     let request_details = payload
         .request_details
         .ok_or_else(|| {
-            FfiPaymentError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some("missing request_details in payload".to_string()),
-                None,
-                Some(400),
-            )
+            ResponseError::from(ConnectorError::MissingRequiredField {
+                field_name: "request_details",
+            })
         })
         .and_then(|rd| {
             RequestDetails::foreign_try_from(rd).map_err(|e| {
-                FfiPaymentError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(e.to_string()),
-                    None,
-                    Some(400),
-                )
+                ResponseError::from(ConnectorError::GenericError {
+                    error_message: e.to_string(),
+                    error_object: serde_json::Value::Null,
+                })
             })
         })?;
 
@@ -444,12 +435,10 @@ pub fn handle_event_transformer(
         .webhook_secrets
         .map(|ws| {
             ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
-                FfiPaymentError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(e.to_string()),
-                    None,
-                    Some(400),
-                )
+                ResponseError::from(ConnectorError::GenericError {
+                    error_message: e.to_string(),
+                    error_object: serde_json::Value::Null,
+                })
             })
         })
         .transpose()?;

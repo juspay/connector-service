@@ -9,13 +9,41 @@
  * Flow methods (authorize, capture, void, refund, …) are defined as Kotlin
  * extension functions in GeneratedFlows.kt — no flow names are hardcoded here.
  * To add a new flow: edit sdk/flows.yaml and run `make generate`.
+ *
+ * Error Handling:
+ *   FFI transformers return raw bytes that may represent either a success proto or
+ *   an error proto (RequestError for req_transformer, ResponseError for res_transformer).
+ *   On error, a FfiTransformerException is thrown with the `ffiError` property set to
+ *   the decoded proto (RequestError or ResponseError instance). Callers can inspect:
+ *
+ *       try {
+ *           val response = client.authorize(request)
+ *       } catch (e: FfiTransformerException) {
+ *           when (e.ffiError) {
+ *               is RequestError -> println("${e.ffiError.errorCode}: ${e.ffiError.errorMessage}")
+ *               is ResponseError -> println("${e.ffiError.errorCode}: ${e.ffiError.errorMessage}")
+ *           }
+ *       }
  */
 
 package payments
 
 import com.google.protobuf.ByteString
+import com.google.protobuf.InvalidProtocolBufferException
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
+
+/**
+ * Exception thrown when an FFI transformer returns an error proto instead of
+ * the expected success response.
+ *
+ * @param message Human-readable error message
+ * @param ffiError The decoded error proto (RequestError or ResponseError)
+ */
+class FfiTransformerException(
+    message: String,
+    val ffiError: MessageLite
+) : RuntimeException(message)
 
 open class ConnectorClient(
     val config: ConnectorConfig,
@@ -61,13 +89,56 @@ open class ConnectorClient(
     }
 
     /**
+     * Parse FFI req_transformer bytes as either FfiConnectorHttpRequest or RequestError.
+     * Tries the success type first; on failure parses as RequestError and throws
+     * FfiTransformerException with ffiError set to the RequestError instance.
+     */
+    private fun checkReqError(resultBytes: ByteArray): FfiConnectorHttpRequest {
+        return try {
+            FfiConnectorHttpRequest.parseFrom(resultBytes)
+        } catch (e: InvalidProtocolBufferException) {
+            // Try parsing as RequestError
+            val error = RequestError.parseFrom(resultBytes)
+            throw FfiTransformerException(
+                "FFI req_transformer error: ${error.errorCode} - ${error.errorMessage}",
+                error
+            )
+        }
+    }
+
+    /**
+     * Parse FFI res_transformer bytes as either success type or ResponseError.
+     * Tries the success type first; on failure parses as ResponseError and throws
+     * FfiTransformerException with ffiError set to the ResponseError instance.
+     */
+    private fun <T : MessageLite> checkResError(
+        resultBytes: ByteArray,
+        successParser: Parser<T>
+    ): T {
+        return try {
+            successParser.parseFrom(resultBytes)
+        } catch (e: InvalidProtocolBufferException) {
+            // Try parsing as ResponseError
+            val error = ResponseError.parseFrom(resultBytes)
+            throw FfiTransformerException(
+                "FFI res_transformer error: ${error.errorCode} - ${error.errorMessage}",
+                error
+            )
+        }
+    }
+
+    /**
      * Execute a full round-trip for any payment flow.
+     *
+     * Errors from the FFI layer are thrown as FfiTransformerException with an
+     * `ffiError` property holding the decoded RequestError or ResponseError proto.
      *
      * @param flow Flow name matching the FFI transformer prefix (e.g. "authorize").
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
      * @param options Optional RequestConfig message.
      * @return Parsed protobuf response.
+     * @throws FfiTransformerException If the FFI transformer returns an error proto.
      */
     fun <T : MessageLite> executeFlow(
         flow: String,
@@ -86,8 +157,9 @@ open class ConnectorClient(
         val httpConfig = resolveHttpConfig(options)
 
         // 2. Build connector HTTP request via FFI
+        //    Parse result bytes as FfiConnectorHttpRequest; if that fails, parse as RequestError.
         val connectorRequestBytes = reqTransformer(requestBytes, optionsBytes)
-        val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
+        val connectorRequest = checkReqError(connectorRequestBytes)
 
         val httpRequest = HttpRequest(
             url = connectorRequest.url,
@@ -108,24 +180,28 @@ open class ConnectorClient(
             .toByteArray()
 
         // 5. Parse connector response via FFI
+        //    Parse result bytes as success type; if that fails, parse as ResponseError.
         val resultBytes = resTransformer(
             ffiResponseBytes,
             requestBytes,
             optionsBytes,
         )
 
-        return responseParser.parseFrom(resultBytes)
+        return checkResError(resultBytes, responseParser)
     }
 
     /**
      * Execute a single-step flow directly via FFI (no HTTP round-trip).
      * Used for inbound flows like webhook processing where the connector sends data to us.
      *
+     * Errors are thrown as FfiTransformerException with `ffiError` set to a ResponseError.
+     *
      * @param flow Flow name matching the FFI transformer (e.g. "handle").
      * @param requestBytes Serialized protobuf request bytes.
      * @param responseParser Protobuf parser for the expected response type.
      * @param options Optional RequestConfig for FFI context. Merged with client defaults.
      * @return Parsed protobuf response.
+     * @throws FfiTransformerException If the FFI transformer returns an error proto.
      */
     fun <T : MessageLite> executeDirect(
         flow: String,
@@ -140,6 +216,8 @@ open class ConnectorClient(
         val optionsBytes = ffiOptions.toByteArray()
 
         val resultBytes = transformer(requestBytes, optionsBytes)
-        return responseParser.parseFrom(resultBytes)
+        
+        // Parse result bytes as success type; if that fails, parse as ResponseError.
+        return checkResError(resultBytes, responseParser)
     }
 }

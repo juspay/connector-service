@@ -25,6 +25,7 @@ from payments import (
     ConnectorConfig,
     RequestConfig,
 )
+from payments.generated.sdk_config_pb2 import RequestError, ResponseError
 
 
 async def run_test():
@@ -93,7 +94,17 @@ async def run_test():
     # --- Test 1: Low-level FFI ---
     print("\n=== Test 1: Low-level FFI (authorize_req_transformer) ===")
     result_bytes = authorize_req_transformer(req.SerializeToString(), options_bytes)
-    result = FfiConnectorHttpRequest.FromString(result_bytes)
+
+    # Try parsing as success first; if that fails, try parsing as RequestError
+    try:
+        result = FfiConnectorHttpRequest.FromString(result_bytes)
+    except Exception:
+        # Parse as RequestError to get error details
+        error = RequestError()
+        error.ParseFromString(result_bytes)
+        print(f"  FFI returned error: {error.error_code} - {error.error_message}")
+        raise Exception(f"FFI request transformer failed: {error.error_code}")
+
     print(f"  URL:    {result.url}")
     print(f"  Method: {result.method}")
     if result.url != "https://api.stripe.com/v1/payment_intents":
@@ -109,11 +120,25 @@ async def run_test():
     else:
         try:
             response = await client.authorize(req)
-            print(f"  Response status: {response.status}")
+            print(f"  Response status: {response.status_code}")
             print(f"  Response type:   {type(response).__name__}")
             print("  PASSED")
-        except Exception as e:
-            print(f"  Response/error received: {e}")
+        except RuntimeError as e:
+            # Check for FFI error attached by connector_client
+            if hasattr(e, "ffi_error"):
+                ffi_err = e.ffi_error
+                if isinstance(ffi_err, RequestError):
+                    print(
+                        f"  Request error [{ffi_err.error_code}]: {ffi_err.error_message}"
+                    )
+                elif isinstance(ffi_err, ResponseError):
+                    print(
+                        f"  Response error [{ffi_err.error_code}]: {ffi_err.error_message}"
+                    )
+                else:
+                    print(f"  Unknown FFI error type: {type(ffi_err)}")
+            else:
+                print(f"  Error: {e}")
             print("  PASSED (round-trip completed, error is from Stripe)")
 
     await client.close()
