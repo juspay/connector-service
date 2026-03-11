@@ -5,6 +5,7 @@ use domain_types::{
 };
 use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService,
+    composite_refund_service_server::CompositeRefundService,
     customer_service_server::CustomerService,
     merchant_authentication_service_server::MerchantAuthenticationService,
     payment_service_server::PaymentService, refund_service_server::RefundService,
@@ -401,7 +402,7 @@ where
         Ok(refund_get_response)
     }
 
-    async fn process_composite_refund_get(
+    pub async fn process_composite_refund_get(
         &self,
         request: tonic::Request<CompositeRefundGetRequest>,
     ) -> Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status> {
@@ -436,28 +437,37 @@ where
     C: CustomerService + Clone + Send + Sync + 'static,
     R: RefundService + Clone + Send + Sync + 'static,
 {
-    async fn composite_authorize(
+    async fn authorize(
         &self,
         request: tonic::Request<CompositeAuthorizeRequest>,
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         self.process_composite_authorize(request).await
     }
 
-    async fn composite_get(
+    async fn get(
         &self,
         request: tonic::Request<CompositeGetRequest>,
     ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
         self.process_composite_get(request).await
     }
 
-    async fn composite_refund(
+    async fn refund(
         &self,
         request: tonic::Request<CompositeRefundRequest>,
     ) -> Result<tonic::Response<CompositeRefundResponse>, tonic::Status> {
         self.process_composite_refund(request).await
     }
+}
 
-    async fn composite_refund_get(
+#[tonic::async_trait]
+impl<P, M, C, R> CompositeRefundService for Payments<P, M, C, R>
+where
+    P: PaymentService + Clone + Send + Sync + 'static,
+    M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
+    C: CustomerService + Clone + Send + Sync + 'static,
+    R: RefundService + Clone + Send + Sync + 'static,
+{
+    async fn get(
         &self,
         request: tonic::Request<CompositeRefundGetRequest>,
     ) -> Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status> {

@@ -9,14 +9,17 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 // Service for composite payment operations.
 service CompositePaymentService {
   // Runs composite authorize flow.
-  rpc CompositeAuthorize(CompositeAuthorizeRequest) returns (CompositeAuthorizeResponse);
+  rpc Authorize(CompositeAuthorizeRequest) returns (CompositeAuthorizeResponse);
 
   // Runs composite get flow.
-  rpc CompositeGet(CompositeGetRequest) returns (CompositeGetResponse);
+  rpc Get(CompositeGetRequest) returns (CompositeGetResponse);
 
   // Runs composite refund flow.
-  rpc CompositeRefund(CompositeRefundRequest) returns (CompositeRefundResponse);
-
-  // Runs composite refund get/sync flow.
-  rpc CompositeRefundGet(CompositeRefundGetRequest) returns (CompositeRefundGetResponse);
+  rpc Refund(CompositeRefundRequest) returns (CompositeRefundResponse);
 }
+
+service CompositeRefundService {
+  // Runs composite refund get/sync flow.
+  rpc Get(CompositeRefundGetRequest) returns (CompositeRefundGetResponse);
+}
+

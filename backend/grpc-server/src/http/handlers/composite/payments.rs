@@ -22,7 +22,7 @@ http_handler!(
     authorize,
     CompositeAuthorizeRequest,
     CompositeAuthorizeResponse,
-    composite_authorize,
+    authorize,
     composite_payments_service
 );
 
@@ -30,7 +30,7 @@ http_handler!(
     get,
     CompositeGetRequest,
     CompositeGetResponse,
-    composite_get,
+    get,
     composite_payments_service
 );
 
@@ -38,7 +38,7 @@ http_handler!(
     refund,
     CompositeRefundRequest,
     CompositeRefundResponse,
-    composite_refund,
+    refund,
     composite_payments_service
 );
 
@@ -46,6 +46,6 @@ http_handler!(
     refund_get,
     CompositeRefundGetRequest,
     CompositeRefundGetResponse,
-    composite_refund_get,
+    process_composite_refund_get,
     composite_payments_service
 );
