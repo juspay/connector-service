@@ -551,7 +551,9 @@ pub struct VgsConfig {
     pub ca_certificate: Option<String>,
 }
 
-#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+#[derive(
+    Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum VgsEnvironment {
     #[default]
@@ -585,7 +587,9 @@ pub struct HyperswitchVaultConfig {
     pub environment: HyperswitchEnvironment,
 }
 
-#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+#[derive(
+    Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum HyperswitchEnvironment {
     #[default]
@@ -608,7 +612,9 @@ pub struct TokenExConfig {
     pub default_token_scheme: TokenExTokenScheme,
 }
 
-#[derive(Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
+#[derive(
+    Clone, Copy, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum TokenExTokenScheme {
     #[default]

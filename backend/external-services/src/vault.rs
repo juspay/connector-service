@@ -113,16 +113,10 @@ pub fn get_vault_headers(
                 Secret::new(config.api_key.clone().expose().to_string()),
             );
             if let Some(url) = original_url {
-                headers.insert(
-                    "BT-PROXY-URL".to_string(),
-                    Secret::new(url.to_string()),
-                );
+                headers.insert("BT-PROXY-URL".to_string(), Secret::new(url.to_string()));
             }
             if let Some(proxy_id) = &config.proxy_id {
-                headers.insert(
-                    "BT-PROXY-ID".to_string(),
-                    Secret::new(proxy_id.clone()),
-                );
+                headers.insert("BT-PROXY-ID".to_string(), Secret::new(proxy_id.clone()));
             }
         }
         // VGS doesn't add headers, it uses URL transformation
@@ -151,9 +145,10 @@ pub fn is_network_proxy(vault_config: &VaultConfig) -> bool {
 /// For VGS, returns None as VGS uses URL transformation, not HTTP proxy.
 pub fn get_network_proxy_url(vault_config: &VaultConfig) -> Option<String> {
     match vault_config {
-        VaultConfig::Evervault(config) => {
-            Some(format!("https://{}.relay.evervault.com:443", config.team_id))
-        }
+        VaultConfig::Evervault(config) => Some(format!(
+            "https://{}.relay.evervault.com:443",
+            config.team_id
+        )),
         _ => None,
     }
 }
@@ -171,10 +166,7 @@ pub fn get_network_proxy_url(vault_config: &VaultConfig) -> Option<String> {
 ///     base
 /// }
 /// ```
-pub fn get_vault_aware_url(
-    original_url: &str,
-    vault_config: Option<&VaultConfig>,
-) -> String {
+pub fn get_vault_aware_url(original_url: &str, vault_config: Option<&VaultConfig>) -> String {
     match vault_config {
         Some(config) => transform_connector_url(original_url, config).unwrap_or_else(|e| {
             tracing::warn!("Failed to transform URL for vault: {}", e);
@@ -190,6 +182,7 @@ mod tests {
     use domain_types::types::{EvervaultConfig, HyperswitchVaultConfig, VgsConfig, VgsEnvironment};
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_vgs_url_transformation_sandbox() {
         let config = VaultConfig::Vgs(VgsConfig {
             tenant_id: "tnt123".to_string(),
@@ -206,6 +199,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_vgs_url_transformation_production() {
         let config = VaultConfig::Vgs(VgsConfig {
             tenant_id: "tnt456".to_string(),
@@ -222,6 +216,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_vgs_url_with_query_params() {
         let config = VaultConfig::Vgs(VgsConfig {
             tenant_id: "tnt789".to_string(),
@@ -229,10 +224,7 @@ mod tests {
             ca_certificate: None,
         });
 
-        let result = transform_connector_url(
-            "https://api.stripe.com/v1/charges?limit=10",
-            &config,
-        );
+        let result = transform_connector_url("https://api.stripe.com/v1/charges?limit=10", &config);
         assert!(result.is_ok());
         assert_eq!(
             result.unwrap(),
