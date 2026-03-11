@@ -282,7 +282,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         cof_data: requests::PeachpaymentsCofData::default(),
                         rrn: item.router_data.request.merchant_order_id.clone(),
                         pre_auth_inc_ext_capture_flow: None,
-                        _phantom: std::marker::PhantomData,
                     },
                 )
             }
@@ -302,12 +301,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            transaction_data,
+            ecommerce_card_payment_only_transaction_data: transaction_data,
             pos_data: None,
             send_date_time: OffsetDateTime::now_utc()
                 .format(&Iso8601::DEFAULT)
                 .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?,
-            _phantom: std::marker::PhantomData,
         })
     }
 }
@@ -551,13 +549,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            card_data: requests::PeachpaymentsRefundTransactionData {
-                amount: requests::PeachpaymentsAmount {
-                    amount: refund_amount.to_string(),
-                    currency_code: item.router_data.request.currency,
-                    display_amount: None,
+            ecommerce_card_payment_only_transaction_data:
+                requests::PeachpaymentsRefundTransactionData {
+                    amount: requests::PeachpaymentsAmount {
+                        amount: refund_amount.to_string(),
+                        currency_code: item.router_data.request.currency,
+                        display_amount: None,
+                    },
                 },
-            },
             pos_data: None,
         })
     }

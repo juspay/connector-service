@@ -57,25 +57,20 @@ pub struct PeachpaymentsMerchantInformationResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsAuthorizeResponse {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "transactionResult")]
     pub transaction_result: PeachpaymentsPaymentStatus,
-    #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
     pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
-    #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
-    pub card_data: Option<PeachpaymentsCardResponseData>,
+    pub ecommerce_card_payment_only_transaction_data: Option<PeachpaymentsCardResponseData>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsCaptureResponse {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "transactionResult")]
     pub transaction_result: PeachpaymentsPaymentStatus,
-    #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
     pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
     #[serde(rename = "authorizationCode")]
@@ -83,29 +78,22 @@ pub struct PeachpaymentsCaptureResponse {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsVoidResponse {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "transactionResult")]
     pub transaction_result: PeachpaymentsPaymentStatus,
-    #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
     pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsRefundResponse {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "originalTransactionId")]
     pub original_transaction_id: Option<String>,
-    #[serde(rename = "referenceId")]
     pub reference_id: String,
-    #[serde(rename = "transactionResult")]
     pub transaction_result: PeachpaymentsRefundStatus,
-    #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
-    #[serde(rename = "refundBalanceData")]
     pub refund_balance_data: Option<PeachpaymentsRefundBalance>,
 }
 
@@ -138,33 +126,29 @@ pub struct PeachpaymentsRefundSyncResponse {
 pub type PeachpaymentsRsyncResponse = PeachpaymentsRefundSyncResponse;
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
+#[serde(untagged, rename_all = "camelCase")]
 pub enum PeachpaymentsResponseCode {
     Text(String),
     Structured {
         value: String,
         description: String,
-        #[serde(rename = "terminalOutcomeString")]
         terminal_outcome_string: Option<String>,
-        #[serde(rename = "receiptString")]
         receipt_string: Option<String>,
     },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsSyncResponse {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "transactionResult")]
     pub transaction_result: PeachpaymentsPaymentStatus,
-    #[serde(rename = "responseCode")]
     pub response_code: Option<PeachpaymentsResponseCode>,
     pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
-    #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
-    pub card_data: Option<PeachpaymentsCardResponseData>,
+    pub ecommerce_card_payment_only_transaction_data: Option<PeachpaymentsCardResponseData>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsCardResponseData {
     pub amount: Option<PeachpaymentsAmountDetails>,
     pub stan: Option<Secret<String>>,
@@ -176,47 +160,35 @@ pub struct PeachpaymentsCardResponseData {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsAmountDetails {
     pub amount: MinorUnit,
-    #[serde(rename = "currencyCode")]
     pub currency_code: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_amount: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsIncomingWebhook {
-    #[serde(rename = "webhookId")]
     pub webhook_id: String,
-    #[serde(rename = "webhookType")]
     pub webhook_type: String,
-    #[serde(rename = "reversalFailureReason")]
     pub reversal_failure_reason: Option<String>,
     pub transaction: Option<PeachpaymentsWebhookTransaction>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsWebhookTransaction {
-    #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    #[serde(rename = "originalTransactionId")]
     pub original_transaction_id: Option<String>,
-    #[serde(rename = "referenceId")]
     pub reference_id: String,
-    #[serde(rename = "transactionResult")]
     pub transaction_result: PeachpaymentsPaymentStatus,
-    #[serde(rename = "errorMessage")]
     pub error_message: Option<String>,
-    #[serde(rename = "transactionType")]
-    pub transaction_type: Option<PeachpaymentsTransactionType>,
-    #[serde(rename = "responseCode")]
+    pub transaction_type: PeachpaymentsTransactionType,
     pub response_code: Option<PeachpaymentsResponseCode>,
-    pub merchant_information: Option<PeachpaymentsMerchantInformationResponse>,
-    #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
-    pub card_data: Option<PeachpaymentsCardResponseData>,
-    #[serde(rename = "refundBalanceData")]
+    pub ecommerce_card_payment_only_transaction_data: Option<PeachpaymentsCardResponseData>,
     pub refund_balance_data: Option<PeachpaymentsRefundBalance>,
-    #[serde(rename = "paymentMethod")]
     pub payment_method: Secret<String>,
 }
 

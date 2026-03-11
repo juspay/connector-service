@@ -7,7 +7,6 @@ use std::fmt::Debug;
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentMethod {
-    #[serde(rename = "ecommerce_card_payment_only")]
     EcommerceCardPaymentOnly,
 }
 
@@ -28,44 +27,30 @@ pub enum MerchantType {
 }
 
 #[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum CardNetworkLowercase {
     Visa,
     Mastercard,
-    #[serde(rename = "amex")]
     Amex,
-    #[serde(rename = "discover")]
     Discover,
-    #[serde(rename = "jcb")]
     Jcb,
-    #[serde(rename = "diners")]
     Diners,
-    #[serde(rename = "cartes_bancaires")]
     CartesBancaires,
-    #[serde(rename = "unionpay")]
     UnionPay,
-    #[serde(rename = "interac")]
     Interac,
     #[serde(rename = "rupay")]
     RuPay,
-    #[serde(rename = "maestro")]
     Maestro,
-    #[serde(rename = "star")]
     Star,
-    #[serde(rename = "pulse")]
     Pulse,
-    #[serde(rename = "accel")]
     Accel,
-    #[serde(rename = "nyce")]
     Nyce,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreAuthIncExtCaptureFlow {
-    #[serde(rename = "dccMode")]
     pub dcc_mode: DccMode,
-    #[serde(rename = "txnRefNr")]
     pub txn_ref_nr: String,
 }
 
@@ -83,14 +68,14 @@ pub enum CofType {
 }
 
 #[derive(Debug, Serialize, PartialEq, Clone)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
 pub enum CofSource {
     Cit,
     Mit,
 }
 
 #[derive(Debug, Serialize, PartialEq, Clone)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "lowercase")]
 pub enum CofMode {
     Initial,
     Subsequent,
@@ -125,11 +110,10 @@ pub struct PeachpaymentsVoidRequest {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsRefundRequest {
-    #[serde(rename = "referenceId")]
     pub reference_id: String,
-    #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
-    pub card_data: PeachpaymentsRefundTransactionData,
+    pub ecommerce_card_payment_only_transaction_data: PeachpaymentsRefundTransactionData,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pos_data: Option<PosData>,
 }
@@ -140,34 +124,27 @@ pub struct PeachpaymentsRefundTransactionData {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsAuthorizeRequest<T: PaymentMethodDataTypes> {
-    #[serde(rename = "chargeMethod")]
     pub charge_method: String,
-    #[serde(rename = "referenceId")]
     pub reference_id: String,
-    #[serde(rename = "ecommerceCardPaymentOnlyTransactionData")]
-    pub transaction_data: PeachpaymentsTransactionData<T>,
+    pub ecommerce_card_payment_only_transaction_data: PeachpaymentsTransactionData<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pos_data: Option<serde_json::Value>,
-    #[serde(rename = "sendDateTime")]
     pub send_date_time: String,
-    #[serde(skip)]
-    pub(crate) _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum PeachpaymentsTransactionData<T: PaymentMethodDataTypes> {
     Card(PeachpaymentsCardData<T>),
-    NetworkToken(PeachpaymentsNetworkTokenData<T>),
+    NetworkToken(PeachpaymentsNetworkTokenData),
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsCardData<T: PaymentMethodDataTypes> {
-    #[serde(rename = "merchantInformation")]
     pub merchant_information: PeachpaymentsMerchantInformation,
-    #[serde(rename = "routingReference")]
     pub routing_reference: PeachpaymentsRoutingReference,
     pub card: PeachpaymentsCardDetails<T>,
     pub amount: PeachpaymentsAmount,
@@ -180,12 +157,10 @@ pub struct PeachpaymentsCardData<T: PaymentMethodDataTypes> {
 }
 
 #[derive(Debug, Serialize)]
-pub struct PeachpaymentsNetworkTokenData<T: PaymentMethodDataTypes> {
-    #[serde(rename = "merchantInformation")]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsNetworkTokenData {
     pub merchant_information: PeachpaymentsMerchantInformation,
-    #[serde(rename = "routingReference")]
     pub routing_reference: PeachpaymentsRoutingReference,
-    #[serde(rename = "networkToken")]
     pub network_token: PeachpaymentsNetworkTokenDetails,
     pub amount: PeachpaymentsAmount,
     pub cof_data: PeachpaymentsCofData,
@@ -193,21 +168,18 @@ pub struct PeachpaymentsNetworkTokenData<T: PaymentMethodDataTypes> {
     pub rrn: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pre_auth_inc_ext_capture_flow: Option<PeachpaymentsPreAuthFlow>,
-    #[serde(skip)]
-    pub(crate) _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsRoutingReference {
-    #[serde(rename = "merchantPaymentMethodRouteId")]
     pub merchant_payment_method_route_id: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsPreAuthFlow {
-    #[serde(rename = "dccMode")]
     pub dcc_mode: DccMode,
-    #[serde(rename = "txnRefNr")]
     pub txn_ref_nr: String,
 }
 
@@ -228,20 +200,17 @@ pub struct PeachpaymentsCardDetails<T: PaymentMethodDataTypes> {
 }
 
 #[derive(Debug, Serialize)]
-pub struct PeachpaymentsNetworkToken<T: PaymentMethodDataTypes> {
-    #[serde(rename = "paymentMethod")]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsNetworkToken {
     pub payment_method: String,
     pub routing: PeachpaymentsRoutingInfo,
-    #[serde(rename = "networkToken")]
     pub network_token: PeachpaymentsNetworkTokenDetails,
     pub cof_data: PeachpaymentsCofData,
-    #[serde(skip)]
-    pub(crate) _phantom: std::marker::PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsRoutingInfo {
-    #[serde(rename = "merchantPaymentMethodRouteId")]
     pub merchant_payment_method_route_id: Secret<String>,
 }
 
@@ -267,7 +236,7 @@ pub struct PeachpaymentsCofData {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsMerchantInformation {
-    #[serde(rename = "clientMerchantReferenceId")]
     pub client_merchant_reference_id: Secret<String>,
 }
