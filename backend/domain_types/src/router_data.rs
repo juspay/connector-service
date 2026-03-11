@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use cards::NetworkToken;
 use common_utils::{
     ext_traits::{OptionExt, ValueExt},
-    MinorUnit,
+    types::Money,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -142,7 +142,7 @@ impl ConnectorAuthType {
 ///
 /// Each variant holds the exact credentials a specific connector needs,
 /// as opposed to the generic `ConnectorAuthType` which uses positional fields.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub enum ConnectorSpecificAuth {
     // --- Single-field (HeaderKey) connectors ---
     Stripe {
@@ -492,6 +492,12 @@ pub enum ConnectorSpecificAuth {
     Revolv3 {
         api_key: Secret<String>,
     },
+    Finix {
+        finix_user_name: Secret<String>,
+        finix_password: Secret<String>,
+        merchant_identity_id: Secret<String>,
+        merchant_id: Secret<String>,
+    },
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecificAuth {
@@ -811,6 +817,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
             AuthType::Authorizedotnet(authorizedotnet) => Ok(Self::Authorizedotnet {
                 name: authorizedotnet.name.ok_or_else(err)?,
                 transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
+            }),
+            AuthType::Paypal(paypal) => Ok(Self::Paypal {
+                client_id: paypal.client_id.ok_or_else(err)?,
+                client_secret: paypal.client_secret.ok_or_else(err)?,
+                payer_id: paypal.payer_id,
             }),
         }
     }
@@ -1602,6 +1613,20 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            ConnectorEnum::Finix => match auth {
+                ConnectorAuthType::MultiAuthKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                    key2,
+                } => Ok(Self::Finix {
+                    finix_user_name: api_key.clone(),
+                    finix_password: api_secret.clone(),
+                    merchant_identity_id: key1.clone(),
+                    merchant_id: key2.clone(),
+                }),
+                _ => Err(err().into()),
+            },
         }
     }
 }
@@ -1748,19 +1773,15 @@ pub enum PaymentMethodToken {
 #[derive(Debug, Default, Clone)]
 pub struct RecurringMandatePaymentData {
     pub payment_method_type: Option<common_enums::enums::PaymentMethodType>, //required for making recurring payment using saved payment method through stripe
-    pub original_payment_authorized_amount: Option<MinorUnit>,
-    pub original_payment_authorized_currency: Option<common_enums::enums::Currency>,
+    pub original_payment_authorized_amount: Option<Money>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 impl RecurringMandatePaymentData {
-    pub fn get_original_payment_amount(&self) -> Result<MinorUnit, Error> {
+    pub fn get_original_payment_amount(&self) -> Result<Money, Error> {
         self.original_payment_authorized_amount
+            .clone()
             .ok_or_else(missing_field_err("original_payment_authorized_amount"))
-    }
-    pub fn get_original_payment_currency(&self) -> Result<common_enums::Currency, Error> {
-        self.original_payment_authorized_currency
-            .ok_or_else(missing_field_err("original_payment_authorized_currency"))
     }
 }
 

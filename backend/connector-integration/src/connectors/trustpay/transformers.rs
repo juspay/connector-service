@@ -1496,7 +1496,7 @@ where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 {
     #[allow(clippy::unimplemented)]
-    fn get_form_data(&self) -> reqwest::multipart::Form {
+    fn get_form_data(&self) -> common_utils::request::MultipartData {
         // This should never be called for TrustPay since we only use Json and FormUrlEncoded
         unimplemented!("TrustPay only support Json and FormUrlEncoded content types.")
     }
@@ -1665,9 +1665,10 @@ pub struct TrustpayRefundRequestBankRedirect {
 // Implement GetFormData for TrustpayRefundRequest to satisfy the macro requirement
 // This will never be called since TrustPay only uses Json and FormUrlEncoded
 impl connectors::macros::GetFormData for TrustpayRefundRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
+    #[allow(clippy::unimplemented)]
+    fn get_form_data(&self) -> common_utils::request::MultipartData {
         // TrustPay refunds only support Json and FormUrlEncoded content types
-        reqwest::multipart::Form::new()
+        unimplemented!("TrustPay only support Json and FormUrlEncoded content types.")
     }
 }
 

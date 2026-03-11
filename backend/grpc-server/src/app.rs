@@ -4,7 +4,9 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        composite_payment_service_server, dispute_service_server, payment_service_server,
+        composite_payment_service_server, customer_service_server, dispute_service_server,
+        merchant_authentication_service_server, payment_method_authentication_service_server,
+        payment_method_service_server, payment_service_server, recurring_payment_service_server,
         refund_service_server,
     },
 };
@@ -16,9 +18,11 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
+use ucs_env::{configs, error::ConfigurationError, logger};
+
 use crate::{
-    config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError,
-    http::config_middleware::HttpRequestExtensionsLayer, logger, utils,
+    config_overrides::RequestExtensionsLayer, http::config_middleware::HttpRequestExtensionsLayer,
+    utils,
 };
 
 /// # Panics
@@ -95,11 +99,20 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 
 pub struct Service {
     pub health_check_service: crate::server::health_check::HealthCheck,
-    pub composite_payments_service:
-        composite_service::payments::Payments<crate::server::payments::Payments>,
+    pub composite_payments_service: composite_service::payments::Payments<
+        crate::server::payments::Payments,
+        crate::server::payments::MerchantAuthentication,
+        crate::server::payments::Customer,
+    >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
+    pub recurring_payment_service: crate::server::payments::RecurringPayments,
+    pub event_service: crate::server::payments::Events,
+    pub payment_method_service: crate::server::payments::PaymentMethod,
+    pub merchant_authentication_service: crate::server::payments::MerchantAuthentication,
+    pub customer_service: crate::server::payments::Customer,
+    pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
 }
 
 impl Service {
@@ -117,10 +130,18 @@ impl Service {
         } else {
             logger::info!("EventPublisher disabled in configuration");
         }
+        let customer_service = crate::server::payments::Customer;
+        let merchant_authentication_service = crate::server::payments::MerchantAuthentication;
 
-        let payments_service = crate::server::payments::Payments;
-        let composite_payments_service =
-            composite_service::payments::Payments::new(payments_service.clone());
+        let payments_service = crate::server::payments::Payments {
+            customer_service: customer_service.clone(),
+            merchant_authentication_service: merchant_authentication_service.clone(),
+        };
+        let composite_payments_service = composite_service::payments::Payments::new(
+            payments_service.clone(),
+            merchant_authentication_service.clone(),
+            customer_service.clone(),
+        );
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
@@ -128,6 +149,13 @@ impl Service {
             payments_service,
             refunds_service: crate::server::refunds::Refunds,
             disputes_service: crate::server::disputes::Disputes,
+            recurring_payment_service: crate::server::payments::RecurringPayments,
+            event_service: crate::server::payments::Events,
+            payment_method_service: crate::server::payments::PaymentMethod,
+            merchant_authentication_service,
+            customer_service,
+            payment_method_authentication_service:
+                crate::server::payments::PaymentMethodAuthentication,
         }
     }
 
@@ -166,6 +194,12 @@ impl Service {
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
+            self.recurring_payment_service,
+            self.event_service,
+            self.payment_method_service,
+            self.merchant_authentication_service,
+            self.customer_service,
+            self.payment_method_authentication_service,
         );
         let router = crate::http::create_router(app_state)
             .layer(logging_layer)
@@ -241,6 +275,27 @@ impl Service {
             .add_service(dispute_service_server::DisputeServiceServer::new(
                 self.disputes_service,
             ))
+            .add_service(customer_service_server::CustomerServiceServer::new(
+                self.customer_service,
+            ))
+            .add_service(
+                recurring_payment_service_server::RecurringPaymentServiceServer::new(
+                    self.recurring_payment_service,
+                ),
+            )
+            .add_service(payment_method_service_server::PaymentMethodServiceServer::new(
+                self.payment_method_service,
+            ))
+            .add_service(
+                merchant_authentication_service_server::MerchantAuthenticationServiceServer::new(
+                    self.merchant_authentication_service,
+                ),
+            )
+            .add_service(
+                payment_method_authentication_service_server::PaymentMethodAuthenticationServiceServer::new(
+                    self.payment_method_authentication_service,
+                ),
+            )
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;
 

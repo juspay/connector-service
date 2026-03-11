@@ -2141,3 +2141,9 @@ pub enum Tokenization {
     /// Tokenize at PSP Level
     TokenizeAtPsp,
 }
+
+#[derive(Clone, Copy, Debug)]
+pub enum TaxStatus {
+    Taxable,
+    Exempt,
+}

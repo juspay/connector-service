@@ -103,6 +103,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    l2_l3_data: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Calida {
                     api_key: Secret::new(api_key),
@@ -145,7 +146,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -259,6 +260,7 @@ mod tests {
                     minor_amount_capturable: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    l2_l3_data: None,
                 },
                 connector_auth_type: ConnectorSpecificAuth::Calida {
                     api_key: Secret::new(api_key),
@@ -293,7 +295,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(0),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
