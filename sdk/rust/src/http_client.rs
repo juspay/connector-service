@@ -44,6 +44,26 @@ impl From<&HttpConfig> for HttpOptions {
     }
 }
 
+/// Merges client defaults with per-request overrides. Per-request values take precedence.
+pub fn merge_http_options(base: &HttpOptions, override_opts: &HttpOptions) -> HttpOptions {
+    HttpOptions {
+        total_timeout_ms: override_opts
+            .total_timeout_ms
+            .or(base.total_timeout_ms),
+        connect_timeout_ms: override_opts
+            .connect_timeout_ms
+            .or(base.connect_timeout_ms),
+        response_timeout_ms: override_opts
+            .response_timeout_ms
+            .or(base.response_timeout_ms),
+        keep_alive_timeout_ms: override_opts
+            .keep_alive_timeout_ms
+            .or(base.keep_alive_timeout_ms),
+        proxy: override_opts.proxy.clone().or_else(|| base.proxy.clone()),
+        ca_cert: override_opts.ca_cert.clone().or_else(|| base.ca_cert.clone()),
+    }
+}
+
 pub struct HttpRequest {
     pub url: String,
     pub method: Method,
@@ -72,6 +92,12 @@ pub enum HttpClientError {
     InvalidConfiguration(String),
     #[error("Client Initialization Failure: {0}")]
     ClientInitialization(String),
+    #[error("Invalid URL: {0}")]
+    UrlParsingFailed(String),
+    #[error("Failed to read response body: {0}")]
+    ResponseDecodingFailed(String),
+    #[error("Invalid Proxy Configuration: {0}")]
+    InvalidProxyConfiguration(String),
 }
 
 impl HttpClientError {
@@ -80,7 +106,10 @@ impl HttpClientError {
             Self::ConnectTimeout(_) | Self::ResponseTimeout(_) | Self::TotalTimeout(_) => 504,
             Self::NetworkFailure(_)
             | Self::InvalidConfiguration(_)
-            | Self::ClientInitialization(_) => 500,
+            | Self::ClientInitialization(_)
+            | Self::UrlParsingFailed(_)
+            | Self::ResponseDecodingFailed(_)
+            | Self::InvalidProxyConfiguration(_) => 500,
         }
     }
 
@@ -91,7 +120,10 @@ impl HttpClientError {
             Self::TotalTimeout(_) => "TOTAL_TIMEOUT",
             Self::NetworkFailure(_) => "NETWORK_FAILURE",
             Self::InvalidConfiguration(_) => "INVALID_CONFIGURATION",
-            Self::ClientInitialization(_) => "CLIENT_INITIALIZATION_FAILURE",
+            Self::ClientInitialization(_) => "CLIENT_INITIALIZATION",
+            Self::UrlParsingFailed(_) => "URL_PARSING_FAILED",
+            Self::ResponseDecodingFailed(_) => "RESPONSE_DECODING_FAILED",
+            Self::InvalidProxyConfiguration(_) => "INVALID_PROXY_CONFIGURATION",
         }
     }
 }
@@ -147,17 +179,27 @@ impl HttpClient {
                 .as_ref()
                 .or(proxy_config.http_url.as_ref())
             {
-                if let Ok(mut proxy) = reqwest::Proxy::all(url) {
-                    for bypass in &proxy_config.bypass_urls {
-                        proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
+                match reqwest::Proxy::all(url) {
+                    Ok(mut proxy) => {
+                        for bypass in &proxy_config.bypass_urls {
+                            proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
+                        }
+                        builder = builder.proxy(proxy);
                     }
-                    builder = builder.proxy(proxy);
+                    Err(e) => {
+                        return Err(HttpClientError::InvalidProxyConfiguration(e.to_string()));
+                    }
                 }
             }
         }
 
         let client = builder.build().map_err(|e| {
-            HttpClientError::ClientInitialization(format!("Failed to build HTTP client: {}", e))
+            let msg = e.to_string();
+            if msg.to_lowercase().contains("proxy") {
+                HttpClientError::InvalidProxyConfiguration(msg)
+            } else {
+                HttpClientError::ClientInitialization(format!("Failed to build HTTP client: {}", e))
+            }
         })?;
 
         Ok(Self { client, options })
@@ -169,6 +211,10 @@ impl HttpClient {
         request: HttpRequest,
         override_options: Option<HttpOptions>,
     ) -> Result<HttpResponse, HttpClientError> {
+        if reqwest::Url::parse(&request.url).is_err() {
+            return Err(HttpClientError::UrlParsingFailed(request.url.clone()));
+        }
+
         let start_time = Instant::now();
 
         let mut req_builder = match request.method {
@@ -227,7 +273,7 @@ impl HttpClient {
         let body = response
             .bytes()
             .await
-            .map_err(|e| HttpClientError::NetworkFailure(e.to_string()))?
+            .map_err(|e| HttpClientError::ResponseDecodingFailed(e.to_string()))?
             .to_vec();
 
         Ok(HttpResponse {

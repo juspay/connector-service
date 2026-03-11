@@ -148,6 +148,24 @@ def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
     success.ParseFromString(result_bytes)
     return success
 
+def _merge_http_config(
+    client_http: Optional[HttpConfig],
+    override_http: Optional[HttpConfig],
+) -> Optional[HttpConfig]:
+    """
+    Merges client defaults with per-request HTTP overrides. Per-request values take precedence per field.
+    """
+    if override_http is None and client_http is None:
+        return None
+    if override_http is None:
+        return client_http
+    if client_http is None:
+        return override_http
+    merged = HttpConfig()
+    merged.CopyFrom(client_http)
+    merged.MergeFrom(override_http)
+    return merged
+
 
 class _ConnectorClientBase:
     """Base class for per-service connector clients. Do not instantiate directly."""
@@ -178,18 +196,16 @@ class _ConnectorClientBase:
     ) -> tuple[FfiOptions, Optional[HttpConfig]]:
         """
         Merges request-level options with client defaults.
-        Environment comes from ConnectorConfig.options. Connector identity comes from
-        ConnectorConfig.connector_config. HTTP/vault from defaults + request override.
+        Environment and connector identity come from ConnectorConfig (immutable).
+        HTTP/vault use field-level merge where request override wins.
         """
         environment = self.config.options.environment
         connector_config = self.config.connector_config
 
-        # HTTP: request override > client defaults
-        http_config = (
-            options.http
-            if (options and options.HasField("http"))
-            else (self.defaults.http if self.defaults.HasField("http") else None)
-        )
+        # HTTP: field-level merge — client defaults + request overrides (override wins per field)
+        client_http = self.defaults.http if self.defaults.HasField("http") else None
+        override_http = options.http if (options and options.HasField("http")) else None
+        http_config = _merge_http_config(client_http, override_http)
 
         # Resolve FFI Context
         ffi = FfiOptions(

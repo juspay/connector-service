@@ -21,6 +21,22 @@ dependencies {
     implementation("org.json:json:20240303")
 }
 
+sourceSets {
+    main {
+        kotlin.srcDir("tests")
+    }
+}
+
+tasks.register<JavaExec>("runClientSanity") {
+    group = "verification"
+    description = "Run client sanity certification runner"
+    mainClass.set("ClientSanityRunnerKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    standardInput = System.`in`
+    systemProperty("jna.library.path",
+        file("src/main/resources/native").absolutePath)
+}
+
 publishing {
     publications {
         create<MavenPublication>("maven") {

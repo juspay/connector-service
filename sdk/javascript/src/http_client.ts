@@ -31,7 +31,7 @@ export class ConnectorError extends Error {
   constructor(
     public message: string,
     public statusCode?: number,
-    public errorCode?: 'CONNECT_TIMEOUT' | 'RESPONSE_TIMEOUT' | 'TOTAL_TIMEOUT' | 'NETWORK_FAILURE' | 'INVALID_CONFIGURATION' | 'CLIENT_INITIALIZATION' | string,
+    public errorCode?: 'CONNECT_TIMEOUT' | 'RESPONSE_TIMEOUT' | 'TOTAL_TIMEOUT' | 'NETWORK_FAILURE' | 'INVALID_CONFIGURATION' | 'CLIENT_INITIALIZATION' | 'URL_PARSING_FAILED' | 'RESPONSE_DECODING_FAILED' | 'INVALID_PROXY_CONFIGURATION' | string,
     public body?: string,
     public headers?: Record<string, string>
   ) {
@@ -80,10 +80,11 @@ export function createDispatcher(config: types.IHttpConfig): Dispatcher {
       ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
       : new Agent(dispatcherOptions);
   } catch (error: any) {
+    const code = (error?.message || '').toLowerCase().includes('proxy') ? 'INVALID_PROXY_CONFIGURATION' : 'CLIENT_INITIALIZATION';
     throw new ConnectorError(
       `Internal HTTP setup failed: ${error.message}`,
       500,
-      'CLIENT_INITIALIZATION'
+      code
     );
   }
 }
@@ -98,7 +99,12 @@ export async function execute(
 ): Promise<HttpResponse> {
   const { url, method, headers, body } = request;
 
-  // Lifecycle Management
+  try {
+    new URL(url);
+  } catch {
+    throw new ConnectorError(`Invalid URL: ${url}`, undefined, 'URL_PARSING_FAILED');
+  }
+
   const totalTimeout = options.totalTimeoutMs ?? Defaults.TOTAL_TIMEOUT_MS;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), totalTimeout);
@@ -119,13 +125,21 @@ export async function execute(
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((v, k) => { responseHeaders[k.toLowerCase()] = v; });
 
+    let responseBody: Uint8Array;
+    try {
+      responseBody = new Uint8Array(await response.arrayBuffer());
+    } catch (e: any) {
+      throw new ConnectorError(`Failed to read response body: ${e?.message || e}`, response.status, 'RESPONSE_DECODING_FAILED');
+    }
+
     return {
       statusCode: response.status,
       headers: responseHeaders,
-      body: new Uint8Array(await response.arrayBuffer()),
+      body: responseBody,
       latencyMs: Date.now() - startTime
     };
   } catch (error: any) {
+    if (error instanceof ConnectorError) throw error;
     if (error.name === 'AbortError') {
       throw new ConnectorError(
         `Total Request Timeout: ${method} ${url} exceeded ${totalTimeout}ms`,

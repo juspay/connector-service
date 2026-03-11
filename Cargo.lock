@@ -3346,6 +3346,7 @@ dependencies = [
 name = "hyperswitch-payments-client"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "bytes",
  "domain_types",
  "external-services",
