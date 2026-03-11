@@ -1142,10 +1142,8 @@ impl<
                         payment_method_data::SamsungPayWalletData {
                             payment_credential: domain_credential,
                         },
-                    )),
-    ))
+                    ))))
                 }
-
                 // ============================================================================
                 // BANK TRANSFERS - Direct variants
                 // ============================================================================
