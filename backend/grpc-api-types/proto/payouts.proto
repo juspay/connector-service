@@ -4,7 +4,6 @@ package types;
 
 import "payment.proto";
 import "payment_methods.proto";
-// import "google/protobuf/struct.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
@@ -30,8 +29,8 @@ message PayoutEnums {
     REQUIRES_VENDOR_ACCOUNT_CREATION = 13;
   }
 
-  enum PayoutRecipient { // find if its recipient category
-    PayoutRecipient_UNSPECIFIED = 0;
+  enum PayoutRecipientType {
+    PayoutRecipientType_UNSPECIFIED = 0;
     INDIVIDUAL = 1;
     COMPANY = 2;
     NON_PROFIT = 3;
@@ -41,8 +40,8 @@ message PayoutEnums {
     PERSONAL = 7;
   }
 
-  enum PayoutSendPriority { // check for terminology eg. transfer_mode
-    PayoutSendPriority_UNSPECIFIED = 0;
+  enum PayoutPriority {
+    PayoutPriority_UNSPECIFIED = 0;
     INSTANT = 1;
     FAST = 2;
     REGULAR = 3;
@@ -171,7 +170,7 @@ message PayoutMethodData {
 // DEPENDENT MESSAGES
 // ============================================================================
 
-// Container for various address types related to a payment
+// Container for various address types related to a payout
 message PayoutAddress {
   Address shipping_address = 1;
   Address billing_address = 2;
@@ -202,7 +201,7 @@ message PayoutCreateRequest {
   // Customer Details
   optional Customer customer = 9;
   // Priority of the Payout
-  optional PayoutEnums.PayoutSendPriority priority = 10;
+  optional PayoutEnums.PayoutPriority priority = 10;
   // Connector Payout Method ID representing the Payout Method
   optional string connector_payout_method_id = 11;
   // Webhook URL
@@ -230,30 +229,28 @@ message PayoutTransferRequest {
   optional string merchant_payout_id = 1;
   // Address Information
   PayoutAddress address = 2;
-  // Connector Request Reference ID
-  optional string connector_request_id = 3; // can it be represented by merchant_payout_id?
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 4;
+  optional PayoutMethodData payout_method_data = 3;
   // Quote ID
-  optional string connector_quote_id = 5;
+  optional string connector_quote_id = 4;
   // Amount Information
-  Money amount = 6;
+  Money amount = 5;
   // Connector Payout ID
-  optional string connector_payout_id = 7;
+  optional string connector_payout_id = 6;
   // Currency in which payout will be received
-  Currency destination_currency = 8;
+  Currency destination_currency = 7;
   // Customer Details
-  optional Customer customer = 9;
+  optional Customer customer = 8;
   // Priority of the Payout
-  optional PayoutEnums.PayoutSendPriority priority = 10; // check for name
+  optional PayoutEnums.PayoutPriority priority = 9;
   // Connector Transfer Method ID representing the Payout Method
-  optional string connector_payout_method_id = 11;
+  optional string connector_payout_method_id = 10;
   // Webhook URL
-  optional string webhook_url = 12;
+  optional string webhook_url = 11;
   // Browser Information
-  optional BrowserInformation browser_info = 13;
+  optional BrowserInformation browser_info = 12;
   // access token
-  optional string access_token = 14;
+  optional string access_token = 13;
 }
 
 // Response message for creating a payout
@@ -268,20 +265,26 @@ message PayoutTransferResponse {
   optional ErrorInfo error = 4;
 }
 
-// Request message for creating a payout quote
-message PayoutQuoteRequest {
+// Request message for staging a payout
+message PayoutStageRequest {
   // Identification
   optional string merchant_quote_id = 1;
+  // Address Information
+  PayoutAddress address = 2;
   // Amount Information
-  Money amount = 2;
+  Money amount = 3;
   // Currency in which payout will be received
-  Currency destination_currency = 3;
+  Currency destination_currency = 4;
+  // Customer Details
+  optional Customer customer = 5;
+  // Browser Information
+  optional BrowserInformation browser_info = 6;
   // access token
-  optional string access_token = 4;
+  optional string access_token = 7;
 }
 
-// Response message for creating a payout quote
-message PayoutQuoteResponse {
+// Response message for staging a payout
+message PayoutStageResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -340,6 +343,50 @@ message PayoutVoidResponse {
   optional ErrorInfo error = 4;
 }
 
+// Request message for creating a payout
+message PayoutCreateLinkRequest {
+  // Identification
+  optional string merchant_payout_id = 1;
+  // Address Information
+  PayoutAddress address = 2;
+  // Metadata
+  optional SecretString connector_feature_data = 3;
+  // Payout Method Data
+  optional PayoutMethodData payout_method_data = 4;
+  // Quote ID
+  optional string connector_quote_id = 5;
+  // Connector Payout ID
+  optional string connector_payout_id = 6;
+  // Amount Information
+  Money amount = 7;
+  // Currency in which payout will be received
+  Currency destination_currency = 8;
+  // Customer Details
+  optional Customer customer = 9;
+  // Priority of the Payout
+  optional PayoutEnums.PayoutPriority priority = 10;
+  // Connector Payout Method ID representing the Payout Method
+  optional string connector_payout_method_id = 11;
+  // Webhook URL
+  optional string webhook_url = 12;
+  // Browser Information
+  optional BrowserInformation browser_info = 13;
+  // access token
+  optional string access_token = 14;
+}
+
+// Response message for creating a payout
+message PayoutCreateLinkResponse {
+  // Identification
+  optional string merchant_payout_id = 1;
+  // Payout Status
+  optional PayoutEnums.PayoutStatus payout_status = 2;
+  // Connector Payout ID
+  optional string connector_payout_id = 3;
+  // Error Code
+  optional ErrorInfo error = 4;
+}
+
 // Request message for creating recipient account
 message PayoutCreateRecipientRequest {
   // Identification
@@ -351,9 +398,9 @@ message PayoutCreateRecipientRequest {
   // Amount Information
   Money amount = 4;
   // Entity representing the Payout
-  PayoutEnums.PayoutRecipient entity_type = 5;
+  PayoutEnums.PayoutRecipientType recipient_type = 5;
   // Customer Details
-  optional Customer customer_details = 6;
+  optional Customer customer = 6;
   // access token
   optional string access_token = 7;
 }
@@ -403,19 +450,17 @@ message PayoutMethodEligibilityRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Metadata
-  optional SecretString connector_meta_data = 2; // how to differentiate between metadata from connector and request metadata?
-  // Connector Request Reference ID
-  optional string connector_request_reference_id = 3;
+  optional SecretString connector_feature_data = 2;
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 4;
+  optional PayoutMethodData payout_method_data = 3;
   // Amount Information
-  Money amount = 5;
+  Money amount = 4;
   // Connector Payout ID
-  optional string connector_payout_id = 6;
+  optional string connector_payout_id = 5;
   // Currency in which payout will be received
-  Currency destination_currency = 7;
+  Currency destination_currency = 6;
   // access token
-  optional string access_token = 8;
+  optional string access_token = 7;
 }
 
 // Response message for checking payout eligibility

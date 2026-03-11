@@ -279,8 +279,11 @@ service PayoutService {
   // Void a payout.
   rpc Void(PayoutVoidRequest) returns (PayoutVoidResponse);
 
-  // Create payout quote.
-  rpc CreateQuote(PayoutQuoteRequest) returns (PayoutQuoteResponse);
+  // Stage the payout.
+  rpc Stage(PayoutStageRequest) returns (PayoutStageResponse);
+  
+  // Creates a link between the recipient and the payout.
+  rpc CreateLink(PayoutCreateLinkRequest) returns (PayoutCreateLinkResponse);
 
   // Create payout recipient.
   rpc CreateRecipient(PayoutCreateRecipientRequest) returns (PayoutCreateRecipientResponse);
