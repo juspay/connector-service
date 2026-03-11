@@ -161,7 +161,7 @@ pub struct PeachpaymentsCardData<T: PaymentMethodDataTypes> {
 pub struct PeachpaymentsNetworkTokenData {
     pub merchant_information: PeachpaymentsMerchantInformation,
     pub routing_reference: PeachpaymentsRoutingReference,
-    pub network_token: PeachpaymentsNetworkTokenDetails,
+    pub network_token_data: PeachpaymentsNetworkTokenDetails,
     pub amount: PeachpaymentsAmount,
     pub cof_data: PeachpaymentsCofData,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -215,6 +215,7 @@ pub struct PeachpaymentsRoutingInfo {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsNetworkTokenDetails {
     pub token: Secret<String>,
     pub expiry_year: Secret<String>,
@@ -224,7 +225,7 @@ pub struct PeachpaymentsNetworkTokenDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub eci: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub scheme: Option<String>,
+    pub scheme: Option<CardNetworkLowercase>,
 }
 
 #[derive(Debug, Serialize, Clone)]

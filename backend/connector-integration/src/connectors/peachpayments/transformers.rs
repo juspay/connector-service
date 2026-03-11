@@ -214,16 +214,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             .merchant_payment_method_route_id,
                     },
                     card: requests::PeachpaymentsCardDetails {
-                        pan: card_info.card_number,
-                        cardholder_name: card_info.card_holder_name,
-                        expiry_year: Some({
-                            let year_str = card_info.card_exp_year.peek();
-                            if year_str.len() == 4 {
-                                Secret::new(year_str[2..].to_string())
-                            } else {
-                                Secret::new(year_str.to_string())
-                            }
-                        }),
+                        pan: card_info.card_number.clone(),
+                        cardholder_name: card_info.card_holder_name.clone(),
+                        expiry_year: Some(card_info.get_card_expiry_year_2_digit()?),
                         expiry_month: Some(card_info.card_exp_month),
                         cvv: Some(card_info.card_cvc),
                         eci: None,
@@ -266,13 +259,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             merchant_payment_method_route_id: connector_meta_data
                                 .merchant_payment_method_route_id,
                         },
-                        network_token: requests::PeachpaymentsNetworkTokenDetails {
+                        network_token_data: requests::PeachpaymentsNetworkTokenDetails {
                             token: Secret::new(token_data.token_number.peek().clone()),
-                            expiry_year: token_data.token_exp_year,
+                            expiry_year: token_data.get_token_expiry_year_2_digit()?,
                             expiry_month: token_data.token_exp_month,
                             cryptogram: token_data.token_cryptogram,
                             eci: token_data.eci,
-                            scheme: token_data.card_network.map(|n| format!("{:?}", n)),
+                            scheme: token_data
+                                .card_network
+                                .map(requests::CardNetworkLowercase::try_from)
+                                .transpose()?,
                         },
                         amount: requests::PeachpaymentsAmount {
                             amount: amount.to_string(),
@@ -631,26 +627,26 @@ impl From<responses::PeachpaymentsRefundStatus> for RefundStatus {
     }
 }
 
-impl TryFrom<requests::CardNetworkLowercase> for common_enums::CardNetwork {
+impl TryFrom<common_enums::CardNetwork> for requests::CardNetworkLowercase {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(card_network: requests::CardNetworkLowercase) -> Result<Self, Self::Error> {
+    fn try_from(card_network: common_enums::CardNetwork) -> Result<Self, Self::Error> {
         match card_network {
-            requests::CardNetworkLowercase::Visa => Ok(Self::Visa),
-            requests::CardNetworkLowercase::Mastercard => Ok(Self::Mastercard),
-            requests::CardNetworkLowercase::Amex => Ok(Self::AmericanExpress),
-            requests::CardNetworkLowercase::Discover => Ok(Self::Discover),
-            requests::CardNetworkLowercase::Jcb => Ok(Self::JCB),
-            requests::CardNetworkLowercase::Diners => Ok(Self::DinersClub),
-            requests::CardNetworkLowercase::CartesBancaires => Ok(Self::CartesBancaires),
-            requests::CardNetworkLowercase::UnionPay => Ok(Self::UnionPay),
-            requests::CardNetworkLowercase::Interac => Ok(Self::Interac),
-            requests::CardNetworkLowercase::RuPay => Ok(Self::RuPay),
-            requests::CardNetworkLowercase::Maestro => Ok(Self::Maestro),
-            requests::CardNetworkLowercase::Star => Ok(Self::Star),
-            requests::CardNetworkLowercase::Pulse => Ok(Self::Pulse),
-            requests::CardNetworkLowercase::Accel => Ok(Self::Accel),
-            requests::CardNetworkLowercase::Nyce => Ok(Self::Nyce),
+            common_enums::CardNetwork::Visa => Ok(Self::Visa),
+            common_enums::CardNetwork::Mastercard => Ok(Self::Mastercard),
+            common_enums::CardNetwork::AmericanExpress => Ok(Self::Amex),
+            common_enums::CardNetwork::Discover => Ok(Self::Discover),
+            common_enums::CardNetwork::JCB => Ok(Self::Jcb),
+            common_enums::CardNetwork::DinersClub => Ok(Self::Diners),
+            common_enums::CardNetwork::CartesBancaires => Ok(Self::CartesBancaires),
+            common_enums::CardNetwork::UnionPay => Ok(Self::UnionPay),
+            common_enums::CardNetwork::Interac => Ok(Self::Interac),
+            common_enums::CardNetwork::RuPay => Ok(Self::RuPay),
+            common_enums::CardNetwork::Maestro => Ok(Self::Maestro),
+            common_enums::CardNetwork::Star => Ok(Self::Star),
+            common_enums::CardNetwork::Pulse => Ok(Self::Pulse),
+            common_enums::CardNetwork::Accel => Ok(Self::Accel),
+            common_enums::CardNetwork::Nyce => Ok(Self::Nyce),
         }
     }
 }
