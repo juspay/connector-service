@@ -5,7 +5,7 @@ use common_utils::{
     events::{EventConfig, EventConfigPatch},
     metadata::{HeaderMaskingConfig, HeaderMaskingConfigPatch},
 };
-use domain_types::types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch};
+use domain_types::types::{Connectors, ConnectorsPatch, Proxy, ProxyPatch, VaultConfig, VaultConfigPatch};
 
 use crate::{
     error::ConfigurationError,
@@ -20,6 +20,10 @@ pub struct Config {
     pub log: Log,
     pub proxy: Proxy,
     pub connectors: Connectors,
+    /// Global vault configuration (optional)
+    /// When set, connectors can use enable_vault_proxy to route through this vault
+    #[serde(default)]
+    pub vault: Option<VaultConfig>,
     #[serde(default)]
     pub events: EventConfig,
     #[serde(default)]

@@ -252,20 +252,59 @@ vault_proxy_override = { provider = "hyperswitch_vault", api_key = "...", profil
 
 ---
 
-## Files to Update
+## Files Updated
 
 | File | Change |
 |------|--------|
-| `backend/domain_types/src/types.rs` | Add `VaultConfig`, provider configs, update `ConnectorParams` |
-| `backend/ucs_env/src/configs.rs` | Add `vault` field to main `Config` |
-| `docs/pci-compliance/*.md` | Update all examples to use `enable_vault_proxy` |
+| `backend/domain_types/src/types.rs` | Added `VaultConfig` enum, 5 provider configs, updated `ConnectorParams` with `enable_vault_proxy` and `vault_proxy_override`, added `resolve_vault()` method to `Connectors` |
+| `backend/ucs_env/src/configs.rs` | Added `vault: Option<VaultConfig>` to main `Config`, imported `VaultConfigPatch` |
+| `backend/external-services/src/vault.rs` | **New file** - HTTP client integration with URL transformation, header generation, and helper functions |
+| `backend/external-services/src/lib.rs` | Exported `vault` module |
+| `docs/pci-compliance/*.md` | Updated examples to use `enable_vault_proxy` |
+
+---
+
+## Implementation Summary
+
+### Phase 1: Core Types (Complete)
+Added `VaultConfig` enum with 5 provider variants and their configuration structs:
+- `VgsConfig` - Network proxy with tenant_id, environment, optional CA cert
+- `EvervaultConfig` - Network proxy with team_id, app_id, api_key
+- `HyperswitchVaultConfig` - Application proxy with api_key, profile_id, proxy_url
+- `TokenExConfig` - Application proxy with api_key, tokenex_id, token scheme
+- `BasisTheoryConfig` - Application proxy with api_key, proxy_url, proxy_id
+
+### Phase 2: Config Integration (Complete)
+- Added `vault: Option<VaultConfig>` to main `Config` struct in `ucs_env/src/configs.rs`
+- Config hot-reloading supported via `config_patch_derive::Patch`
+- Backward compatible - vault is optional
+
+### Phase 3: Vault Resolution Logic (Complete)
+- Added `get_connector_params()` method to `Connectors` for connector lookup by name
+- Added `resolve_vault()` method that returns vault config with priority:
+  1. Connector's `vault_proxy_override` (if set)
+  2. Global vault config (if set)
+  3. None (if `enable_vault_proxy` is false)
+
+### Phase 4: HTTP Client Integration (Complete)
+Created `external-services/src/vault.rs` with:
+- `transform_connector_url()` - URL transformation for VGS (network proxy)
+- `get_vault_headers()` - Header generation for application proxies
+- `is_network_proxy()` - Check if vault uses network-level proxy
+- `get_vault_aware_url()` - Convenience function for connectors
+- Unit tests for VGS URL transformation
+
+### Phase 5: Validation and Tests (Complete)
+- All crates compile successfully: `domain_types`, `ucs_env`, `external-services`, `connector-integration`
+- Unit tests for vault URL transformation
+- Config deserialization validated
 
 ---
 
 ## Checklist
 
-- [ ] Phase 1: Core types added
-- [ ] Phase 2: Config integration complete
-- [ ] Phase 3: Vault resolution logic
-- [ ] Phase 4: HTTP client integration
-- [ ] Phase 5: Validation and tests
+- [x] Phase 1: Core types added
+- [x] Phase 2: Config integration complete
+- [x] Phase 3: Vault resolution logic
+- [x] Phase 4: HTTP client integration
+- [x] Phase 5: Validation and tests
