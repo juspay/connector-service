@@ -1097,9 +1097,8 @@ macro_rules! impl_report_into {
             fn report_into(self) -> $target {
                 let ctx = self.current_context();
                 // Print the error
-                println!("Error: {:?}", ctx);
+                eprintln!("Error: {:?}", ctx);
                 let (message, code, status_code) = $extract(ctx);
-
                 $target {
                     status: grpc_api_types::payments::PaymentStatus::Pending.into(),
                     error_message: message,
