@@ -1,5 +1,5 @@
 use domain_types::types::VaultConfig;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use std::collections::HashMap;
 
 /// Error types for vault operations
@@ -84,13 +84,13 @@ pub fn get_vault_headers(
             );
             headers.insert(
                 "Proxy-Authorization".to_string(),
-                Secret::new(format!("Bearer {}", config.api_key.clone().expose())),
+                Secret::new(format!("Bearer {}", config.api_key.peek())),
             );
         }
         VaultConfig::HyperswitchVault(config) => {
             headers.insert(
                 "x-api-key".to_string(),
-                Secret::new(config.api_key.clone().expose().to_string()),
+                Secret::new(config.api_key.peek().to_string()),
             );
             headers.insert(
                 "x-profile-id".to_string(),
@@ -100,7 +100,7 @@ pub fn get_vault_headers(
         VaultConfig::TokenEx(config) => {
             headers.insert(
                 "TX-ApiKey".to_string(),
-                Secret::new(config.api_key.clone().expose().to_string()),
+                Secret::new(config.api_key.peek().to_string()),
             );
             headers.insert(
                 "TX-TokenExID".to_string(),
@@ -110,7 +110,7 @@ pub fn get_vault_headers(
         VaultConfig::BasisTheory(config) => {
             headers.insert(
                 "BT-API-KEY".to_string(),
-                Secret::new(config.api_key.clone().expose().to_string()),
+                Secret::new(config.api_key.peek().to_string()),
             );
             if let Some(url) = original_url {
                 headers.insert("BT-PROXY-URL".to_string(), Secret::new(url.to_string()));
@@ -183,7 +183,10 @@ pub fn get_vault_aware_url(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use domain_types::types::{EvervaultConfig, HyperswitchVaultConfig, VgsConfig, VgsEnvironment};
+    use domain_types::types::{
+        BasisTheoryConfig, EvervaultConfig, HyperswitchEnvironment, HyperswitchVaultConfig,
+        TokenExConfig, TokenExTokenScheme, VgsConfig, VgsEnvironment,
+    };
 
     #[test]
     #[allow(clippy::unwrap_used)]
@@ -256,8 +259,75 @@ mod tests {
             api_key: Secret::new("key".to_string()),
             profile_id: "pro123".to_string(),
             proxy_url: "https://proxy.example.com".to_string(),
-            environment: domain_types::types::HyperswitchEnvironment::Sandbox,
+            environment: HyperswitchEnvironment::Sandbox,
         });
         assert!(!is_network_proxy(&hyperswitch));
+    }
+
+    #[test]
+    fn test_get_vault_headers_evervault() {
+        let config = VaultConfig::Evervault(EvervaultConfig {
+            team_id: "team123".to_string(),
+            app_id: "app456".to_string(),
+            api_key: Secret::new("test_key".to_string()),
+        });
+
+        let headers = get_vault_headers(&config, None).unwrap();
+        assert_eq!(headers.get("X-Evervault-App-ID").unwrap().peek(), "app456");
+        assert!(headers.get("Proxy-Authorization").unwrap().peek().starts_with("Bearer "));
+    }
+
+    #[test]
+    fn test_get_vault_headers_hyperswitch() {
+        let config = VaultConfig::HyperswitchVault(HyperswitchVaultConfig {
+            api_key: Secret::new("hs_key".to_string()),
+            profile_id: "pro_abc123".to_string(),
+            proxy_url: "https://proxy.example.com".to_string(),
+            environment: HyperswitchEnvironment::Sandbox,
+        });
+
+        let headers = get_vault_headers(&config, None).unwrap();
+        assert_eq!(headers.get("x-api-key").unwrap().peek(), "hs_key");
+        assert_eq!(headers.get("x-profile-id").unwrap().peek(), "pro_abc123");
+    }
+
+    #[test]
+    fn test_get_vault_headers_tokenex() {
+        let config = VaultConfig::TokenEx(TokenExConfig {
+            api_key: Secret::new("tx_key".to_string()),
+            tokenex_id: "tx_12345".to_string(),
+            tgapi_url: "https://tgapi.tokenex.com".to_string(),
+            default_token_scheme: domain_types::types::TokenExTokenScheme::TokenFour,
+        });
+
+        let headers = get_vault_headers(&config, None).unwrap();
+        assert_eq!(headers.get("TX-ApiKey").unwrap().peek(), "tx_key");
+        assert_eq!(headers.get("TX-TokenExID").unwrap().peek(), "tx_12345");
+    }
+
+    #[test]
+    fn test_get_vault_headers_basis_theory() {
+        let config = VaultConfig::BasisTheory(BasisTheoryConfig {
+            api_key: Secret::new("bt_key".to_string()),
+            proxy_url: "https://proxy.basistheory.com".to_string(),
+            proxy_id: Some("proxy_123".to_string()),
+        });
+
+        let headers = get_vault_headers(&config, Some("https://api.stripe.com/v1/charges")).unwrap();
+        assert_eq!(headers.get("BT-API-KEY").unwrap().peek(), "bt_key");
+        assert_eq!(headers.get("BT-PROXY-URL").unwrap().peek(), "https://api.stripe.com/v1/charges");
+        assert_eq!(headers.get("BT-PROXY-ID").unwrap().peek(), "proxy_123");
+    }
+
+    #[test]
+    fn test_get_vault_headers_vgs() {
+        let config = VaultConfig::Vgs(VgsConfig {
+            tenant_id: "tnt123".to_string(),
+            environment: VgsEnvironment::Sandbox,
+            ca_certificate: None,
+        });
+
+        let headers = get_vault_headers(&config, None).unwrap();
+        assert!(headers.is_empty());
     }
 }

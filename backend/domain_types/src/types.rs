@@ -459,7 +459,7 @@ impl Connectors {
     pub fn resolve_vault(
         &self,
         connector_name: &str,
-        global_vault: &Option<VaultConfig>,
+        global_vault: Option<&VaultConfig>,
     ) -> Option<VaultConfig> {
         let params = self.get_connector_params(connector_name)?;
 
@@ -471,7 +471,7 @@ impl Connectors {
         params
             .vault_proxy_override
             .clone()
-            .or_else(|| global_vault.clone())
+            .or_else(|| global_vault.cloned())
     }
 }
 
