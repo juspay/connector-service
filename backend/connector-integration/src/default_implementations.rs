@@ -108,6 +108,7 @@ default_impl_verify_webhook_source_v2!(
     Redsys,
     Revolut,
     Revolv3,
+    Finix,
     Shift4,
     Silverflow,
     Stax,

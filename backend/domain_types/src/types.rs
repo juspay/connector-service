@@ -240,19 +240,20 @@ use crate::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ApplePayPaymentRequest,
         ApplePaySessionResponse, BillingDescriptor, ConnectorCustomerData,
         ConnectorMandateReferenceId, ConnectorResponseHeaders, ContinueRedirectionResponse,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        GpayAllowedPaymentMethods, GpayBillingAddressFormat, GpaySessionTokenResponse,
-        MandateReferenceId, MandateRevokeRequestData, MultipleCaptureRequestData,
-        NetworkTokenWithNTIRef, NextActionCall, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        CustomerInfo, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        DisputeWebhookDetailsResponse, GpayAllowedPaymentMethods, GpayBillingAddressFormat,
+        GpaySessionTokenResponse, L2L3Data, MandateReferenceId, MandateRevokeRequestData,
+        MultipleCaptureRequestData, NetworkTokenWithNTIRef, NextActionCall, OrderInfo,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, PaypalFlow, PaypalTransactionInfo, RawConnectorRequestResponse,
         RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        SubmitEvidenceData, TaxInfo, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -361,6 +362,7 @@ pub struct Connectors {
     pub zift: ConnectorParams,
     pub revolv3: ConnectorParams,
     pub truelayer: ConnectorParams,
+    pub finix: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -3159,6 +3161,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -3194,6 +3197,12 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                 }))?
             }
         };
+
+        let l2_l3_data = value
+            .l2_l3_data
+            .as_ref()
+            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .transpose()?;
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
@@ -3276,7 +3285,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             vault_headers,
             recurring_mandate_payment_data: None,
             order_details,
-
+            l2_l3_data: l2_l3_data.map(Box::new),
             minor_amount_authorized: None,
         })
     }
@@ -3316,6 +3325,12 @@ impl
                 )
             }
         };
+
+        let l2_l3_data = value
+            .l2_l3_data
+            .as_ref()
+            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .transpose()?;
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
@@ -3367,6 +3382,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: l2_l3_data.map(Box::new),
         })
     }
 }
@@ -3444,6 +3460,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -3513,6 +3530,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -6053,6 +6071,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -6176,6 +6195,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -6801,6 +6821,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -6869,6 +6890,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -7136,6 +7158,13 @@ impl
                 }))?
             }
         };
+
+        let l2_l3_data = value
+            .l2_l3_data
+            .as_ref()
+            .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
+            .transpose()?;
+
         let test_mode = match environment {
             consts::Env::Development => Some(true),
             consts::Env::Production => Some(false),
@@ -7218,6 +7247,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: l2_l3_data.map(Box::new),
         })
     }
 }
@@ -7324,6 +7354,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -7556,6 +7587,176 @@ impl
                 .or(statement_descriptor_suffix),
             reference: descriptor.reference.clone(),
         }
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        &grpc_api_types::payments::L2l3Data,
+        &PaymentAddress,
+        Option<&grpc_api_types::payments::Customer>,
+    )> for L2L3Data
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        (l2l3_data, payment_address, customer): (
+            &grpc_api_types::payments::L2l3Data,
+            &PaymentAddress,
+            Option<&grpc_api_types::payments::Customer>,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let order_info = l2l3_data
+            .order_info
+            .as_ref()
+            .map(OrderInfo::foreign_try_from)
+            .transpose()?;
+
+        let tax_info = l2l3_data
+            .tax_info
+            .as_ref()
+            .map(TaxInfo::foreign_try_from)
+            .transpose()?;
+
+        let customer_info = customer.map(CustomerInfo::foreign_try_from).transpose()?;
+
+        let shipping_address = payment_address.get_shipping();
+        let billing_address = payment_address.get_payment_billing();
+
+        Ok(Self {
+            order_info,
+            tax_info,
+            customer_info,
+            billing_details: billing_address
+                .and_then(|address| address.address.as_ref())
+                .cloned(),
+            shipping_details: shipping_address
+                .and_then(|address| address.address.as_ref())
+                .cloned(),
+        })
+    }
+}
+
+impl ForeignTryFrom<&grpc_api_types::payments::OrderInfo> for OrderInfo {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: &grpc_api_types::payments::OrderInfo,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let order_details = (!value.order_details.is_empty())
+            .then(|| {
+                value
+                    .order_details
+                    .clone()
+                    .into_iter()
+                    .map(OrderDetailsWithAmount::foreign_try_from)
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()?;
+
+        Ok(Self {
+            order_date: value.order_date.and_then(|ts| {
+                time::OffsetDateTime::from_unix_timestamp(ts)
+                    .ok()
+                    .map(|offset_dt| {
+                        time::PrimitiveDateTime::new(offset_dt.date(), offset_dt.time())
+                    })
+            }),
+            order_details,
+            merchant_order_reference_id: value.merchant_order_reference_id.clone(),
+            discount_amount: value
+                .discount_amount
+                .map(common_utils::types::MinorUnit::new),
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
+            duty_amount: value.duty_amount.map(common_utils::types::MinorUnit::new),
+        })
+    }
+}
+
+impl ForeignTryFrom<&grpc_api_types::payments::TaxInfo> for TaxInfo {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: &grpc_api_types::payments::TaxInfo,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let tax_status = match value.tax_status() {
+            grpc_api_types::payments::TaxStatus::Unspecified => None,
+            _ => Some(common_enums::TaxStatus::foreign_try_from(
+                &value.tax_status(),
+            )?),
+        };
+
+        Ok(Self {
+            tax_status,
+            customer_tax_registration_id: value.customer_tax_registration_id.clone(),
+            merchant_tax_registration_id: value.merchant_tax_registration_id.clone(),
+            shipping_amount_tax: value
+                .shipping_amount_tax
+                .map(common_utils::types::MinorUnit::new),
+            order_tax_amount: value
+                .order_tax_amount
+                .map(common_utils::types::MinorUnit::new),
+        })
+    }
+}
+
+impl ForeignTryFrom<&grpc_api_types::payments::TaxStatus> for common_enums::TaxStatus {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: &grpc_api_types::payments::TaxStatus,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::TaxStatus::Exempt => Ok(Self::Exempt),
+            grpc_api_types::payments::TaxStatus::Taxable => Ok(Self::Taxable),
+            grpc_api_types::payments::TaxStatus::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_TAX_STATUS".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Tax status must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
+    }
+}
+
+impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: &grpc_api_types::payments::Customer,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let customer_id = value
+            .id
+            .clone()
+            .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+            .transpose()
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                error_identifier: 400,
+                error_message: "Failed to parse Customer Id".to_owned(),
+                error_object: None,
+            }))?;
+
+        let customer_email: Option<Email> = match value.email {
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
+
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
+            None => None,
+        };
+
+        Ok(Self {
+            customer_id,
+            customer_email,
+            customer_name: value.name.clone().map(Into::into),
+            customer_phone_number: value.phone_number.clone().map(Into::into),
+            customer_phone_country_code: value.phone_country_code.clone(),
+        })
     }
 }
 
@@ -8196,6 +8397,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -8692,6 +8894,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -8870,6 +9073,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -9029,6 +9233,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -10492,6 +10697,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -10580,6 +10786,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -10675,6 +10882,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
@@ -10749,6 +10957,7 @@ impl
             recurring_mandate_payment_data: None,
             order_details: None,
             minor_amount_authorized: None,
+            l2_l3_data: None,
         })
     }
 }
