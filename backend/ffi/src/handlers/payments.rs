@@ -2,8 +2,9 @@ pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/d
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
 use crate::types::FfiRequestData;
-use domain_types::errors::ConnectorError;
+use domain_types::errors::{ConnectorError, ReportInto};
 use domain_types::payment_method_data::DefaultPCIHolder;
+use error_stack::Report;
 use grpc_api_types::payments::{Environment, RequestError, ResponseError};
 
 fn get_config(
@@ -35,7 +36,9 @@ macro_rules! impl_flow_handlers {
                 request: FfiRequestData<$req_type>,
                 environment: Option<Environment>,
             ) -> Result<Option<common_utils::request::Request>, RequestError> {
-                let config = get_config(environment).map_err(RequestError::from)?;
+                let config = get_config(environment).map_err(|e| {
+                    <Report<ConnectorError> as ReportInto<RequestError>>::report_into(Report::new(e))
+                })?;
                 $req_svc::<DefaultPCIHolder>(
                     request.payload,
                     &config,
@@ -50,7 +53,9 @@ macro_rules! impl_flow_handlers {
                 response: domain_types::router_response_types::Response,
                 environment: Option<Environment>,
             ) -> Result<$res_type, ResponseError> {
-                let config = get_config(environment).map_err(ResponseError::from)?;
+                let config = get_config(environment).map_err(|e| {
+                    <Report<ConnectorError> as ReportInto<ResponseError>>::report_into(Report::new(e))
+                })?;
                 $res_svc::<DefaultPCIHolder>(
                     request.payload,
                     &config,
@@ -81,7 +86,9 @@ pub fn handle_event_handler(
     request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>,
     environment: Option<Environment>,
 ) -> Result<grpc_api_types::payments::EventServiceHandleResponse, ResponseError> {
-    let config = get_config(environment).map_err(ResponseError::from)?;
+    let config = get_config(environment).map_err(|e| {
+        <Report<ConnectorError> as ReportInto<ResponseError>>::report_into(Report::new(e))
+    })?;
     crate::services::payments::handle_event_transformer(
         request.payload,
         &config,

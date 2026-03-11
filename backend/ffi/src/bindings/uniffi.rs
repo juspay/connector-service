@@ -10,10 +10,11 @@ mod uniffi_bindings_inner {
     use bytes::Bytes;
     use common_utils::request::Request;
     use domain_types::connector_types::ConnectorEnum;
-    use domain_types::errors::ConnectorError;
+    use domain_types::errors::{ConnectorError, ReportInto};
     use domain_types::router_data::ConnectorSpecificAuth;
     use domain_types::router_response_types::Response;
     use domain_types::utils::ForeignTryFrom;
+    use error_stack::Report;
     use grpc_api_types::payments::{
         Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, RequestError,
         ResponseError,
@@ -23,48 +24,19 @@ mod uniffi_bindings_inner {
 
     // ── Shared helpers ────────────────────────────────────────────────────────
 
-    /// Build FfiMetadataPayload from FfiOptions.
-    fn parse_metadata(
-        options: &FfiOptions,
-    ) -> Result<crate::types::FfiMetadataPayload, ConnectorError> {
-        // 1. Resolve Connector (Taken from FfiOptions)
-        let proto_connector = options.connector(); // Direct enum access via generated method
-        let connector = ConnectorEnum::foreign_try_from(proto_connector).map_err(|e| {
-            ConnectorError::GenericError {
-                error_message: format!("Connector mapping failed: {e}"),
-                error_object: serde_json::Value::Null,
-            }
-        })?;
-
-        // 2. Resolve Auth (Taken from typed Protobuf in FfiOptions)
-        let proto_auth = options
-            .auth
-            .as_ref()
-            .ok_or_else(|| ConnectorError::MissingRequiredField { field_name: "auth" })?;
-
-        let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
-            .map_err(|e| ConnectorError::GenericError {
-                error_message: format!("Typed auth mapping failed: {e}"),
-                error_object: serde_json::Value::Null,
-            })?;
-
-        Ok(crate::types::FfiMetadataPayload {
-            connector,
-            connector_auth_type,
-        })
-    }
-
     /// Helper to convert internal Request to Protobuf FfiConnectorHttpRequest bytes.
-    fn build_ffi_request_bytes(request: &Request) -> Result<Vec<u8>, ConnectorError> {
+    fn build_ffi_request_bytes(request: &Request) -> Result<Vec<u8>, RequestError> {
         let mut headers = request.get_headers_map();
         let (body, boundary) = request
             .body
             .as_ref()
             .map(|b| b.get_body_bytes())
             .transpose()
-            .map_err(|e| ConnectorError::GenericError {
-                error_message: e.to_string(),
-                error_object: serde_json::Value::Null,
+            .map_err(|e| RequestError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some(format!("Body encoding failed: {e}")),
+                error_code: None,
+                status_code: Some(400),
             })?
             .unwrap_or((None, None));
 
@@ -86,13 +58,15 @@ mod uniffi_bindings_inner {
     }
 
     /// Helper to convert Protobuf FfiConnectorHttpResponse bytes to internal Response.
-    fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, ConnectorError> {
+    fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, ResponseError> {
         let response =
             FfiConnectorHttpResponse::decode(Bytes::from(response_bytes)).map_err(|e| {
-                ConnectorError::DecodingFailed(Some(format!(
-                    "FfiConnectorHttpResponse decode failed: {}",
-                    e
-                )))
+                ResponseError {
+                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    error_message: Some(format!("ConnectorHttpResponse decode failed: {e}")),
+                    error_code: None,
+                    status_code: Some(400),
+                }
             })?;
         let mut header_map = HeaderMap::new();
         for (key, value) in &response.headers {
@@ -111,24 +85,48 @@ mod uniffi_bindings_inner {
                 Some(header_map)
             },
             response: Bytes::from(response.body),
-            status_code: response.status_code.try_into().map_err(|e| {
-                ConnectorError::GenericError {
-                    error_message: format!("Invalid HTTP status code: {e}"),
-                    error_object: serde_json::Value::Null,
-                }
+            status_code: response.status_code.try_into().map_err(|e| ResponseError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some(format!("Invalid HTTP status code: {e}")),
+                error_code: None,
+                status_code: Some(400),
             })?,
         })
     }
 
-    /// Parse FfiOptions from optional bytes.
-    fn parse_ffi_options(options_bytes: Vec<u8>) -> Result<FfiOptions, ConnectorError> {
+    /// Parse FfiOptions from optional bytes (for request path).
+    fn parse_ffi_options_for_req(options_bytes: Vec<u8>) -> Result<FfiOptions, RequestError> {
         if options_bytes.is_empty() {
-            return Err(ConnectorError::DecodingFailed(Some(
-                "Empty options bytes".to_string(),
-            )));
+            return Err(RequestError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some("Empty options bytes".to_string()),
+                error_code: None,
+                status_code: Some(400),
+            });
         }
-        FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| {
-            ConnectorError::DecodingFailed(Some(format!("FfiOptions decode failed: {}", e)))
+        FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| RequestError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(format!("Options decode failed: {e}")),
+            error_code: None,
+            status_code: Some(400),
+        })
+    }
+
+    /// Parse FfiOptions from optional bytes (for response path).
+    fn parse_ffi_options_for_res(options_bytes: Vec<u8>) -> Result<FfiOptions, ResponseError> {
+        if options_bytes.is_empty() {
+            return Err(ResponseError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some("Empty options bytes".to_string()),
+                error_code: None,
+                status_code: Some(400),
+            });
+        }
+        FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| ResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(format!("Options decode failed: {e}")),
+            error_code: None,
+            status_code: Some(400),
         })
     }
 
@@ -151,21 +149,57 @@ mod uniffi_bindings_inner {
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return RequestError::from(ConnectorError::DecodingFailed(Some(format!(
-                    "Request payload decode failed: {}",
-                    e
-                ))))
+                return RequestError {
+                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    error_message: Some(format!("Request payload decode failed: {e}")),
+                    error_code: None,
+                    status_code: Some(400),
+                }
                 .encode_to_vec()
             }
         };
 
-        let ffi_options = match parse_ffi_options(options_bytes) {
+        let ffi_options = match parse_ffi_options_for_req(options_bytes) {
             Ok(o) => o,
-            Err(e) => return RequestError::from(e).encode_to_vec(),
+            Err(e) => return e.encode_to_vec(),
         };
-        let ffi_metadata = match parse_metadata(&ffi_options) {
-            Ok(m) => m,
-            Err(e) => return RequestError::from(e).encode_to_vec(),
+
+        // 1. Resolve Connector
+        let proto_connector = ffi_options.connector();
+        let connector = match ConnectorEnum::foreign_try_from(proto_connector) {
+            Ok(c) => c,
+            Err(e) => {
+                return <Report<domain_types::errors::ApplicationErrorResponse> as ReportInto<
+                    RequestError,
+                >>::report_into(e)
+                .encode_to_vec()
+            }
+        };
+
+        // 2. Resolve Auth
+        let proto_auth =
+            match ffi_options.auth.as_ref().ok_or_else(|| {
+                Report::new(ConnectorError::MissingRequiredField { field_name: "auth" })
+            }) {
+                Ok(a) => a,
+                Err(e) => {
+                    return <Report<ConnectorError> as ReportInto<RequestError>>::report_into(e)
+                        .encode_to_vec()
+                }
+            };
+
+        let connector_auth_type = match ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
+        {
+            Ok(a) => a,
+            Err(e) => {
+                return <Report<ConnectorError> as ReportInto<RequestError>>::report_into(e)
+                    .encode_to_vec()
+            }
+        };
+
+        let ffi_metadata = crate::types::FfiMetadataPayload {
+            connector,
+            connector_auth_type,
         };
 
         let request = crate::types::FfiRequestData {
@@ -184,13 +218,19 @@ mod uniffi_bindings_inner {
         let connector_request = match result {
             Some(r) => r,
             None => {
-                return RequestError::from(ConnectorError::RequestEncodingFailed).encode_to_vec()
+                return RequestError {
+                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    error_message: Some("Request encoding failed".to_string()),
+                    error_code: None,
+                    status_code: Some(400),
+                }
+                .encode_to_vec()
             }
         };
 
         match build_ffi_request_bytes(&connector_request) {
             Ok(bytes) => bytes,
-            Err(e) => RequestError::from(e).encode_to_vec(),
+            Err(e) => e.encode_to_vec(),
         }
     }
 
@@ -213,27 +253,63 @@ mod uniffi_bindings_inner {
     {
         let domain_response = match build_domain_response(response_bytes) {
             Ok(r) => r,
-            Err(e) => return ResponseError::from(e).encode_to_vec(),
+            Err(e) => return e.encode_to_vec(),
         };
 
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return ResponseError::from(ConnectorError::DecodingFailed(Some(format!(
-                    "Request payload decode failed: {}",
-                    e
-                ))))
+                return ResponseError {
+                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    error_message: Some(format!("Request payload decode failed: {e}")),
+                    error_code: None,
+                    status_code: Some(400),
+                }
                 .encode_to_vec()
             }
         };
 
-        let ffi_options = match parse_ffi_options(options_bytes) {
+        let ffi_options = match parse_ffi_options_for_res(options_bytes) {
             Ok(o) => o,
-            Err(e) => return ResponseError::from(e).encode_to_vec(),
+            Err(e) => return e.encode_to_vec(),
         };
-        let ffi_metadata = match parse_metadata(&ffi_options) {
-            Ok(m) => m,
-            Err(e) => return ResponseError::from(e).encode_to_vec(),
+
+        // 1. Resolve Connector
+        let proto_connector = ffi_options.connector();
+        let connector = match ConnectorEnum::foreign_try_from(proto_connector) {
+            Ok(c) => c,
+            Err(e) => {
+                return <Report<domain_types::errors::ApplicationErrorResponse> as ReportInto<
+                    ResponseError,
+                >>::report_into(e)
+                .encode_to_vec()
+            }
+        };
+
+        // 2. Resolve Auth
+        let proto_auth =
+            match ffi_options.auth.as_ref().ok_or_else(|| {
+                Report::new(ConnectorError::MissingRequiredField { field_name: "auth" })
+            }) {
+                Ok(a) => a,
+                Err(e) => {
+                    return <Report<ConnectorError> as ReportInto<ResponseError>>::report_into(e)
+                        .encode_to_vec()
+                }
+            };
+
+        let connector_auth_type = match ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
+        {
+            Ok(a) => a,
+            Err(e) => {
+                return <Report<ConnectorError> as ReportInto<ResponseError>>::report_into(e)
+                    .encode_to_vec()
+            }
+        };
+
+        let ffi_metadata = crate::types::FfiMetadataPayload {
+            connector,
+            connector_auth_type,
         };
 
         let request = crate::types::FfiRequestData {
@@ -314,21 +390,57 @@ mod uniffi_bindings_inner {
         ) {
             Ok(p) => p,
             Err(e) => {
-                return ResponseError::from(ConnectorError::DecodingFailed(Some(format!(
-                    "EventServiceHandleRequest decode failed: {}",
-                    e
-                ))))
+                return ResponseError {
+                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    error_message: Some(format!("EventServiceHandleRequest decode failed: {e}")),
+                    error_code: None,
+                    status_code: Some(400),
+                }
                 .encode_to_vec()
             }
         };
 
-        let ffi_options = match parse_ffi_options(options_bytes) {
+        let ffi_options = match parse_ffi_options_for_res(options_bytes) {
             Ok(o) => o,
-            Err(e) => return ResponseError::from(e).encode_to_vec(),
+            Err(e) => return e.encode_to_vec(),
         };
-        let ffi_metadata = match parse_metadata(&ffi_options) {
-            Ok(m) => m,
-            Err(e) => return ResponseError::from(e).encode_to_vec(),
+
+        // 1. Resolve Connector
+        let proto_connector = ffi_options.connector();
+        let connector = match ConnectorEnum::foreign_try_from(proto_connector) {
+            Ok(c) => c,
+            Err(e) => {
+                return <Report<domain_types::errors::ApplicationErrorResponse> as ReportInto<
+                    ResponseError,
+                >>::report_into(e)
+                .encode_to_vec()
+            }
+        };
+
+        // 2. Resolve Auth
+        let proto_auth =
+            match ffi_options.auth.as_ref().ok_or_else(|| {
+                Report::new(ConnectorError::MissingRequiredField { field_name: "auth" })
+            }) {
+                Ok(a) => a,
+                Err(e) => {
+                    return <Report<ConnectorError> as ReportInto<ResponseError>>::report_into(e)
+                        .encode_to_vec()
+                }
+            };
+
+        let connector_auth_type = match ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
+        {
+            Ok(a) => a,
+            Err(e) => {
+                return <Report<ConnectorError> as ReportInto<ResponseError>>::report_into(e)
+                    .encode_to_vec()
+            }
+        };
+
+        let ffi_metadata = crate::types::FfiMetadataPayload {
+            connector,
+            connector_auth_type,
         };
 
         let request = crate::types::FfiRequestData {

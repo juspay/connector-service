@@ -408,37 +408,33 @@ pub fn handle_event_transformer(
     connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
     _metadata: &common_utils::metadata::MaskedMetadata,
 ) -> Result<EventServiceHandleResponse, ResponseError> {
-    use domain_types::errors::ConnectorError;
     use domain_types::utils::ForeignTryFrom as _;
-
-    let map_app_err = |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        ResponseError::from(e.current_context())
-    };
 
     let request_details = payload
         .request_details
-        .ok_or_else(|| {
-            ResponseError::from(ConnectorError::MissingRequiredField {
-                field_name: "request_details",
-            })
+        .ok_or_else(|| ResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some("Missing required field: request_details".to_string()),
+            error_code: None,
+            status_code: Some(400),
         })
         .and_then(|rd| {
-            RequestDetails::foreign_try_from(rd).map_err(|e| {
-                ResponseError::from(ConnectorError::GenericError {
-                    error_message: e.to_string(),
-                    error_object: serde_json::Value::Null,
-                })
+            RequestDetails::foreign_try_from(rd).map_err(|e| ResponseError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some(format!("ForeignTryFrom failed: {e}")),
+                error_code: None,
+                status_code: Some(400),
             })
         })?;
 
     let webhook_secrets = payload
         .webhook_secrets
         .map(|ws| {
-            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
-                ResponseError::from(ConnectorError::GenericError {
-                    error_message: e.to_string(),
-                    error_object: serde_json::Value::Null,
-                })
+            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| ResponseError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some(format!("ForeignTryFrom failed: {e}")),
+                error_code: None,
+                status_code: Some(400),
             })
         })
         .transpose()?;
@@ -464,5 +460,5 @@ pub fn handle_event_transformer(
         Some(connector_auth_details),
         source_verified,
     )
-    .map_err(map_app_err)
+    .map_err(<error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<ResponseError>>::report_into)
 }

@@ -1067,70 +1067,47 @@ impl ErrorSwitch<ApiClientError> for HttpClientError {
 }
 
 // =============================================================================
-// Conversions: Error types → gRPC FFI error types
+// Conversions: error_stack::Report → gRPC FFI error types
 // =============================================================================
 
-/// Macro to generate From implementations for both owned and reference variants.
-/// Reduces boilerplate for the 8 nearly identical conversions (2 source types × 2 target types × 2 variants).
-macro_rules! impl_error_conversion {
-    ($src:ty => $dst:ty, $body:expr) => {
-        impl From<$src> for $dst {
-            fn from(e: $src) -> Self {
-                ($body)(&e)
-            }
-        }
-        impl From<&$src> for $dst {
-            fn from(e: &$src) -> Self {
-                ($body)(e)
+/// Trait for converting error_stack::Report to gRPC FFI error types.
+/// Needed because From<Report<T>> violates orphan rules when both From and Report are foreign.
+pub trait ReportInto<T> {
+    /// Convert the error report into the target type.
+    fn report_into(self) -> T;
+}
+
+macro_rules! impl_report_into {
+    ($source:ty, $extract:expr) => {
+        impl_report_into!(@impl $source, grpc_api_types::payments::RequestError, $extract);
+        impl_report_into!(@impl $source, grpc_api_types::payments::ResponseError, $extract);
+    };
+
+    (@impl $source:ty, $target:path, $extract:expr) => {
+        impl ReportInto<$target> for error_stack::Report<$source> {
+            fn report_into(self) -> $target {
+                let ctx = self.current_context();
+                let (message, code, status_code) = $extract(ctx);
+
+                $target {
+                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    error_message: message,
+                    error_code: code,
+                    status_code,
+                }
             }
         }
     };
 }
 
-// TODO: Match on specific ConnectorError variants to return appropriate status codes.
-// Currently all variants default to 500, but many should return 4xx codes:
-// - MissingRequiredField, InvalidDataFormat, MismatchedPaymentData → 400
-// - SourceVerificationFailed, FailedToObtainAuthType → 401
-// - RequestTimeoutReceived → 504
-// - NotImplemented → 501
-// See detailed mapping plan for full variant-to-status-code mapping.
-
-// ConnectorError conversions
-impl_error_conversion!(ConnectorError => grpc_api_types::payments::RequestError, |e: &ConnectorError| {
-    grpc_api_types::payments::RequestError {
-        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-        error_message: Some(e.to_string()),
-        error_code: None,
-        status_code: Some(500),
-    }
+impl_report_into!(ConnectorError, |e: &ConnectorError| {
+    (Some(e.to_string()), None, Some(400))
 });
-
-impl_error_conversion!(ConnectorError => grpc_api_types::payments::ResponseError, |e: &ConnectorError| {
-    grpc_api_types::payments::ResponseError {
-        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-        error_message: Some(e.to_string()),
-        error_code: None,
-        status_code: Some(500),
-    }
-});
-
-// ApplicationErrorResponse conversions
-impl_error_conversion!(ApplicationErrorResponse => grpc_api_types::payments::RequestError, |e: &ApplicationErrorResponse| {
+impl_report_into!(ApplicationErrorResponse, |e: &ApplicationErrorResponse| {
     let api_error = e.get_api_error();
-    grpc_api_types::payments::RequestError {
-        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-        error_message: Some(api_error.error_message.clone()),
-        error_code: Some(api_error.sub_code.clone()),
-        status_code: Some(api_error.error_identifier as u32),
-    }
-});
-
-impl_error_conversion!(ApplicationErrorResponse => grpc_api_types::payments::ResponseError, |e: &ApplicationErrorResponse| {
-    let api_error = e.get_api_error();
-    grpc_api_types::payments::ResponseError {
-        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-        error_message: Some(api_error.error_message.clone()),
-        error_code: Some(api_error.sub_code.clone()),
-        status_code: Some(api_error.error_identifier as u32),
-    }
+    (
+        Some(api_error.error_message.clone()),
+        Some(api_error.sub_code.clone()),
+        Some(api_error.error_identifier as u32),
+    )
 });
