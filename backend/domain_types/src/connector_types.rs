@@ -342,8 +342,8 @@ impl MandateIds {
             Some(MandateReferenceId::ConnectorMandateId(cm)) => {
                 cm.get_connector_mandate_id().is_some()
             }
-            Some(MandateReferenceId::NetworkMandateId(_)) |
-            Some(MandateReferenceId::NetworkTokenWithNTI(_)) => true,
+            Some(MandateReferenceId::NetworkMandateId(_))
+            | Some(MandateReferenceId::NetworkTokenWithNTI(_)) => true,
             None => false,
         }
     }
@@ -2706,7 +2706,9 @@ pub trait ConnectorSpecifications {
     fn is_pre_authentication_flow_required(
         &self,
         _auth_type: AuthenticationType,
-        _payment_method_data: &Option<PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>>,
+        _payment_method_data: &Option<
+            PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>,
+        >,
         _mandate_ids: &Option<MandateIds>,
     ) -> bool {
         false
@@ -2733,7 +2735,9 @@ pub trait ConnectorSpecifications {
     fn should_continue_to_authenticate_after_preauth(
         &self,
         _auth_type: AuthenticationType,
-        _payment_method_data: &Option<PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>>,
+        _payment_method_data: &Option<
+            PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>,
+        >,
     ) -> bool {
         false
     }

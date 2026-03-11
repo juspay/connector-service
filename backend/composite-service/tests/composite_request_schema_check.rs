@@ -49,9 +49,7 @@ const COMPOSITE_FLOW_SPECS: &[CompositeFlowSpec] = &[
     CompositeFlowSpec {
         name: "pre_authenticate",
         composite_request_message: "CompositePreauthenticateRequest",
-        granular_request_messages: &[
-            "PaymentMethodAuthenticationServicePreAuthenticateRequest",
-        ],
+        granular_request_messages: &["PaymentMethodAuthenticationServicePreAuthenticateRequest"],
         ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
         ignore_composite_only_fields: DEFAULT_IGNORE_COMPOSITE_ONLY_FIELDS,
     },

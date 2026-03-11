@@ -1,7 +1,7 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositeGetRequest, CompositePreauthenticateRequest, ConnectorState,
-    CustomerServiceCreateRequest, CustomerServiceCreateResponse,
+    CompositeAuthorizeRequest, CompositeGetRequest, CompositePreauthenticateRequest,
+    ConnectorState, CustomerServiceCreateRequest, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentServiceAuthorizeRequest,

@@ -15,7 +15,8 @@ type CompositePaymentMethodAuthenticationService = composite_service::payments::
 #[derive(Clone)]
 pub struct AppState {
     pub composite_payments_service: CompositePaymentsService,
-    pub composite_payment_method_authentication_service: CompositePaymentMethodAuthenticationService,
+    pub composite_payment_method_authentication_service:
+        CompositePaymentMethodAuthenticationService,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,

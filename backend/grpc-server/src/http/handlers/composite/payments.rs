@@ -5,8 +5,8 @@ use axum::{
 };
 use grpc_api_types::payments::{
     composite_payment_method_authentication_service_server::CompositePaymentMethodAuthenticationService,
-    composite_payment_service_server::CompositePaymentService,
-    CompositeAuthorizeRequest, CompositeAuthorizeResponse, CompositeGetRequest, CompositeGetResponse,
+    composite_payment_service_server::CompositePaymentService, CompositeAuthorizeRequest,
+    CompositeAuthorizeResponse, CompositeGetRequest, CompositeGetResponse,
     CompositePreauthenticateRequest, CompositePreauthenticateResponse,
 };
 use std::sync::Arc;

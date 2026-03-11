@@ -4,21 +4,19 @@ use domain_types::{
     utils::ForeignTryFrom as _,
 };
 use grpc_api_types::payments::{
-    composite_payment_service_server::CompositePaymentService,
     composite_payment_method_authentication_service_server::CompositePaymentMethodAuthenticationService,
+    composite_payment_service_server::CompositePaymentService,
     customer_service_server::CustomerService,
     merchant_authentication_service_server::MerchantAuthenticationService,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
-    payment_service_server::PaymentService,
-    CompositeAuthorizeRequest, CompositeAuthorizeResponse,
-    CompositeGetRequest, CompositeGetResponse,
-    CompositePreauthenticateRequest, CompositePreauthenticateResponse,
-    ConnectorState, CustomerServiceCreateResponse,
+    payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    CompositeGetRequest, CompositeGetResponse, CompositePreauthenticateRequest,
+    CompositePreauthenticateResponse, ConnectorState, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
-    PaymentMethodAuthenticationServicePreAuthenticateResponse,
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
 };
 
 use crate::transformers::ForeignFrom;
@@ -305,7 +303,8 @@ where
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<PaymentMethodAuthenticationServicePreAuthenticateResponse, tonic::Status> {
-        let pre_authenticate_payload = PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(payload);
+        let pre_authenticate_payload =
+            PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(payload);
 
         let mut pre_authenticate_request = tonic::Request::new(pre_authenticate_payload);
         *pre_authenticate_request.metadata_mut() = metadata.clone();

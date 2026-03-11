@@ -1132,12 +1132,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn is_pre_authentication_flow_required(
         &self,
         auth_type: common_enums::AuthenticationType,
-        payment_method_data: &Option<domain_types::payment_method_data::PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>>,
+        payment_method_data: &Option<
+            domain_types::payment_method_data::PaymentMethodData<
+                domain_types::payment_method_data::DefaultPCIHolder,
+            >,
+        >,
         mandate_ids: &Option<domain_types::connector_types::MandateIds>,
     ) -> bool {
         auth_type.is_three_ds()
-            && payment_method_data.as_ref().is_some_and(|pmd| pmd.is_card())
-            && !mandate_ids.as_ref().is_some_and(|m| m.has_mandate_reference())
+            && payment_method_data
+                .as_ref()
+                .is_some_and(|pmd| pmd.is_card())
+            && !mandate_ids
+                .as_ref()
+                .is_some_and(|m| m.has_mandate_reference())
     }
 
     /// After DDC redirect, need to run enrollment check
@@ -1161,7 +1169,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         redirect_response: &Option<domain_types::connector_types::ContinueRedirectionResponse>,
     ) -> bool {
-       let redirection_params = redirect_response
+        let redirection_params = redirect_response
             .as_ref()
             .and_then(|redirect| redirect.params.as_ref());
 
