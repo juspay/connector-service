@@ -547,7 +547,7 @@ fn trim_and_check_empty(value: &str) -> Option<&str> {
 }
 
 /// Validates a 4-digit string (for card_last_four_digits and dpan_last_four_digits)
-fn validate_last_four_digits<'a>(
+fn validate_last_four_digits(
     value: &str,
     field_name: &str,
 ) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
