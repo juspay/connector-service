@@ -155,3 +155,36 @@ message CompositeGetResponse {
   optional MerchantAuthenticationServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response
   optional PaymentServiceGetResponse get_response = 2; // Get flow response
 }
+
+// Request message for composite handle event (webhook) flow.
+message CompositeHandleEventRequest {
+  // Identification
+  Identifier merchant_event_id = 1; // Merchant's event ID for tracking
+
+  // Request Details
+  RequestDetails request_details = 2; // The raw HTTP request from the connector
+
+  // Security
+  optional WebhookSecrets webhook_secrets = 3; // Secrets for webhook source verification
+
+  // State Information
+  optional ConnectorState state = 4; // State data for access token storage and other connector-specific state
+}
+
+// Response message for composite handle event (webhook) flow.
+message CompositeHandleEventResponse {
+  // Event type
+  WebhookEventType event_type = 1;
+
+  // Content
+  EventResponse event_response = 2;
+
+  // Verification
+  bool source_verified = 3;
+
+  // Reference
+  optional Identifier merchant_event_id = 4;
+
+  // Event Status
+  WebhookEventStatus event_status = 5;
+}

@@ -1,7 +1,8 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositeGetRequest, ConnectorState, CustomerServiceCreateRequest,
-    CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    CompositeAuthorizeRequest, CompositeGetRequest, CompositeHandleEventRequest, ConnectorState,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse, EventServiceHandleRequest,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceGetRequest,
 };
@@ -198,6 +199,17 @@ impl
             connector_order_reference_id: item.connector_order_reference_id.clone(),
             test_mode: item.test_mode,
             payment_experience: item.payment_experience,
+        }
+    }
+}
+
+impl ForeignFrom<&CompositeHandleEventRequest> for EventServiceHandleRequest {
+    fn foreign_from(item: &CompositeHandleEventRequest) -> Self {
+        Self {
+            merchant_event_id: item.merchant_event_id.clone(),
+            request_details: item.request_details.clone(),
+            webhook_secrets: item.webhook_secrets.clone(),
+            state: item.state.clone(),
         }
     }
 }
