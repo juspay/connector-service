@@ -1870,6 +1870,7 @@ pub enum EventType {
 
     // Mandate events
     MandateActive,
+    MandateFailed,
     MandateRevoked,
 
     // Misc events
@@ -1948,7 +1949,10 @@ impl EventType {
 
     /// Returns true if this event type is mandate-related
     pub fn is_mandate_event(&self) -> bool {
-        matches!(self, Self::MandateActive | Self::MandateRevoked)
+        matches!(
+            self,
+            Self::MandateActive | Self::MandateFailed | Self::MandateRevoked
+        )
     }
 
     /// Returns true if this event type is payout-related
@@ -2062,6 +2066,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::WebhookDisputeWon => Ok(Self::DisputeWon),
             grpc_api_types::payments::WebhookEventType::WebhookDisputeLost => Ok(Self::DisputeLost),
             grpc_api_types::payments::WebhookEventType::MandateActive => Ok(Self::MandateActive),
+            grpc_api_types::payments::WebhookEventType::MandateFailed => Ok(Self::MandateFailed),
             grpc_api_types::payments::WebhookEventType::MandateRevoked => Ok(Self::MandateRevoked),
             grpc_api_types::payments::WebhookEventType::EndpointVerification => {
                 Ok(Self::EndpointVerification)
@@ -2134,6 +2139,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::DisputeWon => Ok(Self::WebhookDisputeWon),
             EventType::DisputeLost => Ok(Self::WebhookDisputeLost),
             EventType::MandateActive => Ok(Self::MandateActive),
+            EventType::MandateFailed => Ok(Self::MandateFailed),
             EventType::MandateRevoked => Ok(Self::MandateRevoked),
             EventType::EndpointVerification => Ok(Self::EndpointVerification),
             EventType::ExternalAuthenticationAres => Ok(Self::ExternalAuthenticationAres),

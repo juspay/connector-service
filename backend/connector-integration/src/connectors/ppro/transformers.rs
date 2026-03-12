@@ -8,7 +8,7 @@ use crate::types::ResponseRouterData;
 use domain_types::{
     connector_flow::{Capture, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
@@ -18,6 +18,7 @@ use domain_types::{
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
 };
+use interfaces::webhooks::IncomingWebhookEvent;
 
 #[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -128,7 +129,18 @@ where
             Some(common_enums::PaymentMethodType::AliPay) => "ALIPAY".to_string(),
             Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
-            Some(ref pm) => pm.to_string().to_uppercase(),
+            Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
+            Some(common_enums::PaymentMethodType::Wero) => "WERO".to_string(),
+            Some(common_enums::PaymentMethodType::Ideal) => "IDEAL".to_string(),
+            Some(common_enums::PaymentMethodType::Trustly) => "TRUSTLY".to_string(),
+            Some(common_enums::PaymentMethodType::Blik) => "BLIK".to_string(),
+            Some(ref pm) => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: format!("payment method {pm} is not supported by PPRO"),
+                    connector: "ppro",
+                }
+                .into())
+            }
             None => {
                 return Err(errors::ConnectorError::MissingRequiredField {
                     field_name: "payment_method_type",
@@ -216,9 +228,69 @@ pub enum PproPaymentStatus {
     Failed,
     Discarded,
     Voided,
+    /// Returned on the charge object when a refund has settled.
     RefundSettled,
     Success,
+    /// Returned on the charge object when the charge has been fully refunded.
     Refunded,
+    Rejected,
+    Declined,
+}
+
+impl From<PproPaymentStatus> for common_enums::AttemptStatus {
+    fn from(status: PproPaymentStatus) -> Self {
+        match status {
+            PproPaymentStatus::AuthorizationProcessing | PproPaymentStatus::CaptureProcessing => {
+                Self::Pending
+            }
+            PproPaymentStatus::AuthenticationPending => Self::AuthenticationPending,
+            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => {
+                Self::Authorized
+            }
+            PproPaymentStatus::Captured | PproPaymentStatus::Success => Self::Charged,
+            PproPaymentStatus::Failed
+            | PproPaymentStatus::Discarded
+            | PproPaymentStatus::Rejected
+            | PproPaymentStatus::Declined => Self::Failure,
+            PproPaymentStatus::Voided => Self::Voided,
+            // When a charge is refunded, treat it as Charged (terminal success state).
+            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => Self::Charged,
+        }
+    }
+}
+
+impl From<PproPaymentStatus> for common_enums::RefundStatus {
+    fn from(status: PproPaymentStatus) -> Self {
+        match status {
+            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => Self::Success,
+            PproPaymentStatus::Failed
+            | PproPaymentStatus::Rejected
+            | PproPaymentStatus::Declined => Self::Failure,
+            PproPaymentStatus::AuthorizationProcessing
+            | PproPaymentStatus::CaptureProcessing
+            | PproPaymentStatus::AuthenticationPending
+            | PproPaymentStatus::AuthorizationAsync
+            | PproPaymentStatus::CapturePending
+            | PproPaymentStatus::Captured
+            | PproPaymentStatus::Success
+            | PproPaymentStatus::Discarded
+            | PproPaymentStatus::Voided => Self::Pending,
+        }
+    }
+}
+
+/// Statuses returned by the PPRO refund API endpoints (POST/GET /v1/payment-charges/{id}/refunds).
+/// These are distinct from payment charge statuses.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PproRefundStatus {
+    /// Refund has been settled / funds returned to the consumer.
+    RefundSettled,
+    /// The parent charge has been fully refunded.
+    Refunded,
+    /// Refund is pending processing by PPRO or the provider.
+    Pending,
+    Failed,
     Rejected,
     Declined,
 }
@@ -265,11 +337,22 @@ pub struct PproAgreementResponse {
 }
 
 pub type PproPSyncResponse = PproPaymentsResponse;
-pub type PproRSyncResponse = PproPaymentsResponse;
 pub type PproAuthorizeResponse = PproPaymentsResponse;
 pub type PproCaptureResponse = PproPaymentsResponse;
 pub type PproVoidResponse = PproPaymentsResponse;
-pub type PproRefundResponse = PproPaymentsResponse;
+
+/// Response body returned by PPRO refund endpoints.
+/// Uses `PproRefundStatus` rather than the payment-charge `PproPaymentStatus`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PproRefundResponse {
+    pub id: String,
+    pub status: PproRefundStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failure: Option<PproFailure>,
+}
+
+pub type PproRSyncResponse = PproRefundResponse;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -280,12 +363,19 @@ pub struct PproAuthenticationResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum PproHttpMethod {
+    Get,
+    Post,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PproAuthDetailsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub request_method: Option<String>,
+    pub request_method: Option<PproHttpMethod>,
     // TODO: Uncomment when adding support for other authentication flows
     // #[serde(skip_serializing_if = "Option::is_none")]
     // pub code_type: Option<String>,
@@ -398,7 +488,7 @@ where
                 .request
                 .reason
                 .as_ref()
-                .map(|r| r.as_str().into()),
+                .map(|r| r.as_str().parse::<PproRefundReason>().unwrap_or_default()),
         })
     }
 }
@@ -440,6 +530,56 @@ pub enum PproWebhookType {
     PaymentAgreementRevokedByProvider,
 }
 
+impl TryFrom<PproWebhookType> for EventType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(event_type: PproWebhookType) -> Result<Self, Self::Error> {
+        match event_type {
+            PproWebhookType::PaymentChargeCaptureSucceeded => Ok(Self::PaymentIntentCaptureSuccess),
+            PproWebhookType::PaymentChargeFailed
+            | PproWebhookType::PaymentChargeAuthorizationFailed
+            | PproWebhookType::PaymentChargeDiscarded => Ok(Self::PaymentIntentFailure),
+            PproWebhookType::PaymentChargeAuthorizationSucceeded
+            | PproWebhookType::PaymentChargeSuccess => Ok(Self::PaymentIntentAuthorizationSuccess),
+            PproWebhookType::PaymentChargeRefundSucceeded => Ok(Self::RefundSuccess),
+            PproWebhookType::PaymentChargeRefundFailed => Ok(Self::RefundFailure),
+            PproWebhookType::PaymentChargeVoidSucceeded => Ok(Self::PaymentIntentCancelled),
+            PproWebhookType::PaymentChargeVoidFailed => Ok(Self::PaymentIntentCancelFailure),
+            PproWebhookType::PaymentChargeCaptureFailed => Ok(Self::PaymentIntentCaptureFailure),
+            PproWebhookType::PaymentAgreementActive => Ok(Self::MandateActive),
+            PproWebhookType::PaymentAgreementFailed => Ok(Self::MandateFailed),
+            PproWebhookType::PaymentAgreementRevokedByConsumer
+            | PproWebhookType::PaymentAgreementRevokedByMerchant
+            | PproWebhookType::PaymentAgreementRevokedByProvider => Ok(Self::MandateRevoked),
+        }
+    }
+}
+
+impl TryFrom<PproWebhookType> for IncomingWebhookEvent {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(event_type: PproWebhookType) -> Result<Self, Self::Error> {
+        match event_type {
+            PproWebhookType::PaymentChargeAuthorizationSucceeded
+            | PproWebhookType::PaymentChargeSuccess => Ok(Self::PaymentIntentSuccess),
+            PproWebhookType::PaymentChargeAuthorizationFailed
+            | PproWebhookType::PaymentChargeFailed
+            | PproWebhookType::PaymentChargeDiscarded => Ok(Self::PaymentIntentFailure),
+            PproWebhookType::PaymentChargeCaptureSucceeded => Ok(Self::PaymentIntentCaptureSuccess),
+            PproWebhookType::PaymentChargeCaptureFailed => Ok(Self::PaymentIntentCaptureFailure),
+            PproWebhookType::PaymentChargeVoidSucceeded => Ok(Self::PaymentIntentCancelled),
+            PproWebhookType::PaymentChargeVoidFailed => Ok(Self::PaymentIntentCancelFailure),
+            PproWebhookType::PaymentChargeRefundSucceeded => Ok(Self::RefundSuccess),
+            PproWebhookType::PaymentChargeRefundFailed => Ok(Self::RefundFailure),
+            PproWebhookType::PaymentAgreementActive => Ok(Self::MandateActive),
+            PproWebhookType::PaymentAgreementFailed
+            | PproWebhookType::PaymentAgreementRevokedByConsumer
+            | PproWebhookType::PaymentAgreementRevokedByMerchant
+            | PproWebhookType::PaymentAgreementRevokedByProvider => Ok(Self::MandateRevoked),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PproWebhookEvent {
@@ -463,28 +603,7 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: ResponseRouterData<PproPaymentsResponse, Self>) -> Result<Self, Self::Error> {
-        let status = match item.response.status {
-            PproPaymentStatus::AuthorizationProcessing | PproPaymentStatus::CaptureProcessing => {
-                common_enums::AttemptStatus::Pending
-            }
-            PproPaymentStatus::AuthenticationPending => {
-                common_enums::AttemptStatus::AuthenticationPending
-            }
-            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => {
-                common_enums::AttemptStatus::Authorized
-            }
-            PproPaymentStatus::Captured | PproPaymentStatus::Success => {
-                common_enums::AttemptStatus::Charged
-            }
-            PproPaymentStatus::Failed
-            | PproPaymentStatus::Discarded
-            | PproPaymentStatus::Rejected
-            | PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
-            PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
-            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => {
-                common_enums::AttemptStatus::Pending
-            }
-        };
+        let status = common_enums::AttemptStatus::from(item.response.status);
 
         let mut error_response = None;
         if status == common_enums::AttemptStatus::Failure {
@@ -546,8 +665,10 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
                     if method.r#type == PproAuthenticationType::Redirect {
                         if let Some(details) = &method.details {
                             if let Some(url) = &details.request_url {
-                                let http_method = match details.request_method.as_deref() {
-                                    Some("POST") => common_utils::request::Method::Post,
+                                let http_method = match details.request_method {
+                                    Some(PproHttpMethod::Post) => {
+                                        common_utils::request::Method::Post
+                                    }
                                     _ => common_utils::request::Method::Get,
                                 };
                                 redirection_data =
@@ -600,26 +721,19 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
     }
 }
 
-impl<F, Req, T> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
+impl<F, Req, T> TryFrom<ResponseRouterData<PproRefundResponse, Self>>
     for RouterDataV2<F, Req, T, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: ResponseRouterData<PproPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PproRefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = match item.response.status {
-            PproPaymentStatus::Captured
-            | PproPaymentStatus::RefundSettled
-            | PproPaymentStatus::Success
-            | PproPaymentStatus::Refunded => common_enums::RefundStatus::Success,
-            PproPaymentStatus::Failed
-            | PproPaymentStatus::Rejected
-            | PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
-            PproPaymentStatus::AuthorizationProcessing
-            | PproPaymentStatus::CaptureProcessing
-            | PproPaymentStatus::AuthenticationPending
-            | PproPaymentStatus::AuthorizationAsync
-            | PproPaymentStatus::CapturePending
-            | PproPaymentStatus::Discarded
-            | PproPaymentStatus::Voided => common_enums::RefundStatus::Pending,
+            PproRefundStatus::RefundSettled | PproRefundStatus::Refunded => {
+                common_enums::RefundStatus::Success
+            }
+            PproRefundStatus::Failed | PproRefundStatus::Rejected | PproRefundStatus::Declined => {
+                common_enums::RefundStatus::Failure
+            }
+            PproRefundStatus::Pending => common_enums::RefundStatus::Pending,
         };
 
         let response = if refund_status == common_enums::RefundStatus::Failure {
@@ -777,9 +891,23 @@ where
         let router_data = item.router_data;
         let payment_method = match router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
+            Some(common_enums::PaymentMethodType::Ideal) => "IDEAL".to_string(),
+            Some(common_enums::PaymentMethodType::Trustly) => "TRUSTLY".to_string(),
+            Some(common_enums::PaymentMethodType::Blik) => "BLIK".to_string(),
             Some(common_enums::PaymentMethodType::UpiCollect) => "UPI".to_string(),
-            Some(ref pm) => pm.to_string().to_uppercase(),
-            None => "".to_string(),
+            Some(ref pm) => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: format!("payment method {pm} is not supported for PPRO mandates"),
+                    connector: "ppro",
+                }
+                .into())
+            }
+            None => {
+                return Err(errors::ConnectorError::MissingRequiredField {
+                    field_name: "payment_method_type",
+                }
+                .into())
+            }
         };
 
         let amount = Amount {
@@ -1034,8 +1162,10 @@ impl<F, Req> TryFrom<ResponseRouterData<PproAgreementResponse, Self>>
                     if method.r#type == PproAuthenticationType::Redirect {
                         if let Some(details) = &method.details {
                             if let Some(url) = &details.request_url {
-                                let http_method = match details.request_method.as_deref() {
-                                    Some("POST") => common_utils::request::Method::Post,
+                                let http_method = match details.request_method {
+                                    Some(PproHttpMethod::Post) => {
+                                        common_utils::request::Method::Post
+                                    }
                                     _ => common_utils::request::Method::Get,
                                 };
                                 redirection_data =
@@ -1112,8 +1242,9 @@ pub enum PproScheduleType {
     Recurring,
 }
 
-#[derive(Debug, Serialize, Default, Clone, Copy)]
+#[derive(Debug, Serialize, Default, Clone, Copy, strum::EnumString)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE", ascii_case_insensitive)]
 pub enum PproRefundReason {
     Return,
     Duplicate,
@@ -1122,19 +1253,6 @@ pub enum PproRefundReason {
     PreDispute,
     #[default]
     Other,
-}
-
-impl From<&str> for PproRefundReason {
-    fn from(reason: &str) -> Self {
-        match reason.to_uppercase().as_str() {
-            "RETURN" => Self::Return,
-            "DUPLICATE" => Self::Duplicate,
-            "FRAUD" => Self::Fraud,
-            "CUSTOMER_REQUEST" => Self::CustomerRequest,
-            "PRE_DISPUTE" => Self::PreDispute,
-            _ => Self::Other,
-        }
-    }
 }
 
 /// Request body for creating a charge against an existing Payment Agreement.

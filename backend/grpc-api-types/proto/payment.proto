@@ -412,6 +412,7 @@ enum WebhookEventType {
 
   // Mandate events
   MANDATE_ACTIVE = 24;                     // Mandate is active
+  MANDATE_FAILED = 41;                     // Mandate failed
   MANDATE_REVOKED = 25;                    // Mandate revoked
 
   // Misc events

@@ -883,9 +883,6 @@ impl<
                         Box::new(payment_method_data::WeChatPayQr {}),
                     )))
                 }
-                // ============================================================================
-                // WALLET PAYMENTS - PaymentMethodType mappings
-                // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::MbWay(
                         payment_method_data::MbWayData {},
@@ -7892,9 +7889,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
 
                 PaymentServiceSetupRecurringResponse {
                     connector_recurring_payment_id: Option::foreign_try_from(resource_id)?,
-                    redirection_data: redirection_data.map(
-                        #[allow(clippy::result_large_err)]
-                        |form| {
+                    redirection_data: redirection_data.map(|form| {
                             match *form {
                                 router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, Box<ApplicationErrorResponse>>(grpc_api_types::payments::RedirectForm {

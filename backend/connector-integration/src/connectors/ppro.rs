@@ -414,32 +414,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
-        match event.r#type {
-            PproWebhookType::PaymentChargeCaptureSucceeded => {
-                Ok(EventType::PaymentIntentCaptureSuccess)
-            }
-            PproWebhookType::PaymentChargeFailed
-            | PproWebhookType::PaymentChargeAuthorizationFailed
-            | PproWebhookType::PaymentChargeDiscarded => Ok(EventType::PaymentIntentFailure),
-            PproWebhookType::PaymentChargeAuthorizationSucceeded
-            | PproWebhookType::PaymentChargeSuccess => {
-                Ok(EventType::PaymentIntentAuthorizationSuccess)
-            }
-            PproWebhookType::PaymentChargeRefundSucceeded => Ok(EventType::RefundSuccess),
-            PproWebhookType::PaymentChargeRefundFailed => Ok(EventType::RefundFailure),
-            PproWebhookType::PaymentChargeVoidSucceeded
-            | PproWebhookType::PaymentChargeVoidFailed
-            | PproWebhookType::PaymentChargeCaptureFailed
-            | PproWebhookType::PaymentAgreementActive
-            | PproWebhookType::PaymentAgreementFailed
-            | PproWebhookType::PaymentAgreementRevokedByConsumer
-            | PproWebhookType::PaymentAgreementRevokedByMerchant
-            | PproWebhookType::PaymentAgreementRevokedByProvider => {
-                Ok(EventType::IncomingWebhookEventUnspecified)
-            }
-        }
+        EventType::try_from(event.r#type)
     }
 
     fn process_payment_webhook(
@@ -456,32 +433,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into())
+                return Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
             }
         };
 
-        let status = match charge.status {
-            PproPaymentStatus::AuthorizationProcessing | PproPaymentStatus::CaptureProcessing => {
-                common_enums::AttemptStatus::Pending
-            }
-            PproPaymentStatus::AuthenticationPending => {
-                common_enums::AttemptStatus::AuthenticationPending
-            }
-            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => {
-                common_enums::AttemptStatus::Authorized
-            }
-            PproPaymentStatus::Captured | PproPaymentStatus::Success => {
-                common_enums::AttemptStatus::Charged
-            }
-            PproPaymentStatus::Failed
-            | PproPaymentStatus::Discarded
-            | PproPaymentStatus::Rejected
-            | PproPaymentStatus::Declined => common_enums::AttemptStatus::Failure,
-            PproPaymentStatus::Voided => common_enums::AttemptStatus::Voided,
-            PproPaymentStatus::RefundSettled | PproPaymentStatus::Refunded => {
-                common_enums::AttemptStatus::Pending
-            }
-        };
+        let status = common_enums::AttemptStatus::from(charge.status);
 
         let (error_code, error_message, error_reason) = match charge.failure.as_ref() {
             Some(failure) => (
@@ -531,26 +487,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(errors::ConnectorError::WebhookBodyDecodingFailed.into())
+                return Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
             }
         };
 
-        let status = match charge.status {
-            PproPaymentStatus::Captured
-            | PproPaymentStatus::RefundSettled
-            | PproPaymentStatus::Success
-            | PproPaymentStatus::Refunded => common_enums::RefundStatus::Success,
-            PproPaymentStatus::Failed
-            | PproPaymentStatus::Rejected
-            | PproPaymentStatus::Declined => common_enums::RefundStatus::Failure,
-            PproPaymentStatus::AuthorizationProcessing
-            | PproPaymentStatus::CaptureProcessing
-            | PproPaymentStatus::AuthenticationPending
-            | PproPaymentStatus::AuthorizationAsync
-            | PproPaymentStatus::CapturePending
-            | PproPaymentStatus::Discarded
-            | PproPaymentStatus::Voided => common_enums::RefundStatus::Pending,
-        };
+        let status = common_enums::RefundStatus::from(charge.status);
 
         let (error_code, error_message) = match charge.failure.as_ref() {
             Some(failure) => (
@@ -603,8 +544,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
 
         let algorithm = crypto::HmacSha256;
-        let expected_signature = hex::decode(signature)
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+        let expected_signature =
+            hex::decode(signature).change_context(errors::ConnectorError::WebhookDecodingFailed)?;
 
         algorithm
             .verify_signature(
@@ -1147,7 +1088,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
             .get("Webhook-Signature")
             .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?
             .to_str()
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
 
         Ok(header_value.as_bytes().to_vec())
     }
@@ -1170,40 +1111,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
             .parse_struct("PproWebhookEvent")
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
-        match event.r#type {
-            PproWebhookType::PaymentChargeAuthorizationSucceeded
-            | PproWebhookType::PaymentChargeSuccess => {
-                Ok(IncomingWebhookEvent::PaymentIntentSuccess)
-            }
-            PproWebhookType::PaymentChargeAuthorizationFailed
-            | PproWebhookType::PaymentChargeFailed
-            | PproWebhookType::PaymentChargeDiscarded => {
-                Ok(IncomingWebhookEvent::PaymentIntentFailure)
-            }
-            PproWebhookType::PaymentChargeCaptureSucceeded => {
-                Ok(IncomingWebhookEvent::PaymentIntentCaptureSuccess)
-            }
-            PproWebhookType::PaymentChargeCaptureFailed => {
-                Ok(IncomingWebhookEvent::PaymentIntentCaptureFailure)
-            }
-            PproWebhookType::PaymentChargeVoidSucceeded => {
-                Ok(IncomingWebhookEvent::PaymentIntentCancelled)
-            }
-            PproWebhookType::PaymentChargeVoidFailed => {
-                Ok(IncomingWebhookEvent::PaymentIntentCancelFailure)
-            }
-            PproWebhookType::PaymentChargeRefundSucceeded => {
-                Ok(IncomingWebhookEvent::RefundSuccess)
-            }
-            PproWebhookType::PaymentChargeRefundFailed => Ok(IncomingWebhookEvent::RefundFailure),
-            PproWebhookType::PaymentAgreementActive => Ok(IncomingWebhookEvent::MandateActive),
-            PproWebhookType::PaymentAgreementFailed
-            | PproWebhookType::PaymentAgreementRevokedByConsumer
-            | PproWebhookType::PaymentAgreementRevokedByMerchant
-            | PproWebhookType::PaymentAgreementRevokedByProvider => {
-                Ok(IncomingWebhookEvent::MandateRevoked)
-            }
-        }
+        IncomingWebhookEvent::try_from(event.r#type)
     }
 
     fn get_webhook_resource_object(
