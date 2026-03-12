@@ -9,7 +9,6 @@
 
 ## SDKs
 - [Node.js SDK](sdks/nodejs/README.md)
-- [Python SDK](sdks/python/README.md)
 
 ## Connectors
 - [Overview](connectors/README.md)
@@ -19,7 +18,6 @@
 
 ## Architecture
 - [Architecture](architecture/README.md)
-- [Architecture Overview](architecture/overview.md)
 
 ## API Reference
 - [Overview](api-reference/README.md)
