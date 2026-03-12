@@ -168,6 +168,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             }),
             Self::MissingApplePayTokenData
             | Self::WebhookBodyDecodingFailed
+            | Self::WebhookDecodingFailed
             | Self::WebhookSourceVerificationFailed
             | Self::WebhookVerificationSecretInvalid => {
                 ApplicationErrorResponse::BadRequest(ApiError {
