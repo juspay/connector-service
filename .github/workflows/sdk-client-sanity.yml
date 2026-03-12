@@ -14,7 +14,7 @@ on:
       - 'sdk/python/src/payments/http_client.py'
       - 'sdk/python/tests/client_sanity_runner.py'
       - 'sdk/rust/src/http_client.rs'
-      - 'sdk/rust/tests/client_sanity_runner.rs'
+      - 'sdk/rust/src/bin/client_sanity_runner.rs'
       - 'sdk/java/src/main/kotlin/HttpClient.kt'
       - 'sdk/java/tests/ClientSanityRunner.kt'
       - 'sdk/tests/client_sanity/**'
@@ -29,7 +29,7 @@ on:
       - 'sdk/python/src/payments/http_client.py'
       - 'sdk/python/tests/client_sanity_runner.py'
       - 'sdk/rust/src/http_client.rs'
-      - 'sdk/rust/tests/client_sanity_runner.rs'
+      - 'sdk/rust/src/bin/client_sanity_runner.rs'
       - 'sdk/java/src/main/kotlin/HttpClient.kt'
       - 'sdk/java/tests/ClientSanityRunner.kt'
       - 'sdk/tests/client_sanity/**'
@@ -128,8 +128,8 @@ jobs:
               ? fs.readFileSync(reportPath, 'utf8')
               : '*Report file not generated.*';
 
-            const verdict = report.includes('✅ PASS') ? '✅' : '❌';
-            const body = `## SDK Client Sanity Certification ${verdict}\n\n<details>\n<summary>Report</summary>\n\n\`\`\`markdown\n${report.replace(/```/g, '\\`\\`\\`')}\n\`\`\`\n\n</details>\n\n<!-- sdk-client-sanity -->`;
+            const verdict = report.includes('**Verdict**: PASS') ? 'PASS' : 'FAIL';
+            const body = `## SDK Client Sanity Certification: ${verdict}\n\n<details>\n<summary>Report</summary>\n\n\`\`\`markdown\n${report.replace(/```/g, '\\`\\`\\`')}\n\`\`\`\n\n</details>\n\n<!-- sdk-client-sanity -->`;
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
