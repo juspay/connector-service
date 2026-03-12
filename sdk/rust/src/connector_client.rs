@@ -165,7 +165,7 @@ pub fn build_ffi_request<T>(
         .map_err(|e| format!("Auth mapping failed: {e}"))?;
 
     let masked_metadata = ffi_headers_to_masked_metadata(metadata)
-        .map_err(|e| format!("Metadata mapping failed: {e}"))?;
+        .map_err(|e| format!("Metadata mapping failed: {:?}", e))?;
 
     Ok(FfiRequestData {
         payload,
