@@ -270,7 +270,7 @@
     },
     {
       "id": "CASE_PROXY_FORWARD",
-      "description": "Request sent via simple forward proxy (Makefile starts tests/client_sanity/simple_proxy.js).",
+      "description": "Request sent via simple forward proxy (Makefile starts sdk/tests/client_sanity/simple_proxy.js).",
       "proxy": { "http_url": "http://localhost:9082" },
       "request": {
         "method": "GET",

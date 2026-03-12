@@ -8,7 +8,7 @@ const assert = require('assert');
 
 const CLIENT_SANITY_DIR = __dirname;
 const ARTIFACTS_DIR = path.join(CLIENT_SANITY_DIR, 'artifacts');
-const REFERENCE_BOUNDARY = "REFERENCE_BOUNDARY";
+const REFERENCE_BOUNDARY = 'REFERENCE_BOUNDARY';
 
 /**
  * Normalizes headers by lowercasing keys and ignoring transport-level noise.
@@ -96,7 +96,7 @@ function verifyScenario(lang, scenarioId, goldenPath, actualPath, capturePath, e
       return { status: 'FAILED', message: 'Actual error.code missing' };
     }
     try {
-      assert.strictEqual(String(actualCode), String(expectedError), "Error Code Mismatch");
+      assert.strictEqual(String(actualCode), String(expectedError), 'Error Code Mismatch');
       return { status: 'SUCCESS', message: 'Expected error code matched' };
     } catch (err) {
       return { status: 'FAILED', message: err.message, diff: { actual: err.actual, expected: err.expected } };
@@ -104,7 +104,7 @@ function verifyScenario(lang, scenarioId, goldenPath, actualPath, capturePath, e
   }
 
   if (!goldenExists) {
-    return { status: 'MISSING', message: 'Golden capture missing (run node tests/client_sanity/generate_golden.js)' };
+    return { status: 'MISSING', message: 'Golden capture missing (run node sdk/tests/client_sanity/generate_golden.js)' };
   }
   if (!actualExists) {
     return { status: 'MISSING', message: 'Actual capture missing' };
@@ -119,26 +119,26 @@ function verifyScenario(lang, scenarioId, goldenPath, actualPath, capturePath, e
 
   try {
     // Speaker: request parity — compare echo server capture to golden request
-    assert.strictEqual(capture.method, golden.method, "Method Mismatch");
-    assert.strictEqual(normalizeUrl(capture.url), normalizeUrl(golden.url), "URL Mismatch");
+    assert.strictEqual(capture.method, golden.method, 'Method Mismatch');
+    assert.strictEqual(normalizeUrl(capture.url), normalizeUrl(golden.url), 'URL Mismatch');
 
     const normGoldenHeaders = normalizeHeaders(golden.headers);
     const normCaptureHeaders = normalizeHeaders(capture.headers);
-    assert.deepStrictEqual(normCaptureHeaders, normGoldenHeaders, "Headers Mismatch");
+    assert.deepStrictEqual(normCaptureHeaders, normGoldenHeaders, 'Headers Mismatch');
 
     const normGoldenBody = normalizeBody(golden.body, golden.headers);
     const normCaptureBody = normalizeBody(capture.body, capture.headers);
-    assert.strictEqual(normCaptureBody, normGoldenBody, "Body Content Mismatch");
+    assert.strictEqual(normCaptureBody, normGoldenBody, 'Body Content Mismatch');
 
     // Listener: response parity — compare SDK's actual response to golden expected response
     if (golden.response && actual.response) {
-      assert.strictEqual(actual.response.statusCode, golden.response.statusCode, "Response Status Mismatch");
+      assert.strictEqual(actual.response.statusCode, golden.response.statusCode, 'Response Status Mismatch');
       const normGoldenRespHeaders = normalizeResponseHeaders(golden.response.headers || {});
       const normActualRespHeaders = normalizeResponseHeaders(actual.response.headers || {});
-      assert.deepStrictEqual(normActualRespHeaders, normGoldenRespHeaders, "Response Headers Mismatch");
+      assert.deepStrictEqual(normActualRespHeaders, normGoldenRespHeaders, 'Response Headers Mismatch');
       const goldenRespBody = golden.response.body != null ? String(golden.response.body) : '';
       const actualRespBody = actual.response.body != null ? String(actual.response.body) : '';
-      assert.strictEqual(actualRespBody, goldenRespBody, "Response Body Mismatch");
+      assert.strictEqual(actualRespBody, goldenRespBody, 'Response Body Mismatch');
     }
 
     return { status: 'SUCCESS', message: 'Perfect Parity' };
@@ -151,12 +151,12 @@ async function runCertification() {
   const manifestPath = path.join(CLIENT_SANITY_DIR, 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const languages = ['node', 'python', 'rust', 'kotlin'];
-  
+
   const reportData = [];
   let totalCertified = 0;
   let totalFailed = 0;
 
-  console.log("\n🛡️ [HTTP CLIENT SANITY JUDGE]: Starting certification...");
+  console.log('\n🛡️ [HTTP CLIENT SANITY JUDGE]: Starting certification...');
 
   for (const lang of languages) {
     // Check if any actual captures exist for this language
@@ -202,8 +202,8 @@ async function runCertification() {
 
   // GENERATE MARKDOWN REPORT
   let markdown = `# 🛡️ HTTP Client Sanity Report\n\n**Verdict**: ${totalFailed === 0 ? '✅ PASS' : '❌ FAIL'}\n\n`;
-  markdown += `## 📊 Language Scorecard\n| Language | Certified | Success Rate | Status |\n| :--- | :--- | :--- | :--- |\n`;
-  
+  markdown += '## 📊 Language Scorecard\n| Language | Certified | Success Rate | Status |\n| :--- | :--- | :--- | :--- |\n';
+
   reportData.forEach(entry => {
     const success = entry.results.filter(r => r.status === 'SUCCESS').length;
     const total = entry.results.length;
@@ -211,20 +211,20 @@ async function runCertification() {
     markdown += `| **${entry.lang.toUpperCase()}** | ${total}/${total} | ${pct}% | ${success === total ? '✅' : '⚠️'} |\n`;
   });
 
-  markdown += `\n## 🔍 Detailed Scenario Audit\n| ID | Description | ` + languages.map(l => l.toUpperCase()).join(' | ') + ` |\n| :--- | :--- | ` + languages.map(() => ':---:').join(' | ') + ` |\n`;
+  markdown += '\n## 🔍 Detailed Scenario Audit\n| ID | Description | ' + languages.map(l => l.toUpperCase()).join(' | ') + ' |\n| :--- | :--- | ' + languages.map(() => ':---:').join(' | ') + ' |\n';
 
   manifest.scenarios.forEach(scenario => {
     const globallyOptional = scenario.optional;
     const optionalTag = globallyOptional ? ' *(optional)*' : '';
     let row = `| **${scenario.id}**${optionalTag} | ${scenario.description} | `;
     const statuses = reportData.map(entry => {
-        const res = entry.results.find(r => r.id === scenario.id);
-        if (!res) return '➖';
-        if (res.status === 'SUCCESS') return '✅';
-        const isOptional = globallyOptional || (Array.isArray(scenario.skip_langs) && scenario.skip_langs.includes(entry.lang));
-        return isOptional ? '⚠️' : '❌';
+      const res = entry.results.find(r => r.id === scenario.id);
+      if (!res) return '➖';
+      if (res.status === 'SUCCESS') return '✅';
+      const isOptional = globallyOptional || (Array.isArray(scenario.skip_langs) && scenario.skip_langs.includes(entry.lang));
+      return isOptional ? '⚠️' : '❌';
     });
-    markdown += row + statuses.join(' | ') + ` |\n`;
+    markdown += row + statuses.join(' | ') + ' |\n';
   });
 
   // Collect all optional/skipped notes for the footer.
@@ -239,13 +239,13 @@ async function runCertification() {
     }
   });
   if (optionalNotes.length > 0) {
-    markdown += `\n## ℹ️ Optional / Skipped Scenarios\n\nThese failures do not block certification.\n\n`;
+    markdown += '\n## ℹ️ Optional / Skipped Scenarios\n\nThese failures do not block certification.\n\n';
     markdown += optionalNotes.join('\n') + '\n';
   }
 
   const reportPath = path.join(ARTIFACTS_DIR, 'REPORT.md');
   fs.writeFileSync(reportPath, markdown);
-  console.log(`\n✨ Certification Complete. Report: tests/client_sanity/artifacts/REPORT.md`);
+  console.log('\n✨ Certification Complete. Report: sdk/tests/client_sanity/artifacts/REPORT.md');
 
   process.exit(totalFailed === 0 ? 0 : 1);
 }

@@ -17,8 +17,8 @@ on:
       - 'sdk/rust/tests/client_sanity_runner.rs'
       - 'sdk/java/src/main/kotlin/HttpClient.kt'
       - 'sdk/java/tests/ClientSanityRunner.kt'
-      - 'tests/client_sanity/**'
-      - 'tests/package.json'
+      - 'sdk/tests/client_sanity/**'
+      - 'sdk/tests/package.json'
       - 'Makefile'
   push:
     branches:
@@ -32,8 +32,8 @@ on:
       - 'sdk/rust/tests/client_sanity_runner.rs'
       - 'sdk/java/src/main/kotlin/HttpClient.kt'
       - 'sdk/java/tests/ClientSanityRunner.kt'
-      - 'tests/client_sanity/**'
-      - 'tests/package.json'
+      - 'sdk/tests/client_sanity/**'
+      - 'sdk/tests/package.json'
       - 'Makefile'
 
 concurrency:
@@ -75,7 +75,7 @@ jobs:
         run: cd sdk/javascript && npm install && cd ../..
 
       - name: Install test dependencies (echo, proxy, judge)
-        run: cd tests && npm install --no-save && cd ..
+        run: cd sdk/tests && npm install --no-save && cd ../..
 
       - name: Install Python dependencies (SDK)
         run: pip install -r sdk/python/requirements.txt grpcio-tools protobuf
@@ -97,7 +97,7 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            const reportPath = path.join(process.env.GITHUB_WORKSPACE || '.', 'tests', 'client_sanity', 'artifacts', 'REPORT.md');
+            const reportPath = path.join(process.env.GITHUB_WORKSPACE || '.', 'sdk', 'tests', 'client_sanity', 'artifacts', 'REPORT.md');
             const report = fs.existsSync(reportPath)
               ? fs.readFileSync(reportPath, 'utf8')
               : '*Report file not generated.*';

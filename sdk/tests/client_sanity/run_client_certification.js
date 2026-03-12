@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Client Sanity Certification Runner
- * 
+ *
  * Orchestrates the execution of client sanity tests across all SDK languages.
  * For each scenario in manifest.json, this script:
  * 1. Starts the echo server
@@ -14,7 +14,7 @@ const path = require('path');
 const { spawn, execFileSync } = require('child_process');
 
 const CLIENT_SANITY_DIR = __dirname;
-const PROJECT_ROOT = path.join(CLIENT_SANITY_DIR, '..', '..');
+const PROJECT_ROOT = path.join(CLIENT_SANITY_DIR, '..', '..', '..');
 const ARTIFACTS_DIR = path.join(CLIENT_SANITY_DIR, 'artifacts');
 const MANIFEST_PATH = path.join(CLIENT_SANITY_DIR, 'manifest.json');
 const ECHO_SERVER_PATH = path.join(CLIENT_SANITY_DIR, 'echo_server.js');
@@ -40,7 +40,7 @@ async function runCommand(cmd, args, input = null, opts = {}) {
 }
 
 async function startEchoServer() {
-  console.log("📡 Starting Echo Server...");
+  console.log('📡 Starting Echo Server...');
   const server = spawn('node', [ECHO_SERVER_PATH], { stdio: 'inherit' });
   await new Promise(r => setTimeout(r, 1000)); // Wait for server to bind
   return server;
@@ -50,7 +50,7 @@ async function main() {
   const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
   const languages = process.argv.slice(2);
   if (languages.length === 0) {
-    console.error("Usage: node tests/client_sanity/orchestrator.js <rust|python|node|kotlin>");
+    console.error('Usage: node sdk/tests/client_sanity/run_client_certification.js <rust|python|node|kotlin>');
     process.exit(1);
   }
 
@@ -58,14 +58,14 @@ async function main() {
 
   for (const lang of languages) {
     console.log(`\n🚀 [ORCHESTRATOR]: Testing ${lang.toUpperCase()} SDK...`);
-    
+
     for (const scenario of manifest.scenarios) {
       console.log(`   👉 Scenario: ${scenario.id}`);
-      
+
       const sourceId = `${lang}_${scenario.id}`;
       const actualStore = path.join(ARTIFACTS_DIR, `actual_${lang}_${scenario.id}.json`);
       const captureFile = path.join(ARTIFACTS_DIR, `capture_${sourceId}.json`);
-      
+
       // Clean up old files
       if (fs.existsSync(actualStore)) fs.unlinkSync(actualStore);
       if (fs.existsSync(captureFile)) fs.unlinkSync(captureFile);
@@ -100,7 +100,7 @@ async function main() {
         runOpts = { cwd: path.join(PROJECT_ROOT, 'sdk/java') };
       }
       const { stdout } = await runCommand(cmd, args, runnerInput, runOpts);
-      
+
       let sdkOutput;
       try {
         sdkOutput = JSON.parse(stdout.trim());
@@ -119,7 +119,7 @@ async function main() {
   }
 
   echoServer.kill();
-  console.log("\n⚖️ Starting Judge...");
+  console.log('\n⚖️ Starting Judge...');
   execFileSync('node', [JUDGE_PATH], { stdio: 'inherit' });
 }
 

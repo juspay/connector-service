@@ -54,17 +54,17 @@ generate:
 
 ## SDK Certification: Run HTTP client sanity suite across all supported languages
 certify-client-sanity:
-	@echo "🧹 Cleaning previous client sanity artifacts..."
-	@rm -rf tests/client_sanity/artifacts || true
-	@mkdir -p tests/client_sanity/artifacts
-	@echo "🛡️ Starting Client Sanity Certification..."
+	@echo "Cleaning previous client sanity artifacts..."
+	@rm -rf sdk/tests/client_sanity/artifacts || true
+	@mkdir -p sdk/tests/client_sanity/artifacts
+	@echo "Starting Client Sanity Certification..."
 	@pkill -f echo_server.js || true
 	@pkill -f simple_proxy.js || true
-	@node tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 1
-	@echo "📄 Generating golden captures from manifest..."
-	@node tests/client_sanity/generate_golden.js
-	@echo "🚀 [CERTIFICATION]: Running client sanity suite..."
-	@node tests/client_sanity/run_client_certification.js rust python node kotlin
+	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 1
+	@echo "Generating golden captures from manifest..."
+	@node sdk/tests/client_sanity/generate_golden.js
+	@echo "[CERTIFICATION]: Running client sanity suite..."
+	@node sdk/tests/client_sanity/run_client_certification.js rust python node kotlin
 	@pkill -f echo_server.js; pkill -f simple_proxy.js || true
 
 # Format proto files
