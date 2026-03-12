@@ -74,13 +74,14 @@ export function createDispatcher(config: types.IHttpConfig): Dispatcher {
     keepAliveTimeout: config.keepAliveTimeoutMs ?? Defaults.KEEP_ALIVE_TIMEOUT_MS,
   };
 
+  const proxyUrl = config.proxy?.httpsUrl || config.proxy?.httpUrl;
   try {
-    const proxyUrl = config.proxy?.httpsUrl || config.proxy?.httpUrl;
     return proxyUrl
       ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
       : new Agent(dispatcherOptions);
   } catch (error: any) {
-    const code = (error?.message || '').toLowerCase().includes('proxy') ? 'INVALID_PROXY_CONFIGURATION' : 'CLIENT_INITIALIZATION';
+    // If we were attempting proxy setup, any constructor failure is a proxy config error.
+    const code = proxyUrl ? 'INVALID_PROXY_CONFIGURATION' : 'CLIENT_INITIALIZATION';
     throw new ConnectorError(
       `Internal HTTP setup failed: ${error.message}`,
       500,

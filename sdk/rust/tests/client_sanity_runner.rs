@@ -13,6 +13,7 @@ struct RunnerInput {
     source_id: String,
     request: RequestDetails,
     client_timeout_ms: Option<u64>,
+    client_response_timeout_ms: Option<u64>,
     proxy: Option<ScenarioProxy>,
 }
 
@@ -97,6 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = HttpOptions {
         proxy: proxy_cfg,
         total_timeout_ms: input.client_timeout_ms.map(|ms| ms as u32),
+        response_timeout_ms: input.client_response_timeout_ms.map(|ms| ms as u32),
         ..Default::default()
     };
 

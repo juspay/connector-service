@@ -64,7 +64,10 @@ function normalizeResponseHeaders(headers) {
  * Normalizes multipart bodies by replacing random boundaries with a static reference.
  */
 function normalizeBody(body, headers) {
-  const contentType = headers['content-type'] || '';
+  // Case-insensitive lookup: golden headers preserve manifest casing (e.g. 'Content-Type')
+  // while capture headers from Node's http.IncomingMessage are always lowercase.
+  const contentType = Object.entries(headers)
+    .find(([k]) => k.toLowerCase() === 'content-type')?.[1] || '';
   if (contentType.includes('multipart/form-data')) {
     const boundaryMatch = contentType.match(/boundary=([^;]+)/);
     if (boundaryMatch) {
@@ -172,17 +175,28 @@ async function runCertification() {
       const result = verifyScenario(lang, scenario.id, golden, actual, capture, expectedError);
       langResults.push({ id: scenario.id, ...result });
 
+      // A scenario is optional if globally optional OR skipped for this specific language.
+      const isOptional = scenario.optional || (Array.isArray(scenario.skip_langs) && scenario.skip_langs.includes(lang));
+      const skipReason = scenario[`skip_reason_${lang}`] || scenario.skip_reason || '';
+
       if (result.status === 'SUCCESS') {
         console.log(`   ✅ ${scenario.id}: Passed`);
       } else {
-        const optionalMarker = scenario.optional ? ' [OPTIONAL]' : '';
-        const skipReason = scenario.skip_reason ? ` — ${scenario.skip_reason}` : '';
-        console.error(`   ❌ ${scenario.id}${optionalMarker}: ${result.status} (${result.message})${skipReason}`);
+        const optionalMarker = isOptional ? ' [OPTIONAL]' : '';
+        const reasonSuffix = skipReason ? ` — ${skipReason}` : '';
+        const icon = isOptional ? '⚠️' : '❌';
+        console.error(`   ${icon} ${scenario.id}${optionalMarker}: ${result.status} (${result.message})${reasonSuffix}`);
       }
     }
 
-    const failedCount = langResults.filter(r => r.status === 'FAILED').length;
-    if (failedCount > 0) totalFailed++;
+    // Only non-optional failures block certification.
+    const mandatoryFailedCount = langResults.filter(r => {
+      if (r.status !== 'FAILED') return false;
+      const scenario = manifest.scenarios.find(s => s.id === r.id);
+      const isOptional = scenario?.optional || (Array.isArray(scenario?.skip_langs) && scenario.skip_langs.includes(lang));
+      return !isOptional;
+    }).length;
+    if (mandatoryFailedCount > 0) totalFailed++;
     reportData.push({ lang, results: langResults });
   }
 
@@ -200,16 +214,34 @@ async function runCertification() {
   markdown += `\n## 🔍 Detailed Scenario Audit\n| ID | Description | ` + languages.map(l => l.toUpperCase()).join(' | ') + ` |\n| :--- | :--- | ` + languages.map(() => ':---:').join(' | ') + ` |\n`;
 
   manifest.scenarios.forEach(scenario => {
-    const optionalTag = scenario.optional ? ' *(optional)*' : '';
+    const globallyOptional = scenario.optional;
+    const optionalTag = globallyOptional ? ' *(optional)*' : '';
     let row = `| **${scenario.id}**${optionalTag} | ${scenario.description} | `;
     const statuses = reportData.map(entry => {
         const res = entry.results.find(r => r.id === scenario.id);
         if (!res) return '➖';
         if (res.status === 'SUCCESS') return '✅';
-        return scenario.optional ? '⚠️' : '❌';
+        const isOptional = globallyOptional || (Array.isArray(scenario.skip_langs) && scenario.skip_langs.includes(entry.lang));
+        return isOptional ? '⚠️' : '❌';
     });
     markdown += row + statuses.join(' | ') + ` |\n`;
   });
+
+  // Collect all optional/skipped notes for the footer.
+  const optionalNotes = [];
+  manifest.scenarios.forEach(s => {
+    if (s.optional && s.skip_reason) optionalNotes.push(`- **${s.id}** *(all languages)*: ${s.skip_reason}`);
+    if (Array.isArray(s.skip_langs)) {
+      s.skip_langs.forEach(lang => {
+        const reason = s[`skip_reason_${lang}`] || s.skip_reason || 'Not supported for this SDK.';
+        optionalNotes.push(`- **${s.id}** *(${lang.toUpperCase()})*: ${reason}`);
+      });
+    }
+  });
+  if (optionalNotes.length > 0) {
+    markdown += `\n## ℹ️ Optional / Skipped Scenarios\n\nThese failures do not block certification.\n\n`;
+    markdown += optionalNotes.join('\n') + '\n';
+  }
 
   const reportPath = path.join(ARTIFACTS_DIR, 'REPORT.md');
   fs.writeFileSync(reportPath, markdown);

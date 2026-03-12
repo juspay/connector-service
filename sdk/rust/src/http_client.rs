@@ -225,16 +225,14 @@ impl HttpClient {
             Method::Patch => self.client.patch(&request.url),
         };
 
-        // Efficient Override: Apply total timeout directly to RequestBuilder.
-        let effective_total_timeout =
-            if let Some(total) = override_options.as_ref().and_then(|o| o.total_timeout_ms) {
-                req_builder = req_builder.timeout(Duration::from_millis(total as u64));
-                total
-            } else {
-                self.options
-                    .total_timeout_ms
-                    .unwrap_or(HttpDefault::TotalTimeoutMs as u32)
-            };
+        // Resolve and apply effective total timeout for this request.
+        // reqwest 0.11 supports only total timeout (.timeout()) at request level.
+        let effective_total_timeout = override_options
+            .as_ref()
+            .and_then(|o| o.total_timeout_ms)
+            .or(self.options.total_timeout_ms)
+            .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
+        req_builder = req_builder.timeout(Duration::from_millis(effective_total_timeout as u64));
 
         for (key, value) in &request.headers {
             req_builder = req_builder.header(key, value);
@@ -245,15 +243,13 @@ impl HttpClient {
         }
 
         let response = req_builder.send().await.map_err(|e| {
-            let elapsed = start_time.elapsed().as_millis() as u32;
-
             if e.is_timeout() {
                 if e.is_connect() {
                     HttpClientError::ConnectTimeout(request.url.clone())
-                } else if elapsed >= effective_total_timeout {
-                    HttpClientError::TotalTimeout(request.url.clone())
                 } else {
-                    HttpClientError::ResponseTimeout(request.url.clone())
+                    // reqwest 0.11 only supports total timeout (.timeout()); response_timeout_ms
+                    // is not supported. Any non-connect timeout is therefore a total timeout.
+                    HttpClientError::TotalTimeout(request.url.clone())
                 }
             } else {
                 HttpClientError::NetworkFailure(e.to_string())

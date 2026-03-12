@@ -1,5 +1,5 @@
 /**
- * Multi-connector smoke test for hyperswitch-payments SDK.
+ * Multi-connector smoke test for hs-playlib SDK.
  * 
  * Loads connector credentials from external JSON file and runs authorize flow
  * for multiple connectors.

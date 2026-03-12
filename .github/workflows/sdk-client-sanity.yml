@@ -78,7 +78,11 @@ jobs:
         run: cd tests && npm install --no-save && cd ..
 
       - name: Install Python dependencies (SDK)
-        run: pip install -r sdk/python/requirements.txt
+        run: pip install -r sdk/python/requirements.txt grpcio-tools protobuf
+
+      - name: Generate Python protobuf stubs
+        run: make generate-proto
+        working-directory: sdk/python
 
       - name: Run SDK Client Sanity Certification
         id: certify

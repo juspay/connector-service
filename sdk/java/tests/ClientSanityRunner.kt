@@ -18,6 +18,7 @@ fun main() {
     val reqData = input.getJSONObject("request")
     val proxy = input.optJSONObject("proxy")
     val clientTimeoutMs = input.optLong("client_timeout_ms", -1L)
+    val clientResponseTimeoutMs = input.optLong("client_response_timeout_ms", -1L)
 
     val headers = mutableMapOf<String, String>()
     if (reqData.has("headers")) {
@@ -45,9 +46,11 @@ fun main() {
         body = body
     )
 
-    val httpConfig = if (clientTimeoutMs > 0) {
-        HttpConfig.newBuilder().setTotalTimeoutMs(clientTimeoutMs.toInt()).build()
-    } else null
+    val httpConfig = when {
+        clientTimeoutMs > 0 -> HttpConfig.newBuilder().setTotalTimeoutMs(clientTimeoutMs.toInt()).build()
+        clientResponseTimeoutMs > 0 -> HttpConfig.newBuilder().setResponseTimeoutMs(clientResponseTimeoutMs.toInt()).build()
+        else -> null
+    }
 
     val output = JSONObject()
     try {

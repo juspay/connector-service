@@ -11,7 +11,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { spawn, execSync } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const CLIENT_SANITY_DIR = __dirname;
 const PROJECT_ROOT = path.join(CLIENT_SANITY_DIR, '..', '..');
@@ -76,7 +76,8 @@ async function main() {
         source_id: sourceId,
         request: scenario.request,
         proxy: scenario.proxy,
-        client_timeout_ms: scenario.client_timeout_ms
+        client_timeout_ms: scenario.client_timeout_ms,
+        client_response_timeout_ms: scenario.client_response_timeout_ms
       });
 
       // Execute Thin Runner
@@ -119,7 +120,7 @@ async function main() {
 
   echoServer.kill();
   console.log("\n⚖️ Starting Judge...");
-  execSync(`node ${JUDGE_PATH}`, { stdio: 'inherit' });
+  execFileSync('node', [JUDGE_PATH], { stdio: 'inherit' });
 }
 
 main().catch(err => {

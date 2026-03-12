@@ -41,18 +41,14 @@ proxy.on('error', (err, req, res) => {
 });
 
 const httpServer = http.createServer((clientReq, clientRes) => {
-  // For proxied requests, client sends full URL in req.url (e.g. http://localhost:8081/path)
-  // Extract target origin and rewrite req.url to just the path before forwarding
+  // Always forward to the fixed local test target regardless of what the client sends.
+  // Prevents SSRF: user-controlled URL/Host headers cannot redirect the proxy elsewhere.
+  const target = `http://${TARGET_HOST}:${TARGET_PORT}`;
   if (clientReq.url.startsWith('http://') || clientReq.url.startsWith('https://')) {
     const parsed = new URL(clientReq.url);
-    const target = `${parsed.protocol}//${parsed.host}`;
     clientReq.url = parsed.pathname + parsed.search;
-    proxy.web(clientReq, clientRes, { target, changeOrigin: true });
-  } else {
-    // Fallback for relative URLs
-    const target = `http://${clientReq.headers.host || 'localhost:8081'}`;
-    proxy.web(clientReq, clientRes, { target, changeOrigin: true });
   }
+  proxy.web(clientReq, clientRes, { target, changeOrigin: true });
 });
 
 const netServer = net.createServer((clientSocket) => {

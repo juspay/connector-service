@@ -77,7 +77,8 @@ function sendResponse(res, statusCode, headers, bodyWire) {
 
 const server = http.createServer((req, res) => {
   const scenarioId = req.headers['x-scenario-id'];
-  const source = req.headers['x-source'] || 'unknown';
+  const rawSource = req.headers['x-source'] || 'unknown';
+  const source = path.basename(String(rawSource)).replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown';
 
   let chunks = [];
   req.on('data', chunk => chunks.push(chunk));
@@ -87,10 +88,17 @@ const server = http.createServer((req, res) => {
     // Store as UTF-8 when valid, else base64 so capture matches golden (manifest) and judge can compare.
     let requestBodyForCapture = '';
     if (rawBody.length > 0) {
-      const isUtf8 = typeof Buffer.isUtf8 === 'function'
-        ? Buffer.isUtf8(rawBody)
-        : (() => { try { new TextDecoder('utf8', { fatal: true }).decode(rawBody); return true; } catch { return false; } })();
-      requestBodyForCapture = isUtf8 ? rawBody.toString('utf8') : 'base64:' + rawBody.toString('base64');
+      // Use Content-Type to decide encoding: application/octet-stream means binary → always base64.
+      // For text types, decode as UTF-8 if valid, otherwise fall back to base64.
+      const incomingContentType = (req.headers['content-type'] || '').toLowerCase();
+      if (incomingContentType.includes('application/octet-stream')) {
+        requestBodyForCapture = 'base64:' + rawBody.toString('base64');
+      } else {
+        const isUtf8 = typeof Buffer.isUtf8 === 'function'
+          ? Buffer.isUtf8(rawBody)
+          : (() => { try { new TextDecoder('utf8', { fatal: true }).decode(rawBody); return true; } catch { return false; } })();
+        requestBodyForCapture = isUtf8 ? rawBody.toString('utf8') : 'base64:' + rawBody.toString('base64');
+      }
     }
 
     const m = loadManifest();
