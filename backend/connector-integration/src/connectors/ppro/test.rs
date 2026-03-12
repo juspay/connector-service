@@ -146,8 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn test_webhook_event_type_authorization_succeeded() -> Result<(), Box<dyn std::error::Error>>
-    {
+    fn test_webhook_event_type_authorization_succeeded() -> Result<(), Box<dyn std::error::Error>> {
         let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
         for event in &[
             "PAYMENT_CHARGE_AUTHORIZATION_SUCCEEDED",
@@ -277,8 +276,8 @@ mod tests {
     }
 
     #[test]
-    fn test_process_payment_webhook_failed_with_failure_details()
-    -> Result<(), Box<dyn std::error::Error>> {
+    fn test_process_payment_webhook_failed_with_failure_details(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
         let body = r#"{
             "specversion": "1.0",
@@ -487,8 +486,8 @@ mod transformer_tests {
 
     /// A captured response carries the instrument_id for mandate storage.
     #[test]
-    fn test_authorize_response_captured_with_instrument_id()
-    -> Result<(), Box<dyn std::error::Error>> {
+    fn test_authorize_response_captured_with_instrument_id(
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let json = r#"{
             "id": "charge_xyz789",
             "status": "CAPTURED",
@@ -607,8 +606,7 @@ mod transformer_tests {
     // ── SetupMandate (agreement) response deserialization ────────────────────
 
     #[test]
-    fn test_agreement_response_authentication_pending()
-    -> Result<(), Box<dyn std::error::Error>> {
+    fn test_agreement_response_authentication_pending() -> Result<(), Box<dyn std::error::Error>> {
         let json = r#"{
             "id": "agr_abc123",
             "status": "AUTHENTICATION_PENDING",
@@ -641,8 +639,8 @@ mod transformer_tests {
     }
 
     #[test]
-    fn test_agreement_response_active_with_instrument_id()
-    -> Result<(), Box<dyn std::error::Error>> {
+    fn test_agreement_response_active_with_instrument_id() -> Result<(), Box<dyn std::error::Error>>
+    {
         let json = r#"{
             "id": "agr_xyz456",
             "status": "ACTIVE",
