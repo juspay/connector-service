@@ -615,6 +615,11 @@ macros::macro_connector_implementation!(
 
 pub const AUTH_ORG_ID_HEADER: &str = "X-Forte-Auth-Organization-Id";
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Forte<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Forte<T>
 {

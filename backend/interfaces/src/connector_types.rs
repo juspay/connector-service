@@ -37,6 +37,7 @@ use crate::{
 
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
+    + ConnectorSpecifications
     + ValidationTrait
     + PaymentAuthorizeV2<T>
     + PaymentSyncV2

@@ -461,6 +461,15 @@ macros::create_all_prerequisites!(
 );
 
 // ============================================================================
+// ConnectorSpecifications Implementation
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Powertranz<T>
+{
+}
+
+// ============================================================================
 // ConnectorCommon Implementation
 // ============================================================================
 
