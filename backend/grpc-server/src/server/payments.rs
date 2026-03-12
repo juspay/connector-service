@@ -3688,16 +3688,17 @@ async fn verify_webhook_source_external(
         connector_response_headers: None,
     };
 
-    let merchant_secret = webhook_secrets.ok_or_else(|| {
-        tonic::Status::invalid_argument(
-            "webhook_secrets is required for external webhook source verification",
-        )
-    })?;
+    let merchant_secret =
+        webhook_secrets.unwrap_or_else(|| domain_types::connector_types::ConnectorWebhookSecrets {
+            secret: "default_secret".to_string().into_bytes(),
+            additional_secret: None,
+        });
 
     let verify_webhook_request = VerifyWebhookSourceRequestData {
         webhook_headers: request_details.headers.clone(),
         webhook_body: request_details.body.clone(),
         merchant_secret,
+        webhook_uri: request_details.uri.clone(),
     };
 
     let verify_webhook_router_data = RouterDataV2::<
