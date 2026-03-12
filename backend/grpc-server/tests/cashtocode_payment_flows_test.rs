@@ -12,9 +12,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        AuthenticationType, CaptureMethod, ClassicReward, Currency, Identifier, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentStatus,
+        payment_method, payment_service_client::PaymentServiceClient, AuthenticationType,
+        CaptureMethod, ClassicReward, Currency, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -95,14 +95,13 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             id: Some("cust_1233".to_string()),
             connector_customer_id: Some("cust_1233".to_string()),
             phone_number: None,
+            phone_country_code: None,
         }),
         return_url: Some("https://hyperswitch.io/connector-service".to_string()),
         webhook_url: Some("https://hyperswitch.io/connector-service".to_string()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        merchant_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("cashtocode_test_{}", get_timestamp()))),
-        }),
+        merchant_transaction_id: Some(format!("cashtocode_test_{}", get_timestamp())),
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),

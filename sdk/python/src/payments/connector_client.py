@@ -65,14 +65,13 @@ class _ConnectorClientBase:
 
         return ffi, http_config
 
-    async def _execute_flow(self, flow: str, request: Any, metadata: dict, response_cls, options: Optional[RequestConfig] = None):
+    async def _execute_flow(self, flow: str, request: Any, response_cls, options: Optional[RequestConfig] = None):
         """
         Execute a full payment flow round-trip asynchronously.
         
         Args:
             flow: Flow name matching the FFI transformer prefix (e.g. "authorize").
             request: A domain protobuf request message.
-            metadata: Dict with transport headers. (Connector and Auth are handled via identity).
             response_cls: Protobuf message class to deserialize the response into.
             options: Optional per-request configuration overrides.
         """
@@ -86,7 +85,7 @@ class _ConnectorClientBase:
         options_bytes = ffi_options.SerializeToString()
 
         # 2. Build connector HTTP request via FFI
-        result_bytes = req_transformer(request_bytes, metadata, options_bytes)
+        result_bytes = req_transformer(request_bytes, options_bytes)
         connector_req = FfiConnectorHttpRequest.FromString(result_bytes)
         
         connector_request = HttpRequest(
@@ -115,14 +114,13 @@ class _ConnectorClientBase:
         result_bytes_res = res_transformer(
             res_bytes,
             request_bytes,
-            metadata,
             options_bytes
         )
 
         # 6. Deserialize final domain response
         return response_cls.FromString(result_bytes_res)
 
-    def _execute_direct(self, flow: str, request, metadata: dict, response_cls, options: Optional[RequestConfig] = None):
+    def _execute_direct(self, flow: str, request, response_cls, options: Optional[RequestConfig] = None):
         """
         Execute a single-step flow: FFI transformer called directly, no HTTP round-trip.
         """
@@ -134,7 +132,7 @@ class _ConnectorClientBase:
         ffi_options, _ = self._resolve_config(options)
         options_bytes = ffi_options.SerializeToString()
 
-        result_bytes = transformer(request_bytes, metadata, options_bytes)
+        result_bytes = transformer(request_bytes, options_bytes)
 
         return response_cls.FromString(result_bytes)
 

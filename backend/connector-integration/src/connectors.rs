@@ -223,3 +223,6 @@ pub use self::ppro::Ppro;
 
 pub mod truelayer;
 pub use self::truelayer::Truelayer;
+
+pub mod finix;
+pub use self::finix::Finix;

@@ -149,7 +149,7 @@ The architecture prioritizes:
 
 1. **Consistency**: Same types, patterns, and errors across all connectors
 2. **Extensibility**: Add connectors without SDK changes
-3. **Performance**: gRPC interface provides significant advantage over REST APIs for high volume payment processing. The lirabry could also be used as microservice with 10x smaller paylos, faster serialization/ deserialization hops, reduced bannwidth consumption and optimized for concurrent requests on a single connection
+3. **Performance**: gRPC interface provides significant advantage over REST APIs for high volume payment processing. The library could also be used as microservice with 10x smaller payloads, faster serialization/ deserialization hops, reduced bandwidth consumption and optimized for concurrent requests on a single connection
 4. **Developer Experience**: Idiomatic payments interface with multi language SDKs 
 
 For developers integrating multiple payment providers, this means weeks of integration work becomes hours, and maintenance burden drops from O(N connectors) to O(1).
