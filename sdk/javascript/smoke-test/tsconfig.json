@@ -6,10 +6,10 @@
     "moduleResolution": "node",
     "skipLibCheck": true,
     "strict": true,
-    "baseUrl": "..",
+    "baseUrl": ".",
     "paths": {
-      "hyperswitch-payments": ["src/index"],
-      "hyperswitch-payments/dist/src/payments/generated/proto": ["src/payments/generated/proto"]
+      "hs-playlib": ["./node_modules/hs-playlib/dist/src/index"],
+      "hs-playlib/dist/src/payments/generated/proto": ["./node_modules/hs-playlib/dist/src/payments/generated/proto"]
     }
   },
   "include": ["test_smoke.ts"]

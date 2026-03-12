@@ -4,7 +4,7 @@
 ---
 title: Refund
 description: Initiate a refund to customer's payment method - return funds for returns, cancellations, or service adjustments after original payment
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -42,8 +42,8 @@ The `Refund` RPC returns funds to a customer's payment method after the original
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_refund_id` | Identifier | Yes | Your unique identifier for this refund operation |
-| `connector_transaction_id` | Identifier | Yes | The connector's transaction ID from the original authorization |
+| `merchant_refund_id` | string | Yes | Your unique identifier for this refund operation |
+| `connector_transaction_id` | string | Yes | The connector's transaction ID from the original authorization |
 | `payment_amount` | int64 | Yes | Original payment amount in minor units |
 | `refund_amount` | Money | Yes | Amount to refund (can be partial or full) |
 | `reason` | string | No | Reason for the refund |
@@ -63,7 +63,7 @@ The `Refund` RPC returns funds to a customer's payment method after the original
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `merchant_refund_id` | Identifier | Your refund reference (echoed back) |
+| `merchant_refund_id` | string | Your refund reference (echoed back) |
 | `connector_refund_id` | string | Connector's ID for the refund |
 | `status` | RefundStatus | Current status of the refund. Values: PENDING, SUCCEEDED, FAILED |
 | `error` | ErrorInfo | Error details if refund failed |
@@ -84,8 +84,8 @@ The `Refund` RPC returns funds to a customer's payment method after the original
 grpcurl -H "x-connector: stripe" \
   -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
   -d '{
-    "merchant_refund_id": {"id": "refund_001"},
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "merchant_refund_id": "refund_001",
+    "connector_transaction_id": "pi_3Oxxx...",
     "payment_amount": 1000,
     "refund_amount": {
       "minor_amount": 1000,
@@ -102,9 +102,7 @@ grpcurl -H "x-connector: stripe" \
 
 ```json
 {
-  "merchant_refund_id": {
-    "id": "refund_001"
-  },
+  "merchant_refund_id": "refund_001",
   "connector_refund_id": "re_3Oxxx...",
   "status": "SUCCEEDED",
   "status_code": 200,

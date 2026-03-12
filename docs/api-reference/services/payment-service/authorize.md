@@ -40,7 +40,7 @@ The `Authorize` RPC reserves funds on a customer's payment method without transf
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_transaction_id` | Identifier | Yes | Your unique transaction reference |
+| `merchant_transaction_id` | string | Yes | Your unique transaction reference |
 | `amount` | Money | Yes | The amount for the payment in minor units (e.g., 1000 = $10.00) |
 | `order_tax_amount` | int64 | No | Tax amount for the order in minor units |
 | `shipping_cost` | int64 | No | Cost of shipping for the order in minor units |
@@ -87,8 +87,8 @@ The `Authorize` RPC reserves funds on a customer's payment method without transf
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `merchant_transaction_id` | Identifier | Your transaction reference (echoed back) |
-| `connector_transaction_id` | Identifier | Connector's transaction ID (e.g., Stripe pi_xxx) |
+| `merchant_transaction_id` | string | Your transaction reference (echoed back) |
+| `connector_transaction_id` | string | Connector's transaction ID (e.g., Stripe pi_xxx) |
 | `status` | PaymentStatus | Current status: AUTHORIZED, PENDING, FAILED, etc. |
 | `error` | ErrorInfo | Error details if status is FAILED |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
@@ -109,18 +109,18 @@ The `Authorize` RPC reserves funds on a customer's payment method without transf
 grpcurl -H "x-connector: stripe" \
   -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
   -d '{
-    "merchant_transaction_id": {"id": "txn_order_001"},
+    "merchant_transaction_id": "txn_order_001",
     "amount": {
       "minor_amount": 1000,
       "currency": "USD"
     },
     "payment_method": {
       "card": {
-        "card_number": {"value": "4242424242424242"},
-        "expiry_month": {"value": "12"},
-        "expiry_year": {"value": "2027"},
-        "card_holder_name": {"value": "John Doe"},
-        "cvc": {"value": "123"}
+        "card_number": "4242424242424242",
+        "expiry_month": "12",
+        "expiry_year": "2027",
+        "card_holder_name": "John Doe",
+        "cvc": "123"
       }
     },
     "auth_type": "NO_THREE_DS",
@@ -135,12 +135,8 @@ grpcurl -H "x-connector: stripe" \
 
 ```json
 {
-  "merchant_transaction_id": {
-    "id": "txn_order_001"
-  },
-  "connector_transaction_id": {
-    "id": "pi_3Oxxx..."
-  },
+  "merchant_transaction_id": "txn_order_001",
+  "connector_transaction_id": "pi_3Oxxx...",
   "status": "AUTHORIZED",
   "status_code": 200,
   "incremental_authorization_allowed": false
