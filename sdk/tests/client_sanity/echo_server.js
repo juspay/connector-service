@@ -1,7 +1,7 @@
 /**
  * Manifest-driven echo server for HTTP client sanity certification.
  * Single source of truth: manifest.json in this directory.
- * Response is determined only by x-scenario-id header → manifest.expected_response.
+ * Response is determined only by x-scenario-id header -> manifest.expected_response.
  */
 const http = require('http');
 const fs = require('fs');
@@ -28,7 +28,7 @@ function loadManifest() {
 
 /**
  * Build response from manifest expected_response.
- * body: object → JSON; string → as-is; string "base64:..." → decode and send binary (bodyForCapture = base64 for JSON-safe capture).
+ * body: object -> JSON; string -> as-is; string "base64:..." -> decode and send binary (bodyForCapture = base64 for JSON-safe capture).
  * headers: optional; values can be string or string[] (e.g. Set-Cookie).
  * Returns { statusCode, headers, bodyWire, bodyForCapture } so binary can be sent as Buffer and stored as base64 in capture.
  */
@@ -88,7 +88,7 @@ const server = http.createServer((req, res) => {
     // Store as UTF-8 when valid, else base64 so capture matches golden (manifest) and judge can compare.
     let requestBodyForCapture = '';
     if (rawBody.length > 0) {
-      // Use Content-Type to decide encoding: application/octet-stream means binary → always base64.
+      // Use Content-Type to decide encoding: application/octet-stream means binary -> always base64.
       // For text types, decode as UTF-8 if valid, otherwise fall back to base64.
       const incomingContentType = (req.headers['content-type'] || '').toLowerCase();
       if (incomingContentType.includes('application/octet-stream')) {

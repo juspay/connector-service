@@ -2,11 +2,11 @@
 
 Each scenario in `manifest.json` is the **contract**: request (what the client sends) and **expected_response** (what the echo server returns).
 
-- **Golden captures** are generated from the manifest: `node tests/client_sanity/generate_golden.js`. Golden files have the same shape as echo server captures (method, url, headers, body, response).
+- **Golden captures** are generated from the manifest: `node sdk/tests/client_sanity/generate_golden.js`. Golden files have the same shape as echo server captures (method, url, headers, body, response).
 - **Certification runner** (`run_client_certification.js`) orchestrates test execution across all SDK languages.
 - **Judge** compares **golden_&lt;id&gt;.json** (from manifest) vs **actual_&lt;lang&gt;_&lt;id&gt;.json**. **Request** in actual is what the echo server received (what the SDK sent). **Response** in actual is what the SDK's `execute()` returned (status, headers, body)—so we certify the SDK's response handling, not the echo server's self-reported response.
 - **Capture URL:** Echo server stores the **full URL** (scheme from connection, host from `Host` header, path+query from request).
-- **Proxy:** Makefile starts `tests/client_sanity/simple_proxy.js` (port 9082) alongside the echo server. Scenario `CASE_PROXY_FORWARD` sends the request via the proxy. Port 9082 is used to avoid conflict with other services on 8082.
+- **Proxy:** Makefile starts `sdk/tests/client_sanity/simple_proxy.js` (port 9082) alongside the echo server. Scenario `CASE_PROXY_FORWARD` sends the request via the proxy. Port 9082 is used to avoid conflict with other services on 8082.
 
 ## How to give `expected_response`
 
@@ -66,7 +66,7 @@ For invalid-proxy tests:
 "proxy": { "http_url": "invalid://bad" }
 ```
 
-> Note: the Makefile / CI starts `tests/client_sanity/simple_proxy.js` on port 9082 for proxy scenarios.
+> Note: the Makefile / CI starts `sdk/tests/client_sanity/simple_proxy.js` on port 9082 for proxy scenarios.
 
 ### Runner wait (derived; not a manifest field)
 
