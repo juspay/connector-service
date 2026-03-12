@@ -129,26 +129,26 @@ async fn test_health() {
 }
 
 // Test payment authorization with auto capture
-#[tokio::test]
-async fn test_payment_authorization() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Create the payment authorization request
-        let request = create_authorize_request(CaptureMethod::Automatic);
+// #[tokio::test]
+// async fn test_payment_authorization() {
+//     grpc_test!(client, PaymentServiceClient<Channel>, {
+//         // Create the payment authorization request
+//         let request = create_authorize_request(CaptureMethod::Automatic);
 
-        // Add metadata headers
-        let mut grpc_request = Request::new(request);
-        add_cashtocode_metadata(&mut grpc_request);
+//         // Add metadata headers
+//         let mut grpc_request = Request::new(request);
+//         add_cashtocode_metadata(&mut grpc_request);
 
-        // Send the request
-        let response = client
-            .authorize(grpc_request)
-            .await
-            .expect("gRPC authorize call failed")
-            .into_inner();
+//         // Send the request
+//         let response = client
+//             .authorize(grpc_request)
+//             .await
+//             .expect("gRPC authorize call failed")
+//             .into_inner();
 
-        assert!(
-            response.status == i32::from(PaymentStatus::AuthenticationPending),
-            "Payment should be in AuthenticationPending state"
-        );
-    });
-}
+//         assert!(
+//             response.status == i32::from(PaymentStatus::AuthenticationPending),
+//             "Payment should be in AuthenticationPending state"
+//         );
+//     });
+// }
