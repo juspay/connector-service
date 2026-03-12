@@ -236,7 +236,7 @@ macros::macro_connector_implementation!(
         }
         fn get_url(&self, req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
             let reference_id = req.resource_common_data.connector_request_reference_id.clone();
-            Ok(format!("{}/transactions?referenceId={}", self.connector_base_url_payments(req), reference_id))
+            Ok(format!("{}/transactions/by-reference/{}", self.connector_base_url_payments(req), reference_id))
         }
     }
 );

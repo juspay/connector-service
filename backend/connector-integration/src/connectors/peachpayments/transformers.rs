@@ -2,7 +2,7 @@ use super::{requests, responses, PeachpaymentsRouterData};
 
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
-use common_utils::{errors::CustomResult, types::MinorUnit, SecretSerdeValue};
+use common_utils::{consts, errors::CustomResult, types::MinorUnit, SecretSerdeValue};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -25,7 +25,7 @@ pub fn get_error_code(response_code: Option<&responses::PeachpaymentsResponseCod
     match response_code {
         Some(responses::PeachpaymentsResponseCode::Text(code)) => code.clone(),
         Some(responses::PeachpaymentsResponseCode::Structured { value, .. }) => value.clone(),
-        None => "UNKNOWN".to_string(),
+        None => consts::NO_ERROR_CODE.to_string(),
     }
 }
 
@@ -35,7 +35,7 @@ pub fn get_error_message(response_code: Option<&responses::PeachpaymentsResponse
         Some(responses::PeachpaymentsResponseCode::Structured { description, .. }) => {
             description.clone()
         }
-        None => "Unknown error".to_string(),
+        None => consts::NO_ERROR_CODE.to_string(),
     }
 }
 
@@ -180,7 +180,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         if item.router_data.resource_common_data.is_three_ds() {
             return Err(errors::ConnectorError::NotSupported {
-                message: "3DS payments are not supported by PeachPayments".to_string(),
+                message: "3DS payments".to_string(),
                 connector: "peachpayments",
             }
             .into());
