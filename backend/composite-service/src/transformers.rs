@@ -1,9 +1,10 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositeGetRequest, CompositePreauthenticateRequest,
-    ConnectorState, CustomerServiceCreateRequest, CustomerServiceCreateResponse,
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    CompositeAuthenticateRequest, CompositeAuthorizeRequest, CompositeGetRequest,
+    CompositePreauthenticateRequest, ConnectorState, CustomerServiceCreateRequest,
+    CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentServiceAuthorizeRequest,
     PaymentServiceGetRequest,
 };
@@ -223,6 +224,29 @@ impl ForeignFrom<&CompositePreauthenticateRequest>
             state: item.state.clone(),
             capture_method: item.capture_method,
             description: item.description.clone(),
+        }
+    }
+}
+
+impl ForeignFrom<&CompositeAuthenticateRequest>
+    for PaymentMethodAuthenticationServiceAuthenticateRequest
+{
+    fn foreign_from(item: &CompositeAuthenticateRequest) -> Self {
+        Self {
+            merchant_order_id: item.merchant_order_id.clone(),
+            amount: item.amount,
+            payment_method: item.payment_method.clone(),
+            customer: item.customer.clone(),
+            address: item.address.clone(),
+            authentication_data: item.authentication_data.clone(),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            return_url: item.return_url.clone(),
+            continue_redirection_url: item.continue_redirection_url.clone(),
+            browser_info: item.browser_info.clone(),
+            state: item.state.clone(),
+            redirection_response: item.redirection_response.clone(),
+            capture_method: item.capture_method,
         }
     }
 }

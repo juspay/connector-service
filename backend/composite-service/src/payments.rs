@@ -9,11 +9,14 @@ use grpc_api_types::payments::{
     customer_service_server::CustomerService,
     merchant_authentication_service_server::MerchantAuthenticationService,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
-    payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    payment_service_server::PaymentService, CompositeAuthenticateRequest,
+    CompositeAuthenticateResponse, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
     CompositeGetRequest, CompositeGetResponse, CompositePreauthenticateRequest,
     CompositePreauthenticateResponse, ConnectorState, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
@@ -333,6 +336,41 @@ where
             pre_authenticate_response: Some(pre_authenticate_response),
         }))
     }
+
+    async fn authenticate(
+        &self,
+        payload: &CompositeAuthenticateRequest,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<PaymentMethodAuthenticationServiceAuthenticateResponse, tonic::Status> {
+        let authenticate_payload =
+            PaymentMethodAuthenticationServiceAuthenticateRequest::foreign_from(payload);
+
+        let mut authenticate_request = tonic::Request::new(authenticate_payload);
+        *authenticate_request.metadata_mut() = metadata.clone();
+        *authenticate_request.extensions_mut() = extensions.clone();
+
+        let authenticate_response = self
+            .payment_method_authentication_service
+            .authenticate(authenticate_request)
+            .await?
+            .into_inner();
+
+        Ok(authenticate_response)
+    }
+
+    async fn process_composite_authenticate(
+        &self,
+        request: tonic::Request<CompositeAuthenticateRequest>,
+    ) -> Result<tonic::Response<CompositeAuthenticateResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let authenticate_response = self.authenticate(&payload, &metadata, &extensions).await?;
+
+        Ok(tonic::Response::new(CompositeAuthenticateResponse {
+            authenticate_response: Some(authenticate_response),
+        }))
+    }
 }
 
 #[tonic::async_trait]
@@ -371,5 +409,12 @@ where
         request: tonic::Request<CompositePreauthenticateRequest>,
     ) -> Result<tonic::Response<CompositePreauthenticateResponse>, tonic::Status> {
         self.process_composite_pre_authenticate(request).await
+    }
+
+    async fn composite_authenticate(
+        &self,
+        request: tonic::Request<CompositeAuthenticateRequest>,
+    ) -> Result<tonic::Response<CompositeAuthenticateResponse>, tonic::Status> {
+        self.process_composite_authenticate(request).await
     }
 }

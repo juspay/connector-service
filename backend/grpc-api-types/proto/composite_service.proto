@@ -21,4 +21,7 @@ service CompositePaymentMethodAuthenticationService {
   // For frictionless, performs Next step after Preauthenticate
   // For Challenge, returns challenge-based verification
   rpc CompositePreauthenticate(CompositePreauthenticateRequest) returns (CompositePreauthenticateResponse);
+
+  // Execute 3DS challenge or frictionless verification.
+  rpc CompositeAuthenticate(CompositeAuthenticateRequest) returns (CompositeAuthenticateResponse);
 }

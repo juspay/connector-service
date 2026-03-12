@@ -200,3 +200,48 @@ message CompositePreauthenticateRequest {
 message CompositePreauthenticateResponse {
   optional PaymentMethodAuthenticationServicePreAuthenticateResponse pre_authenticate_response = 1;
 }
+
+// Request message for composite authenticate flow.
+message CompositeAuthenticateRequest {
+  // Payment Identification
+  Identifier merchant_order_id = 1;
+
+  // Amount Information
+  Money amount = 2;
+
+  // Payment Method
+  PaymentMethod payment_method = 3;
+
+  // Customer Information
+  optional Customer customer = 4;
+
+  // Address Information
+  PaymentAddress address = 5;
+
+  // Authentication Details
+  optional AuthenticationData authentication_data = 6;
+
+  optional SecretString metadata = 7; // Additional metadata for the connector
+  optional SecretString connector_feature_data = 8; // Connector-specific metadata for the transaction
+
+  // URLs for Redirection
+  optional string return_url = 9;
+  optional string continue_redirection_url = 10;
+
+  // Contextual Information
+  optional BrowserInformation browser_info = 11;
+
+  // State Information
+  optional ConnectorState state = 12;
+
+  // Redirection Information after DDC step
+  optional RedirectionResponse redirection_response = 13;
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 14;
+}
+
+// Response message for composite authenticate flow.
+message CompositeAuthenticateResponse {
+  optional PaymentMethodAuthenticationServiceAuthenticateResponse authenticate_response = 1;
+}
