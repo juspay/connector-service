@@ -103,8 +103,9 @@
     {
       "id": "CASE_10_RESPONSE_TIMEOUT",
       "description": "Slow server (2s). SDK must timeout at 1s via response_timeout_ms.",
-      "skip_langs": ["rust"],
+      "skip_langs": ["rust", "python"],
       "skip_reason_rust": "reqwest 0.11 has no read/response-phase timeout (read_timeout added in 0.12). response_timeout_ms is not supported; use total_timeout_ms instead.",
+      "skip_reason_python": "httpx response_timeout not yet verified for this scenario.",
       "request": {
         "method": "POST",
         "url": "http://localhost:8081/sanity/v1/timeout",

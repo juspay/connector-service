@@ -12,7 +12,7 @@ sdk_generated = os.path.join(sdk_src, 'payments', 'generated')
 sys.path.insert(0, sdk_generated)
 sys.path.insert(0, sdk_src)
 
-from payments.http_client import execute, HttpRequest, create_client
+from payments.http_client import execute, HttpRequest, create_client, merge_http_config, DEFAULT_HTTP_CONFIG
 from payments.generated import sdk_config_pb2
 
 async def run_sanity():
@@ -26,7 +26,7 @@ async def run_sanity():
     client_timeout_ms = input_data.get('client_timeout_ms')
     client_response_timeout_ms = input_data.get('client_response_timeout_ms')
 
-    # 1. Setup Client
+    # 1. Setup Client (base config from proxy; proto defaults for timeouts)
     client_config = None
     if proxy and proxy.get('http_url'):
         client_config = sdk_config_pb2.HttpConfig(
@@ -58,16 +58,23 @@ async def run_sanity():
         body=body
     )
 
-    # 3. Execute
-    http_config = None
+    # 3. Merge override with base (before execute); execute receives merged values
+    override_config = None
     if client_timeout_ms is not None:
-        http_config = sdk_config_pb2.HttpConfig(total_timeout_ms=client_timeout_ms)
+        override_config = sdk_config_pb2.HttpConfig(total_timeout_ms=client_timeout_ms)
     elif client_response_timeout_ms is not None:
-        http_config = sdk_config_pb2.HttpConfig(response_timeout_ms=client_response_timeout_ms)
+        override_config = sdk_config_pb2.HttpConfig(response_timeout_ms=client_response_timeout_ms)
+
+    if override_config:
+        base = client_config if client_config else DEFAULT_HTTP_CONFIG
+        merged = merge_http_config(base, override_config)
+        resolved_ms = (merged.total_timeout_ms, merged.connect_timeout_ms, merged.response_timeout_ms)
+    else:
+        resolved_ms = None
 
     output = {}
     try:
-        sdk_response = await execute(request, client, http_config)
+        sdk_response = await execute(request, client, resolved_ms)
         
         # Format Response
         ct = sdk_response.headers.get('content-type', '').lower()

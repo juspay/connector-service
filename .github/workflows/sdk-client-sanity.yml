@@ -129,7 +129,7 @@ jobs:
               : '*Report file not generated.*';
 
             const verdict = report.includes('**Verdict**: PASS') ? 'PASS' : 'FAIL';
-            const body = `## SDK Client Sanity Certification: ${verdict}\n\n<details>\n<summary>Report</summary>\n\n\`\`\`markdown\n${report.replace(/```/g, '\\`\\`\\`')}\n\`\`\`\n\n</details>\n\n<!-- sdk-client-sanity -->`;
+            const body = `## SDK Client Sanity Certification: ${verdict}\n\n<details>\n<summary>Report</summary>\n\n${report}\n\n</details>\n\n<!-- sdk-client-sanity -->`;
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,

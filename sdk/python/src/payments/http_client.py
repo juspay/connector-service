@@ -10,6 +10,13 @@ Defaults = sdk_config_pb2.HttpDefault
 
 # Type alias for proto-generated HttpConfig and sub-configs
 HttpConfig = sdk_config_pb2.HttpConfig
+
+# Proto-default HttpConfig; use as base when no client config exists
+DEFAULT_HTTP_CONFIG = HttpConfig(
+    total_timeout_ms=Defaults.TOTAL_TIMEOUT_MS,
+    connect_timeout_ms=Defaults.CONNECT_TIMEOUT_MS,
+    response_timeout_ms=Defaults.RESPONSE_TIMEOUT_MS,
+)
 ProxyOptions = sdk_config_pb2.ProxyOptions
 NetworkErrorCode = sdk_config_pb2.NetworkErrorCode
 
@@ -56,6 +63,18 @@ class NetworkError(Exception):
         }
         return names.get(self.code, "NETWORK_ERROR_CODE_UNSPECIFIED")
 
+def merge_http_config(base: HttpConfig, override: Optional[HttpConfig]) -> HttpConfig:
+    """
+    Merge override onto base (field-wise; override wins).
+    base is always provided (use DEFAULT_HTTP_CONFIG when no client config).
+    """
+    result = HttpConfig()
+    result.CopyFrom(base)
+    if override:
+        result.MergeFrom(override)
+    return result
+
+
 def resolve_proxies(proxy_options: Optional[ProxyOptions]) -> Optional[Dict[str, Optional[str]]]:
     """
     Builds the native httpx proxy dictionary with bypass support.
@@ -78,58 +97,55 @@ def resolve_proxies(proxy_options: Optional[ProxyOptions]) -> Optional[Dict[str,
 def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient:
     """
     Creates a high-performance asynchronous connection pool.
+    Merges http_config with proto defaults; optional http_config uses defaults only.
     """
+    merged = merge_http_config(DEFAULT_HTTP_CONFIG, http_config)
+    total_sec = merged.total_timeout_ms / 1000.0
+    connect_sec = merged.connect_timeout_ms / 1000.0
+    read_sec = merged.response_timeout_ms / 1000.0
+
     verify: Union[bool, ssl.SSLContext] = True
     mounts = None
+    if merged.HasField("ca_cert"):
+        ca = merged.ca_cert
+        context = ssl.create_default_context()
+        if ca.HasField("pem"):
+            context.load_verify_locations(cadata=ca.pem)
+        elif ca.HasField("der"):
+            context.load_verify_locations(cadata=ca.der)
+        verify = context
 
-    # Resolve Timeouts (Defaults from HttpConfig or Protobuf Constants)
-    total_timeout = (http_config.total_timeout_ms / 1000.0) if (http_config and http_config.HasField('total_timeout_ms')) else (Defaults.TOTAL_TIMEOUT_MS / 1000.0)
-    connect_timeout = (http_config.connect_timeout_ms / 1000.0) if (http_config and http_config.HasField('connect_timeout_ms')) else (Defaults.CONNECT_TIMEOUT_MS / 1000.0)
-    read_timeout = (http_config.response_timeout_ms / 1000.0) if (http_config and http_config.HasField('response_timeout_ms')) else (Defaults.RESPONSE_TIMEOUT_MS / 1000.0)
-
-    if http_config:
-        # 2. Resolve Certificate
-        if http_config.HasField('ca_cert'):
-            ca = http_config.ca_cert
-            context = ssl.create_default_context()
-            if ca.HasField('pem'):
-                context.load_verify_locations(cadata=ca.pem)
-            elif ca.HasField('der'):
-                context.load_verify_locations(cadata=ca.der)
-            verify = context
-
-        # 3. Resolve Proxy
-        proxies = resolve_proxies(http_config.proxy if http_config.HasField('proxy') else None)
+    if merged.HasField("proxy"):
+        proxies = resolve_proxies(merged.proxy)
         if proxies:
             mounts = {k: httpx.AsyncHTTPTransport(proxy=v) if v else None for k, v in proxies.items()}
 
     try:
-        return httpx.AsyncClient(
+        client = httpx.AsyncClient(
             verify=verify,
             mounts=mounts,
             http2=True,
-            timeout=httpx.Timeout(
-                total_timeout,
-                connect=connect_timeout,
-                read=read_timeout
-            )
+            timeout=httpx.Timeout(total_sec, connect=connect_sec, read=read_sec),
         )
+        return client
     except NetworkError:
         raise  # already classified, pass through
     except Exception as e:
         code = sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION if "proxy" in str(e).lower() else sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION
         raise NetworkError(f"Internal HTTP setup failed: {e}", code, 500)
 
+
 async def execute(
     request: HttpRequest,
     client: httpx.AsyncClient,
-    http_config: Optional[HttpConfig] = None
+    resolved_timeouts_ms: Optional[tuple[int, int, int]] = None,
 ) -> HttpResponse:
     """
     Standardized stateless execution engine using httpx AsyncClient.
+    resolved_timeouts_ms: (total_ms, connect_ms, read_ms) — matches proto; convert to sec internally.
+    When None, uses client default.
     """
     # Validate URL: httpx.URL() does not raise for missing scheme (e.g. "not-a-valid-url").
-    # Check scheme explicitly so we fail fast before a network attempt.
     try:
         parsed_url = httpx.URL(request.url)
         if parsed_url.scheme not in ('http', 'https'):
@@ -140,23 +156,15 @@ async def execute(
         raise NetworkError(f"Invalid URL: {request.url}", sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED)
     start_time = time.time()
 
-    # Per-request timeout override merged with the already-resolved client defaults.
-    # This keeps timeout resolution centralized in create_client().
-    timeout = httpx.USE_CLIENT_DEFAULT
-    if http_config:
-        total = (http_config.total_timeout_ms / 1000.0) if http_config.HasField('total_timeout_ms') else None
-        connect = (http_config.connect_timeout_ms / 1000.0) if http_config.HasField('connect_timeout_ms') else None
-        read = (http_config.response_timeout_ms / 1000.0) if http_config.HasField('response_timeout_ms') else None
-        if total is not None or connect is not None or read is not None:
-            base_timeout = client.timeout
-            effective_total = total if total is not None else base_timeout.timeout
-            effective_connect = connect if connect is not None else base_timeout.connect
-            effective_read = read if read is not None else base_timeout.read
-            timeout = httpx.Timeout(
-                effective_total,
-                connect=effective_connect,
-                read=effective_read
-            )
+    timeout = (
+        httpx.Timeout(
+            resolved_timeouts_ms[0] / 1000.0,
+            connect=resolved_timeouts_ms[1] / 1000.0,
+            read=resolved_timeouts_ms[2] / 1000.0,
+        )
+        if resolved_timeouts_ms is not None
+        else httpx.USE_CLIENT_DEFAULT
+    )
 
     try:
         response = await client.request(

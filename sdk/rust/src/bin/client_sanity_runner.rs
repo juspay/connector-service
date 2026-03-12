@@ -1,8 +1,6 @@
 use base64::{engine::general_purpose, Engine as _};
 use common_utils::request::Method;
-use hyperswitch_payments_client::http_client::{
-    HttpClient, HttpOptions, HttpRequest, ProxyConfig,
-};
+use hyperswitch_payments_client::http_client::{HttpClient, HttpOptions, HttpRequest, ProxyConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, Read};

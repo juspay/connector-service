@@ -39,6 +39,9 @@ proxy.on('error', (err, req, res) => {
     res.end(JSON.stringify({ error: err.message }));
   }
 });
+proxy.on('proxyReq', (proxyReq) => {
+  proxyReq.setHeader('X-Via-Proxy', 'true');
+});
 
 const httpServer = http.createServer((clientReq, clientRes) => {
   // Always forward to the fixed local test target regardless of what the client sends.

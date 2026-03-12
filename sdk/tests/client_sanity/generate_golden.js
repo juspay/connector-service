@@ -34,6 +34,7 @@ manifest.scenarios.forEach((scenario) => {
   const headers = { ...(req.headers || {}) };
   headers['x-source'] = `golden_${scenario.id}`;
   headers['x-scenario-id'] = scenario.id;
+  if (scenario.proxy) headers['x-via-proxy'] = 'true';
 
   const expectedResponse = scenario.expected_response || { status_code: 200, body: { status: 'ok' } };
   const statusCode = expectedResponse.status_code ?? 200;
