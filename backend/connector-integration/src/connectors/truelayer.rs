@@ -2,14 +2,15 @@ pub mod transformers;
 
 use std::{self, fmt::Debug};
 
-use common_enums::{AttemptStatus, CurrencyUnit};
+use base64::Engine;
+use common_enums::{AttemptStatus, CurrencyUnit, RefundStatus};
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void,
+        SdkSessionToken, SetupMandate, SubmitEvidence, VerifyWebhookSource, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -21,13 +22,14 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
-    router_response_types::Response,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
     utils::base64_decode,
 };
@@ -157,10 +159,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::DisputeDefend for Truelayer<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Truelayer<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -845,4 +843,225 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         MandateRevokeResponseData,
     > for Truelayer<T>
 {
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyWebhookSourceV2 for Truelayer<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        VerifyWebhookSource,
+        VerifyWebhookSourceFlowData,
+        VerifyWebhookSourceRequestData,
+        VerifyWebhookSourceResponseData,
+    > for Truelayer<T>
+{
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Get
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let tl_signature_header = req
+            .request
+            .webhook_headers
+            .get("tl-signature")
+            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+
+        let tl_signature = tl_signature_header.as_str();
+        let parts: Vec<&str> = tl_signature.splitn(3, '.').collect();
+        let header_b64 = parts
+            .first()
+            .ok_or(errors::ConnectorError::WebhookDecodingFailed)?;
+        let header_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(header_b64)
+            .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
+        let jws_header: truelayer::JwsHeaderWebhooks = serde_json::from_slice(&header_json)
+            .change_context(errors::ConnectorError::WebhookDecodingFailed)?;
+
+        let jku = jws_header
+            .jku
+            .ok_or_else(|| errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        if truelayer::ALLOWED_JKUS.contains(&jku.as_str()) {
+            Ok(jku)
+        } else {
+            Err(errors::ConnectorError::WebhookSourceVerificationFailed.into())
+        }
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            VerifyWebhookSource,
+            VerifyWebhookSourceFlowData,
+            VerifyWebhookSourceRequestData,
+            VerifyWebhookSourceResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let response: truelayer::Jwks = res
+            .response
+            .parse_struct("truelayer Jwks")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        if let Some(event) = event_builder {
+            event.set_connector_response(&response)
+        }
+
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Truelayer<T>
+{
+    fn get_event_type(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificAuth>,
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
+    {
+        let webhook_body: truelayer::TruelayerWebhookEventTypeBody = request
+            .body
+            .parse_struct("TruelayerPayoutsWebhookBody")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        Ok(truelayer::get_webhook_event(webhook_body._type))
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificAuth>,
+    ) -> Result<
+        domain_types::connector_types::WebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let request_body_copy = request.body.clone();
+        let details: truelayer::TruelayerWebhookBody = request
+            .body
+            .parse_struct("TruelayerWebhookBody")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let status = truelayer::get_truelayer_payment_webhook_status(details._type)?;
+
+        let (error_code, error_message, error_reason) = if status == AttemptStatus::Failure {
+            (
+                details.failure_reason.clone(),
+                details.failure_reason.clone(),
+                details.failure_reason.clone(),
+            )
+        } else {
+            (None, None, None)
+        };
+
+        Ok(domain_types::connector_types::WebhookDetailsResponse {
+            resource_id: Some(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                    details.payment_id.clone(),
+                ),
+            ),
+            status,
+            connector_response_reference_id: None,
+            mandate_reference: None,
+            error_code,
+            error_message,
+            error_reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
+            response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            amount_captured: None,
+            minor_amount_captured: None,
+            network_txn_id: None,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+        _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificAuth>,
+    ) -> Result<
+        domain_types::connector_types::RefundWebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let request_body_copy = request.body.clone();
+        let details: truelayer::TruelayerWebhookBody = request
+            .body
+            .parse_struct("TruelayerWebhookBody")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let status = truelayer::get_truelayer_refund_webhook_status(details._type)?;
+
+        let (error_code, error_message) = if status == RefundStatus::Failure {
+            (
+                details.failure_reason.clone(),
+                details.failure_reason.clone(),
+            )
+        } else {
+            (None, None)
+        };
+
+        Ok(
+            domain_types::connector_types::RefundWebhookDetailsResponse {
+                connector_refund_id: details.refund_id.clone(),
+                status,
+                connector_response_reference_id: details.refund_id.clone(),
+                error_code,
+                error_message,
+                raw_connector_response: Some(
+                    String::from_utf8_lossy(&request_body_copy).to_string(),
+                ),
+                status_code: 200,
+                response_headers: None,
+            },
+        )
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: domain_types::connector_types::RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let details: truelayer::TruelayerWebhookBody = request
+            .body
+            .parse_struct("TruelayerWebhooksBody")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        Ok(Box::new(details))
+    }
 }
