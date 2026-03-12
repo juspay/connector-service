@@ -1,65 +1,63 @@
-# Connector Service: A Unified Payment Integration Layer
+# One Integration to Rule Them All: How We Built the Connector Service
 
-## The Problem
+If you have ever integrated a payment processor, you know the drill. You read through a PDF that was last updated in 2019, figure out what combination of API keys goes in which header, discover that "decline code 51" means something subtly different on this processor than the last one you dealt with, and then do it all over again when your business decides to add a second processor.
 
-In the era of global commerce, integrating and maintaining dozens of disparate payment APIs is a heavy engineering burden. As the need to add new payment methods, payment flows, or a new processor arises, the integration burden snowballs, forcing teams to manage non-standardized payloads, authentication protocols, and inconsistent error codes.
+We have been living in this world for years as part of Hyperswitch, an open-source payment orchestrator. At some point we had integrations for 50+ connectors. The integrations worked well — but they were locked inside our orchestrator, not usable by anyone who just needed to talk to Stripe or Adyen without adopting an entire platform.
 
-This problem of non-standardized implementations of similar functionality is not new — it was the preferred approach at the application layer of the TCP/IP stack, where applications have the freedom to define and implement their own constructs even if they were similar in functionality. Over time, unification abstractions emerged that give consumers the ability to swap out one implementation for another without major effort — a design principle that gives freedom from vendor lock-in.
-
-Examples include:
-
-* **JDBC**: Oracle / MySQL / PostgreSQL / SQL Server / SQLite / ...
-* **OpenTelemetry**: Datadog / New Relic / Jaeger / Zipkin / Prometheus / ...
-* **LiteLLM**: Gemini / OpenAI / Anthropic / Mistral / ...
-* **OpenFeature**: Statsig / Datadog / Flagsmith / Devcycle / ...
-
-Most of these unification abstractions gradually evolve to become de-facto standards. Payment integrations also have such abstractions via payment orchestrators like Spreedly and Primer — but none were managed and maintained by the community. Hyperswitch started as an open-source orchestrator project focused on building a full-fledged payment orchestrator. Connector integrations were maintained under a separate internal abstraction all along, with the hope of unbundling it someday.
-
-Over the past year, we felt the need to make that separation real. We believe businesses integrating with one processor should be vendor-independent from day one — not only at the point they decide to switch. When we decided to unbundle, we also decided that the unification constructs had to be comprehensive enough to evolve into a standard maintained by the payments community. So we set out to:
-
-1. Build a **specification** for payment integrations that can be managed via a community-driven process.
-2. Build an **implementation** of that specification that runs anywhere — embedded in your process or deployed as a standalone service.
+This post is about what we did next: unbundling those integrations into a standalone, community-owned library called the **Connector Service**, and the interesting engineering decisions we made along the way.
 
 ---
 
-## The Specification: Proto-First Design
+## Why unbundle at all?
 
-We chose **Protocol Buffers (protobuf)** to describe and document services, their methods, and all message types. The choice was driven by protobuf's wide support for type and client generation across all languages — a critical requirement for a library meant to be consumed from Python, JavaScript, Java, Kotlin, Rust, and Go.
+Here's the thing we kept running into: the payment integration problem is not new. Databases have JDBC. Observability has OpenTelemetry. LLMs have LiteLLM. Feature flags have OpenFeature. All of these started as "we just need a common interface over these N things" and eventually became de-facto standards that the whole industry converged on.
 
-The specification lives in `backend/grpc-api-types/proto/` and defines a rich surface across nine services:
+Payments never got that. There are orchestrators — Spreedly, Primer, and yes, Hyperswitch — but all of them are managed by a single company. None of them emerged as a neutral, community-maintained standard. Which means that today, if you integrate Stripe directly, you are vendor-locked from day one. Not because you want to be, but because your integration code only speaks Stripe's language.
 
-| Service | Purpose |
+We think the right answer is a specification — a protobuf schema for payment operations that any connector can implement and any application can consume — maintained by the community, not by any one company. The Connector Service is our attempt to seed that.
+
+---
+
+## Why protobuf for the specification?
+
+> **Q: JSON schemas exist. OpenAPI exists. Why protobuf?**
+>
+> The core requirement was multi-language client generation. We needed Python developers, Java developers, TypeScript developers, and Rust developers to all be able to consume this library with first-class, type-safe APIs — without anyone hand-writing SDK code in each language. Protobuf has the most mature ecosystem for this: `prost` for Rust, `protoc-gen-java` for Java, `grpc_tools.protoc` for Python, and so on. It also doubles as our gRPC interface description when the library is deployed as a server, which turned out to be a natural fit for the two deployment modes we wanted to support (more on that below).
+
+The specification lives in `backend/grpc-api-types/proto/` and covers the full payment lifecycle across nine services:
+
+| Service | What it does |
 |---|---|
-| `PaymentService` | Authorize, capture, void, refund, and sync payment states |
-| `RecurringPaymentService` | Charge and revoke mandates for subscription billing |
-| `RefundService` | Retrieve and synchronize refund statuses |
+| `PaymentService` | Authorize, capture, void, refund, sync — the core lifecycle |
+| `RecurringPaymentService` | Charge and revoke mandates for subscriptions |
+| `RefundService` | Retrieve and sync refund statuses |
 | `DisputeService` | Submit evidence, defend, and accept chargebacks |
-| `EventService` | Process inbound webhook events from connectors |
+| `EventService` | Process inbound webhook events |
 | `PaymentMethodService` | Tokenize and retrieve payment methods |
 | `CustomerService` | Create and manage customer profiles at connectors |
-| `MerchantAuthenticationService` | Generate access tokens and SDK session credentials |
-| `PaymentMethodAuthenticationService` | Execute 3DS pre/authenticate/post flows |
+| `MerchantAuthenticationService` | Access tokens, session tokens, Apple Pay / Google Pay session init |
+| `PaymentMethodAuthenticationService` | 3DS pre/authenticate/post flows |
 
-Each service method has fully typed request and response messages. For example, `PaymentService.Authorize` takes a `PaymentServiceAuthorizeRequest` (containing amount, currency, payment method, customer details, metadata) and returns a `PaymentServiceAuthorizeResponse` (with status, connector reference IDs, and error details). Nothing is stringly typed. Nothing is freeform JSON.
-
-The specification is the contract. The implementation below honors it.
+Everything is strongly typed. `PaymentService.Authorize` takes a `PaymentServiceAuthorizeRequest` — amount, currency, payment method details, customer, metadata, capture method — and returns a `PaymentServiceAuthorizeResponse` with a unified status enum, connector reference IDs, and structured error details. No freeform JSON blobs. No stringly-typed status fields. The spec is the contract.
 
 ---
 
-## The Implementation
+## The implementation: Rust at the core
 
-### Rust at the Core
+> **Q: Why Rust? Wouldn't Go or Java be easier for a community project?**
+>
+> A few reasons. First, we already had 50+ connector implementations in Rust from Hyperswitch, so starting there was practical. But more importantly: the library needs to be embeddable in Python, JavaScript, and Java applications without a separate process or a runtime dependency like the JVM or a Python interpreter. The only realistic way to distribute a native library that loads cleanly into all of those runtimes is as a compiled shared library — `.so` on Linux, `.dylib` on macOS. Rust produces exactly that, with no garbage collector pauses, no runtime to ship, and memory safety that does not require a GC.
 
-The entire connector integration logic is written in **Rust**, organized across a set of internal crates:
+The Rust codebase is organized into a handful of internal crates:
 
-- `connector-integration` — Connector-specific HTTP transformation logic for 50+ payment processors (Stripe, Adyen, Braintree, PayPal, etc.)
-- `domain_types` — Shared domain models: `RouterDataV2`, flow markers (`Authorize`, `Capture`, `Refund`, ...), request/response data types
-- `grpc-api-types` — Rust types generated from the protobuf specification via `prost`
-- `interfaces` — Trait definitions for connector integration points
+- `connector-integration` — The actual connector logic: 50+ implementations translating unified domain types into connector-specific HTTP requests and parsing responses back
+- `domain_types` — Shared models: `RouterDataV2`, flow markers (`Authorize`, `Capture`, `Refund`, ...), request/response data types
+- `grpc-api-types` — Rust types generated from the protobuf spec via `prost`
+- `interfaces` — The trait definitions that connector implementations must satisfy
 
-#### The Two-Phase Flow Pattern
+### The two-phase transformer pattern
 
-Every payment operation follows the same two-phase pattern, regardless of connector:
+The single most important design decision in the Rust core is that **the library never makes HTTP calls itself**. Every payment operation is split into two pure functions:
 
 ```
 ┌─────────────┐    req_transformer     ┌──────────────────┐
@@ -68,7 +66,7 @@ Every payment operation follows the same two-phase pattern, regardless of connec
 │  (proto)    │                         │ (URL, headers,   │
 └─────────────┘                         │  body)           │
                                         └────────┬─────────┘
-                                                 │  HTTP call
+                                                 │  you make this call
                                                  ▼
 ┌─────────────┐    res_transformer     ┌──────────────────┐
 │  Unified    │ ◀────────────────────── │ Connector HTTP   │
@@ -77,16 +75,16 @@ Every payment operation follows the same two-phase pattern, regardless of connec
 └─────────────┘                         └──────────────────┘
 ```
 
-The `req_transformer` takes a unified protobuf request, constructs the connector-specific HTTP request (URL, headers, serialized body), and returns it. The caller makes the actual HTTP call. The `res_transformer` takes the raw HTTP response and the original request, and returns a unified protobuf response.
+`req_transformer` takes your unified protobuf request and returns the connector-specific HTTP request — the URL, the headers, the serialized body. You make the HTTP call however you like. `res_transformer` takes the raw response bytes plus the original request and returns a unified protobuf response.
 
-This clean separation means the core library is **stateless** and **transport-agnostic**: it does not own any HTTP connections or make any network calls itself. The caller controls the transport.
+> **Q: Why not just have the library make the HTTP call for you?**
+>
+> Mostly because it makes the library genuinely stateless and transport-agnostic. It does not own any connection pools. It does not have opinions about TLS configuration, proxy settings, or retry logic. When this code runs inside a Python application, the Python application's `httpx` client handles the HTTP. When it runs inside the gRPC server, the server's client handles it. This also turns out to be quite testable — you can unit test transformers by feeding them request bytes and asserting on the resulting HTTP request structure, without standing up any network infrastructure.
 
-#### Flow Registration via Macros
-
-New payment flows are registered using Rust macros in `backend/ffi/src/services/payments.rs`. Each flow requires a pair of transformer implementations:
+Each flow is registered using a pair of Rust macros:
 
 ```rust
-// authorize request transformer
+// Register the request transformer for the Authorize flow
 req_transformer!(
     fn_name: authorize_req_transformer,
     request_type: PaymentServiceAuthorizeRequest,
@@ -96,7 +94,7 @@ req_transformer!(
     response_data_type: PaymentsResponseData,
 );
 
-// authorize response transformer
+// Register the response transformer for the Authorize flow
 res_transformer!(
     fn_name: authorize_res_transformer,
     request_type: PaymentServiceAuthorizeRequest,
@@ -108,124 +106,125 @@ res_transformer!(
 );
 ```
 
-The macros generate the full boilerplate: looking up the connector by name, getting the connector integration trait object, constructing the `RouterDataV2` struct, calling the connector's transformation logic, and serializing the result. Adding a new flow means implementing the connector trait method and registering it here — the rest flows from the code generator.
+The macros generate the boilerplate: connector lookup, trait object dispatch, `RouterDataV2` construction, serialization. A new flow means adding the connector trait implementation and one pair of macro invocations. The code generator (described later) handles everything else.
 
 ---
 
-### Two Ways to Consume the Service
+## Two ways to use it
 
-The same Rust core is exposed through two distinct deployment modes. Critically, the API surface — defined by the protobuf specification — is identical in both. Your application code does not need to change if you switch between modes.
+This is where things get interesting. We wanted the library to work both as an **embedded SDK** (loaded directly into your application process) and as a **standalone gRPC service** (deployed separately, called over the network). Same Rust core, same proto types, same API — two completely different deployment topologies.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Your Application                       │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-          ┌────────────┴────────────┐
-          ▼                         ▼
-  ┌──────────────┐         ┌─────────────────┐
-  │  SDK Mode    │         │  gRPC Mode      │
-  │  (FFI/UniFFI)│         │  (Client/Server)│
-  └──────┬───────┘         └────────┬────────┘
-         │                          │
-         │  in-process              │  network call
-         ▼                          ▼
-  ┌──────────────────────────────────────────┐
-  │           Rust Core (connector-service)   │
-  │    req_transformer → HTTP → res_transformer│
-  └──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    Your Application                       │
+└─────────────────────┬────────────────────────────────────┘
+                      │
+         ┌────────────┴────────────┐
+         ▼                         ▼
+ ┌──────────────┐         ┌─────────────────┐
+ │   SDK Mode   │         │   gRPC Mode     │
+ │  (FFI/UniFFI)│         │ (Client/Server) │
+ └──────┬───────┘         └────────┬────────┘
+        │                          │
+        │  in-process call         │  network call
+        ▼                          ▼
+ ┌──────────────────────────────────────────────┐
+ │          Rust Core (connector-service)        │
+ │  req_transformer → [HTTP] → res_transformer   │
+ └──────────────────────────────────────────────┘
 ```
 
-#### Mode 1: Embedded SDK via FFI
+### Mode 1: The embedded SDK
 
-In SDK mode, the Rust core is compiled into a native shared library (`.so` on Linux, `.dylib` on macOS) and exposed to host languages via **UniFFI** — Mozilla's Rust FFI framework that generates language bindings automatically from Rust interface definitions.
+In SDK mode, the Rust core compiles into a native shared library (`.so` / `.dylib`) and is exposed to host languages via **UniFFI** — Mozilla's framework for generating language bindings from Rust automatically. When your Python code calls `authorize_req_transformer(request_bytes, options_bytes)`, that call crosses the FFI boundary directly into the Rust binary running in the same process.
 
-The FFI layer in `backend/ffi/` sits directly on top of the core:
+The FFI layer (`backend/ffi/`) is thin by design:
 
-- `bindings/uniffi.rs` — UniFFI bridge: the `define_ffi_flow!` macro exposes `{flow}_req_transformer` and `{flow}_res_transformer` as callable FFI symbols for each registered flow
-- `handlers/payments.rs` — Loads the embedded config, delegates to service transformers via `impl_flow_handlers!`
-- `services/payments.rs` — The actual transformer implementations, wired to domain types
+- `services/payments.rs` — the transformer implementations, wired to domain types via the macros above
+- `handlers/payments.rs` — loads the embedded config (yes, the connector URL config is baked into the binary) and delegates to the service transformers
+- `bindings/uniffi.rs` — the UniFFI bridge, where `define_ffi_flow!` exposes each flow as named FFI symbols
 
-When a Python application calls `authorize_req_transformer(request_bytes, options_bytes)`, the call goes directly into the Rust binary in the same process. No serialization overhead beyond protobuf (which would be needed regardless). No network round-trip. No separate process to manage.
+Data crosses the language boundary as serialized protobuf bytes. This is intentional — every language already has a protobuf runtime, so there is no custom serialization protocol to maintain, and the byte interface is completely language-neutral.
 
-The FFI layer passes data as serialized protobuf bytes in both directions — this is both efficient and language-neutral. Every language already has a protobuf runtime, so there is no custom serialization protocol to maintain.
+> **Q: Does this mean I need to compile Rust to use the Python SDK?**
+>
+> For development, yes — you run `make pack`, which builds the Rust library, runs `uniffi-bindgen` to generate the Python bindings, and packages everything into a wheel. For production use, we ship pre-built binaries for Linux x86\_64, Linux aarch64, macOS x86\_64, and macOS aarch64 inside the wheel. The loader picks the right one at runtime. You install the wheel and never think about Rust again.
 
-#### Mode 2: gRPC Client/Server
+### Mode 2: The gRPC server
 
-In gRPC mode, the `backend/grpc-server` crate runs as a standalone Tonic (Rust async gRPC) server. It implements the same nine proto services, but instead of being called via FFI it accepts network connections from any language's generated gRPC client.
+In gRPC mode, `backend/grpc-server` runs as a standalone async service built on **Tonic** (Rust's async gRPC framework). It implements all nine proto services, accepts gRPC connections from any language's generated stubs, makes the connector HTTP calls internally, and returns unified proto responses over the wire.
 
-The gRPC server uses the Rust core **directly** — it calls the same service transformer functions as the FFI layer, just from a different entry point. The HTTP transport is handled by the server itself via a built-in HTTP client; the connector HTTP calls happen inside the server process, not in the caller's process.
+The gRPC server calls the same Rust core transformers as the FFI layer — just from a different entry point. The transformation logic is literally the same code path. The difference is that the HTTP client lives inside the server process, not in the caller's.
 
-Clients connect using standard gRPC stubs generated from the same `services.proto`. Each SDK includes a `grpc-client/` subdirectory alongside the FFI-based SDK client:
+Clients connect using standard gRPC stubs generated from `services.proto`. Each language SDK ships both:
 
 ```
 sdk/python/
-├── src/payments/           ← FFI-based SDK client
+├── src/payments/           ← FFI-based embedded SDK
 │   ├── connector_client.py
 │   └── _generated_service_clients.py
-└── grpc-client/            ← gRPC stub client (generated from proto)
+└── grpc-client/            ← gRPC stubs for server mode
 
 sdk/java/
-├── src/                    ← FFI-based SDK client (JNA + UniFFI)
-└── grpc-client/            ← gRPC stub client
+├── src/                    ← FFI-based embedded SDK (JNA + UniFFI)
+└── grpc-client/            ← gRPC stubs for server mode
 
 sdk/javascript/
-├── src/payments/           ← FFI-based SDK client (node-ffi)
-└── grpc-client/            ← gRPC stub client
+├── src/payments/           ← FFI-based embedded SDK (node-ffi)
+└── grpc-client/            ← gRPC stubs for server mode
 ```
 
-The same protobuf message types are used in both paths. `PaymentServiceAuthorizeRequest` is built identically whether you are calling the FFI SDK or a remote gRPC server.
+> **Q: When would you actually choose gRPC over the embedded SDK?**
+>
+> The embedded SDK is great when you have a single-language service and want zero network overhead — serverless functions, edge deployments, or situations where adding a sidecar is painful. The gRPC server shines in polyglot environments: if your checkout service is in Java, your fraud service is in Python, and your reconciliation job is in Go, deploying one gRPC server gives all of them a shared, consistent integration layer without each one shipping a native binary. It also gives you process isolation if that matters for your threat model.
+>
+> The important point is that the choice is not a migration — your `PaymentServiceAuthorizeRequest` looks identical in both modes. You change a config flag, not your application code.
 
-#### Choosing Between the Two Modes
-
-| Consideration | SDK (FFI) | gRPC Server |
+| | SDK (embedded) | gRPC (network) |
 |---|---|---|
-| **Deployment** | Library bundled in your app | Separate service to deploy and scale |
-| **Latency** | In-process, ~microseconds | Network call, ~milliseconds |
-| **Language** | Python, JS, Java/Kotlin, Rust (native bindings) | Any language with gRPC support |
-| **Process isolation** | Runs in your process | Fully isolated |
-| **Connector HTTP** | Your app's outbound HTTP | Server's outbound HTTP |
-| **Best for** | Serverless, edge, single-language services | Polyglot stacks, shared infrastructure |
+| **Latency** | Microseconds (in-process) | Milliseconds (network) |
+| **Deployment** | Library inside your app | Separate service to run |
+| **Language support** | Python, JS, Java/Kotlin, Rust | Any language with gRPC |
+| **Connector HTTP** | Your app makes the calls | Server makes the calls |
+| **Best for** | Serverless, edge, single-language | Polyglot stacks, shared infra |
 
 ---
 
-### Code Generation: From Proto to Typed SDK
+## Code generation: the glue that holds it together
 
-Adding a new flow to the connector service should not require writing boilerplate in five languages. The code generator at `sdk/codegen/generate.py` eliminates this entirely by cross-referencing two sources of truth and emitting all SDK client code automatically.
+Here is a problem we needed to solve: the connector service supports many payment flows (authorize, capture, void, refund, recurring charge, 3DS pre-auth, webhook handling, ...) and many SDK languages. Hand-maintaining typed client methods for each flow in each language is exactly the kind of work that introduces drift and bugs. So we do not do it.
 
-#### The Two Sources of Truth
+The code generator at `sdk/codegen/generate.py` reads two sources of truth and emits all the SDK client boilerplate automatically.
 
-1. **`services.proto`** (compiled to a binary descriptor via `protoc`): defines every RPC, its request type, its response type, and its doc comment.
-2. **`backend/ffi/src/services/payments.rs`**: defines which flows are actually implemented (by the presence of `req_transformer!` invocations).
+> **Q: What are the two sources of truth?**
+>
+> 1. `services.proto` compiled to a binary descriptor — this tells the generator every RPC name, its request type, its response type, and its doc comment.
+> 2. `backend/ffi/src/services/payments.rs` — this tells the generator which flows are actually implemented, by scanning for `req_transformer!` invocations.
+>
+> The generator takes their intersection. A flow in proto but not implemented in Rust? Warning, skipped — we don't ship unimplemented APIs. A transformer in Rust with no matching proto RPC? Also a warning — the spec is the authority, not the implementation.
 
-The generator performs a set intersection: only flows that appear in both the proto definition *and* the Rust implementation are emitted. A flow defined in proto but not yet implemented is reported as a warning and skipped. A flow implemented in Rust but missing from proto is also warned about — the spec is the authority.
+Running `make generate` produces:
 
-#### What Gets Generated
+**In Rust** (`backend/ffi/src/`):
+- `_generated_flow_registrations.rs` — the `impl_flow_handlers!` wiring for each flow
+- `_generated_ffi_flows.rs` — the `define_ffi_flow!` UniFFI exposure for each flow
 
-Running `make generate` (or `python3 sdk/codegen/generate.py`) produces:
-
-**Rust FFI registration files** (in `backend/ffi/src/`):
-- `_generated_flow_registrations.rs` — `impl_flow_handlers!` calls wiring each flow to its handlers
-- `_generated_ffi_flows.rs` — `define_ffi_flow!` calls exposing each flow via UniFFI
-
-**Python SDK** (in `sdk/python/src/payments/`):
-- `_generated_flows.py` — flow metadata dictionary (flow name → response type)
-- `_generated_service_clients.py` — per-service client classes with typed methods:
+**In Python** (`sdk/python/src/payments/`):
+- `_generated_service_clients.py` — per-service typed client classes:
   ```python
   class PaymentClient(_ConnectorClientBase):
       async def authorize(self, request: PaymentServiceAuthorizeRequest, options=None) -> PaymentServiceAuthorizeResponse:
-          """PaymentService.Authorize — Authorizes a payment amount..."""
+          """PaymentService.Authorize — Authorizes a payment amount on a payment method..."""
           return await self._execute_flow("authorize", request, _pb2.PaymentServiceAuthorizeResponse, options)
   ```
-- `connector_client.pyi` — type stubs for IDE completions and static analysis (Pylance, mypy)
+- `connector_client.pyi` — type stubs so Pylance and mypy see typed signatures without running any code
 
-**JavaScript/TypeScript SDK** (in `sdk/javascript/src/payments/`):
-- `_generated_flows.js` — flow dispatch table for the FFI layer
-- `_generated_connector_client_flows.ts` — per-service typed client classes
-- `_generated_uniffi_client_flows.ts` — typed wrappers around raw FFI byte calls
+**In TypeScript** (`sdk/javascript/src/payments/`):
+- `_generated_connector_client_flows.ts` — per-service typed async client classes
+- `_generated_uniffi_client_flows.ts` — typed wrappers around the raw FFI byte calls
 
-**Java/Kotlin SDK** (in `sdk/java/src/main/kotlin/`):
-- `GeneratedFlows.kt` — `FlowRegistry` object (maps flow names to transformer function references via UniFFI Kotlin bindings) and per-service typed client classes:
+**In Kotlin** (`sdk/java/src/main/kotlin/`):
+- `GeneratedFlows.kt` — a `FlowRegistry` object mapping flow names to UniFFI-generated Kotlin function references, plus per-service client classes:
   ```kotlin
   class PaymentClient(config: ConnectorConfig, ...) : ConnectorClient(config, ...) {
       fun authorize(request: PaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
@@ -233,184 +232,104 @@ Running `make generate` (or `python3 sdk/codegen/generate.py`) produces:
   }
   ```
 
-The generator also handles **single-step flows** (such as webhook processing) that do not require an HTTP round-trip — these get a `_execute_direct` code path instead of the two-phase req/HTTP/res path.
+The generator also handles a second category of flows: **single-step flows** (like webhook processing) that transform a request directly into a response without an HTTP round-trip. These get a `_execute_direct` path instead of the two-phase req/HTTP/res path.
 
-#### The Full Code Generation Pipeline
+Here is the full pipeline:
 
 ```
 services.proto
     │
-    ├── protoc ──────────────────────────────────┐
-    │   (compile to binary descriptor)            │
-    │                                             ▼
-    │                                     services.desc
-    │                                             │
-    ├── prost (Rust) ──────────────────────┐      │
-    │   (generates Rust types)             │      │
-    │                                      ▼      │
-    │                               grpc-api-types │
-    │                               (Rust crate)  │
-    │                                             │
-    ├── grpc_tools.protoc (Python) ───────────┐   │
-    │   (generates Python proto stubs)        │   │
-    │                                         ▼   │
-    │                               payment_pb2.py │
-    │                                             │
-    ├── protoc-gen-java / Kotlin ─────────────┐   │
-    │   (generates Java/Kotlin proto stubs)   │   │
-    │                                         ▼   │
-    │                              Payment.java    │
-    │                                             │
-    └── protoc (JS + TS plugin) ─────────────┐   │
-        (generates JS proto stubs)            │   │
-                                              ▼   ▼
-                                         payment.js
-                                              │
-                                              │
-backend/ffi/src/services/payments.rs ────────▼
-    │  (transformer implementations)    generate.py
-    │                                        │
-    └────────────────────────────────────────┤
-                                             │
-                            ┌────────────────┼────────────────────┐
-                            ▼                ▼                     ▼
-                  _generated_ffi_flows.rs  *.py           GeneratedFlows.kt
-                  _generated_flow_         *.ts           *.js
-                  registrations.rs         *.pyi
-```
+    ├── prost (Rust build.rs)           → grpc-api-types crate (Rust types)
+    ├── grpc_tools.protoc               → payment_pb2.py (Python proto stubs)
+    ├── protoc-gen-java                 → Payment.java (Java/Kotlin proto stubs)
+    ├── protoc (JS plugin)              → proto.js / proto.d.ts (JS proto stubs)
+    └── protoc (binary descriptor)      → services.desc
+                                                │
+backend/ffi/src/services/payments.rs ──────────┤
+    (req/res transformer registrations)         │
+                                                ▼
+                                          generate.py
+                                                │
+              ┌─────────────────────────────────┼──────────────────────────────┐
+              ▼                                 ▼                              ▼
+  _generated_ffi_flows.rs         _generated_service_clients.py     GeneratedFlows.kt
+  _generated_flow_registrations.rs connector_client.pyi             _generated_connector_client_flows.ts
+                                  _generated_flows.py               _generated_uniffi_client_flows.ts
 
-UniFFI runs as a separate pass over the compiled Rust binary:
 
-```
 cargo build --features uniffi
-    │
-    └── uniffi-bindgen ───────────────────────────────────────────┐
-        (reads Rust proc macros + UDL)                             │
-                                         ┌─────────────────────────┼────────────────┐
-                                         ▼                         ▼                ▼
-                              connector_service_ffi.py   ConnectorServiceFfi.kt   ffi.js
-                              (Python native bindings)   (Kotlin/JVM bindings)    (Node bindings)
+    └── uniffi-bindgen
+              │
+              ├── connector_service_ffi.py   (Python native bindings)
+              ├── ConnectorServiceFfi.kt     (Kotlin/JVM native bindings)
+              └── ffi.js                     (Node.js native bindings)
 ```
 
-The result: when a new payment flow is added to `services.proto` and implemented in Rust, a single `make generate` emits typed, documented client methods in Python, TypeScript, Kotlin, and Rust simultaneously. No manual SDK maintenance. No drift between languages.
+The practical result: add a new flow to `services.proto`, implement the transformer pair in Rust, run `make generate` — and every language SDK gets a typed, documented method for that flow. No one writes boilerplate by hand.
 
 ---
 
-### Multi-Language SDK Architecture
+## Walking through a real authorize call
 
-Each language SDK follows the same structural pattern but adapts it to language idioms:
+Let's trace what actually happens when a Python application calls `client.authorize(...)` in SDK mode. This makes the layering concrete.
 
-#### Python
 ```
-sdk/python/
-├── src/payments/
-│   ├── connector_client.py          ← _ConnectorClientBase: async httpx, protobuf bytes over FFI
-│   ├── _generated_service_clients.py ← PaymentClient, MerchantAuthenticationClient, ...
-│   ├── _generated_flows.py          ← flow metadata (generated)
-│   ├── connector_client.pyi         ← type stubs for IDE (generated)
-│   └── generated/
-│       ├── connector_service_ffi.py ← UniFFI-generated Python bindings
-│       └── payment_pb2.py           ← protoc-generated protobuf stubs
-```
+① App builds PaymentServiceAuthorizeRequest (protobuf message)
 
-Python usage:
-```python
-from payments import PaymentClient, ConnectorConfig, ConnectorEnum, Environment
-from payments.generated.payment_pb2 import (
-    PaymentServiceAuthorizeRequest, Money, Currency, PaymentMethod, CardDetails
-)
+② PaymentClient.authorize() → _execute_flow("authorize", request, ...)
 
-client = PaymentClient(ConnectorConfig(
-    connector=ConnectorEnum.STRIPE,
-    environment=Environment.SANDBOX,
-    auth=...,
-))
+③ _ConnectorClientBase._execute_flow():
 
-response = await client.authorize(PaymentServiceAuthorizeRequest(
-    amount=Money(minor_amount=1000, currency=Currency.USD),
-    payment_method=PaymentMethod(card=CardDetails(...)),
-))
-```
+   a. request.SerializeToString() → request_bytes
 
-#### JavaScript / TypeScript
-```
-sdk/javascript/
-├── src/payments/
-│   ├── connector_client.ts                      ← ConnectorClient base (node-ffi, protobufjs)
-│   ├── _generated_connector_client_flows.ts     ← PaymentClient, ... (generated)
-│   ├── _generated_uniffi_client_flows.ts        ← raw FFI byte dispatch (generated)
-│   ├── _generated_flows.js                      ← flow dispatch table (generated)
-│   └── generated/
-│       └── proto.js / proto.d.ts                ← protoc-generated stubs
+   b. authorize_req_transformer(request_bytes, options_bytes)
+      ──── FFI boundary: Python → Rust shared library ────
+      Rust: build_router_data! macro
+        ├── ConnectorEnum::from("stripe")   ← look up connector
+        ├── connector.get_connector_integration_v2()
+        ├── proto bytes → PaymentFlowData + PaymentsAuthorizeData
+        ├── construct RouterDataV2 { flow, request, auth, ... }
+        └── connector.build_request(router_data) → Request { url, headers, body }
+      serialize Request → FfiConnectorHttpRequest bytes
+      ──── returns bytes across FFI boundary ────
+
+   c. deserialize FfiConnectorHttpRequest → url, method, headers, body
+
+   d. httpx AsyncClient.post(url, headers=headers, content=body)
+      ← this is the actual outbound HTTP call to Stripe
+
+   e. raw response bytes received
+
+   f. authorize_res_transformer(response_bytes, request_bytes, options_bytes)
+      ──── FFI boundary: Python → Rust shared library ────
+      Rust: connector.handle_response(raw_bytes)
+        ├── parse Stripe's JSON response format
+        └── map → PaymentServiceAuthorizeResponse (unified proto)
+      serialize → proto bytes
+      ──── returns bytes across FFI boundary ────
+
+   g. PaymentServiceAuthorizeResponse.FromString(bytes)
+
+④ App receives unified PaymentServiceAuthorizeResponse
 ```
 
-#### Java / Kotlin
-```
-sdk/java/
-├── src/main/kotlin/
-│   ├── ConnectorClient.kt      ← base client (JNA for FFI, prost for proto)
-│   └── GeneratedFlows.kt       ← FlowRegistry + PaymentClient, ... (generated)
-└── src/main/proto/
-    └── payment.proto           ← proto source (symlinked from backend/)
-```
-
-The Java SDK uses **JNA** (Java Native Access) to call into the native `.so`/`.dylib`, and the standard protobuf Java runtime for message serialization. The Kotlin `FlowRegistry` object maps flow names to UniFFI-generated Kotlin transformer functions, enabling the generic `ConnectorClient.executeFlow()` to dispatch correctly at runtime without reflection.
-
-#### Rust
-The Rust SDK is the most direct: it calls the FFI handlers without any language bridging layer. It links directly against the `connector-service-ffi` crate and calls `authorize_req_handler` / `authorize_res_handler` as ordinary Rust function calls. The `ConnectorClient` in `sdk/rust/src/connector_client.rs` owns an `HttpClient` (reqwest), builds the FFI request, executes the HTTP call, and runs the response transformer — all in idiomatic async Rust.
+In gRPC mode, steps ③b through ③f happen inside the `grpc-server` process. The app sends the protobuf request over the network and gets the protobuf response back. The connector lookup, HTTP call, and response transformation are identical — just running in a different process.
 
 ---
 
-## Putting It All Together: The Full Request Lifecycle
+## What we are hoping the community does with this
 
-Here is the complete lifecycle of an `authorize` call through the Python FFI SDK:
+We have two asks.
 
-```
-1. Application builds PaymentServiceAuthorizeRequest (protobuf message)
+The first is **use it and break it**. We have 50+ connectors implemented, but payment APIs are a long tail of edge cases. 3DS flows differ between processors. Webhook schemas change without notice. Authorization responses that technically succeeded but should be treated as soft declines. The only way to harden this is real-world usage across a wider set of applications and processors than we can test internally.
 
-2. PaymentClient.authorize() calls _execute_flow("authorize", request, ...)
+The second is **contribute connectors and flows**. The architecture is specifically designed to make both straightforward:
 
-3. _ConnectorClientBase._execute_flow():
-   a. Serializes request to bytes (request.SerializeToString())
-   b. Calls authorize_req_transformer(request_bytes, options_bytes)
-      └── FFI boundary: Python → Rust shared library
-          └── Rust: build_router_data! macro
-              ├── Looks up connector by name (e.g. ConnectorEnum::Stripe)
-              ├── Gets connector integration trait object
-              ├── Deserializes proto bytes → PaymentFlowData + PaymentsAuthorizeData
-              ├── Constructs RouterDataV2
-              └── Calls connector.build_request() → Returns HTTP Request
-          └── Serializes HTTP Request → FfiConnectorHttpRequest bytes
-      └── Returns: FfiConnectorHttpRequest bytes
-   c. Deserializes FfiConnectorHttpRequest → url, method, headers, body
-   d. Executes HTTP request via httpx AsyncClient
-   e. Receives raw HTTP response bytes
-   f. Calls authorize_res_transformer(response_bytes, request_bytes, options_bytes)
-      └── FFI boundary: Python → Rust shared library
-          └── Rust: calls connector.handle_response()
-              ├── Deserializes connector-specific JSON response
-              └── Maps to unified PaymentServiceAuthorizeResponse
-          └── Serializes response → proto bytes
-      └── Returns: PaymentServiceAuthorizeResponse bytes
-   g. Deserializes bytes → PaymentServiceAuthorizeResponse
+- **Adding a connector** means implementing a Rust trait in `connector-integration/`. The FFI layer, gRPC server, and all language SDKs pick it up automatically. You do not need to write Python or JavaScript.
+- **Adding a flow** means extending `services.proto` (which is a community discussion), implementing the transformer pair in Rust, and running `make generate`. All SDKs get the new method in every language.
 
-4. Application receives unified PaymentServiceAuthorizeResponse
-```
+The longer-term goal is for `services.proto` to evolve into something the payments community — developers, processors, orchestrators — maintains together. The same way OpenTelemetry's semantic conventions did not come from one company. The same way JDBC ended up being the right abstraction because it was simple enough to implement and strict enough to actually abstract.
 
-In gRPC mode, steps 3b–3f happen inside the `grpc-server` process instead of in the caller's process. The application sends the protobuf request over the wire and receives the protobuf response back. Everything else — the connector lookup, the HTTP call to the payment processor, the response transformation — is identical.
+Payment APIs are not that different from database drivers. We just have not agreed on the interface yet.
 
----
-
-## What This Means for the Community
-
-The connector service is designed to be a community standard, not a proprietary integration layer. A few properties make this possible:
-
-**The specification is the contract.** All nine services, every RPC, every message type is defined in `.proto` files that can be read, discussed, and evolved through community pull requests. Adding a new payment flow means first agreeing on the proto shape, then implementing it.
-
-**Adding a connector is a single-language task.** New connector integrations are written once in Rust, in `connector-integration/`. The FFI layer, gRPC server, and all language SDKs automatically pick them up. You do not need to write Python or JavaScript to add a connector.
-
-**Adding a flow is a two-step task.** Extend `services.proto` with the new RPC and message types, implement the Rust transformer pair in `services/payments.rs`, then run `make generate`. All SDK languages get typed, documented client methods automatically.
-
-**The dual-mode design removes the "library vs. service" choice as a lock-in vector.** Start with the embedded SDK in development. Deploy the gRPC server in production for isolation and multi-language access. The API is the same.
-
-The goal is a payments integration ecosystem where processors compete on features and pricing, not on API design. A unified, community-owned specification is the foundation for that.
+The Connector Service is our proposal for what that interface should look like.
