@@ -6,35 +6,60 @@ use crate::harness::scenario_types::{
     ConnectorSuiteSpec, FieldAssert, ScenarioDef, ScenarioError, ScenarioFile, SuiteSpec,
 };
 
+/// Fallback connector set used by `--all-connectors` when env override is not set.
 const ALL_CONNECTORS_RUN_LIST: &[&str] = &["authorizedotnet", "paypal", "stripe"];
 
+/// Root directory containing `<suite>_suite/scenario.json` and `suite_spec.json`.
 pub fn scenario_root() -> PathBuf {
     std::env::var("UCS_SCENARIO_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/global_suites"))
 }
 
+/// Root directory containing per-connector `specs.json` and `override.json`.
+pub fn connector_specs_root() -> PathBuf {
+    std::env::var("UCS_CONNECTOR_SPECS_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            scenario_root()
+                .parent()
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src"))
+                .join("connector_specs")
+        })
+}
+
+/// Connector-specific directory under `connector_specs/`.
+pub fn connector_spec_dir(connector: &str) -> PathBuf {
+    connector_specs_root().join(connector)
+}
+
+/// Absolute path to the suite scenario file.
 pub fn scenario_file_path(suite: &str) -> PathBuf {
     scenario_root()
         .join(format!("{suite}_suite"))
         .join("scenario.json")
 }
 
+/// Absolute path to the suite specification file.
 pub fn suite_spec_file_path(suite: &str) -> PathBuf {
     scenario_root()
         .join(format!("{suite}_suite"))
         .join("suite_spec.json")
 }
 
+/// Resolves connector spec path, preferring `<connector>/specs.json` and falling
+/// back to legacy `<connector>.json` location.
 pub fn connector_spec_file_path(connector: &str) -> PathBuf {
-    scenario_root()
-        .parent()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src"))
-        .join("connector_specs")
-        .join(format!("{connector}.json"))
+    let directory_spec_path = connector_spec_dir(connector).join("specs.json");
+    if directory_spec_path.exists() {
+        directory_spec_path
+    } else {
+        connector_specs_root().join(format!("{connector}.json"))
+    }
 }
 
+/// Loads all scenarios for a suite from `scenario.json`.
 pub fn load_suite_scenarios(suite: &str) -> Result<ScenarioFile, ScenarioError> {
     let path = scenario_file_path(suite);
     let content = fs::read_to_string(&path).map_err(|source| ScenarioError::ScenarioFileRead {
@@ -46,6 +71,7 @@ pub fn load_suite_scenarios(suite: &str) -> Result<ScenarioFile, ScenarioError> 
         .map_err(|source| ScenarioError::ScenarioFileParse { path, source })
 }
 
+/// Loads one named scenario definition from the suite file.
 pub fn load_scenario(suite: &str, scenario: &str) -> Result<ScenarioDef, ScenarioError> {
     load_suite_scenarios(suite)?
         .get(scenario)
@@ -56,6 +82,7 @@ pub fn load_scenario(suite: &str, scenario: &str) -> Result<ScenarioDef, Scenari
         })
 }
 
+/// Loads suite execution metadata including dependency graph and scope.
 pub fn load_suite_spec(suite: &str) -> Result<SuiteSpec, ScenarioError> {
     let path = suite_spec_file_path(suite);
     if !path.exists() {
@@ -71,6 +98,7 @@ pub fn load_suite_spec(suite: &str) -> Result<SuiteSpec, ScenarioError> {
         .map_err(|source| ScenarioError::SuiteSpecParse { path, source })
 }
 
+/// Returns the unique default scenario name for a suite.
 pub fn load_default_scenario_name(suite: &str) -> Result<String, ScenarioError> {
     let scenarios = load_suite_scenarios(suite)?;
     let defaults = scenarios
@@ -90,6 +118,9 @@ pub fn load_default_scenario_name(suite: &str) -> Result<String, ScenarioError> 
     }
 }
 
+/// Checks whether a connector explicitly supports a suite.
+///
+/// If connector specs are absent, this falls back to checking suite presence on disk.
 pub fn is_suite_supported_for_connector(
     connector: &str,
     suite: &str,
@@ -116,6 +147,8 @@ pub fn is_suite_supported_for_connector(
     Ok(scenario_file_path(suite).exists())
 }
 
+/// Lists all suites supported by a connector, preserving order from connector
+/// spec and removing duplicates.
 pub fn load_supported_suites_for_connector(connector: &str) -> Result<Vec<String>, ScenarioError> {
     let path = connector_spec_file_path(connector);
     if path.exists() {
@@ -172,15 +205,9 @@ pub fn load_supported_suites_for_connector(connector: &str) -> Result<Vec<String
     Ok(suites.into_iter().collect())
 }
 
+/// Discovers connector names by scanning `connector_specs/`.
 pub fn discover_all_connectors() -> Result<Vec<String>, ScenarioError> {
-    let specs_dir = connector_spec_file_path("_dummy")
-        .parent()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("src")
-                .join("connector_specs")
-        });
+    let specs_dir = connector_specs_root();
 
     if !specs_dir.exists() {
         return Ok(Vec::new());
@@ -196,24 +223,38 @@ pub fn discover_all_connectors() -> Result<Vec<String>, ScenarioError> {
             source,
         })?;
         let path = entry.path();
+
+        if path.is_dir() {
+            let has_specs_file = path.join("specs.json").is_file();
+            if has_specs_file {
+                if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                    connectors.insert(name.to_string());
+                }
+            }
+            continue;
+        }
+
         if !path.is_file() {
             continue;
         }
+
         let Some(name) = path.file_stem().and_then(|s| s.to_str()) else {
             continue;
         };
         let Some(ext) = path.extension().and_then(|s| s.to_str()) else {
             continue;
         };
-        if ext != "json" {
-            continue;
+        if ext == "json" {
+            connectors.insert(name.to_string());
         }
-        connectors.insert(name.to_string());
     }
 
     Ok(connectors.into_iter().collect())
 }
 
+/// Resolves connector list for all-connector runs.
+///
+/// Environment override format: `UCS_ALL_CONNECTORS=stripe,paypal,authorizedotnet`.
 pub fn configured_all_connectors() -> Vec<String> {
     if let Ok(raw) = std::env::var("UCS_ALL_CONNECTORS") {
         let connectors = raw
@@ -236,10 +277,12 @@ pub fn configured_all_connectors() -> Vec<String> {
         .collect()
 }
 
+/// Convenience accessor used by runners to load request template JSON.
 pub fn get_the_grpc_req(suite: &str, scenario: &str) -> Result<Value, ScenarioError> {
     Ok(load_scenario(suite, scenario)?.grpc_req)
 }
 
+/// Convenience accessor used by runners to load assertion rules.
 pub fn get_the_assertion(
     suite: &str,
     scenario: &str,
@@ -432,5 +475,70 @@ mod tests {
         }
 
         assert_eq!(connectors, vec!["adyen", "rapyd", "stripe"]);
+    }
+
+    #[test]
+    fn recurring_charge_scenarios_exclude_unsupported_connector_transaction_field() {
+        for scenario_name in [
+            "recurring_charge",
+            "recurring_charge_low_amount",
+            "recurring_charge_with_order_context",
+        ] {
+            let req = get_the_grpc_req("recurring_charge", scenario_name)
+                .expect("recurring charge grpc_req should be loadable");
+            assert!(
+                req.get("connector_transaction_id").is_none(),
+                "recurring_charge/{scenario_name} should not include connector_transaction_id"
+            );
+        }
+    }
+
+    #[test]
+    fn setup_recurring_extended_scenarios_have_billing_address() {
+        for scenario_name in [
+            "setup_recurring_with_webhook",
+            "setup_recurring_with_order_context",
+        ] {
+            let req = get_the_grpc_req("setup_recurring", scenario_name)
+                .expect("setup_recurring grpc_req should be loadable");
+
+            let has_billing_address = req
+                .get("address")
+                .and_then(|address| address.get("billing_address"))
+                .is_some();
+            assert!(
+                has_billing_address,
+                "setup_recurring/{scenario_name} should include address.billing_address"
+            );
+        }
+    }
+
+    #[test]
+    fn three_connector_suite_coverage_includes_recurring_flows() {
+        let authorizedotnet = load_supported_suites_for_connector("authorizedotnet")
+            .expect("authorizedotnet supported suites should load");
+        assert!(
+            authorizedotnet.contains(&"setup_recurring".to_string())
+                && authorizedotnet.contains(&"recurring_charge".to_string()),
+            "authorizedotnet should cover recurring suites"
+        );
+
+        let stripe =
+            load_supported_suites_for_connector("stripe").expect("stripe suites should load");
+        assert!(
+            stripe.contains(&"create_customer".to_string())
+                && stripe.contains(&"setup_recurring".to_string())
+                && stripe.contains(&"recurring_charge".to_string()),
+            "stripe should include create_customer + recurring suites"
+        );
+
+        let paypal =
+            load_supported_suites_for_connector("paypal").expect("paypal suites should load");
+        assert!(
+            paypal.contains(&"create_access_token".to_string())
+                && paypal.contains(&"setup_recurring".to_string())
+                && paypal.contains(&"recurring_charge".to_string()),
+            "paypal should include token + recurring suites"
+        );
     }
 }

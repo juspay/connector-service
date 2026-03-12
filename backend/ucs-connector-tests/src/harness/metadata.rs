@@ -2,6 +2,10 @@ use tonic::Request;
 
 use crate::harness::credentials::ConnectorAuth;
 
+/// Adds connector/auth/tenant/request metadata headers expected by UCS.
+///
+/// All harness execution paths (grpcurl and tonic) should converge on the same
+/// header contract so scenarios behave consistently across runners.
 pub fn add_connector_metadata<T>(
     request: &mut Request<T>,
     connector: &str,
@@ -11,11 +15,13 @@ pub fn add_connector_metadata<T>(
     request_id: &str,
     connector_request_reference_id: &str,
 ) {
+    // Connector identity is always required by server-side routing.
     request.metadata_mut().append(
         "x-connector",
         connector.parse().expect("valid x-connector header"),
     );
 
+    // Auth header shape depends on connector auth type from creds.json.
     match auth {
         ConnectorAuth::HeaderKey { api_key } => {
             request
@@ -61,6 +67,7 @@ pub fn add_connector_metadata<T>(
         }
     }
 
+    // Common execution-scoping headers used by middleware and connector calls.
     request.metadata_mut().append(
         "x-merchant-id",
         merchant_id.parse().expect("valid x-merchant-id header"),

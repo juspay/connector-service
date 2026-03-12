@@ -10,6 +10,7 @@ use tonic::transport::{Channel, Endpoint, Server};
 use tower::service_fn;
 use ucs_env::configs::Config;
 
+/// Interceptor that injects the shared `Config` object into request extensions.
 #[derive(Clone)]
 struct ConfigInterceptor {
     config: Arc<Config>,
@@ -22,6 +23,7 @@ impl tonic::service::Interceptor for ConfigInterceptor {
     }
 }
 
+/// Handle to an in-process UCS server plus a ready-to-use tonic channel.
 pub struct UcsServer {
     channel: Channel,
     task: JoinHandle<()>,
@@ -29,6 +31,7 @@ pub struct UcsServer {
 }
 
 impl UcsServer {
+    /// Creates a payment client bound to the in-process UCS transport.
     pub fn payment_client(&self) -> PaymentServiceClient<Channel> {
         PaymentServiceClient::new(self.channel.clone())
     }
@@ -40,6 +43,8 @@ impl Drop for UcsServer {
     }
 }
 
+/// Boots UCS services on a temporary Unix domain socket and returns a connected
+/// client channel wrapper.
 pub async fn spawn() -> Result<UcsServer, Box<dyn Error>> {
     let config = Arc::new(Config::new()?);
     let service = grpc_server::app::Service::new(config.clone()).await;
@@ -70,6 +75,7 @@ pub async fn spawn() -> Result<UcsServer, Box<dyn Error>> {
         let _ = router.serve_with_incoming(stream).await;
     });
 
+    // Create a tonic channel that dials the Unix socket instead of TCP.
     let socket_clone = Arc::clone(&socket);
     let channel = Endpoint::try_from("http://any.url")?
         .connect_with_connector(service_fn(move |_: Uri| {

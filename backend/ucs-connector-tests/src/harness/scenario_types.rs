@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 use serde_json::Value;
 
+/// Shared schema types used across scenario loading, execution, and assertions.
+
 pub type ScenarioFile = BTreeMap<String, ScenarioDef>;
 
 /// Mapping of target request paths to dependency source paths.
@@ -16,19 +18,27 @@ pub type ContextMap = HashMap<String, String>;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ScenarioDef {
+    /// Request payload template for the suite/scenario.
     pub grpc_req: Value,
+    /// Assertion rules evaluated against response JSON.
     #[serde(rename = "assert")]
     pub assert_rules: BTreeMap<String, FieldAssert>,
+    /// Marks exactly one scenario in a suite as the default target.
     #[serde(default)]
     pub is_default: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SuiteSpec {
+    /// Suite name, expected to match `<suite>_suite` folder naming.
     pub suite: String,
+    /// Human-readable suite classification (`independent`, `payment_flow`, etc.).
     pub suite_type: String,
+    /// Upstream suites/scenarios that must run before this suite.
     pub depends_on: Vec<SuiteDependency>,
+    /// Whether dependency failures should stop this suite immediately.
     pub strict_dependencies: bool,
+    /// Whether dependencies run once per suite or once per scenario.
     #[serde(default)]
     pub dependency_scope: DependencyScope,
 }
@@ -79,7 +89,9 @@ impl SuiteDependency {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ConnectorSuiteSpec {
+    /// Connector name represented by this spec file.
     pub connector: String,
+    /// Suites explicitly supported for this connector.
     pub supported_suites: Vec<String>,
 }
 
@@ -120,6 +132,8 @@ pub enum ScenarioError {
     CredentialLoad { connector: String, message: String },
     #[error("grpcurl execution failed: {message}")]
     GrpcurlExecution { message: String },
+    #[error("sdk call failed: {message}")]
+    SdkExecution { message: String },
     #[error("failed to read suite spec '{path}': {source}")]
     SuiteSpecRead {
         path: PathBuf,
@@ -143,6 +157,16 @@ pub enum ScenarioError {
     },
     #[error("failed to parse connector spec '{path}': {source}")]
     ConnectorSpecParse {
+        path: PathBuf,
+        source: serde_json::Error,
+    },
+    #[error("failed to read connector override file '{path}': {source}")]
+    ConnectorOverrideRead {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    #[error("failed to parse connector override file '{path}': {source}")]
+    ConnectorOverrideParse {
         path: PathBuf,
         source: serde_json::Error,
     },

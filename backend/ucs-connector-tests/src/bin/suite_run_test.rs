@@ -1,19 +1,27 @@
 #![allow(clippy::print_stderr, clippy::print_stdout, clippy::too_many_arguments)]
 
+//! Suite runner (grpcurl backend).
+//!
+//! Supports single suite, all suites for one connector, or all suites across
+//! configured connectors and optionally writes consolidated report entries.
+
 use std::{fs, path::PathBuf};
 
 use serde::Deserialize;
+use serde_json::Value;
 use ucs_connector_tests::harness::{
     report::{
-        append_report_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms, ReportEntry,
+        append_report_batch_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms,
+        ReportEntry,
     },
     scenario_api::{
-        get_the_grpc_req, run_all_connectors_with_options, run_all_suites_with_options,
-        run_suite_test_with_options, SuiteRunOptions, SuiteRunSummary, DEFAULT_CONNECTOR,
-        DEFAULT_ENDPOINT,
+        get_the_grpc_req_for_connector, run_all_connectors_with_options,
+        run_all_suites_with_options, run_suite_test_with_options, ExecutionBackend,
+        SuiteRunOptions, SuiteRunSummary, DEFAULT_CONNECTOR, DEFAULT_ENDPOINT,
     },
 };
 
+/// CLI entrypoint for suite-level grpcurl execution.
 fn main() {
     let args = match parse_args(std::env::args().skip(1)) {
         Ok(args) => args,
@@ -74,10 +82,15 @@ fn main() {
         merchant_id: args.merchant_id.as_deref(),
         tenant_id: args.tenant_id.as_deref(),
         plaintext: args.plaintext,
+        backend: ExecutionBackend::Grpcurl,
+        report: args.report,
     };
 
-    // Clear report at start of every run
-    clear_report();
+    if args.report {
+        clear_report();
+    }
+
+    let mut report_entries = Vec::new();
 
     // --all-connectors: run all suites for all connectors
     if args.all_connectors {
@@ -92,9 +105,11 @@ fn main() {
         for connector_summary in &summary.connectors {
             println!("\n--- Connector: {} ---", connector_summary.connector);
             for suite_summary in &connector_summary.suites {
-                print_suite_results(suite_summary, &endpoint);
+                print_suite_results(suite_summary, &endpoint, args.report, &mut report_entries);
             }
         }
+
+        flush_report_entries(&mut report_entries);
 
         println!(
             "\n[suite_run_test] grand total: connectors={} passed={} failed={}",
@@ -120,8 +135,10 @@ fn main() {
         };
 
         for suite_summary in &summary.suites {
-            print_suite_results(suite_summary, &endpoint);
+            print_suite_results(suite_summary, &endpoint, args.report, &mut report_entries);
         }
+
+        flush_report_entries(&mut report_entries);
 
         println!(
             "\n[suite_run_test] summary mode=all connector={} suites={} passed={} failed={}",
@@ -152,29 +169,46 @@ fn main() {
         }
     };
 
-    print_suite_results(&summary, &endpoint);
+    print_suite_results(&summary, &endpoint, args.report, &mut report_entries);
+    flush_report_entries(&mut report_entries);
 
     if summary.failed > 0 {
         std::process::exit(1);
     }
 }
 
-fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str) {
+/// Prints one suite summary and appends each scenario result to report output.
+fn print_suite_results(
+    summary: &SuiteRunSummary,
+    endpoint: &str,
+    report: bool,
+    report_entries: &mut Vec<ReportEntry>,
+) {
     for result in &summary.results {
-        let req_for_report = get_the_grpc_req(&result.suite, &result.scenario).ok();
-        let (pm, pmt) = extract_pm_and_pmt(req_for_report.as_ref());
-        write_report_entry(
-            &result.suite,
-            &result.scenario,
-            &summary.connector,
-            endpoint,
-            pm.as_deref(),
-            pmt.as_deref(),
-            result.is_dependency,
-            if result.passed { "PASS" } else { "FAIL" },
-            None,
-            result.error.clone(),
-        );
+        let template_req =
+            get_the_grpc_req_for_connector(&result.suite, &result.scenario, &summary.connector)
+                .ok();
+        let req_for_report = result.req_body.as_ref().or(template_req.as_ref());
+        let (pm, pmt) = extract_pm_and_pmt(req_for_report);
+        if report {
+            report_entries.push(write_report_entry(
+                &result.suite,
+                &result.scenario,
+                &summary.connector,
+                endpoint,
+                pm.as_deref(),
+                pmt.as_deref(),
+                result.is_dependency,
+                if result.passed { "PASS" } else { "FAIL" },
+                None,
+                result.error.clone(),
+                result.dependency.clone(),
+                result.req_body.clone(),
+                result.res_body.clone(),
+                result.grpc_request.clone(),
+                result.grpc_response.clone(),
+            ));
+        }
 
         if result.passed {
             println!(
@@ -209,6 +243,15 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str) {
     }
 }
 
+fn flush_report_entries(report_entries: &mut Vec<ReportEntry>) {
+    if report_entries.is_empty() {
+        return;
+    }
+
+    append_report_batch_best_effort(std::mem::take(report_entries));
+}
+
+/// Converts scenario result information into `ReportEntry`.
 fn write_report_entry(
     suite: &str,
     scenario: &str,
@@ -220,8 +263,13 @@ fn write_report_entry(
     assertion_result: &str,
     response_status: Option<String>,
     error: Option<String>,
-) {
-    append_report_best_effort(ReportEntry {
+    dependency: Vec<String>,
+    req_body: Option<Value>,
+    res_body: Option<Value>,
+    grpc_request: Option<String>,
+    grpc_response: Option<String>,
+) -> ReportEntry {
+    ReportEntry {
         run_at_epoch_ms: now_epoch_ms(),
         suite: suite.to_string(),
         scenario: scenario.to_string(),
@@ -233,7 +281,12 @@ fn write_report_entry(
         assertion_result: assertion_result.to_string(),
         response_status,
         error,
-    });
+        dependency,
+        req_body,
+        res_body,
+        grpc_request,
+        grpc_response,
+    }
 }
 
 #[derive(Debug, Default)]
@@ -246,10 +299,12 @@ struct CliArgs {
     creds_file: Option<String>,
     merchant_id: Option<String>,
     tenant_id: Option<String>,
+    report: bool,
     plaintext: bool,
     help: bool,
 }
 
+/// Parses CLI arguments for suite runner modes.
 fn parse_args(args: impl Iterator<Item = String>) -> Result<CliArgs, String> {
     let mut cli = CliArgs {
         plaintext: true,
@@ -299,6 +354,7 @@ fn parse_args(args: impl Iterator<Item = String>) -> Result<CliArgs, String> {
                     .ok_or_else(|| "missing value for --tenant-id".to_string())?;
                 cli.tenant_id = Some(value);
             }
+            "--report" => cli.report = true,
             "--tls" => cli.plaintext = false,
             _ if arg.starts_with('-') => return Err(format!("unknown argument '{arg}'")),
             _ => positionals.push(arg),
@@ -330,6 +386,7 @@ struct StoredDefaults {
     creds_file: Option<String>,
 }
 
+/// Returns persisted defaults file path.
 fn defaults_path() -> PathBuf {
     if let Ok(path) = std::env::var("UCS_RUN_TEST_DEFAULTS_PATH") {
         return PathBuf::from(path);
@@ -345,6 +402,7 @@ fn defaults_path() -> PathBuf {
     PathBuf::from(".ucs_run_test_defaults.json")
 }
 
+/// Loads persisted endpoint/credentials defaults.
 fn load_defaults() -> StoredDefaults {
     let path = defaults_path();
     let Ok(content) = fs::read_to_string(path) else {
@@ -354,9 +412,10 @@ fn load_defaults() -> StoredDefaults {
     serde_json::from_str(&content).unwrap_or_default()
 }
 
+/// Prints usage/help text for suite runner.
 fn print_usage() {
     eprintln!(
-        "Usage:\n  cargo run -p ucs-connector-tests --bin suite_run_test -- --suite <suite> [--connector <name>] [options]\n  cargo run -p ucs-connector-tests --bin suite_run_test -- --all [--connector <name>] [options]\n  cargo run -p ucs-connector-tests --bin suite_run_test -- --all-connectors [options]\n  cargo run -p ucs-connector-tests --bin suite_run_test -- <suite>\n\nOptions:\n  --endpoint <host:port>   gRPC server endpoint\n  --creds-file <path>      Connector credentials file\n  --merchant-id <id>       Merchant ID\n  --tenant-id <id>         Tenant ID\n  --tls                    Use TLS instead of plaintext\n\nBehavior:\n  - --suite: Runs all scenarios from <suite>_suite/scenario.json\n  - --all: Runs all suites supported by the selected connector\n  - --all-connectors: Runs all suites for all connectors (zero args needed)\n  - Clears report.json at start, auto-generates test_report.md on each write\n  - Fails with exit code 1 if any scenario fails"
+        "Usage:\n  cargo run -p ucs-connector-tests --bin suite_run_test -- --suite <suite> [--connector <name>] [options]\n  cargo run -p ucs-connector-tests --bin suite_run_test -- --all [--connector <name>] [options]\n  cargo run -p ucs-connector-tests --bin suite_run_test -- --all-connectors [options]\n  cargo run -p ucs-connector-tests --bin suite_run_test -- <suite>\n\nOptions:\n  --endpoint <host:port>   gRPC server endpoint\n  --creds-file <path>      Connector credentials file\n  --merchant-id <id>       Merchant ID\n  --tenant-id <id>         Tenant ID\n  --report                 Generate report.json and test_report.md\n  --tls                    Use TLS instead of plaintext\n\nBehavior:\n  - --suite: Runs all scenarios from <suite>_suite/scenario.json\n  - --all: Runs all suites supported by the selected connector\n  - --all-connectors: Runs all suites for all connectors (zero args needed)\n  - Report files are generated only when --report is passed\n  - Fails with exit code 1 if any scenario fails"
     );
 }
 
@@ -401,6 +460,15 @@ mod tests {
         assert!(parsed.all_connectors);
         assert!(parsed.suite.is_none());
         assert!(parsed.connector.is_none());
+    }
+
+    #[test]
+    fn parses_report_flag() {
+        let args = vec!["--suite", "authorize", "--report"]
+            .into_iter()
+            .map(str::to_string);
+        let parsed = parse_args(args).expect("args should parse");
+        assert!(parsed.report);
     }
 
     #[test]

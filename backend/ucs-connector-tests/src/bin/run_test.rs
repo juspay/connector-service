@@ -1,5 +1,10 @@
 #![allow(clippy::print_stderr, clippy::print_stdout, clippy::too_many_arguments)]
 
+//! Single-scenario runner.
+//!
+//! This binary executes exactly one `(suite, scenario, connector)` path and
+//! optionally appends a structured report entry.
+
 use std::{fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -10,12 +15,14 @@ use ucs_connector_tests::harness::{
         append_report_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms, ReportEntry,
     },
     scenario_api::{
-        build_grpcurl_request_from_payload, do_assertion, execute_grpcurl_request_from_payload,
-        get_the_assertion, get_the_grpc_req, run_test, DEFAULT_CONNECTOR, DEFAULT_ENDPOINT,
+        build_grpcurl_request_from_payload, do_assertion,
+        execute_grpcurl_request_from_payload_with_trace, get_the_assertion_for_connector,
+        get_the_grpc_req_for_connector, run_test, DEFAULT_CONNECTOR, DEFAULT_ENDPOINT,
         DEFAULT_SCENARIO, DEFAULT_SUITE,
     },
 };
 
+/// CLI entrypoint for one-scenario execution.
 fn main() {
     let args = match parse_args(std::env::args().skip(1)) {
         Ok(args) => args,
@@ -70,8 +77,9 @@ fn main() {
         return;
     }
 
-    // Clear report at start of every run
-    clear_report();
+    if args.report {
+        clear_report();
+    }
 
     let endpoint = args.endpoint.clone().or(defaults.endpoint.clone());
     let endpoint_value = endpoint
@@ -91,10 +99,11 @@ fn main() {
     let suite = args.suite.as_deref().unwrap_or(DEFAULT_SUITE);
     let scenario = args.scenario.as_deref().unwrap_or(DEFAULT_SCENARIO);
     let connector = args.connector.as_deref().unwrap_or(DEFAULT_CONNECTOR);
-    let mut grpc_req = match get_the_grpc_req(suite, scenario) {
+    let mut grpc_req = match get_the_grpc_req_for_connector(suite, scenario, connector) {
         Ok(req) => req,
         Err(error) => {
             write_report_entry(
+                args.report,
                 suite,
                 scenario,
                 connector,
@@ -104,6 +113,11 @@ fn main() {
                 "FAIL",
                 None,
                 Some(format!("failed to load grpc request: {error}")),
+                vec![],
+                None,
+                None,
+                None,
+                None,
             );
             eprintln!("run_test failed: {error}");
             std::process::exit(1);
@@ -112,6 +126,7 @@ fn main() {
 
     if let Err(error) = resolve_auto_generate(&mut grpc_req) {
         write_report_entry(
+            args.report,
             suite,
             scenario,
             connector,
@@ -121,6 +136,11 @@ fn main() {
             "FAIL",
             None,
             Some(format!("failed to resolve auto-generated fields: {error}")),
+            vec![],
+            Some(grpc_req.clone()),
+            None,
+            None,
+            None,
         );
         eprintln!("run_test failed: {error}");
         std::process::exit(1);
@@ -130,6 +150,7 @@ fn main() {
 
     if let Err(error) = run_test(Some(suite), Some(scenario), Some(connector)) {
         write_report_entry(
+            args.report,
             suite,
             scenario,
             connector,
@@ -139,12 +160,17 @@ fn main() {
             "FAIL",
             None,
             Some(error.to_string()),
+            vec![],
+            Some(grpc_req.clone()),
+            None,
+            None,
+            None,
         );
         eprintln!("run_test failed: {error}");
         std::process::exit(1);
     }
 
-    match build_grpcurl_request_from_payload(
+    let prebuilt_grpc_request = match build_grpcurl_request_from_payload(
         suite,
         scenario,
         &grpc_req,
@@ -155,14 +181,10 @@ fn main() {
         args.plaintext,
         false,
     ) {
-        Ok(request) => {
-            println!(
-                "[run_test] generated grpcurl command:\n{}",
-                request.to_command_string()
-            );
-        }
+        Ok(request) => Some(request.to_command_string()),
         Err(error) => {
             write_report_entry(
+                args.report,
                 suite,
                 scenario,
                 connector,
@@ -172,13 +194,18 @@ fn main() {
                 "FAIL",
                 None,
                 Some(error.to_string()),
+                vec![],
+                Some(grpc_req.clone()),
+                None,
+                None,
+                None,
             );
             eprintln!("grpcurl generation failed: {error}");
             std::process::exit(1);
         }
-    }
+    };
 
-    match execute_grpcurl_request_from_payload(
+    match execute_grpcurl_request_from_payload_with_trace(
         suite,
         scenario,
         &grpc_req,
@@ -188,13 +215,15 @@ fn main() {
         args.tenant_id.as_deref(),
         args.plaintext,
     ) {
-        Ok(response) => {
-            println!("[run_test] grpc response:\n{response}");
-
+        Ok(trace) => {
+            let response = trace.response_body;
+            let grpc_request = Some(trace.request_command);
+            let grpc_response = Some(trace.response_output);
             let response_json: Value = match serde_json::from_str(&response) {
                 Ok(parsed) => parsed,
                 Err(error) => {
                     write_report_entry(
+                        args.report,
                         suite,
                         scenario,
                         connector,
@@ -206,6 +235,11 @@ fn main() {
                         Some(format!(
                             "failed to parse grpc response JSON before assertions: {error}"
                         )),
+                        vec![],
+                        Some(grpc_req.clone()),
+                        None,
+                        grpc_request.clone(),
+                        grpc_response.clone(),
                     );
                     eprintln!("[run_test] assertion result: FAIL");
                     eprintln!(
@@ -215,10 +249,11 @@ fn main() {
                 }
             };
 
-            let assertions = match get_the_assertion(suite, scenario) {
+            let assertions = match get_the_assertion_for_connector(suite, scenario, connector) {
                 Ok(assertions) => assertions,
                 Err(error) => {
                     write_report_entry(
+                        args.report,
                         suite,
                         scenario,
                         connector,
@@ -228,6 +263,11 @@ fn main() {
                         "FAIL",
                         extract_response_status(&response_json),
                         Some(format!("failed to load assertion rules: {error}")),
+                        vec![],
+                        Some(grpc_req.clone()),
+                        Some(response_json.clone()),
+                        grpc_request.clone(),
+                        grpc_response.clone(),
                     );
                     eprintln!("[run_test] assertion result: FAIL");
                     eprintln!("[run_test] failed to load assertion rules: {error}");
@@ -239,6 +279,7 @@ fn main() {
                 Ok(()) => {
                     println!("[run_test] assertion result: PASS");
                     write_report_entry(
+                        args.report,
                         suite,
                         scenario,
                         connector,
@@ -248,10 +289,16 @@ fn main() {
                         "PASS",
                         extract_response_status(&response_json),
                         None,
+                        vec![],
+                        Some(grpc_req.clone()),
+                        Some(response_json.clone()),
+                        grpc_request.clone(),
+                        grpc_response.clone(),
                     );
                 }
                 Err(error) => {
                     write_report_entry(
+                        args.report,
                         suite,
                         scenario,
                         connector,
@@ -261,6 +308,11 @@ fn main() {
                         "FAIL",
                         extract_response_status(&response_json),
                         Some(error.to_string()),
+                        vec![],
+                        Some(grpc_req.clone()),
+                        Some(response_json.clone()),
+                        grpc_request.clone(),
+                        grpc_response.clone(),
                     );
                     eprintln!("[run_test] assertion result: FAIL");
                     eprintln!("[run_test] assertion failure: {error}");
@@ -270,6 +322,7 @@ fn main() {
         }
         Err(error) => {
             write_report_entry(
+                args.report,
                 suite,
                 scenario,
                 connector,
@@ -279,6 +332,11 @@ fn main() {
                 "FAIL",
                 None,
                 Some(error.to_string()),
+                vec![],
+                Some(grpc_req.clone()),
+                None,
+                prebuilt_grpc_request,
+                None,
             );
             eprintln!("grpc execution failed: {error}");
             std::process::exit(1);
@@ -297,6 +355,7 @@ struct CliArgs {
     tenant_id: Option<String>,
     set_defaults: bool,
     show_defaults: bool,
+    report: bool,
     plaintext: bool,
     help: bool,
 }
@@ -307,6 +366,7 @@ struct StoredDefaults {
     creds_file: Option<String>,
 }
 
+/// Returns location of persisted CLI defaults for endpoint/credentials.
 fn defaults_path() -> PathBuf {
     if let Ok(path) = std::env::var("UCS_RUN_TEST_DEFAULTS_PATH") {
         return PathBuf::from(path);
@@ -322,6 +382,7 @@ fn defaults_path() -> PathBuf {
     PathBuf::from(".ucs_run_test_defaults.json")
 }
 
+/// Loads saved defaults; returns empty defaults when file is absent/invalid.
 fn load_defaults() -> StoredDefaults {
     let path = defaults_path();
     let Ok(content) = fs::read_to_string(path) else {
@@ -330,6 +391,7 @@ fn load_defaults() -> StoredDefaults {
     serde_json::from_str(&content).unwrap_or_default()
 }
 
+/// Persists CLI defaults to disk in pretty JSON form.
 fn save_defaults(defaults: &StoredDefaults) -> Result<(), String> {
     let path = defaults_path();
     if let Some(parent) = path.parent() {
@@ -351,7 +413,9 @@ fn save_defaults(defaults: &StoredDefaults) -> Result<(), String> {
     })
 }
 
+/// Appends one run result into `report.json` / `test_report.md`.
 fn write_report_entry(
+    report: bool,
     suite: &str,
     scenario: &str,
     connector: &str,
@@ -361,7 +425,16 @@ fn write_report_entry(
     assertion_result: &str,
     response_status: Option<String>,
     error: Option<String>,
+    dependency: Vec<String>,
+    req_body: Option<Value>,
+    res_body: Option<Value>,
+    grpc_request: Option<String>,
+    grpc_response: Option<String>,
 ) {
+    if !report {
+        return;
+    }
+
     append_report_best_effort(ReportEntry {
         run_at_epoch_ms: now_epoch_ms(),
         suite: suite.to_string(),
@@ -374,9 +447,15 @@ fn write_report_entry(
         assertion_result: assertion_result.to_string(),
         response_status,
         error,
+        dependency,
+        req_body,
+        res_body,
+        grpc_request,
+        grpc_response,
     });
 }
 
+/// Extracts normalized status text from response payload for reporting.
 fn extract_response_status(response_json: &Value) -> Option<String> {
     response_json
         .get("status")
@@ -384,6 +463,7 @@ fn extract_response_status(response_json: &Value) -> Option<String> {
         .map(ToString::to_string)
 }
 
+/// Parses CLI flags/positionals with backward-compatible positional support.
 fn parse_args(args: impl Iterator<Item = String>) -> Result<CliArgs, String> {
     let mut cli = CliArgs {
         plaintext: true,
@@ -439,6 +519,7 @@ fn parse_args(args: impl Iterator<Item = String>) -> Result<CliArgs, String> {
             }
             "--set-defaults" => cli.set_defaults = true,
             "--show-defaults" => cli.show_defaults = true,
+            "--report" => cli.report = true,
             "--tls" => cli.plaintext = false,
             _ if arg.starts_with('-') => {
                 return Err(format!("unknown argument '{arg}'"));
@@ -468,9 +549,10 @@ fn parse_args(args: impl Iterator<Item = String>) -> Result<CliArgs, String> {
     Ok(cli)
 }
 
+/// Prints CLI usage/help text.
 fn print_usage() {
     eprintln!(
-        "Usage:\n  cargo run -p ucs-connector-tests --bin run_test -- [--suite <suite>] [--scenario <scenario>] [--connector <name>] [--endpoint <host:port>] [--creds-file <path>] [--merchant-id <id>] [--tenant-id <id>] [--tls]\n  cargo run -p ucs-connector-tests --bin run_test -- [suite] [scenario] [connector]\n\nDefault mode behavior:\n  - Clears previous report.json at start\n  - Loads scenario request JSON\n  - Prints generated grpcurl command\n  - Executes grpcurl and prints response\n  - Runs assertions and prints PASS/FAIL\n  - Writes run details into report.json and auto-generates test_report.md\n\nSave once and reuse auth/endpoint:\n  cargo run -p ucs-connector-tests --bin run_test -- --set-defaults --endpoint <host:port> --creds-file <path>\n  cargo run -p ucs-connector-tests --bin run_test -- --show-defaults\n\nDefaults:\n  suite: {DEFAULT_SUITE}\n  scenario: {DEFAULT_SCENARIO}\n  connector: {DEFAULT_CONNECTOR}\n  endpoint: {DEFAULT_ENDPOINT}\n  merchant-id: test_merchant\n  tenant-id: default\n  transport: plaintext\n\nConfig path:\n  $UCS_RUN_TEST_DEFAULTS_PATH or ~/.config/ucs-connector-tests/run_test_defaults.json\nReport path:\n  $UCS_RUN_TEST_REPORT_PATH or backend/ucs-connector-tests/report.json"
+        "Usage:\n  cargo run -p ucs-connector-tests --bin run_test -- [--suite <suite>] [--scenario <scenario>] [--connector <name>] [--endpoint <host:port>] [--creds-file <path>] [--merchant-id <id>] [--tenant-id <id>] [--report] [--tls]\n  cargo run -p ucs-connector-tests --bin run_test -- [suite] [scenario] [connector]\n\nDefault mode behavior:\n  - Loads scenario request JSON\n  - Executes grpcurl\n  - Runs assertions and prints PASS/FAIL\n\nOptional report output:\n  - Pass --report to clear previous report.json at start\n  - Pass --report to write run details into report.json and auto-generate test_report.md\n\nSave once and reuse auth/endpoint:\n  cargo run -p ucs-connector-tests --bin run_test -- --set-defaults --endpoint <host:port> --creds-file <path>\n  cargo run -p ucs-connector-tests --bin run_test -- --show-defaults\n\nDefaults:\n  suite: {DEFAULT_SUITE}\n  scenario: {DEFAULT_SCENARIO}\n  connector: {DEFAULT_CONNECTOR}\n  endpoint: {DEFAULT_ENDPOINT}\n  merchant-id: test_merchant\n  tenant-id: default\n  transport: plaintext\n\nConfig path:\n  $UCS_RUN_TEST_DEFAULTS_PATH or ~/.config/ucs-connector-tests/run_test_defaults.json\nReport path:\n  $UCS_RUN_TEST_REPORT_PATH or backend/ucs-connector-tests/report.json"
     );
 }
 
@@ -564,5 +646,15 @@ mod tests {
             parsed.creds_file.as_deref(),
             Some("/tmp/connector_creds.json")
         );
+    }
+
+    #[test]
+    fn parses_report_flag() {
+        let args = vec!["--suite", "authorize", "--report"]
+            .into_iter()
+            .map(str::to_string);
+
+        let parsed = parse_args(args).expect("args should parse");
+        assert!(parsed.report);
     }
 }

@@ -1,5 +1,6 @@
 use std::{fs, path::PathBuf};
 
+/// Connector authentication shapes supported by the harness.
 #[derive(Clone, Debug)]
 pub enum ConnectorAuth {
     HeaderKey {
@@ -16,6 +17,7 @@ pub enum ConnectorAuth {
     },
 }
 
+/// Credential loading/validation failures surfaced with connector context.
 #[derive(Debug, thiserror::Error)]
 pub enum CredentialError {
     #[error("Failed to read credentials file: {0}")]
@@ -35,10 +37,12 @@ pub enum CredentialError {
     MissingField { connector: String, field: String },
 }
 
+/// Default local credentials path used when env overrides are not set.
 fn default_creds_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.github/test/creds.json")
 }
 
+/// Resolves credentials path from env, then falls back to repo default.
 fn creds_file_path() -> PathBuf {
     std::env::var("CONNECTOR_AUTH_FILE_PATH")
         .or_else(|_| std::env::var("UCS_CREDS_PATH"))
@@ -46,6 +50,8 @@ fn creds_file_path() -> PathBuf {
         .unwrap_or_else(|_| default_creds_path())
 }
 
+/// Extracts `connector_account_details` for a connector with compatibility for
+/// both flat and nested credential file layouts.
 fn extract_account_details<'a>(
     root: &'a serde_json::Value,
     connector: &str,
@@ -59,6 +65,8 @@ fn extract_account_details<'a>(
     }
 
     if let Some(connector_obj) = connector_value.as_object() {
+        // Allow forcing a specific connector label (connector_1/connector_2)
+        // through env var when multiple accounts exist.
         let env_key = format!(
             "UCS_CONNECTOR_LABEL_{}",
             connector.to_ascii_uppercase().replace('-', "_")
@@ -79,6 +87,8 @@ fn extract_account_details<'a>(
             &["connector_1", "connector_2"]
         };
 
+        // Prefer deterministic labels first, then fall back to any nested
+        // account details to stay resilient to file shape drift.
         for label in preferred_labels {
             if let Some(account_details) = connector_obj
                 .get(*label)
@@ -100,6 +110,7 @@ fn extract_account_details<'a>(
     ))
 }
 
+/// Reads a required string field from connector account details.
 fn get_required_string(
     account_details: &serde_json::Value,
     connector: &str,
@@ -115,6 +126,9 @@ fn get_required_string(
         .map(ToString::to_string)
 }
 
+/// Loads connector auth credentials from the configured credential file.
+///
+/// Supported auth_type values are normalized for underscore/hyphen variants.
 pub fn load_connector_auth(connector: &str) -> Result<ConnectorAuth, CredentialError> {
     let content = fs::read_to_string(creds_file_path())?;
     let json: serde_json::Value = serde_json::from_str(&content)?;

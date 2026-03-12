@@ -4,6 +4,7 @@ use serde_json::Value;
 
 use crate::harness::scenario_types::{FieldAssert, ScenarioError};
 
+/// Applies all assertion rules for one request/response pair.
 pub fn do_assertion(
     assert_rules: &BTreeMap<String, FieldAssert>,
     response_json: &Value,
@@ -15,12 +16,14 @@ pub fn do_assertion(
     Ok(())
 }
 
+/// Evaluates a single assertion rule against a response field.
 fn apply_rule(
     field: &str,
     rule: &FieldAssert,
     response_json: &Value,
     request_json: &Value,
 ) -> Result<(), ScenarioError> {
+    // All rule variants begin by resolving the response field path.
     let actual = lookup_json_path(response_json, field);
     match rule {
         FieldAssert::MustExist { must_exist } => {
@@ -159,6 +162,12 @@ fn apply_rule(
     }
 }
 
+/// Looks up a dot-separated JSON path with array-index support.
+///
+/// Example paths:
+/// - `status`
+/// - `mandate_reference.connector_mandate_id.connector_mandate_id`
+/// - `errors.0.message`
 pub fn lookup_json_path<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
     if path.is_empty() {
         return Some(value);
@@ -180,6 +189,7 @@ pub fn lookup_json_path<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
     Some(current)
 }
 
+/// Resolves one object segment and tolerates snake_case/camelCase mismatches.
 fn lookup_object_segment<'a>(current: &'a Value, segment: &str) -> Option<&'a Value> {
     if let Some(value) = current.get(segment) {
         return Some(value);
@@ -202,6 +212,7 @@ fn lookup_object_segment<'a>(current: &'a Value, segment: &str) -> Option<&'a Va
     None
 }
 
+/// Converts snake_case to camelCase for path fallback resolution.
 fn snake_to_camel_case(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     let mut uppercase_next = false;
@@ -221,6 +232,7 @@ fn snake_to_camel_case(input: &str) -> String {
     out
 }
 
+/// Converts camelCase to snake_case for path fallback resolution.
 fn camel_to_snake_case(input: &str) -> String {
     let mut out = String::with_capacity(input.len() + 4);
     for (idx, ch) in input.chars().enumerate() {
@@ -232,6 +244,7 @@ fn camel_to_snake_case(input: &str) -> String {
     out
 }
 
+/// Renders JSON values safely for assertion error messages.
 fn render_json(value: &Value) -> String {
     serde_json::to_string(value).unwrap_or_else(|_| "<json-render-error>".to_string())
 }

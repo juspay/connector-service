@@ -6,6 +6,10 @@ use crate::harness::{
     server::{spawn, UcsServer},
 };
 
+/// Lightweight helper that bundles a spawned UCS server with connector auth.
+///
+/// This is primarily used by integration-style harness code that needs to build
+/// correctly-authenticated tonic requests repeatedly.
 pub struct ConnectorExecutor {
     server: UcsServer,
     auth: ConnectorAuth,
@@ -15,6 +19,8 @@ pub struct ConnectorExecutor {
 }
 
 impl ConnectorExecutor {
+    /// Creates a new executor for one connector by starting an in-process server
+    /// and loading the connector credentials from the configured auth source.
     pub async fn new(connector: &str) -> Self {
         let server = spawn().await.expect("UCS server should start");
         let auth = load_connector_auth(connector)
@@ -29,6 +35,7 @@ impl ConnectorExecutor {
         }
     }
 
+    /// Returns a `PaymentServiceClient` backed by the in-process server channel.
     pub fn payment_client(
         &self,
     ) -> grpc_api_types::payments::payment_service_client::PaymentServiceClient<
@@ -37,6 +44,8 @@ impl ConnectorExecutor {
         self.server.payment_client()
     }
 
+    /// Wraps a payload into a tonic request and injects standard UCS metadata
+    /// headers (`x-connector`, auth headers, request ids, tenant/merchant ids).
     pub fn request_with_ids<T>(
         &self,
         payload: T,

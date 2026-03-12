@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate test-ucs
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -51,6 +51,11 @@ ci:
 generate:
 	@echo "▶ Generating SDK flows from services.proto…"
 	python3 sdk/codegen/generate.py
+
+## Run interactive UCS connector test runner
+test-ucs:
+	@echo "▶ Starting interactive UCS connector tests…"
+	cargo run -p ucs-connector-tests --bin test_ucs
 
 # Format proto files
 proto-format:
@@ -102,4 +107,5 @@ help:
 	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo
 	@echo "Other Targets:"
+	@echo "  test-ucs Run interactive UCS connector tests"
 	@echo "  help     Show this help message"

@@ -9,6 +9,10 @@ use uuid::Uuid;
 
 use crate::harness::scenario_types::ScenarioError;
 
+/// Replaces `auto_generate` sentinel placeholders in a request payload.
+///
+/// Context-deferred fields are intentionally skipped here because those are
+/// expected to be copied from dependency responses later in the pipeline.
 pub fn resolve_auto_generate(current_grpc_req: &mut Value) -> Result<(), ScenarioError> {
     let mut paths = Vec::new();
     collect_leaf_paths(current_grpc_req, String::new(), &mut paths);
@@ -37,6 +41,7 @@ pub fn resolve_auto_generate(current_grpc_req: &mut Value) -> Result<(), Scenari
     Ok(())
 }
 
+/// Generates a deterministic-by-shape value for a specific JSON path.
 fn generate_value_for_path(path: &str, runner: &mut TestRunner) -> Result<String, ScenarioError> {
     let lower = path.to_ascii_lowercase();
 
@@ -98,6 +103,7 @@ fn generate_value_for_path(path: &str, runner: &mut TestRunner) -> Result<String
     sample_string(path, generic_string_strategy(), runner)
 }
 
+/// Returns semantic ID prefixes so generated identifiers are easier to debug.
 fn id_prefix_for_path(path: &str) -> &'static str {
     let Some((left, _)) = path.rsplit_once('.') else {
         return "id";
@@ -118,6 +124,8 @@ fn id_prefix_for_path(path: &str) -> &'static str {
     }
 }
 
+/// Samples one string value from a proptest strategy and wraps any generation
+/// failure into harness-level errors.
 fn sample_string<S>(
     path: &str,
     strategy: S,
@@ -134,6 +142,7 @@ where
     Ok(tree.current())
 }
 
+/// Generates `<prefix>_<uuid>` helper identifiers.
 fn prefixed_uuid(prefix: &str) -> String {
     format!("{prefix}_{}", Uuid::new_v4().simple())
 }
