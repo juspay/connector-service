@@ -40,8 +40,8 @@ from payments import (
 
 # PayPal credentials (test values)
 PAYPAL_CREDS = {
-    "client_id": "ASKAGh2WXgqfQ5TzjpZzLsfhVGlFbjq5VrV5IOX8KXDD2N_XqkGeYNDkWyr_UXnfhXpEkABdmP284b_2",
-    "client_secret": "EOpaRHxEgaMJ9OHfsn3ngHy7DoXArNjPgCwsrzaJreO3gXPSJP_r4iOp1UUEn140CsEjaYxtm0g61VFU",
+    "client_id": "client_id",
+    "client_secret": "client_secret",
 }
 
 
