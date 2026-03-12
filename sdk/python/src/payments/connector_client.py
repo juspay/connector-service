@@ -178,9 +178,11 @@ class _ConnectorClientBase:
     ) -> tuple[FfiOptions, Optional[HttpConfig]]:
         """
         Merges request-level options with client defaults.
-        Environment comes from ConnectorConfig (immutable). HTTP/vault from defaults + request override.
+        Environment comes from ConnectorConfig.options. Connector identity comes from
+        ConnectorConfig.connector_config. HTTP/vault from defaults + request override.
         """
-        environment = self.config.environment
+        environment = self.config.options.environment
+        connector_config = self.config.connector_config
 
         # HTTP: request override > client defaults
         http_config = (
@@ -192,8 +194,7 @@ class _ConnectorClientBase:
         # Resolve FFI Context
         ffi = FfiOptions(
             environment=environment,
-            connector=self.config.connector,
-            auth=self.config.auth,
+            connector_config=connector_config,
         )
 
         return ffi, http_config

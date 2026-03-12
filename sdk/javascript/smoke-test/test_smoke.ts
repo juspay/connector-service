@@ -20,7 +20,7 @@ const {
   CaptureMethod,
   AuthenticationType,
   Connector,
-  SdkConfig,
+  ConnectorConfig,
   Environment,
   RequestError,
   ResponseError
@@ -168,12 +168,13 @@ async function testConnector(
     // Build ConnectorAuth with the appropriate oneof field
     // The key should match the connector name (e.g., 'stripe', 'adyen', 'aci')
     const connectorAuthKey = connectorKey.toLowerCase();
-    const auth: any = {};
-    auth[connectorAuthKey] = authFields;
+    const connectorConfig: Record<string, unknown> = {
+      [connectorAuthKey]: authFields,
+    };
 
-    const config = SdkConfig.create({
-      connectorConfig: { config: auth },
+    const config = ConnectorConfig.create({
       options: { environment: Environment.SANDBOX },
+      connectorConfig: connectorConfig as types.IConnectorSpecificConfig,
     });
 
     // Test 1: Low-level FFI via PaymentClient internals
