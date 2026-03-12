@@ -517,13 +517,17 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
     lines.append("")
 
     # FlowRegistry object
+    # UniFFI transformers include metadata param; we wrap with emptyMap() so the public API
+    # does not expose metadata (per decision: Kotlin SDK omits metadata).
     lines += [
         "object FlowRegistry {",
         "    val reqTransformers: Map<String, (ByteArray, ByteArray) -> ByteArray> = mapOf(",
     ]
     for f in flows:
         camel = to_camel(f["name"])
-        lines.append(f'        "{f["name"]}" to ::{camel}ReqTransformer,')
+        lines.append(
+            f'        "{f["name"]}" to {{ requestBytes, optionsBytes -> {camel}ReqTransformer(requestBytes, emptyMap(), optionsBytes) }},'
+        )
     lines += [
         "    )",
         "",
@@ -531,7 +535,9 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
     ]
     for f in flows:
         camel = to_camel(f["name"])
-        lines.append(f'        "{f["name"]}" to ::{camel}ResTransformer,')
+        lines.append(
+            f'        "{f["name"]}" to {{ responseBytes, requestBytes, optionsBytes -> {camel}ResTransformer(responseBytes, requestBytes, emptyMap(), optionsBytes) }},'
+        )
     lines += ["    )", ""]
     if single_flows:
         lines += [
@@ -540,7 +546,9 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
         ]
         for f in single_flows:
             camel = to_camel(f["name"])
-            lines.append(f'        "{f["name"]}" to ::{camel}Transformer,')
+            lines.append(
+                f'        "{f["name"]}" to {{ requestBytes, optionsBytes -> {camel}Transformer(requestBytes, emptyMap(), optionsBytes) }},'
+            )
         lines += ["    )", ""]
     lines += ["}", ""]
 

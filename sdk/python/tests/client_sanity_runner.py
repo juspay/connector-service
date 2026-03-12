@@ -4,8 +4,13 @@ import os
 import asyncio
 import base64
 
-# Add src to path so we can import the client
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+# Add SDK src and generated proto dirs to import path.
+# Some generated *_pb2.py files use bare imports (e.g., "import payment_pb2"),
+# so include the generated directory explicitly for local/CI robustness.
+sdk_src = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sdk_generated = os.path.join(sdk_src, 'payments', 'generated')
+sys.path.insert(0, sdk_generated)
+sys.path.insert(0, sdk_src)
 
 from payments.http_client import execute, HttpRequest, create_client
 from payments.generated import sdk_config_pb2

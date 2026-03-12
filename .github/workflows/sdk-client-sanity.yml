@@ -71,6 +71,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Install protobuf compiler (protoc)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
       - name: Install Node dependencies (SDK JS)
         run: cd sdk/javascript && npm install && cd ../..
 
@@ -80,9 +85,17 @@ jobs:
       - name: Install Python dependencies (SDK)
         run: pip install -r sdk/python/requirements.txt grpcio-tools protobuf
 
-      - name: Generate Python protobuf stubs
-        run: make generate-proto
+      - name: Generate Python SDK artifacts (proto + UniFFI + flows)
+        run: make generate-all
         working-directory: sdk/python
+
+      - name: Generate JavaScript SDK artifacts (proto + native + flows)
+        run: make generate-all
+        working-directory: sdk/javascript
+
+      - name: Generate Java/Kotlin SDK artifacts (proto + UniFFI + flows)
+        run: make generate-all
+        working-directory: sdk/java
 
       - name: Run SDK Client Sanity Certification
         id: certify
