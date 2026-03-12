@@ -9,8 +9,8 @@ repositories {
 }
 
 dependencies {
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation("com.hyperswitch:payments-client:0.1.0")
-    implementation("org.json:json:20240303")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
