@@ -18,11 +18,11 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
-        AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2,
-        Currency, Identifier, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceVoidRequest, PaymentStatus,
+        payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+        BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2, Currency, PaymentAddress,
+        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceVoidRequest,
+        PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -100,27 +100,25 @@ fn add_helcim_metadata<T>(request: &mut Request<T>) {
 // Helper function to extract connector transaction ID from authorize response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
     match &response.connector_transaction_id {
-        Some(id) => match &id.id_type {
-            Some(IdType::Id(id)) => id.clone(),
-            Some(IdType::EncodedData(id)) => id.clone(),
-            Some(IdType::NoResponseIdMarker(_)) => {
-                // For manual capture, extract the transaction ID from connector metadata
-                if let Some(connector_meta) = &response.connector_feature_data {
-                    if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
-                        connector_meta.as_ref().expose(),
-                    ) {
-                        if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
-                            return preauth_id.clone();
-                        }
+        Some(id) => {
+            if id.is_empty() {
+                panic!("Transaction ID is None")
+            } else {
+                id.clone()
+            }
+        }
+        None => {
+            if let Some(connector_meta) = &response.connector_feature_data {
+                if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
+                    connector_meta.as_ref().expose(),
+                ) {
+                    if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
+                        return preauth_id.clone();
                     }
                 }
-                panic!(
-                    "NoResponseIdMarker found but no preauth_transaction_id in connector metadata"
-                )
             }
-            None => panic!("ID type is None in transaction_id"),
-        },
-        None => panic!("Transaction ID is None"),
+            panic!("NoResponseIdMarker found but no preauth_transaction_id in connector metadata")
+        }
     }
 }
 
@@ -128,24 +126,17 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 fn extract_void_transaction_id(
     response: &grpc_api_types::payments::PaymentServiceVoidResponse,
 ) -> String {
-    match &response.connector_transaction_id {
-        Some(id) => match &id.id_type {
-            Some(IdType::Id(id)) => id.clone(),
-            Some(IdType::EncodedData(id)) => id.clone(),
-            Some(_) => panic!("Unexpected ID type in transaction_id"),
-            None => panic!("ID type is None in transaction_id"),
-        },
-        None => panic!("Transaction ID is None"),
+    if response.connector_transaction_id.is_empty() {
+        panic!("Transaction ID is None")
+    } else {
+        response.connector_transaction_id.clone()
     }
 }
 
 // Helper function to extract connector request ref ID from response
 fn extract_request_ref_id(response: &PaymentServiceAuthorizeResponse) -> String {
     match &response.merchant_transaction_id {
-        Some(id) => match id.id_type.as_ref().unwrap() {
-            IdType::Id(id) => id.clone(),
-            _ => panic!("Expected connector response_ref_id"),
-        },
+        Some(id) => id.clone(),
         None => panic!("Resource ID is None"),
     }
 }
@@ -251,9 +242,7 @@ fn create_payment_authorize_request_with_amount(
         address: Some(create_test_billing_address()),
         browser_info: Some(create_test_browser_info()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        merchant_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("helcim_test_{}", get_timestamp()))),
-        }),
+        merchant_transaction_id: Some(format!("helcim_test_{}", get_timestamp())),
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
@@ -271,9 +260,7 @@ fn create_payment_sync_request(
     amount: i64,
 ) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         encoded_data: None,
         capture_method: None,
         handle_response: None,
@@ -298,9 +285,7 @@ fn create_payment_capture_request(
     amount: i64,
 ) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         amount_to_capture: Some(grpc_api_types::payments::Money {
             minor_amount: amount,
             currency: i32::from(Currency::Usd),
@@ -314,13 +299,9 @@ fn create_payment_capture_request(
 // Helper function to create a payment void request
 fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         cancellation_reason: None,
-        merchant_void_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
-        }),
+        merchant_void_id: Some(format!("void_ref_{}", get_timestamp())),
         all_keys_required: None,
         browser_info: Some(create_test_browser_info()),
         amount: None,
@@ -399,8 +380,8 @@ async fn test_payment_authorization_manual_capture() {
             .into_inner();
 
         assert!(
-            auth_response.connector_transaction_id.is_some(),
-            "Transaction ID should be present"
+            auth_response.connector_transaction_id.is_none(),
+            "Transaction ID should not be present"
         );
 
         // Extract the transaction ID
@@ -479,7 +460,7 @@ async fn test_payment_void() {
 
         // Verify the void response
         assert!(
-            void_response.connector_transaction_id.is_some(),
+            !void_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in void response"
         );
 
