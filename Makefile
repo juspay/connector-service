@@ -50,7 +50,7 @@ ci:
 ## Generate SDK flow bindings from services.proto ∩ bindings/uniffi.rs
 generate:
 	@echo "▶ Generating SDK flows from services.proto…"
-	python3 sdk/codegen/generate.py
+	@$(MAKE) -C sdk generate
 
 ## Run interactive UCS connector test runner
 test-ucs:

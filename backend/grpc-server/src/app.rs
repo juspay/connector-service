@@ -296,6 +296,27 @@ impl Service {
             .add_service(dispute_service_server::DisputeServiceServer::new(
                 self.disputes_service,
             ))
+            .add_service(customer_service_server::CustomerServiceServer::new(
+                self.customer_service,
+            ))
+            .add_service(
+                recurring_payment_service_server::RecurringPaymentServiceServer::new(
+                    self.recurring_payment_service,
+                ),
+            )
+            .add_service(payment_method_service_server::PaymentMethodServiceServer::new(
+                self.payment_method_service,
+            ))
+            .add_service(
+                merchant_authentication_service_server::MerchantAuthenticationServiceServer::new(
+                    self.merchant_authentication_service,
+                ),
+            )
+            .add_service(
+                payment_method_authentication_service_server::PaymentMethodAuthenticationServiceServer::new(
+                    self.payment_method_authentication_service,
+                ),
+            )
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;
 

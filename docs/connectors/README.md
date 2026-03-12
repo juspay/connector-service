@@ -4,11 +4,11 @@ This document provides a comprehensive overview of all supported payment connect
 
 ## Status Legend
 
-| Status | Description |
-|--------|-------------|
-| ![Integrated](https://img.shields.io/badge/-integrated-blue) | Code and transformers are available in `/connectors` folder |
-| ![Tested](https://img.shields.io/badge/-tested-green) | Code is integrated and tests are available in `/tests` folder |
-| ![Not Integrated](https://img.shields.io/badge/-not%20integrated-lightgrey) | No code or mapping available for this operation |
+| Status | Badge | Description |
+|--------|-------|-------------|
+| **integrated** | ![Integrated](https://img.shields.io/badge/-integrated-blue) | Code and mapping transformers are available in `/connectors` folder |
+| **tested** | ![Tested](https://img.shields.io/badge/-tested-green) | Integrated with tests available in the connector's `test.rs` file |
+| **not integrated** | ![Not Integrated](https://img.shields.io/badge/-not%20integrated-lightgrey) | No code or mapping available for this operation |
 
 ---
 

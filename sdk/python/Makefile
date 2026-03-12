@@ -5,6 +5,9 @@
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
 
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
+
 # Include common SDK build configuration
 include $(SDK_ROOT)/../common.mk
 
@@ -85,7 +88,7 @@ generate-proto: install-deps
 # stubs. Proto is generated first to ensure the __init__.py marker exists
 # before the UniFFI wrapper references the package.
 # ---------------------------------------------------------------------------
-generate-all: generate-proto generate-bindings
+generate-all: generate-proto generate-bindings generate-flows
 
 # ---------------------------------------------------------------------------
 # generate-flows
@@ -129,11 +132,17 @@ test-package: generate-all pack-archive
 	@rm -rf /tmp/test-hyperswitch-py
 	@mkdir -p /tmp/test-hyperswitch-py
 	@cp $(SDK_ROOT)/smoke-test/test_smoke.py /tmp/test-hyperswitch-py/
+	@# Copy credentials file if it exists
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-py/; \
+	else \
+		echo "  Note: creds.json not found, test will use placeholder credentials"; \
+	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
 		--force-reinstall
-	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) 
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Package test passed."
 
