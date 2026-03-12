@@ -24,11 +24,11 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
-    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
-    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
-    DisputeServiceSubmitEvidenceResponse, EventResponse, EventServiceHandleRequest,
-    EventServiceHandleResponse, WebhookEventType,
+    dispute_service_server::DisputeService, event_content, DisputeResponse,
+    DisputeServiceAcceptRequest, DisputeServiceAcceptResponse, DisputeServiceDefendRequest,
+    DisputeServiceDefendResponse, DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, EventContent, EventServiceHandleRequest,
+    EventServiceHandleResponse, EventStatus, WebhookEventType,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -484,10 +484,11 @@ impl DisputeService for Disputes {
                     .map_err(|e| e.into_grpc_status())?;
                     let response = EventServiceHandleResponse {
                         event_type: WebhookEventType::WebhookDisputeOpened.into(),
-                        event_response: Some(content),
+                        event_content: Some(content),
                         source_verified,
                         merchant_event_id: None,
-                        event_status: grpc_api_types::payments::WebhookEventStatus::Complete.into(),
+                        event_status: EventStatus::EventStatusComplete as i32,
+                        event_ack_response: None,
                     };
                     Ok(tonic::Response::new(response))
                 }
@@ -502,7 +503,7 @@ async fn get_disputes_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorSpecificAuth>,
-) -> CustomResult<EventResponse, ApplicationErrorResponse> {
+) -> CustomResult<EventContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
@@ -518,9 +519,9 @@ async fn get_disputes_webhook_content(
         }),
     )?;
 
-    Ok(EventResponse {
+    Ok(EventContent {
         content: Some(
-            grpc_api_types::payments::event_response::Content::DisputesResponse(response),
+            event_content::Content::DisputesResponse(response),
         ),
     })
 }

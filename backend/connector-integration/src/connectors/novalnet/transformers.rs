@@ -2443,6 +2443,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                                     NovalnetResponsePaymentData::Paypal(_) => None,
                                 }
                             }),
+                            payment_method_update: None,
                             transformation_status:
                                 common_enums::WebhookTransformationStatus::Complete,
                         })
@@ -2466,6 +2467,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         amount_captured: None,
                         error_reason: None,
                         network_txn_id: None,
+                        payment_method_update: None,
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     }),
                 }

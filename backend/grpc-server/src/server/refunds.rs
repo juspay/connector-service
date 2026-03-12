@@ -12,8 +12,9 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    refund_service_server::RefundService, EventResponse, EventServiceHandleRequest,
-    EventServiceHandleResponse, RefundResponse, RefundServiceGetRequest, WebhookEventType,
+    event_content, refund_service_server::RefundService, EventContent, EventServiceHandleRequest,
+    EventServiceHandleResponse, EventStatus, RefundResponse, RefundServiceGetRequest,
+    WebhookEventType,
 };
 
 use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
@@ -171,10 +172,11 @@ impl RefundService for Refunds {
 
                 let response = EventServiceHandleResponse {
                     event_type: WebhookEventType::WebhookRefundSuccess.into(),
-                    event_response: Some(content),
+                    event_content: Some(content),
                     source_verified,
                     merchant_event_id: None,
-                    event_status: grpc_api_types::payments::WebhookEventStatus::Complete.into(),
+                    event_status: EventStatus::EventStatusComplete as i32,
+                    event_ack_response: None,
                 };
 
                 Ok(tonic::Response::new(response))
@@ -189,7 +191,7 @@ async fn get_refunds_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorSpecificAuth>,
-) -> CustomResult<EventResponse, ApplicationErrorResponse> {
+) -> CustomResult<EventContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
         .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
@@ -205,7 +207,7 @@ async fn get_refunds_webhook_content(
         }),
     )?;
 
-    Ok(EventResponse {
-        content: Some(grpc_api_types::payments::event_response::Content::RefundsResponse(response)),
+    Ok(EventContent {
+        content: Some(event_content::Content::RefundsResponse(response)),
     })
 }
