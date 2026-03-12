@@ -209,17 +209,17 @@ async function testConnector(
       if (e instanceof RequestError) {
         result.roundTripTest = {
           passed: true,
-          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || e.statusCode || String(e),
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
         };
         result.status = "passed_with_error";
-        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || e.statusCode || String(e);
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
       } else if (e instanceof ResponseError) {
         result.roundTripTest = {
           passed: true,
-          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || e.statusCode || String(e),
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
         };
         result.status = "passed_with_error";
-        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || e.statusCode || String(e);
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
       } else {
         result.roundTripTest = {
           passed: true,
