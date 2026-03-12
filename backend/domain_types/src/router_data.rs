@@ -492,6 +492,12 @@ pub enum ConnectorSpecificAuth {
     Revolv3 {
         api_key: Secret<String>,
     },
+    Fiservcommercehub {
+        api_key: Secret<String>,
+        secret: Secret<String>,
+        merchant_id: Secret<String>,
+        terminal_id: Secret<String>,
+    },
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecificAuth {
@@ -1599,6 +1605,20 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             ConnectorEnum::Revolv3 => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolv3 {
                     api_key: api_key.clone(),
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Fiservcommercehub => match auth {
+                ConnectorAuthType::MultiAuthKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                    key2,
+                } => Ok(Self::Fiservcommercehub {
+                    api_key: api_key.clone(),
+                    secret: api_secret.clone(),
+                    merchant_id: key1.clone(),
+                    terminal_id: key2.clone(),
                 }),
                 _ => Err(err().into()),
             },
