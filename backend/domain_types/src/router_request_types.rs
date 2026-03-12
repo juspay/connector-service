@@ -473,6 +473,7 @@ pub struct VerifyWebhookSourceRequestData {
     pub webhook_headers: std::collections::HashMap<String, String>,
     pub webhook_body: Vec<u8>,
     pub merchant_secret: ConnectorWebhookSecrets,
+    pub webhook_uri: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
