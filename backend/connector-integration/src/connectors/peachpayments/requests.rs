@@ -7,12 +7,6 @@ use std::fmt::Debug;
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "snake_case")]
-pub enum PaymentMethod {
-    EcommerceCardPaymentOnly,
-}
-
-#[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "snake_case")]
 pub enum DccMode {
     NoDcc,
     OptInDcc,

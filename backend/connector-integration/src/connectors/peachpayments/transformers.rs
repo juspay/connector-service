@@ -1,7 +1,7 @@
 use super::{requests, responses, PeachpaymentsRouterData};
 
 use crate::types::ResponseRouterData;
-use common_enums::{AttemptStatus, Currency, RefundStatus};
+use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{consts, errors::CustomResult, types::MinorUnit, SecretSerdeValue};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
@@ -289,7 +289,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             pos_data: None,
             send_date_time: OffsetDateTime::now_utc()
                 .format(&Iso8601::DEFAULT)
-                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?,
+                .map_err(|error| {
+                    errors::ConnectorError::RequestEncodingFailedWithReason(format!(
+                        "Failed to format datetime: {}",
+                        error
+                    ))
+                })?,
         })
     }
 }
@@ -450,8 +455,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.amount.unwrap_or_default();
-        let currency = item.router_data.request.currency.unwrap_or(Currency::ZAR);
+        let amount = item.router_data.request.amount.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "amount",
+            },
+        )?;
+        let currency = item.router_data.request.currency.ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "currency",
+            },
+        )?;
 
         Ok(Self {
             amount: requests::PeachpaymentsAmount {
