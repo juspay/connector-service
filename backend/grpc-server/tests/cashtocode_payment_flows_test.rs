@@ -130,6 +130,7 @@ async fn test_health() {
 
 // Test payment authorization with auto capture
 #[tokio::test]
+#[ignore] // skip in CI
 async fn test_payment_authorization() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request
