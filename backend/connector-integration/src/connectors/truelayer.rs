@@ -889,12 +889,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let jku = jws_header
             .jku
-            .ok_or_else(|| errors::ConnectorError::WebhookDecodingFailed)?;
+            .ok_or_else(|| errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
         if truelayer::ALLOWED_JKUS.contains(&jku.as_str()) {
             Ok(jku)
         } else {
-            Err(errors::ConnectorError::WebhookDecodingFailed.into())
+            Err(errors::ConnectorError::WebhookSourceVerificationFailed.into())
         }
     }
 

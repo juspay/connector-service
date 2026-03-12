@@ -1171,7 +1171,7 @@ impl TryFrom<ResponseRouterData<Jwks, Self>>
             .keys
             .into_iter()
             .find(|k| k.kid == jws_header.kid && k.kty == "EC")
-            .ok_or(errors::ConnectorError::WebhookDecodingFailed)?;
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
         let x_raw = URL_SAFE_NO_PAD
             .decode(jwk.x.ok_or(errors::ConnectorError::WebhookDecodingFailed)?)
