@@ -1,16 +1,12 @@
 {
   "capture_full_amount": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
       "amount_to_capture": {
         "minor_amount": 6000,
         "currency": "USD"
       },
-      "merchant_capture_id": {
-        "id": "auto_generate"
-      },
+      "merchant_capture_id": "auto_generate",
       "state": {
         "connector_customer_id": "",
         "access_token": {
@@ -40,16 +36,12 @@
   },
   "capture_partial_amount": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
       "amount_to_capture": {
         "minor_amount": 3000,
         "currency": "USD"
       },
-      "merchant_capture_id": {
-        "id": "auto_generate"
-      },
+      "merchant_capture_id": "auto_generate",
       "state": {
         "connector_customer_id": "",
         "access_token": {
@@ -78,16 +70,12 @@
   },
   "capture_with_merchant_order_id": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
       "amount_to_capture": {
         "minor_amount": 6000,
         "currency": "USD"
       },
-      "merchant_capture_id": {
-        "id": "auto_generate"
-      },
+      "merchant_capture_id": "auto_generate",
       "merchant_order_id": "auto_generate",
       "state": {
         "connector_customer_id": "",

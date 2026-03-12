@@ -203,7 +203,7 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
             println!(
                 "[sdk_run_test] assertion result for '{}': FAIL ({})",
                 result.scenario,
-                result.error.as_deref().unwrap_or("unknown error")
+                compact_error_for_console(result.error.as_deref())
             );
         }
     }
@@ -224,6 +224,49 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
             "[sdk_run_test] failed_scenarios={}",
             failed_scenarios.join(", ")
         );
+    }
+}
+
+fn compact_error_for_console(error: Option<&str>) -> String {
+    let Some(error) = error else {
+        return "unknown error".to_string();
+    };
+
+    for line in error.lines() {
+        let trimmed = line.trim();
+        if let Some(message) = trimmed.strip_prefix("Message:") {
+            let message = message.trim();
+            if !message.is_empty() {
+                return truncate_for_console(message, 220);
+            }
+        }
+    }
+
+    for line in error.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty()
+            || trimmed == "ERROR:"
+            || trimmed.starts_with("Resolved method descriptor:")
+            || trimmed.starts_with("Request metadata to send:")
+            || trimmed.starts_with("Response headers received:")
+            || trimmed.starts_with("Response trailers received:")
+            || trimmed.starts_with("Sent ")
+        {
+            continue;
+        }
+        return truncate_for_console(trimmed, 220);
+    }
+
+    truncate_for_console(error.trim(), 220)
+}
+
+fn truncate_for_console(text: &str, max_chars: usize) -> String {
+    let mut chars = text.chars();
+    let truncated: String = chars.by_ref().take(max_chars).collect();
+    if chars.next().is_some() {
+        format!("{truncated}...")
+    } else {
+        truncated
     }
 }
 

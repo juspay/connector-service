@@ -67,9 +67,7 @@
   "refund_sync": {
     "refund_sync": {
       "grpc_req": {
-        "merchant_refund_id": {
-          "id": "auto_generate"
-        },
+        "merchant_refund_id": "auto_generate",
         "refund_id": "authnet_refund_reference"
       },
       "assert": {
@@ -87,9 +85,7 @@
     },
     "refund_sync_with_reason": {
       "grpc_req": {
-        "merchant_refund_id": {
-          "id": "auto_generate"
-        },
+        "merchant_refund_id": "auto_generate",
         "refund_id": "authnet_refund_reference"
       },
       "assert": {

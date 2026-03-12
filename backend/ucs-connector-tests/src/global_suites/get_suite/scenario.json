@@ -1,9 +1,7 @@
 {
   "sync_payment": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"
@@ -36,9 +34,7 @@
   },
   "sync_payment_with_handle_response": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"

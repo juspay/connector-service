@@ -1,9 +1,7 @@
 {
   "no3ds_auto_capture_credit_card": {
     "grpc_req": {
-      "merchant_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_transaction_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"
@@ -149,9 +147,7 @@
   },
   "no3ds_auto_capture_debit_card": {
     "grpc_req": {
-      "merchant_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_transaction_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"
@@ -297,9 +293,7 @@
   },
   "no3ds_manual_capture_credit_card": {
     "grpc_req": {
-      "merchant_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_transaction_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"
@@ -445,9 +439,7 @@
   },
   "no3ds_manual_capture_debit_card": {
     "grpc_req": {
-      "merchant_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_transaction_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"
@@ -592,9 +584,7 @@
   },
   "no3ds_fail_payment": {
     "grpc_req": {
-      "merchant_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_transaction_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"

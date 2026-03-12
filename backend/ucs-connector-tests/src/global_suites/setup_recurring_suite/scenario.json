@@ -1,9 +1,7 @@
 {
   "setup_recurring": {
     "grpc_req": {
-      "merchant_recurring_payment_id": {
-        "id": "auto_generate"
-      },
+      "merchant_recurring_payment_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"
@@ -101,9 +99,7 @@
   },
   "setup_recurring_with_webhook": {
     "grpc_req": {
-      "merchant_recurring_payment_id": {
-        "id": "auto_generate"
-      },
+      "merchant_recurring_payment_id": "auto_generate",
       "amount": {
         "minor_amount": 4500,
         "currency": "USD"
@@ -202,9 +198,7 @@
   },
   "setup_recurring_with_order_context": {
     "grpc_req": {
-      "merchant_recurring_payment_id": {
-        "id": "auto_generate"
-      },
+      "merchant_recurring_payment_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"

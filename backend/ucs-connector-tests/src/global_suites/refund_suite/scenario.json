@@ -1,12 +1,8 @@
 {
   "refund_full_amount": {
     "grpc_req": {
-      "merchant_refund_id": {
-        "id": "auto_generate"
-      },
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_refund_id": "auto_generate",
+      "connector_transaction_id": "auto_generate",
       "payment_amount": 6000,
       "refund_amount": {
         "minor_amount": 6000,
@@ -41,12 +37,8 @@
   },
   "refund_partial_amount": {
     "grpc_req": {
-      "merchant_refund_id": {
-        "id": "auto_generate"
-      },
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_refund_id": "auto_generate",
+      "connector_transaction_id": "auto_generate",
       "payment_amount": 6000,
       "refund_amount": {
         "minor_amount": 3000,
@@ -80,12 +72,8 @@
   },
   "refund_with_reason": {
     "grpc_req": {
-      "merchant_refund_id": {
-        "id": "auto_generate"
-      },
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "merchant_refund_id": "auto_generate",
+      "connector_transaction_id": "auto_generate",
       "payment_amount": 6000,
       "refund_amount": {
         "minor_amount": 6000,

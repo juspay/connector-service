@@ -60,6 +60,9 @@ jobs:
       - name: Run Composite Request Schema Checks
         run: cargo test -p composite-service --test composite_request_schema_check
 
+      - name: Run UCS Connector Tests
+        run: cargo test -p ucs-connector-tests
+
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -136,6 +139,149 @@ jobs:
         if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
         run: cargo nextest run --config-file .nextest.toml --profile ci
+
+  ucs-all-connectors-test:
+    name: UCS All Connectors
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      RUSTFLAGS: "-D warnings"
+      CARGO_BUILD_JOBS: "1"
+      RUN_TESTS: ${{ (github.event_name == 'push') || ((github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name)) || (github.event_name == 'merge_group') }}
+
+    steps:
+      - name: Skip UCS all-connectors for PRs from forks
+        if: ${{ env.RUN_TESTS == 'false' }}
+        shell: bash
+        run: echo 'Skipping UCS all-connectors run for PRs from forks'
+
+      - name: Checkout code
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Protoc
+        if: ${{ env.RUN_TESTS == 'true' }}
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: Swatinem/rust-cache@v2.7.8
+        if: ${{ env.RUN_TESTS == 'true' }}
+        with:
+          cache-on-failure: true
+
+      - name: Install grpcurl
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          GRPCURL_VERSION="1.9.2"
+          OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          ARCH="$(uname -m)"
+
+          case "${ARCH}" in
+            x86_64) ARCH="x86_64" ;;
+            arm64|aarch64) ARCH="arm64" ;;
+            *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;;
+          esac
+
+          FILE="grpcurl_${GRPCURL_VERSION}_${OS}_${ARCH}.tar.gz"
+          URL="https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/${FILE}"
+
+          curl -fsSL "${URL}" -o /tmp/grpcurl.tgz
+          tar -xzf /tmp/grpcurl.tgz -C /tmp grpcurl
+          sudo install -m 0755 /tmp/grpcurl /usr/local/bin/grpcurl
+          grpcurl --version
+
+      - name: Download Encrypted Connector Credentials from S3 and Decrypt
+        if: ${{ env.RUN_TESTS == 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.CONNECTOR_CREDS_AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.CONNECTOR_CREDS_AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CONNECTOR_CREDS_AWS_SECRET_ACCESS_KEY }}
+          CONNECTOR_AUTH_PASSPHRASE: ${{ secrets.CONNECTOR_AUTH_PASSPHRASE }}
+          CONNECTOR_CREDS_S3_BUCKET_URI: ${{ secrets.CONNECTOR_CREDS_S3_BUCKET_URI}}
+          DESTINATION_FILE_NAME: "creds.json.gpg"
+          S3_SOURCE_FILE_NAME: "b59e91fc-9054-4412-a746-664fdc185345.json.gpg"
+        shell: bash
+        run: |
+          mkdir -p ".github/secrets" ".github/test"
+
+          aws s3 cp "${CONNECTOR_CREDS_S3_BUCKET_URI}/${S3_SOURCE_FILE_NAME}" ".github/secrets/${DESTINATION_FILE_NAME}"
+          gpg --quiet --batch --yes --decrypt --passphrase="${CONNECTOR_AUTH_PASSPHRASE}" --output ".github/test/creds.json" ".github/secrets/${DESTINATION_FILE_NAME}"
+
+      - name: Set connector credentials path in environment
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          if [[ -f ".github/test/creds.json" ]]; then
+            echo "CONNECTOR_AUTH_FILE_PATH=${{ github.workspace }}/.github/test/creds.json" >> $GITHUB_ENV
+            echo "Connector credentials available for UCS all-connectors run"
+          else
+            echo "No connector credentials available - failing UCS all-connectors run"
+            exit 1
+          fi
+
+      - name: Start local UCS grpc-server
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CS__COMMON__ENVIRONMENT=sandbox \
+          CS__SERVER__PORT=50051 \
+          CS__METRICS__PORT=8081 \
+          cargo run -p grpc-server > /tmp/ucs-grpc-server.log 2>&1 &
+          echo $! > /tmp/ucs-grpc-server.pid
+
+      - name: Wait for local UCS grpc-server readiness
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..60}; do
+            if grpcurl -plaintext localhost:50051 list > /tmp/ucs-grpc-health.log 2>&1; then
+              echo "grpc-server is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "grpc-server failed to become ready"
+          cat /tmp/ucs-grpc-server.log || true
+          cat /tmp/ucs-grpc-health.log || true
+          exit 1
+
+      - name: Run UCS suite_run_test for all connectors
+        if: ${{ env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo run -p ucs-connector-tests --bin suite_run_test -- --all-connectors 2>&1 | tee /tmp/ucs-all-connectors.log
+
+      - name: Stop local UCS grpc-server
+        if: ${{ always() && env.RUN_TESTS == 'true' }}
+        shell: bash
+        run: |
+          if [[ -f /tmp/ucs-grpc-server.pid ]]; then
+            kill "$(cat /tmp/ucs-grpc-server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Upload UCS all-connectors logs
+        if: ${{ always() && env.RUN_TESTS == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ucs-all-connectors-logs
+          path: |
+            /tmp/ucs-all-connectors.log
+            /tmp/ucs-grpc-server.log
+            /tmp/ucs-grpc-health.log
 
   formatting:
     name: Check formatting

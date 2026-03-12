@@ -1449,7 +1449,6 @@ fn normalize_proto_oneof_shapes(value: &mut Value) {
             }
 
             normalize_payment_method_oneof(map);
-            normalize_identifier_oneofs(map);
             normalize_mandate_reference_oneofs(map);
         }
         Value::Array(items) => {
@@ -1485,52 +1484,9 @@ fn normalize_payment_method_oneof(map: &mut serde_json::Map<String, Value>) {
     payment_method_obj.insert("payment_method".to_string(), Value::Object(oneof_obj));
 }
 
-fn normalize_identifier_oneofs(map: &mut serde_json::Map<String, Value>) {
-    const IDENTIFIER_FIELDS: &[&str] = &[
-        "merchant_transaction_id",
-        "connector_transaction_id",
-        "merchant_capture_id",
-        "merchant_refund_id",
-        "merchant_void_id",
-        "merchant_access_token_id",
-        "merchant_recurring_payment_id",
-        "merchant_customer_id",
-        "merchant_charge_id",
-        "connector_order_reference_id",
-    ];
-
-    for field in IDENTIFIER_FIELDS {
-        let Some(Value::Object(identifier_obj)) = map.get_mut(*field) else {
-            continue;
-        };
-
-        if identifier_obj.contains_key("id_type") {
-            continue;
-        }
-
-        let original = std::mem::take(identifier_obj);
-        let id_type = if let Some(value) = original.get("id").cloned() {
-            Some(("Id".to_string(), value))
-        } else if let Some(value) = original.get("encoded_data").cloned() {
-            Some(("EncodedData".to_string(), value))
-        } else if original.contains_key("no_response_id_marker") {
-            Some(("NoResponseIdMarker".to_string(), Value::Null))
-        } else {
-            None
-        };
-
-        if let Some((variant, payload)) = id_type {
-            let mut wrapped = serde_json::Map::new();
-            wrapped.insert(variant, payload);
-            identifier_obj.insert("id_type".to_string(), Value::Object(wrapped));
-        } else {
-            *identifier_obj = original;
-        }
-    }
-}
-
 fn normalize_mandate_reference_oneofs(map: &mut serde_json::Map<String, Value>) {
-    let Some(Value::Object(mandate_reference_obj)) = map.get_mut("mandate_reference_id") else {
+    let Some(Value::Object(mandate_reference_obj)) = map.get_mut("connector_recurring_payment_id")
+    else {
         return;
     };
 
@@ -2676,12 +2632,12 @@ grpc-status: 0
 
         let payload: Value =
             serde_json::from_str(&request.payload).expect("payload should parse as json");
-        let merchant_id = payload["merchant_transaction_id"]["id"]
+        let merchant_id = payload["merchant_transaction_id"]
             .as_str()
-            .expect("merchant_transaction_id.id should be present");
+            .expect("merchant_transaction_id should be present");
         assert!(
             merchant_id.starts_with("mti_"),
-            "merchant_transaction_id.id should be generated"
+            "merchant_transaction_id should be generated"
         );
 
         let customer_id = payload["customer"]["id"]
@@ -3027,7 +2983,7 @@ grpc-status: 0
     #[test]
     fn normalizer_drops_legacy_get_handle_response_bool() {
         let original = json!({
-            "connector_transaction_id": {"id": "txn_123"},
+            "connector_transaction_id": "txn_123",
             "handle_response": true
         });
 
@@ -3038,16 +2994,13 @@ grpc-status: 0
             original,
         );
         assert!(normalized.get("handle_response").is_none());
-        assert_eq!(
-            normalized["connector_transaction_id"]["id_type"]["Id"],
-            json!("txn_123")
-        );
+        assert_eq!(normalized["connector_transaction_id"], json!("txn_123"));
     }
 
     #[test]
     fn normalizer_adds_authorize_order_details_default() {
         let original = json!({
-            "merchant_transaction_id": {"id": "m_123"},
+            "merchant_transaction_id": "m_123",
             "amount": {"minor_amount": 1000, "currency": "USD"}
         });
 
@@ -3078,6 +3031,30 @@ grpc-status: 0
             .as_i64()
             .expect("accepted_at should be injected as i64");
         assert!(accepted_at >= 0);
+    }
+
+    #[test]
+    fn normalizer_wraps_connector_recurring_mandate_oneof() {
+        let original = json!({
+            "connector_recurring_payment_id": {
+                "connector_mandate_id": {
+                    "connector_mandate_id": "mandate_123"
+                }
+            }
+        });
+
+        let normalized = normalize_tonic_request_json(
+            "paypal",
+            "recurring_charge",
+            "normalizer_wraps_connector_recurring_mandate_oneof",
+            original,
+        );
+
+        assert_eq!(
+            normalized["connector_recurring_payment_id"]["mandate_id_type"]["ConnectorMandateId"]
+                ["connector_mandate_id"],
+            json!("mandate_123")
+        );
     }
 
     // ─── deep_set_json_path tests ───

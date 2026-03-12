@@ -1,12 +1,8 @@
 {
   "void_authorized_payment": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
-      "merchant_void_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
+      "merchant_void_id": "auto_generate",
       "state": {
         "connector_customer_id": "",
         "access_token": {
@@ -37,12 +33,8 @@
   },
   "void_without_cancellation_reason": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
-      "merchant_void_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
+      "merchant_void_id": "auto_generate",
       "state": {
         "connector_customer_id": "",
         "access_token": {
@@ -71,12 +63,8 @@
   },
   "void_with_amount": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
-      "merchant_void_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
+      "merchant_void_id": "auto_generate",
       "amount": {
         "minor_amount": 6000,
         "currency": "USD"

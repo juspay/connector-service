@@ -53,6 +53,10 @@ fn generate_value_for_path(path: &str, runner: &mut TestRunner) -> Result<String
         return Ok(prefixed_uuid("cmi"));
     }
 
+    if let Some(prefix) = id_prefix_for_leaf_path(&lower) {
+        return Ok(prefixed_uuid(prefix));
+    }
+
     if lower.ends_with(".id") {
         return Ok(prefixed_uuid(id_prefix_for_path(&lower)));
     }
@@ -122,6 +126,23 @@ fn id_prefix_for_path(path: &str) -> &'static str {
         "customer" => "cust",
         _ => "id",
     }
+}
+
+fn id_prefix_for_leaf_path(path: &str) -> Option<&'static str> {
+    let field = path.rsplit('.').next().unwrap_or(path);
+    let prefix = match field {
+        "merchant_transaction_id" => "mti",
+        "merchant_refund_id" => "mri",
+        "merchant_capture_id" => "mci",
+        "merchant_void_id" => "mvi",
+        "merchant_charge_id" => "mchi",
+        "merchant_recurring_payment_id" => "mrpi",
+        "merchant_access_token_id" => "mati",
+        "merchant_customer_id" => "mcui",
+        "connector_transaction_id" => "cti",
+        _ => return None,
+    };
+    Some(prefix)
 }
 
 /// Samples one string value from a proptest strategy and wraps any generation
@@ -244,6 +265,7 @@ fn is_context_deferred_path(path: &str) -> bool {
             | "state.access_token.expires_in_seconds"
             | "connector_feature_data"
             | "connector_feature_data.value"
+            | "connector_transaction_id"
             | "connector_transaction_id.id"
             | "refund_id"
     )
@@ -345,8 +367,8 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        id_prefix_for_path, is_auto_generate_sentinel, is_context_deferred_path,
-        resolve_auto_generate,
+        id_prefix_for_leaf_path, id_prefix_for_path, is_auto_generate_sentinel,
+        is_context_deferred_path, resolve_auto_generate,
     };
 
     #[test]
@@ -362,12 +384,18 @@ mod tests {
         assert_eq!(id_prefix_for_path("merchant_refund_id.id"), "mri");
         assert_eq!(id_prefix_for_path("merchant_customer_id.id"), "mcui");
         assert_eq!(id_prefix_for_path("unknown.id"), "id");
+        assert_eq!(
+            id_prefix_for_leaf_path("merchant_transaction_id"),
+            Some("mti")
+        );
+        assert_eq!(id_prefix_for_leaf_path("merchant_capture_id"), Some("mci"));
+        assert_eq!(id_prefix_for_leaf_path("unknown"), None);
     }
 
     #[test]
     fn resolves_auto_generate_placeholders_in_request_payload() {
         let mut req = json!({
-            "merchant_transaction_id": {"id": "auto_generate"},
+            "merchant_transaction_id": "auto_generate",
             "customer": {
                 "name": "auto_generate",
                 "email": {"value": "auto_generate"},
@@ -393,7 +421,7 @@ mod tests {
 
         resolve_auto_generate(&mut req).expect("auto generation should succeed");
 
-        let generated_id = req["merchant_transaction_id"]["id"]
+        let generated_id = req["merchant_transaction_id"]
             .as_str()
             .expect("id should be string");
         assert!(generated_id.starts_with("mti_"));
@@ -432,9 +460,9 @@ mod tests {
                 }
             },
             "connector_feature_data": { "value": "auto_generate" },
-            "connector_transaction_id": { "id": "auto_generate" },
+            "connector_transaction_id": "auto_generate",
             "refund_id": "auto_generate",
-            "merchant_transaction_id": { "id": "auto_generate" }
+            "merchant_transaction_id": "auto_generate"
         });
 
         resolve_auto_generate(&mut req).expect("auto generation should succeed");
@@ -455,14 +483,11 @@ mod tests {
             req["connector_feature_data"]["value"],
             json!("auto_generate")
         );
-        assert_eq!(
-            req["connector_transaction_id"]["id"],
-            json!("auto_generate")
-        );
+        assert_eq!(req["connector_transaction_id"], json!("auto_generate"));
         assert_eq!(req["refund_id"], json!("auto_generate"));
 
         // Non-deferred path should still be generated.
-        let merchant_txn_id = req["merchant_transaction_id"]["id"]
+        let merchant_txn_id = req["merchant_transaction_id"]
             .as_str()
             .expect("merchant transaction id should be generated");
         assert!(merchant_txn_id.starts_with("mti_"));
@@ -473,6 +498,7 @@ mod tests {
         assert!(is_context_deferred_path("customer.connector_customer_id"));
         assert!(is_context_deferred_path("state.access_token.token.value"));
         assert!(is_context_deferred_path("connector_feature_data.value"));
+        assert!(is_context_deferred_path("connector_transaction_id"));
         assert!(is_context_deferred_path("connector_transaction_id.id"));
         assert!(!is_context_deferred_path("merchant_transaction_id.id"));
     }

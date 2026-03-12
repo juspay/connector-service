@@ -1,9 +1,7 @@
 {
   "create_customer": {
     "grpc_req": {
-      "merchant_customer_id": {
-        "id": "cust_auto_generate"
-      },
+      "merchant_customer_id": "cust_auto_generate",
       "customer_name": "auto_generate",
       "email": {
         "value": "auto_generate"

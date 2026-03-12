@@ -1,9 +1,7 @@
 {
   "refund_sync": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
       "refund_id": "auto_generate",
       "state": {
         "connector_customer_id": "",
@@ -31,9 +29,7 @@
   },
   "refund_sync_with_reason": {
     "grpc_req": {
-      "connector_transaction_id": {
-        "id": "auto_generate"
-      },
+      "connector_transaction_id": "auto_generate",
       "refund_id": "auto_generate",
       "state": {
         "connector_customer_id": "",

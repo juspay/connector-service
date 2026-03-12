@@ -1,9 +1,7 @@
 {
   "create_access_token": {
     "grpc_req": {
-      "merchant_access_token_id": {
-        "id": "auto_generate"
-      },
+      "merchant_access_token_id": "auto_generate",
       "connector": "STRIPE",
       "test_mode": true
     },
