@@ -37,9 +37,39 @@ from .generated.sdk_config_pb2 import (
     FfiConnectorHttpRequest,
     FfiConnectorHttpResponse,
     HttpConfig,
-    RequestError,
-    ResponseError,
+    RequestError as RequestErrorProto,
+    ResponseError as ResponseErrorProto,
 )
+
+
+class RequestError(Exception):
+    """Exception raised when req_transformer fails.
+
+    Wraps RequestErrorProto and provides transparent access to proto fields.
+    """
+
+    def __init__(self, proto: RequestErrorProto):
+        super().__init__(proto.error_message)
+        self._proto = proto
+
+    def __getattr__(self, name: str):
+        # Delegate attribute access to proto
+        return getattr(self._proto, name)
+
+
+class ResponseError(Exception):
+    """Exception raised when res_transformer fails.
+
+    Wraps ResponseErrorProto and provides transparent access to proto fields.
+    """
+
+    def __init__(self, proto: ResponseErrorProto):
+        super().__init__(proto.error_message)
+        self._proto = proto
+
+    def __getattr__(self, name: str):
+        # Delegate attribute access to proto
+        return getattr(self._proto, name)
 
 
 
@@ -47,8 +77,8 @@ def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
     """
     Parse FFI req_transformer bytes as either a success proto or a RequestError.
 
-    Tries the success type first; on failure parses as RequestError and raises
-    the RequestError directly.
+    Parse as RequestError first; if parsing succeeds AND status is non-default,
+    treat it as an actual error and raise it. Otherwise, parse as success message.
 
     Args:
         result_bytes: Raw bytes returned by the req_transformer FFI call.
@@ -60,21 +90,33 @@ def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
     Raises:
         RequestError: If the bytes represent a transformer error.
     """
+    # Try to parse as RequestErrorProto first
     try:
-        return success_cls.FromString(result_bytes)
+        error_proto = RequestErrorProto()
+        error_proto.ParseFromString(result_bytes)
+
+        # If status is non-default, treat it as an actual error
+        if error_proto.status != 0:
+            raise RequestError(error_proto)
+    except RequestError:
+        # Re-raise our custom exception
+        raise
     except Exception:
-        # Fall back: try parsing as RequestError and raise directly
-        error = RequestError()
-        error.ParseFromString(result_bytes)
-        raise error
+        # Parsing failed or status is zero, try success parsing
+        pass
+
+    # Parse as success message
+    success = success_cls()
+    success.ParseFromString(result_bytes)
+    return success
 
 
 def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
     """
     Parse FFI res_transformer bytes as either a success proto or a ResponseError.
 
-    Tries the success type first; on failure parses as ResponseError and raises
-    the ResponseError directly.
+    Parse as ResponseError first; if parsing succeeds AND status is non-default,
+    treat it as an actual error and raise it. Otherwise, parse as success message.
 
     Args:
         result_bytes: Raw bytes returned by the res_transformer FFI call.
@@ -86,13 +128,25 @@ def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
     Raises:
         ResponseError: If the bytes represent a transformer error.
     """
+    # Try to parse as ResponseErrorProto first
     try:
-        return success_cls.FromString(result_bytes)
+        error_proto = ResponseErrorProto()
+        error_proto.ParseFromString(result_bytes)
+
+        # If status is non-default, treat it as an actual error
+        if error_proto.status != 0:
+            raise ResponseError(error_proto)
+    except ResponseError:
+        # Re-raise our custom exception
+        raise
     except Exception:
-        # Fall back: try parsing as ResponseError and raise directly
-        error = ResponseError()
-        error.ParseFromString(result_bytes)
-        raise error
+        # Parsing failed or status is zero, try success parsing
+        pass
+
+    # Parse as success message
+    success = success_cls()
+    success.ParseFromString(result_bytes)
+    return success
 
 
 class _ConnectorClientBase:
