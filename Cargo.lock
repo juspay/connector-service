@@ -1155,6 +1155,7 @@ dependencies = [
  "josekit",
  "jsonwebtoken",
  "masking",
+ "openssl",
  "paste",
  "qrcode",
  "quick-xml 0.31.0",

@@ -19,6 +19,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.03.12.0
+
+### Features
+
+- **framework:** Added all available services in app.rs ([#618](https://github.com/juspay/connector-service/pull/618)) ([`b05c372`](https://github.com/juspay/connector-service/commit/b05c37205e42d501d4bda5ebb010cfc529062879))
+- **payment_methods:** Add support for Samsung Pay ([#558](https://github.com/juspay/connector-service/pull/558)) ([`e35afcc`](https://github.com/juspay/connector-service/commit/e35afccda14851fb1f6321cf9116a19398deb427))
+
+### Refactors
+
+- **proto:** Refactor id_type to string ([#604](https://github.com/juspay/connector-service/pull/604)) ([`3c66b11`](https://github.com/juspay/connector-service/commit/3c66b11ce7ee18bc93fc10e62b4bf295248e25b1))
+
+**Full Changelog:** [`2026.03.11.0...2026.03.12.0`](https://github.com/juspay/connector-service/compare/2026.03.11.0...2026.03.12.0)
+
+- - -
+
+## 2026.03.11.0
+
+### Features
+
+- **connector:** [Checkout] Add l2_l3 data support in checkout ([#565](https://github.com/juspay/connector-service/pull/565)) ([`ed05bce`](https://github.com/juspay/connector-service/commit/ed05bceb35ecbbb37c50eb34af9629748bf4ade3))
+- [AUTHORIZEDOTNET] ACH BankDebit ([#549](https://github.com/juspay/connector-service/pull/549)) ([`54df6fa`](https://github.com/juspay/connector-service/commit/54df6fa301550120678b10565f3b9dc9b5ffaafd))
+- [FINIX] CARDS NO3DS , ACH BankDebit ([#564](https://github.com/juspay/connector-service/pull/564)) ([`6181e60`](https://github.com/juspay/connector-service/commit/6181e601d90f339c55887f70e742f9418d8ebfe2))
+
+**Full Changelog:** [`2026.03.10.0...2026.03.11.0`](https://github.com/juspay/connector-service/compare/2026.03.10.0...2026.03.11.0)
+
+- - -
+
 ## 2026.03.10.0
 
 ### Features
