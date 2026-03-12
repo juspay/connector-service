@@ -2001,7 +2001,10 @@ message PaymentServiceSetupRecurringRequest {
   optional SecretString connector_testing_data = 33;  // Connector-specific testing data (JSON stringified)
 
   // Level 2 / Level 3 data for enhanced payment processing
-  optional L2L3Data l2_l3_data = 34; 
+  optional L2L3Data l2_l3_data = 34;
+
+  // Mandate setup details
+  optional SetupMandateDetails setup_mandate_details = 35;
 }
 
 // Response message for a mandate setup operation

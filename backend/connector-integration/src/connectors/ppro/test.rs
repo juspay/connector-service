@@ -410,7 +410,7 @@ mod transformer_tests {
             details.request_url.as_deref(),
             Some("https://redirect.ppro.com/auth")
         );
-        assert_eq!(details.request_method.as_deref(), Some("GET"));
+        assert_eq!(details.request_method, Some(PproHttpMethod::Get));
     }
 
     /// A captured response carries the instrument_id for mandate storage.
