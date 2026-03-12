@@ -10,7 +10,7 @@
  *   npx ts-node test_smoke.ts --creds-file creds.json --all --dry-run
  */
 
-import { PaymentClient, types } from "hyperswitch-payments";
+import { PaymentClient, types } from "hs-playlib";
 import * as fs from "fs";
 // @ts-ignore - protobuf generated files might not have types yet
 
