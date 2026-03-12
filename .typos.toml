@@ -14,6 +14,8 @@ extend-exclude = [
 
 [default.extend-words]
 ede = "ede" # Encrypt-Decrypt-Encrypt (Triple DES EDE mode)
+Hashi = "Hashi" # HashiCorp brand name token
+HashiCorp = "HashiCorp" # HashiCorp company name
 
 [default.extend-identifiers]
 ACI = "ACI" # Name of a connector

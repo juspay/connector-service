@@ -123,9 +123,21 @@ Applies to `suite_run_test` and `sdk_run_test`:
 ## Reports
 
 - JSON report: `backend/ucs-connector-tests/report.json` (or `UCS_RUN_TEST_REPORT_PATH` / `--report`)
-- Markdown report: `backend/ucs-connector-tests/test_report.md`
+- Markdown overview: `backend/ucs-connector-tests/test_report/test_overview.md`
 
 Reports are cleared at run start and updated as scenarios execute.
+
+Regenerate markdown from an existing `report.json` (without executing tests):
+
+```bash
+cargo run -p ucs-connector-tests --bin render_report
+```
+
+Optional custom report path:
+
+```bash
+cargo run -p ucs-connector-tests --bin render_report -- --path backend/ucs-connector-tests/report.json
+```
 
 ## Proto/schema drift checks
 
@@ -183,6 +195,7 @@ Detailed override guide: `docs/connector-overrides.md`
 cargo run -p ucs-connector-tests --bin run_test -- --help
 cargo run -p ucs-connector-tests --bin suite_run_test -- --help
 cargo run -p ucs-connector-tests --bin sdk_run_test -- --help
+cargo run -p ucs-connector-tests --bin render_report -- --help
 
 # Full crate tests
 cargo test -p ucs-connector-tests

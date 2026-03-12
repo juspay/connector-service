@@ -165,6 +165,23 @@ pub fn append_report_batch(entries: Vec<ReportEntry>) -> Result<(), String> {
     Ok(())
 }
 
+/// Regenerates markdown artifacts from the report JSON at `json_path`.
+pub fn regenerate_markdown_from_path(json_path: &Path) -> Result<PathBuf, String> {
+    let content = fs::read_to_string(json_path)
+        .map_err(|e| format!("failed to read report '{}': {e}", json_path.display()))?;
+    let report = serde_json::from_str::<ScenarioRunReport>(&content)
+        .map_err(|e| format!("failed to parse report '{}': {e}", json_path.display()))?;
+
+    generate_md(json_path, &report)?;
+    Ok(md_path(json_path))
+}
+
+/// Regenerates markdown artifacts from the default report path.
+pub fn regenerate_markdown_from_disk() -> Result<PathBuf, String> {
+    let path = report_path();
+    regenerate_markdown_from_path(&path)
+}
+
 /// Best-effort wrapper around `append_report` that logs failures instead of
 /// bubbling them.
 pub fn append_report_best_effort(entry: ReportEntry) {
