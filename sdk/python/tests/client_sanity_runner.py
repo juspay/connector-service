@@ -36,8 +36,8 @@ async def run_sanity():
     try:
         client = create_client(client_config)
     except Exception as e:
-        code = getattr(e, 'error_code', 'UNKNOWN_ERROR')
-        print(json.dumps({'error': {'code': code, 'message': str(e)}}))
+        code = getattr(e, 'error_code', None) or getattr(e, 'errorCode', None) or 'UNKNOWN_ERROR'
+        print(json.dumps({'error': {'code': str(code), 'message': str(e)}}))
         return
 
     # 2. Setup Request
@@ -82,7 +82,7 @@ async def run_sanity():
             'body': body_str
         }
     except Exception as e:
-        code = getattr(e, 'error_code', None) or getattr(e, 'errorCode', 'UNKNOWN_ERROR')
+        code = getattr(e, 'error_code', None) or getattr(e, 'errorCode', None) or 'UNKNOWN_ERROR'
         output['error'] = {'code': str(code), 'message': str(e)}
 
     print(json.dumps(output))

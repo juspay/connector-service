@@ -35,7 +35,8 @@ async function runSanity() {
   try {
     dispatcher = createDispatcher(dispatcherConfig);
   } catch (e: any) {
-    console.log(JSON.stringify({ error: { code: e?.errorCode || e?.code || 'UNKNOWN_ERROR', message: e?.message || String(e) } }));
+    const code = e?.errorCode ?? (typeof e?.code === 'string' ? e.code : 'UNKNOWN_ERROR');
+    console.log(JSON.stringify({ error: { code, message: e?.message || String(e) } }));
     return;
   }
 
@@ -54,7 +55,8 @@ async function runSanity() {
       body: bodyStr,
     };
   } catch (e: any) {
-    output.error = { code: e?.errorCode || e?.code || 'UNKNOWN_ERROR', message: e?.message || String(e) };
+    const code = e?.errorCode ?? (typeof e?.code === 'string' ? e.code : 'UNKNOWN_ERROR');
+    output.error = { code, message: e?.message || String(e) };
   }
 
   console.log(JSON.stringify(output));

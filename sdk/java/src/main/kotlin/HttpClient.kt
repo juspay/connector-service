@@ -23,11 +23,17 @@ data class HttpResponse(
     val latencyMs: Long
 )
 
-class ConnectorError(
+/**
+ * Network error for HTTP transport failures. Uses proto NetworkErrorCode for cross-SDK parity.
+ */
+class NetworkError(
     message: String,
-    val statusCode: Int? = null,
-    val errorCode: String? = null
-) : Exception(message)
+    val code: NetworkErrorCode = NetworkErrorCode.NETWORK_ERROR_CODE_UNSPECIFIED,
+    val statusCode: Int? = null
+) : Exception(message) {
+    /** String error code for parity with RequestError/ResponseError (e.g. "CONNECT_TIMEOUT"). */
+    val errorCode: String get() = code.name
+}
 
 object HttpClient {
     /**
@@ -60,11 +66,11 @@ object HttpClient {
             }
             
             return builder.build()
-        } catch (e: ConnectorError) {
+        } catch (e: NetworkError) {
             throw e  // already classified, pass through
         } catch (e: Exception) {
-            val code = if (e.message?.lowercase()?.contains("proxy") == true) "INVALID_PROXY_CONFIGURATION" else "CLIENT_INITIALIZATION"
-            throw ConnectorError("Internal HTTP setup failed: ${e.message}", 500, code)
+            val code = if (e.message?.lowercase()?.contains("proxy") == true) NetworkErrorCode.INVALID_PROXY_CONFIGURATION else NetworkErrorCode.CLIENT_INITIALIZATION
+            throw NetworkError("Internal HTTP setup failed: ${e.message}", code, 500)
         }
     }
 
@@ -73,7 +79,7 @@ object HttpClient {
         if (proxyUrl == null) return
 
         val url = proxyUrl.toHttpUrlOrNull()
-            ?: throw ConnectorError("Unsupported or malformed proxy URL: $proxyUrl", null, "INVALID_PROXY_CONFIGURATION")
+            ?: throw NetworkError("Unsupported or malformed proxy URL: $proxyUrl", NetworkErrorCode.INVALID_PROXY_CONFIGURATION)
         
         // Standard Java Proxy
         val proxy = java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host, url.port))
@@ -100,7 +106,7 @@ object HttpClient {
      */
     fun execute(request: HttpRequest, config: HttpConfig?, client: OkHttpClient): HttpResponse {
         val parsedUrl = request.url.toHttpUrlOrNull()
-            ?: throw ConnectorError("Invalid URL: ${request.url}", null, "URL_PARSING_FAILED")
+            ?: throw NetworkError("Invalid URL: ${request.url}", NetworkErrorCode.URL_PARSING_FAILED)
 
         val okHeaders = request.headers?.toHeaders() ?: Headers.Builder().build()
         val mediaType = okHeaders["Content-Type"]?.toMediaTypeOrNull()
@@ -146,7 +152,7 @@ object HttpClient {
                 val bodyBytes = try {
                     response.body?.bytes() ?: byteArrayOf()
                 } catch (readEx: IOException) {
-                    throw ConnectorError("Failed to read response body: ${readEx.message}", response.code, "RESPONSE_DECODING_FAILED")
+                    throw NetworkError("Failed to read response body: ${readEx.message}", NetworkErrorCode.RESPONSE_DECODING_FAILED, response.code)
                 }
 
                 return HttpResponse(
@@ -167,16 +173,16 @@ object HttpClient {
 
             when {
                 msg.contains("timeout") && latency >= totalTimeout -> {
-                    throw ConnectorError("Total Request Timeout: ${request.url} exceeded ${totalTimeout}ms", 504, "TOTAL_TIMEOUT")
+                    throw NetworkError("Total Request Timeout: ${request.url} exceeded ${totalTimeout}ms", NetworkErrorCode.TOTAL_TIMEOUT, 504)
                 }
                 msg.contains("connect") -> {
-                    throw ConnectorError("Connection Timeout: Failed to connect to ${request.url}", 504, "CONNECT_TIMEOUT")
+                    throw NetworkError("Connection Timeout: Failed to connect to ${request.url}", NetworkErrorCode.CONNECT_TIMEOUT, 504)
                 }
                 msg.contains("read") || msg.contains("write") || e is SocketTimeoutException -> {
-                    throw ConnectorError("Response Timeout: Gateway ${request.url} accepted connection but failed to respond", 504, "RESPONSE_TIMEOUT")
+                    throw NetworkError("Response Timeout: Gateway ${request.url} accepted connection but failed to respond", NetworkErrorCode.RESPONSE_TIMEOUT, 504)
                 }
                 else -> {
-                    throw ConnectorError("Network Error: ${e.message}", 500, "NETWORK_FAILURE")
+                    throw NetworkError("Network Error: ${e.message}", NetworkErrorCode.NETWORK_FAILURE, 500)
                 }
             }
         }

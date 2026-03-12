@@ -79,7 +79,7 @@ fun main() {
             put("body", bodyStr)
         })
     } catch (e: Exception) {
-        val code = if (e is ConnectorError && e.errorCode != null) e.errorCode!! else "UNKNOWN_ERROR"
+        val code = if (e is NetworkError) e.code.name else "UNKNOWN_ERROR"
         output.put("error", JSONObject().apply {
             put("code", code)
             put("message", e.message ?: e.toString())

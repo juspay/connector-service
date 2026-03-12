@@ -85,17 +85,26 @@ jobs:
       - name: Install Python dependencies (SDK)
         run: pip install -r sdk/python/requirements.txt grpcio-tools protobuf
 
+      - name: Build FFI library (UniFFI scaffolding)
+        run: make -C sdk/python build-ffi-lib PROFILE=release
+
       - name: Generate Python SDK artifacts (proto + UniFFI + flows)
         run: make generate-all
         working-directory: sdk/python
+        env:
+          PROFILE: release
 
       - name: Generate JavaScript SDK artifacts (proto + native + flows)
         run: make generate-all
         working-directory: sdk/javascript
+        env:
+          PROFILE: release
 
       - name: Generate Java/Kotlin SDK artifacts (proto + UniFFI + flows)
         run: make generate-all
         working-directory: sdk/java
+        env:
+          PROFILE: release
 
       - name: Run SDK Client Sanity Certification
         id: certify
@@ -107,7 +116,44 @@ jobs:
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
-          script-path: .github/scripts/comment-sanity-report.js
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const reportPath = path.join(
+              process.env.GITHUB_WORKSPACE || '.',
+              'sdk', 'tests', 'client_sanity', 'artifacts', 'REPORT.md'
+            );
+            const report = fs.existsSync(reportPath)
+              ? fs.readFileSync(reportPath, 'utf8')
+              : '*Report file not generated.*';
+
+            const verdict = report.includes('✅ PASS') ? '✅' : '❌';
+            const body = `## SDK Client Sanity Certification ${verdict}\n\n<details>\n<summary>Report</summary>\n\n\`\`\`markdown\n${report.replace(/```/g, '\\`\\`\\`')}\n\`\`\`\n\n</details>\n\n<!-- sdk-client-sanity -->`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find((c) => c.body && c.body.includes('<!-- sdk-client-sanity -->'));
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
       - name: Fail if certification failed
         if: steps.certify.outcome == 'failure'

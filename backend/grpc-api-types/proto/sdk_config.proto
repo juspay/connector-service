@@ -174,3 +174,30 @@ message ResponseError {
   optional string error_code = 3;
   optional uint32 status_code = 4;
 }
+
+// ============================================================
+// Network Error (HTTP transport layer)
+// ============================================================
+// Thrown by SDK HTTP clients when transport fails (timeouts, connection
+// failures, config errors). Unlike RequestError/ResponseError, this does
+// not cross the FFI boundary — it's thrown before/after the HTTP call.
+// The enum ensures consistent error codes across all SDK languages.
+
+enum NetworkErrorCode {
+  NETWORK_ERROR_CODE_UNSPECIFIED = 0;
+  CONNECT_TIMEOUT = 1;
+  RESPONSE_TIMEOUT = 2;
+  TOTAL_TIMEOUT = 3;
+  NETWORK_FAILURE = 4;
+  INVALID_CONFIGURATION = 5;
+  CLIENT_INITIALIZATION = 6;
+  URL_PARSING_FAILED = 7;
+  RESPONSE_DECODING_FAILED = 8;
+  INVALID_PROXY_CONFIGURATION = 9;
+}
+
+message NetworkError {
+  NetworkErrorCode code = 1;
+  optional string message = 2;
+  optional uint32 status_code = 3;
+}
