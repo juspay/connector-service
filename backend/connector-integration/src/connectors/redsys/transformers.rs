@@ -788,6 +788,8 @@ where
                 .attach_printable("Invalid card number")?,
             ds_merchant_terminal: auth.terminal_id.clone(),
             ds_merchant_transactiontype,
+            ds_merchant_excep_sca: None,
+            ds_merchant_directpayment: None,
         };
 
         let transaction = Self::try_from((&payment_request, &auth))?;
@@ -970,6 +972,8 @@ where
                 .attach_printable("Invalid card number")?,
             ds_merchant_terminal: auth.terminal_id.clone(),
             ds_merchant_transactiontype,
+            ds_merchant_excep_sca: None,
+            ds_merchant_directpayment: None,
         };
 
         let transaction = Self::try_from((&payment_request, &auth))?;
@@ -1045,6 +1049,78 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
 
 // Authorize
 
+fn determine_exemption<T: PaymentMethodDataTypes>(
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<requests::RedsysStrongCustomerAuthenticationException, Error> {
+    // 1. Check if explicit exemption was requested
+    if let Some(auth_data) = &router_data.request.authentication_data {
+        if let Some(indicator) = &auth_data.exemption_indicator {
+            return Ok(match indicator {
+                common_enums::ExemptionIndicator::LowValue => {
+                    requests::RedsysStrongCustomerAuthenticationException::Lwv
+                }
+                common_enums::ExemptionIndicator::TransactionRiskAssessment => {
+                    requests::RedsysStrongCustomerAuthenticationException::Tra
+                }
+                common_enums::ExemptionIndicator::RecurringOperation => {
+                    requests::RedsysStrongCustomerAuthenticationException::Mit
+                }
+                common_enums::ExemptionIndicator::SecureCorporatePayment => {
+                    requests::RedsysStrongCustomerAuthenticationException::Cor
+                }
+                common_enums::ExemptionIndicator::ScaDelegation => {
+                    requests::RedsysStrongCustomerAuthenticationException::Atd
+                }
+                _ => {
+                    // Default fallback for unsupported types
+                    let threshold = common_utils::types::MinorUnit::new(3000); // €30
+                    if router_data.request.amount <= threshold {
+                        requests::RedsysStrongCustomerAuthenticationException::Lwv
+                    } else {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: "Exemption type not supported by Redsys".into(),
+                            connector: "Redsys",
+                        }
+                        .into());
+                    }
+                }
+            });
+        }
+    }
+
+    // 2. Auto-detect based on transaction context
+    let is_mandate_payment = router_data.request.mandate_id.is_some();
+    let is_off_session = router_data.request.off_session.unwrap_or(false);
+    let is_setup_future =
+        router_data.request.setup_future_usage == Some(common_enums::FutureUsage::OffSession);
+
+    if is_mandate_payment || (is_off_session && !is_setup_future) {
+        // MIT: Subsequent recurring payment (merchant-initiated)
+        return Ok(requests::RedsysStrongCustomerAuthenticationException::Mit);
+    }
+
+    if is_setup_future {
+        // First payment in a series - could use TRA if merchant has low fraud rates
+        // Or LWV if amount is small
+        return Ok(requests::RedsysStrongCustomerAuthenticationException::Tra);
+    }
+
+    // 3. Default based on amount
+    let threshold = common_utils::types::MinorUnit::new(3000); // €30 threshold
+    if router_data.request.amount <= threshold {
+        // €30 threshold for LWV
+        Ok(requests::RedsysStrongCustomerAuthenticationException::Lwv)
+    } else {
+        // For larger amounts, TRA requires merchant to meet fraud thresholds
+        Ok(requests::RedsysStrongCustomerAuthenticationException::Tra)
+    }
+}
+
 impl<T>
     TryFrom<
         RedsysRouterData<
@@ -1075,13 +1151,6 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-
-        if !item.router_data.resource_common_data.is_three_ds() {
-            Err(errors::ConnectorError::NotSupported {
-                message: "Cards No3DS".to_string(),
-                connector: "Redsys",
-            })?
-        }
 
         let card_data = requests::RedsysCardData::try_from(&Some(
             item.router_data.request.payment_method_data.clone(),
@@ -1132,48 +1201,57 @@ where
         // - NotAvailable means no 3DS method URL was present (exempt case)
         let threeds_completion_indicator = router_data.request.threeds_method_comp_ind.clone();
 
-        let emv3ds_data = match redirect_payload_value {
-            Some(payload) => requests::RedsysEmvThreeDsRequestData::new(
-                requests::RedsysThreeDsInfo::ChallengeResponse,
-            )
-            .set_protocol_version(message_version)
-            .set_three_d_s_cres(payload.cres)
-            .set_billing_data(billing_data)?
-            .set_shipping_data(shipping_data)?,
-            None => match threeds_completion_indicator {
-                Some(comp_ind) => {
-                    let three_d_s_comp_ind = requests::RedsysThreeDSCompInd::from(comp_ind);
-                    let browser_info = router_data.request.browser_info.clone().ok_or(
-                        errors::ConnectorError::MissingRequiredField {
-                            field_name: "browser_info",
-                        },
-                    )?;
-                    let continue_redirection_url = router_data
-                        .request
-                        .continue_redirection_url
-                        .as_ref()
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "continue_redirection_url",
-                        })?;
+        let (ds_merchant_excep_sca, ds_merchant_directpayment, ds_merchant_emv3ds) =
+            if !item.router_data.resource_common_data.is_three_ds() {
+                let exemption = determine_exemption(router_data)?;
 
-                    requests::RedsysEmvThreeDsRequestData::new(
-                        requests::RedsysThreeDsInfo::AuthenticationData,
+                (Some(exemption), Some(true), None)
+            } else {
+                let emv3ds_data = match redirect_payload_value {
+                    Some(payload) => requests::RedsysEmvThreeDsRequestData::new(
+                        requests::RedsysThreeDsInfo::ChallengeResponse,
                     )
-                    .set_three_d_s_server_trans_i_d(three_d_s_server_trans_i_d)
                     .set_protocol_version(message_version)
-                    .set_three_d_s_comp_ind(three_d_s_comp_ind)
-                    .add_browser_data(browser_info)?
-                    .set_notification_u_r_l(continue_redirection_url.clone())
+                    .set_three_d_s_cres(payload.cres)
                     .set_billing_data(billing_data)?
-                    .set_shipping_data(shipping_data)?
-                }
-                None => {
-                    return Err(errors::ConnectorError::MissingRequiredField {
-                        field_name: "threeds_completion_indicator",
-                    })?;
-                }
-            },
-        };
+                    .set_shipping_data(shipping_data)?,
+                    None => match threeds_completion_indicator {
+                        Some(comp_ind) => {
+                            let three_d_s_comp_ind = requests::RedsysThreeDSCompInd::from(comp_ind);
+                            let browser_info = router_data.request.browser_info.clone().ok_or(
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "browser_info",
+                                },
+                            )?;
+                            let continue_redirection_url = router_data
+                                .request
+                                .continue_redirection_url
+                                .as_ref()
+                                .ok_or(errors::ConnectorError::MissingRequiredField {
+                                    field_name: "continue_redirection_url",
+                                })?;
+
+                            requests::RedsysEmvThreeDsRequestData::new(
+                                requests::RedsysThreeDsInfo::AuthenticationData,
+                            )
+                            .set_three_d_s_server_trans_i_d(three_d_s_server_trans_i_d)
+                            .set_protocol_version(message_version)
+                            .set_three_d_s_comp_ind(three_d_s_comp_ind)
+                            .add_browser_data(browser_info)?
+                            .set_notification_u_r_l(continue_redirection_url.clone())
+                            .set_billing_data(billing_data)?
+                            .set_shipping_data(shipping_data)?
+                        }
+                        None => {
+                            return Err(errors::ConnectorError::MissingRequiredField {
+                                field_name: "threeds_completion_indicator",
+                            })?;
+                        }
+                    },
+                };
+
+                (None, None, Some(emv3ds_data))
+            };
 
         let is_auto_capture = router_data.request.is_auto_capture()?;
         let ds_merchant_transactiontype = if is_auto_capture {
@@ -1205,7 +1283,7 @@ where
             )?,
             ds_merchant_currency: router_data.request.currency.iso_4217().to_owned(),
             ds_merchant_cvv2: card_data.cvv2,
-            ds_merchant_emv3ds: Some(emv3ds_data),
+            ds_merchant_emv3ds,
             ds_merchant_expirydate: card_data.expiry_date,
             ds_merchant_merchantcode: auth.merchant_id.clone(),
             ds_merchant_order,
@@ -1214,6 +1292,8 @@ where
                 .attach_printable("Invalid card number")?,
             ds_merchant_terminal: auth.terminal_id.clone(),
             ds_merchant_transactiontype,
+            ds_merchant_directpayment,
+            ds_merchant_excep_sca,
         };
 
         let transaction = Self::try_from((&payment_request, &auth))?;
