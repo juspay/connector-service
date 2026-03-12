@@ -33,13 +33,10 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
     fn foreign_from(item: &CompositeAuthorizeRequest) -> Self {
         let customer = item.customer.as_ref();
         Self {
-            merchant_customer_id: item.merchant_customer_id.clone().or_else(|| {
-                customer
-                    .and_then(|c| c.id.clone())
-                    .map(|id| grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id.clone())),
-                    })
-            }),
+            merchant_customer_id: item
+                .merchant_customer_id
+                .clone()
+                .or_else(|| customer.and_then(|c| c.id.clone())),
             customer_name: item
                 .customer_name
                 .clone()
@@ -137,6 +134,7 @@ impl
             redirection_response: item.redirection_response.clone(),
             continue_redirection_url: item.continue_redirection_url.clone(),
             payment_method_token: item.payment_method_token.clone(),
+            l2_l3_data: item.l2_l3_data.clone(),
         }
     }
 }
