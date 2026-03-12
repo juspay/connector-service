@@ -3,10 +3,6 @@ name = "hyperswitch-payments-client"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "client_sanity_runner"
-path = "tests/client_sanity_runner.rs"
-
 [dependencies]
 # Internal crates (path deps)
 ffi = { path = "../../backend/ffi", features = ["uniffi"] }
