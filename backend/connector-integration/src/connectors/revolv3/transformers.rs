@@ -1327,10 +1327,16 @@ pub fn validate_psync(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct Revolv3WebhookBody {
+    pub body: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum Revolv3Webhook {
-    Invoice(Revolv3WebhookBody),
-    Test(TestData),
+pub enum Revolv3WebhookBodyData {
+    TestData(TestData),
+    InvoiceData(Revolv3InvoiceWebhookBody),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1345,17 +1351,14 @@ pub enum TestEventType {
     WebhookTest,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub struct Revolv3WebhookBody {
-    pub body: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Revolv3InvoiceWebhookBody {
     pub invoice: Revolv3WebhookInvoiceData,
-    pub payment_method: Option<Revolv3PaymentMethodWebhookResponse>,
+    pub event_date_time: Option<String>,
+    pub event_type: Option<String>,
+    pub revolv_merchant_id: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -1367,11 +1370,12 @@ pub struct Revolv3PaymentMethodWebhookResponse {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Revolv3WebhookInvoiceData {
-    pub invoice_id: String,
+    pub invoice_id: i64,
     pub merchant_invoice_ref_id: Option<String>,
     pub invoice_status: WebhookInvoiceStatus,
     pub network_transaction_id: Option<String>,
     pub invoice_attempts: Option<Vec<Revolv3WebhookInvoiceAttempt>>,
+    pub payment_method: Option<Revolv3PaymentMethodWebhookResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1404,7 +1408,7 @@ pub enum WebhookInvoiceStatus {
 
 impl Revolv3InvoiceWebhookBody {
     pub fn get_invoice_id(&self) -> String {
-        self.invoice.invoice_id.clone()
+        self.invoice.invoice_id.to_string()
     }
     pub fn get_invoice_status(&self) -> WebhookInvoiceStatus {
         self.invoice.invoice_status.clone()
@@ -1425,7 +1429,7 @@ impl Revolv3InvoiceWebhookBody {
     }
 
     pub fn get_mandate_reference(&self) -> Option<domain_types::connector_types::MandateReference> {
-        self.payment_method.as_ref().and_then(|payment_method| {
+        self.invoice.payment_method.as_ref().and_then(|payment_method| {
             payment_method
                 .payment_method_id
                 .as_ref()

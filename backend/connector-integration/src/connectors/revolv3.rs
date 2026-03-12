@@ -30,7 +30,7 @@ use transformers::{
     Revolv3PaymentSyncResponse, Revolv3PaymentsRequest, Revolv3PaymentsResponse,
     Revolv3RefundRequest, Revolv3RefundResponse, Revolv3RefundSyncResponse,
     Revolv3RepeatPaymentRequest, Revolv3RepeatPaymentResponse, Revolv3SaleResponse,
-    Revolv3SetupMandateRequest, Revolv3Webhook, Revolv3WebhookBody,
+    Revolv3SetupMandateRequest, Revolv3WebhookBody, Revolv3WebhookBodyData,
 };
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -148,12 +148,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
         // Get the URL from the request URI
-        let url = match request.uri {
-            Some(uri) => uri,
+        let url = match request.url {
+            Some(url) => url,
             None => {
                 tracing::warn!(
                     target: "revolv3_webhook",
-                    "Missing URI in webhook request"
+                    "Missing URL in webhook request"
                 );
                 return Ok(false);
             }
@@ -193,7 +193,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
-        let webhook_body: Revolv3Webhook = request
+        let webhook_body: Revolv3WebhookBody = request
             .body
             .parse_struct("Revolv3Webhook")
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
@@ -201,17 +201,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "Failed to parse webhook event type from Revolv3 webhook body"
             })?;
 
-        match webhook_body {
-            Revolv3Webhook::Invoice(invoice_webhook) => {
-                let invoice_data: Revolv3InvoiceWebhookBody =
-                    serde_json::from_str(&invoice_webhook.body)
-                        .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
-                        .attach_printable_lazy(|| {
-                            "Failed to parse invoice data from Revolv3 webhook body"
-                        })?;
-                Ok(invoice_data.get_invoice_status().to_event_type())
+        let webhook_body_data : Revolv3WebhookBodyData = serde_json::from_str(&webhook_body.body)
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable_lazy(|| {
+                "Failed to parse webhook event type from Revolv3 webhook body"
+            })?;
+
+        match webhook_body_data {
+            Revolv3WebhookBodyData::InvoiceData(invoice_webhook) => {
+                Ok(invoice_webhook.get_invoice_status().to_event_type())
             }
-            Revolv3Webhook::Test(_) => Ok(EventType::EndpointVerification),
+            Revolv3WebhookBodyData::TestData(_) => {
+                Ok(EventType::EndpointVerification)},
         }
     }
 

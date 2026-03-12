@@ -1976,11 +1976,18 @@ impl EventType {
     pub fn is_misc_event(&self) -> bool {
         matches!(
             self,
-            Self::EndpointVerification
-                | Self::ExternalAuthenticationAres
+                 Self::ExternalAuthenticationAres
                 | Self::FrmApproved
                 | Self::FrmRejected
                 | Self::IncomingWebhookEventUnspecified
+        )
+    }
+
+    /// Returns true if this event type is endpoint verification-related
+    pub fn is_endpoint_verification_event(&self) -> bool {
+        matches!(
+            self,
+            Self::EndpointVerification
         )
     }
 }
