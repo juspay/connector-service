@@ -177,6 +177,330 @@ The test framework supports flexible assertion rules for validating responses:
 
 ---
 
+## Global Test Suites
+
+### What Are Global Suites?
+
+**Global suites** are reusable test scenarios stored in `src/global_suites/` that can be executed against any connector. They define the "happy path" and common edge cases for each payment operation, providing a standardized way to test connector functionality across all 110+ payment processors.
+
+**Key Concept**: Write once, run everywhere. A single global suite scenario can validate Stripe, Adyen, PayPal, and all other connectors that support that operation.
+
+### Directory Structure
+
+```
+backend/ucs-connector-tests/src/global_suites/
+├── authorize_suite/
+│   ├── scenario.json          # Test cases for authorization
+│   └── suite_spec.json        # Suite metadata and dependencies
+├── capture_suite/
+│   ├── scenario.json
+│   └── suite_spec.json
+├── void_suite/
+├── refund_suite/
+├── get_suite/
+├── create_access_token_suite/
+├── create_customer_suite/
+├── setup_recurring_suite/
+├── recurring_charge_suite/
+└── refund_sync_suite/
+```
+
+### Suite Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| **Independent** | No dependencies, can run standalone | `create_access_token` |
+| **Dependent** | Requires other suites to run first | `authorize` depends on `create_access_token` |
+
+### Suite Specification Format
+
+Each suite includes a `suite_spec.json` defining its behavior:
+
+```json
+{
+  "suite": "capture",
+  "suite_type": "dependent",
+  "depends_on": ["authorize"],
+  "strict_dependencies": true
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `suite` | Suite name (matches directory) |
+| `suite_type` | `independent` or `dependent` |
+| `depends_on` | Array of suite names that must complete first |
+| `strict_dependencies` | If `true`, fail if dependencies fail; if `false`, continue anyway |
+
+### Dependency Pipeline
+
+When running dependent suites, the test harness automatically:
+
+1. **Executes dependencies first**: Runs `create_access_token` → `create_customer` → `authorize`
+2. **Captures context**: Stores response values (transaction IDs, customer IDs) from each step
+3. **Injects into requests**: Automatically populates dependent request fields like `connector_transaction_id`
+4. **Prunes unresolved fields**: Removes context fields that couldn't be resolved
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│ create_access_  │────▶│   authorize     │────▶│    capture      │
+│     token       │     │                 │     │                 │
+└────────┬────────┘     └────────┬────────┘     └─────────────────┘
+         │                       │
+         │ access_token          │ connector_transaction_id
+         ▼                       ▼
+    Injected into           Injected into
+    authorize request       capture request
+```
+
+---
+
+## Test Data Configuration
+
+### Test Data Locations
+
+Test data is configured across three locations:
+
+| Location | Purpose | Example Files |
+|----------|---------|---------------|
+| **Global Suites** | Reusable scenarios for all connectors | `src/global_suites/*/scenario.json` |
+| **Connector Specs** | Per-connector suite configuration | `src/connector_specs/{connector}.json` |
+| **Credentials** | API keys and authentication secrets | External JSON file (via env var) |
+
+### Global Suite Data (`scenario.json`)
+
+Each scenario defines:
+
+```json
+{
+  "no3ds_auto_capture_credit_card": {
+    "grpc_req": {
+      "merchant_transaction_id": {"id": "auto_generate"},
+      "amount": {"minor_amount": 6000, "currency": "USD"},
+      "payment_method": {
+        "card": {
+          "card_number": {"value": "4111111111111111"},
+          "card_exp_month": {"value": "08"},
+          "card_exp_year": {"value": "30"},
+          "card_cvc": {"value": "999"},
+          "card_holder_name": {"value": "auto_generate"},
+          "card_type": "credit"
+        }
+      },
+      "capture_method": "AUTOMATIC"
+    },
+    "assert": {
+      "status": {"one_of": ["CHARGED", "AUTHORIZED"]},
+      "connector_transaction_id": {"must_exist": true},
+      "error": {"must_not_exist": true}
+    },
+    "is_default": true
+  }
+}
+```
+
+### Auto-Generated Values
+
+Use `"auto_generate"` for dynamic test data:
+
+| Field Type | Generated Format | Example |
+|------------|------------------|---------|
+| Transaction IDs | `{prefix}_{uuid}` | `mti_a1b2c3d4` |
+| Customer Emails | `{name}.{number}@{domain}` | `alex.1234@example.com` |
+| Phone Numbers | `{country_code}{number}` | `+15551234567` |
+| Names | Random first/last name | `Emma Johnson` |
+| Addresses | Realistic street address | `123 Main St` |
+
+**Deferred Fields** (not auto-generated, resolved from dependencies):
+- `connector_customer_id`
+- `connector_transaction_id`
+- `access_token`
+- `refund_id`
+
+### Connector Specifications (`connector_specs/`)
+
+Define which suites each connector supports:
+
+```json
+{
+  "connector": "stripe",
+  "supported_suites": [
+    "authorize",
+    "capture",
+    "void",
+    "refund",
+    "get",
+    "refund_sync"
+  ]
+}
+```
+
+**Purpose**:
+- Skip unsupported suites during `--all` runs
+- Document connector capabilities
+- Enable gradual rollout of new tests
+
+---
+
+## Credentials Configuration
+
+### Credentials File Location
+
+Connector credentials are loaded from a JSON file specified via environment variable:
+
+```bash
+# Primary method
+export CONNECTOR_AUTH_FILE_PATH=/path/to/creds.json
+
+# Alternative
+export UCS_CREDS_PATH=/path/to/creds.json
+
+# Default fallback
+# backend/.github/test/creds.json
+```
+
+### Credentials File Format
+
+```json
+{
+  "stripe": {
+    "connector_account_details": {
+      "auth_type": "HeaderKey",
+      "api_key": "sk_test_..."
+    }
+  },
+  "adyen": {
+    "connector_account_details": {
+      "auth_type": "SignatureKey",
+      "api_key": "...",
+      "key1": "...",
+      "api_secret": "..."
+    }
+  },
+  "braintree": {
+    "connector_1": {
+      "connector_account_details": {
+        "auth_type": "BodyKey",
+        "api_key": "...",
+        "key1": "..."
+      }
+    }
+  }
+}
+```
+
+### Authentication Types
+
+| Type | Fields | Use Case |
+|------|--------|----------|
+| **HeaderKey** | `api_key` | Stripe, simple API keys |
+| **BodyKey** | `api_key`, `key1` | Braintree, key pairs |
+| **SignatureKey** | `api_key`, `key1`, `api_secret` | Adyen, signed requests |
+
+### Multiple Connector Configurations
+
+For connectors with multiple accounts (sandbox, production, different regions):
+
+```json
+{
+  "cybersource": {
+    "connector_1": {
+      "connector_account_details": { ... }
+    },
+    "connector_2": {
+      "connector_account_details": { ... }
+    }
+  }
+}
+```
+
+Select via environment variable:
+```bash
+export UCS_CONNECTOR_LABEL_CYBERSOURCE=connector_2
+```
+
+---
+
+## Overrides
+
+### What Are Overrides?
+
+**Overrides** allow customizing global suite scenarios for specific connectors or edge cases without modifying the base scenario files. They enable:
+
+- Connector-specific request modifications (e.g., different test card numbers)
+- Connector-specific assertion adjustments (e.g., different error message formats)
+- Edge case handling (e.g., specific decline codes)
+
+### Override Types
+
+| Type | Purpose | Location |
+|------|---------|----------|
+| **Request Override** | Modify request payload fields | Planned: `src/overrides/{connector}/{suite}.json` |
+| **Assert Override** | Modify assertion rules | Planned: `src/overrides/{connector}/{suite}.json` |
+| **Dependency Override** | Override specific dependency scenario | `suite_spec.json` `depends_on` with scenario name |
+
+### Request Override (Planned)
+
+```json
+{
+  "scenario_name": "no3ds_auto_capture_credit_card",
+  "request_override": {
+    "payment_method.card.card_number.value": "4000000000003220"
+  },
+  "assert_override": {
+    "status": {
+      "remove": ["equals"],
+      "add": { "one_of": ["AUTHENTICATION_FAILED", "DECLINED"] }
+    }
+  }
+}
+```
+
+### Dependency Scenario Override
+
+Reference a specific scenario from a dependency suite:
+
+```json
+{
+  "suite": "capture",
+  "suite_type": "dependent",
+  "depends_on": [
+    {
+      "suite": "authorize",
+      "scenario": "no3ds_manual_capture_credit_card"
+    }
+  ]
+}
+```
+
+This runs the `no3ds_manual_capture_credit_card` scenario from the authorize suite before capture.
+
+### Assert Override Strategy
+
+Assert overrides use a **merge strategy** with the base assertions:
+
+1. Start with base assertions from global suite
+2. Apply connector-specific additions
+3. Remove overridden fields
+4. Execute merged assertions
+
+```rust
+// Pseudo-code for assert merging
+fn merge_asserts(base: AssertMap, override: AssertMap) -> AssertMap {
+    let mut merged = base.clone();
+    for (field, rules) in override {
+        if rules.remove_all {
+            merged.remove(&field);
+        } else {
+            merged.insert(field, rules);
+        }
+    }
+    merged
+}
+```
+
+---
+
 ## Configuration
 
 ### Environment Variables
