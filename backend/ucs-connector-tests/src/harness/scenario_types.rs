@@ -5,7 +5,6 @@ use serde::Deserialize;
 use serde_json::Value;
 
 /// Shared schema types used across scenario loading, execution, and assertions.
-
 pub type ScenarioFile = BTreeMap<String, ScenarioDef>;
 
 /// Mapping of target request paths to dependency source paths.

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use connector_service_ffi::{bindings::uniffi as ffi_bindings, errors::UniffiError};
+use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use grpc_api_types::payments::{
     self, connector_auth, Connector, ConnectorAuth as ProtoConnectorAuth, Environment,
-    FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions,
+    FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, RequestError, ResponseError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};
@@ -179,8 +179,8 @@ fn execute_sdk_flow<Req, Res>(
     connector: &str,
     grpc_req: &Value,
     options_bytes: &[u8],
-    req_transformer: fn(Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>,
-    res_transformer: fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>,
+    req_transformer: fn(Vec<u8>, Vec<u8>) -> Vec<u8>,
+    res_transformer: fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Vec<u8>,
 ) -> Result<String, ScenarioError>
 where
     Req: Message + Default + DeserializeOwned,
@@ -189,15 +189,20 @@ where
     let request_payload: Req = parse_sdk_payload(suite, scenario, connector, grpc_req)?;
     let request_bytes = request_payload.encode_to_vec();
 
-    let ffi_http_request_bytes = req_transformer(request_bytes.clone(), options_bytes.to_vec())
-        .map_err(|error| sdk_error("request transformer", suite, scenario, error))?;
+    let ffi_http_request_bytes = req_transformer(request_bytes.clone(), options_bytes.to_vec());
 
     let ffi_http_request = FfiConnectorHttpRequest::decode(ffi_http_request_bytes.as_slice())
-        .map_err(|error| ScenarioError::SdkExecution {
-            message: format!(
-                "sdk decode failed for '{}'/'{}' request bytes: {}",
-                suite, scenario, error
-            ),
+        .map_err(|decode_error| {
+            if let Ok(request_error) = RequestError::decode(ffi_http_request_bytes.as_slice()) {
+                return map_request_error("request transformer", suite, scenario, request_error);
+            }
+
+            ScenarioError::SdkExecution {
+                message: format!(
+                    "sdk decode failed for '{}'/'{}' request bytes: {}",
+                    suite, scenario, decode_error
+                ),
+            }
         })?;
 
     let ffi_http_response = execute_connector_http_request(ffi_http_request, suite, scenario)?;
@@ -207,14 +212,17 @@ where
         ffi_http_response_bytes,
         request_bytes,
         options_bytes.to_vec(),
-    )
-    .map_err(|error| sdk_error("response transformer", suite, scenario, error))?;
+    );
 
-    let proto_response = Res::decode(proto_response_bytes.as_slice()).map_err(|error| {
+    let proto_response = Res::decode(proto_response_bytes.as_slice()).map_err(|decode_error| {
+        if let Ok(response_error) = ResponseError::decode(proto_response_bytes.as_slice()) {
+            return map_response_error("response transformer", suite, scenario, response_error);
+        }
+
         ScenarioError::SdkExecution {
             message: format!(
                 "sdk decode failed for '{}'/'{}' response bytes: {}",
-                suite, scenario, error
+                suite, scenario, decode_error
             ),
         }
     })?;
@@ -392,12 +400,64 @@ fn ffi_environment() -> Environment {
     }
 }
 
-/// Formats SDK-stage errors with suite/scenario context.
-fn sdk_error(stage: &str, suite: &str, scenario: &str, error: UniffiError) -> ScenarioError {
+fn map_request_error(
+    stage: &str,
+    suite: &str,
+    scenario: &str,
+    error: RequestError,
+) -> ScenarioError {
+    let mut details = Vec::new();
+    if let Some(message) = error.error_message.filter(|msg| !msg.is_empty()) {
+        details.push(message);
+    }
+    if let Some(code) = error.error_code.filter(|code| !code.is_empty()) {
+        details.push(format!("code={code}"));
+    }
+    if let Some(status_code) = error.status_code {
+        details.push(format!("status_code={status_code}"));
+    }
+
+    let detail_text = if details.is_empty() {
+        "unknown ffi request error".to_string()
+    } else {
+        details.join(", ")
+    };
+
     ScenarioError::SdkExecution {
         message: format!(
             "sdk {} failed for '{}/{}': {}",
-            stage, suite, scenario, error
+            stage, suite, scenario, detail_text
+        ),
+    }
+}
+
+fn map_response_error(
+    stage: &str,
+    suite: &str,
+    scenario: &str,
+    error: ResponseError,
+) -> ScenarioError {
+    let mut details = Vec::new();
+    if let Some(message) = error.error_message.filter(|msg| !msg.is_empty()) {
+        details.push(message);
+    }
+    if let Some(code) = error.error_code.filter(|code| !code.is_empty()) {
+        details.push(format!("code={code}"));
+    }
+    if let Some(status_code) = error.status_code {
+        details.push(format!("status_code={status_code}"));
+    }
+
+    let detail_text = if details.is_empty() {
+        "unknown ffi response error".to_string()
+    } else {
+        details.join(", ")
+    };
+
+    ScenarioError::SdkExecution {
+        message: format!(
+            "sdk {} failed for '{}/{}': {}",
+            stage, suite, scenario, detail_text
         ),
     }
 }
