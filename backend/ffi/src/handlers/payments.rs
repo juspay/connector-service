@@ -1,8 +1,8 @@
 pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/development.toml");
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
-use crate::types::FfiRequestData;
 use crate::errors::{FfiError, FfiPaymentError};
+use crate::types::FfiRequestData;
 use domain_types::errors::ConnectorError;
 use domain_types::payment_method_data::DefaultPCIHolder;
 use grpc_api_types::payments::Environment;
@@ -15,14 +15,13 @@ fn get_config(
     } else {
         EMBEDDED_DEVELOPMENT_CONFIG
     };
-    crate::utils::load_config(config_str)
-        .map_err(|err| {
-            let message = match err {
-                ConnectorError::GenericError { error_message, .. } => error_message,
-                other => format!("{other}"),
-            };
-            FfiError::IntegrationError { message }.into()
-        })
+    crate::utils::load_config(config_str).map_err(|err| {
+        let message = match err {
+            ConnectorError::GenericError { error_message, .. } => error_message,
+            other => format!("{other}"),
+        };
+        FfiError::IntegrationError { message }.into()
+    })
 }
 
 /// Generates a `{flow}_req_handler` and `{flow}_res_handler` function pair.

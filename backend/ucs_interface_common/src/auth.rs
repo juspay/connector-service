@@ -362,8 +362,7 @@ mod tests {
     #[test]
     fn new_header_takes_precedence_over_deprecated() {
         let new_json = stripe_config_json("new-key");
-        let old_json =
-            r#"{"auth_type":{"Stripe":{"api_key":"old-key"}}}"#.to_string();
+        let old_json = r#"{"auth_type":{"Stripe":{"api_key":"old-key"}}}"#.to_string();
         let mut metadata = MetadataMap::new();
         metadata.insert(
             consts::X_CONNECTOR_CONFIG,

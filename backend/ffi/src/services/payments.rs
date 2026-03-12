@@ -1,5 +1,5 @@
-use external_services;
 use crate::errors::FfiPaymentError;
+use external_services;
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest, CustomerServiceCreateResponse, EventServiceHandleRequest,
     EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -410,16 +410,14 @@ pub fn handle_event_transformer(
 ) -> Result<EventServiceHandleResponse, FfiPaymentError> {
     use domain_types::utils::ForeignTryFrom as _;
 
-    let request_details = payload
-        .request_details
-        .ok_or_else(|| {
-            FfiPaymentError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some("Missing required field: request_details".to_string()),
-                None,
-                Some(500),
-            )
-        })?;
+    let request_details = payload.request_details.ok_or_else(|| {
+        FfiPaymentError::new(
+            grpc_api_types::payments::PaymentStatus::Pending,
+            Some("Missing required field: request_details".to_string()),
+            None,
+            Some(500),
+        )
+    })?;
     let request_details = RequestDetails::foreign_try_from(request_details).map_err(|e| {
         FfiPaymentError::new(
             grpc_api_types::payments::PaymentStatus::Pending,

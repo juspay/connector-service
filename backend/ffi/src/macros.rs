@@ -203,8 +203,8 @@ macro_rules! res_transformer {
                 "".to_string(),
                 None,
             )
-                    .map_err(
-                    |e: error_stack::Report<domain_types::errors::ConnectorError>| {
+            .map_err(
+                |e: error_stack::Report<domain_types::errors::ConnectorError>| {
                     $crate::errors::FfiPaymentError::new(
                         grpc_api_types::payments::PaymentStatus::Pending,
                         Some(e.to_string()),
