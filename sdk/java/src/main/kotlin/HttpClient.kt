@@ -60,6 +60,8 @@ object HttpClient {
             }
             
             return builder.build()
+        } catch (e: ConnectorError) {
+            throw e  // already classified, pass through
         } catch (e: Exception) {
             val code = if (e.message?.lowercase()?.contains("proxy") == true) "INVALID_PROXY_CONFIGURATION" else "CLIENT_INITIALIZATION"
             throw ConnectorError("Internal HTTP setup failed: ${e.message}", 500, code)
@@ -70,7 +72,8 @@ object HttpClient {
         val proxyUrl = p.httpsUrl.takeIf { it.isNotEmpty() } ?: p.httpUrl.takeIf { it.isNotEmpty() }
         if (proxyUrl == null) return
 
-        val url = proxyUrl.toHttpUrlOrNull() ?: return
+        val url = proxyUrl.toHttpUrlOrNull()
+            ?: throw ConnectorError("Unsupported or malformed proxy URL: $proxyUrl", null, "INVALID_PROXY_CONFIGURATION")
         
         // Standard Java Proxy
         val proxy = java.net.Proxy(java.net.Proxy.Type.HTTP, java.net.InetSocketAddress(url.host, url.port))
@@ -101,7 +104,12 @@ object HttpClient {
 
         val okHeaders = request.headers?.toHeaders() ?: Headers.Builder().build()
         val mediaType = okHeaders["Content-Type"]?.toMediaTypeOrNull()
-        val requestBody = request.body?.toRequestBody(mediaType)
+        // OkHttp requires a non-null body for POST/PUT/PATCH. Use empty body when none provided.
+        val requestBody = when {
+            request.body != null -> request.body.toRequestBody(mediaType)
+            request.method.uppercase() in listOf("POST", "PUT", "PATCH") -> ByteArray(0).toRequestBody(mediaType)
+            else -> null
+        }
 
         // Build the request
         val okRequest = Request.Builder()

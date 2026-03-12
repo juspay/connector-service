@@ -19,6 +19,7 @@ async def run_sanity():
     req_data = input_data['request']
     proxy = input_data.get('proxy')
     client_timeout_ms = input_data.get('client_timeout_ms')
+    client_response_timeout_ms = input_data.get('client_response_timeout_ms')
 
     # 1. Setup Client
     client_config = None
@@ -56,6 +57,8 @@ async def run_sanity():
     http_config = None
     if client_timeout_ms is not None:
         http_config = sdk_config_pb2.HttpConfig(total_timeout_ms=client_timeout_ms)
+    elif client_response_timeout_ms is not None:
+        http_config = sdk_config_pb2.HttpConfig(response_timeout_ms=client_response_timeout_ms)
 
     output = {}
     try:

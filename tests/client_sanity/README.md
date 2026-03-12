@@ -2,6 +2,15 @@
 
 This folder contains the HTTP Client Sanity Testing framework for certifying SDK HTTP clients across all languages.
 
+**Prerequisites** (for a fresh setup):
+```bash
+# Generate proto stubs for each SDK (gitignored, must be generated locally):
+make -C sdk/javascript generate-proto    # proto.js  (JS runner)
+make -C sdk/python generate-proto        # *_pb2.py  (Python runner)
+make -C sdk/java generate-proto          # Java stubs (Kotlin runner)
+# Rust: no step needed — cargo compiles proto via build.rs automatically
+```
+
 **Run**: `make certify-client-sanity` from the repository root.
 
 **Key Files**:

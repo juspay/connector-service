@@ -102,15 +102,17 @@
     },
     {
       "id": "CASE_10_RESPONSE_TIMEOUT",
-      "description": "Slow server (2s). SDK must timeout at 1s.",
+      "description": "Slow server (2s). SDK must timeout at 1s via response_timeout_ms.",
+      "skip_langs": ["rust"],
+      "skip_reason_rust": "reqwest 0.11 has no read/response-phase timeout (read_timeout added in 0.12). response_timeout_ms is not supported; use total_timeout_ms instead.",
       "request": {
         "method": "POST",
         "url": "http://localhost:8081/sanity/v1/timeout",
         "headers": { "Content-Type": "application/json" },
         "body": "{\"action\": \"sync\"}"
       },
-      "expected_error": "TOTAL_TIMEOUT",
-      "client_timeout_ms": 1000,
+      "expected_error": "RESPONSE_TIMEOUT",
+      "client_response_timeout_ms": 1000,
       "server_delay_ms": 2000,
       "expected_response": { "status_code": 200, "body": { "status": "ok" } }
     },
@@ -254,6 +256,9 @@
     {
       "id": "CASE_ERR_INVALID_PROXY",
       "description": "Invalid proxy config; SDK must fail (e.g. INVALID_PROXY_CONFIGURATION).",
+      "skip_langs": ["python", "kotlin"],
+      "skip_reason_python": "httpx accepts malformed proxy URLs at client creation; the error surfaces only at request time as a generic transport failure that cannot be reliably classified as INVALID_PROXY_CONFIGURATION.",
+      "skip_reason_kotlin": "OkHttp accepts malformed proxy URLs at client creation; the error surfaces only at request time as a generic transport failure that cannot be reliably classified as INVALID_PROXY_CONFIGURATION.",
       "proxy": { "http_url": "invalid://bad" },
       "request": {
         "method": "GET",

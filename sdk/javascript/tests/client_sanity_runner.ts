@@ -6,7 +6,7 @@ async function runSanity() {
   const inputStr = fs.readFileSync(0, 'utf8');
   const input = JSON.parse(inputStr);
 
-  const { scenario_id, source_id, request: reqData, proxy, client_timeout_ms } = input;
+  const { scenario_id, source_id, request: reqData, proxy, client_timeout_ms, client_response_timeout_ms } = input;
 
   const request = { ...reqData };
   request.headers = {
@@ -19,21 +19,24 @@ async function runSanity() {
     request.body = Uint8Array.from(Buffer.from(request.body.replace('base64:', ''), 'base64'));
   }
 
-  const opts: any = {
-    proxy: { bypassUrls: [request.url] }
-  };
+  const opts: any = {};
   if (client_timeout_ms != null) {
     opts.totalTimeoutMs = client_timeout_ms;
   }
+  if (client_response_timeout_ms != null) {
+    opts.responseTimeoutMs = client_response_timeout_ms;
+  }
 
   let dispatcher: any = undefined;
+  const dispatcherConfig: any = { ...opts };
   if (proxy?.http_url) {
-    try {
-      dispatcher = createDispatcher({ proxy: { httpUrl: proxy.http_url } } as any);
-    } catch (e: any) {
-      console.log(JSON.stringify({ error: { code: e?.errorCode || e?.code || 'UNKNOWN_ERROR', message: e?.message || String(e) } }));
-      return;
-    }
+    dispatcherConfig.proxy = { httpUrl: proxy.http_url };
+  }
+  try {
+    dispatcher = createDispatcher(dispatcherConfig);
+  } catch (e: any) {
+    console.log(JSON.stringify({ error: { code: e?.errorCode || e?.code || 'UNKNOWN_ERROR', message: e?.message || String(e) } }));
+    return;
   }
 
   const output: any = {};

@@ -55,7 +55,7 @@ manifest.scenarios.forEach((scenario) => {
     },
   };
 
-  const outPath = path.join(__dirname, `golden_${scenario.id}.json`);
+  const outPath = path.join(ARTIFACTS_DIR, `golden_${scenario.id}.json`);
   fs.writeFileSync(outPath, JSON.stringify(golden, null, 2));
   console.log(`   📄 golden_${scenario.id}.json`);
 });

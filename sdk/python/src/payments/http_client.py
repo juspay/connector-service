@@ -1,8 +1,7 @@
 import time
 import httpx
 import ssl
-import asyncio
-from typing import Optional, Dict, Union, Any
+from typing import Optional, Dict, Union
 from dataclasses import dataclass
 from .generated import sdk_config_pb2
 
@@ -91,6 +90,8 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
                 read=read_timeout
             )
         )
+    except ConnectorError:
+        raise  # already classified, pass through
     except Exception as e:
         code = "INVALID_PROXY_CONFIGURATION" if "proxy" in str(e).lower() else "CLIENT_INITIALIZATION"
         raise ConnectorError(f"Internal HTTP setup failed: {e}", 500, code)
@@ -103,19 +104,35 @@ async def execute(
     """
     Standardized stateless execution engine using httpx AsyncClient.
     """
+    # Validate URL: httpx.URL() does not raise for missing scheme (e.g. "not-a-valid-url").
+    # Check scheme explicitly so we fail fast before a network attempt.
     try:
-        httpx.URL(request.url)
-    except httpx.InvalidURL:
+        parsed_url = httpx.URL(request.url)
+        if parsed_url.scheme not in ('http', 'https'):
+            raise ConnectorError(f"Invalid URL (missing or unsupported scheme): {request.url}", None, "URL_PARSING_FAILED")
+    except ConnectorError:
+        raise
+    except Exception:
         raise ConnectorError(f"Invalid URL: {request.url}", None, "URL_PARSING_FAILED")
     start_time = time.time()
 
-    # Per-request timeout override
+    # Per-request timeout override merged with the already-resolved client defaults.
+    # This keeps timeout resolution centralized in create_client().
     timeout = httpx.USE_CLIENT_DEFAULT
     if http_config:
         total = (http_config.total_timeout_ms / 1000.0) if http_config.HasField('total_timeout_ms') else None
         connect = (http_config.connect_timeout_ms / 1000.0) if http_config.HasField('connect_timeout_ms') else None
         read = (http_config.response_timeout_ms / 1000.0) if http_config.HasField('response_timeout_ms') else None
-        timeout = httpx.Timeout(total, connect=connect, read=read)
+        if total is not None or connect is not None or read is not None:
+            base_timeout = client.timeout
+            effective_total = total if total is not None else base_timeout.timeout
+            effective_connect = connect if connect is not None else base_timeout.connect
+            effective_read = read if read is not None else base_timeout.read
+            timeout = httpx.Timeout(
+                effective_total,
+                connect=effective_connect,
+                read=effective_read
+            )
 
     try:
         response = await client.request(
@@ -146,7 +163,5 @@ async def execute(
         raise ConnectorError(f"Connection Timeout: {request.url}", 504, "CONNECT_TIMEOUT")
     except (httpx.ReadTimeout, httpx.WriteTimeout):
         raise ConnectorError(f"Response Timeout: {request.url}", 504, "RESPONSE_TIMEOUT")
-    except httpx.TimeoutException:
-        raise ConnectorError(f"Total Request Timeout: {request.url}", 504, "TOTAL_TIMEOUT")
     except Exception as e:
         raise ConnectorError(f"Network Error: {str(e)}", 500, "NETWORK_FAILURE")
