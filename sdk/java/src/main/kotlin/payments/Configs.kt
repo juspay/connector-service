@@ -24,7 +24,3 @@ typealias FfiOptions = SdkConfig.FfiOptions
 typealias FfiConnectorHttpRequest = SdkConfig.FfiConnectorHttpRequest
 typealias FfiConnectorHttpResponse = SdkConfig.FfiConnectorHttpResponse
 typealias HttpDefault = SdkConfig.HttpDefault
-
-// Error types
-typealias RequestError = SdkConfig.RequestError
-typealias ResponseError = SdkConfig.ResponseError

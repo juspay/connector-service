@@ -10,7 +10,6 @@
  *   ./gradlew run --args="--creds-file creds.json --all --dry-run"
  */
 
-import com.google.protobuf.InvalidProtocolBufferException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import payments.PaymentClient
@@ -25,9 +24,6 @@ import payments.ConnectorConfig
 import payments.RequestConfig
 import payments.Connector
 import payments.Environment
-
-import payments.RequestError
-import payments.ResponseError
 import uniffi.connector_service_ffi.UniffiException
 import uniffi.connector_service_ffi.authorizeReqTransformer
 import java.io.File
@@ -270,24 +266,6 @@ fun testConnector(
                     status = response.status.number,
                     type = "PaymentServiceAuthorizeResponse",
                     passed = true
-                )
-            )
-        } catch (e: RequestError) {
-            // FFI request building failed
-            result.copy(
-                status = "failed",
-                roundTripTest = RoundTripResult(
-                    passed = false,
-                    error = "RequestError: ${e.errorCode} - ${e.errorMessage}"
-                )
-            )
-        } catch (e: ResponseError) {
-            // FFI response parsing failed
-            result.copy(
-                status = "failed",
-                roundTripTest = RoundTripResult(
-                    passed = false,
-                    error = "ResponseError: ${e.errorCode} - ${e.errorMessage}"
                 )
             )
         } catch (e: UniffiException) {
