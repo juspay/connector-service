@@ -70,8 +70,9 @@ jobs:
 
           git add connector-service/
 
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          # Check if there are any staged changes (new files or modifications)
+          if git diff --cached --quiet; then
+            echo "No changes to sync"
             exit 0
           fi
 
@@ -80,7 +81,7 @@ jobs:
           Sync documentation from juspay/connector-service@${{ github.sha }}
 
           Changes:
-          $(git diff --staged --stat | tail -1)"
+          $(git diff --cached --stat | tail -1)"
 
           git push origin HEAD:main
           echo "Successfully pushed changes to juspay/hyperswitch-docs"
