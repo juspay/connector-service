@@ -5,6 +5,7 @@ use grpc_api_types::payments::{
     CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentServiceAuthorizeRequest,
     PaymentServiceGetRequest,
 };
@@ -247,6 +248,31 @@ impl ForeignFrom<&CompositeAuthenticateRequest>
             state: item.state.clone(),
             redirection_response: item.redirection_response.clone(),
             capture_method: item.capture_method,
+        }
+    }
+}
+
+impl ForeignFrom<&CompositeAuthorizeRequest>
+    for PaymentMethodAuthenticationServicePostAuthenticateRequest
+{
+    fn foreign_from(item: &CompositeAuthorizeRequest) -> Self {
+        Self {
+            merchant_order_id: item.merchant_transaction_id.clone(),
+            amount: item.amount,
+            payment_method: item.payment_method.clone(),
+            customer: item.customer.clone(),
+            address: Some(item.address.clone().unwrap_or_default()),
+            authentication_data: item.post_authenticate_authentication_data.clone(),
+            connector_order_reference_id: item
+                .post_authenticate_connector_order_reference_id
+                .clone(),
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            return_url: item.return_url.clone(),
+            continue_redirection_url: item.continue_redirection_url.clone(),
+            browser_info: item.browser_info.clone(),
+            state: item.state.clone(),
+            redirection_response: item.redirection_response.clone(),
         }
     }
 }
