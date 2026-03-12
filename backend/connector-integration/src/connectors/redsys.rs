@@ -37,7 +37,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -815,4 +815,58 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentsResponseData,
     > for Redsys<T>
 {
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    domain_types::connector_types::ConnectorSpecifications for Redsys<T>
+{
+    /// PreAuth needed for all 3DS card payments
+    fn is_pre_authentication_flow_required(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method_data: &Option<
+            domain_types::payment_method_data::PaymentMethodData<
+                domain_types::payment_method_data::DefaultPCIHolder,
+            >,
+        >,
+        _mandate_ids: &Option<domain_types::connector_types::MandateIds>,
+    ) -> bool {
+        auth_type.is_three_ds()
+            && payment_method_data
+                .as_ref()
+                .is_some_and(|pmd| pmd.is_card())
+    }
+
+    /// Check if AuthN is needed based on redirect response
+    fn is_authentication_flow_required(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        redirect_response: &Option<domain_types::connector_types::ContinueRedirectionResponse>,
+    ) -> bool {
+        let redirection_params = redirect_response
+            .as_ref()
+            .and_then(|redirect| redirect.params.as_ref());
+
+        match redirection_params {
+            Some(param) if !param.peek().is_empty() && auth_type.is_three_ds() => true,
+            Some(_) | None => false,
+        }
+    }
+
+    /// For 3dsexempt: if PreAuth returns no redirect (no three_ds_method_url),
+    /// continue to AuthN in the same composite call
+    fn should_continue_to_authenticate_after_preauth(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method_data: &Option<
+            domain_types::payment_method_data::PaymentMethodData<
+                domain_types::payment_method_data::DefaultPCIHolder,
+            >,
+        >,
+    ) -> bool {
+        auth_type.is_three_ds()
+            && payment_method_data
+                .as_ref()
+                .is_some_and(|pmd| pmd.is_card())
+    }
 }

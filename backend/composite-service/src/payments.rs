@@ -4,14 +4,19 @@ use domain_types::{
     utils::ForeignTryFrom as _,
 };
 use grpc_api_types::payments::{
+    composite_payment_method_authentication_service_server::CompositePaymentMethodAuthenticationService,
     composite_payment_service_server::CompositePaymentService,
     customer_service_server::CustomerService,
     merchant_authentication_service_server::MerchantAuthenticationService,
+    payment_method_authentication_service_server::PaymentMethodAuthenticationService,
     payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
-    CompositeGetRequest, CompositeGetResponse, ConnectorState, CustomerServiceCreateResponse,
+    CompositeGetRequest, CompositeGetResponse, CompositePreauthenticateRequest,
+    CompositePreauthenticateResponse, ConnectorState, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
 };
 
 use crate::transformers::ForeignFrom;
@@ -62,31 +67,35 @@ impl CompositeAccessTokenRequest for CompositeGetRequest {
 }
 
 #[derive(Clone)]
-pub struct Payments<P, M, C> {
+pub struct Payments<P, M, C, A> {
     payment_service: P,
     merchant_authentication_service: M,
     customer_service: C,
+    payment_method_authentication_service: A,
 }
 
-impl<P, M, C> Payments<P, M, C> {
+impl<P, M, C, A> Payments<P, M, C, A> {
     pub fn new(
         payment_service: P,
         merchant_authentication_service: M,
         customer_service: C,
+        payment_method_authentication_service: A,
     ) -> Self {
         Self {
             payment_service,
             merchant_authentication_service,
             customer_service,
+            payment_method_authentication_service,
         }
     }
 }
 
-impl<P, M, C> Payments<P, M, C>
+impl<P, M, C, A> Payments<P, M, C, A>
 where
     P: PaymentService + Clone + Send + Sync + 'static,
     M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
     C: CustomerService + Clone + Send + Sync + 'static,
+    A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
     async fn create_access_token<R: CompositeAccessTokenRequest>(
         &self,
@@ -287,14 +296,52 @@ where
             get_response: Some(get_response),
         }))
     }
+
+    async fn pre_authenticate(
+        &self,
+        payload: &CompositePreauthenticateRequest,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<PaymentMethodAuthenticationServicePreAuthenticateResponse, tonic::Status> {
+        let pre_authenticate_payload =
+            PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(payload);
+
+        let mut pre_authenticate_request = tonic::Request::new(pre_authenticate_payload);
+        *pre_authenticate_request.metadata_mut() = metadata.clone();
+        *pre_authenticate_request.extensions_mut() = extensions.clone();
+
+        let pre_authenticate_response = self
+            .payment_method_authentication_service
+            .pre_authenticate(pre_authenticate_request)
+            .await?
+            .into_inner();
+
+        Ok(pre_authenticate_response)
+    }
+
+    async fn process_composite_pre_authenticate(
+        &self,
+        request: tonic::Request<CompositePreauthenticateRequest>,
+    ) -> Result<tonic::Response<CompositePreauthenticateResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let pre_authenticate_response = self
+            .pre_authenticate(&payload, &metadata, &extensions)
+            .await?;
+
+        Ok(tonic::Response::new(CompositePreauthenticateResponse {
+            pre_authenticate_response: Some(pre_authenticate_response),
+        }))
+    }
 }
 
 #[tonic::async_trait]
-impl<P, M, C> CompositePaymentService for Payments<P, M, C>
+impl<P, M, C, A> CompositePaymentService for Payments<P, M, C, A>
 where
     P: PaymentService + Clone + Send + Sync + 'static,
     M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
     C: CustomerService + Clone + Send + Sync + 'static,
+    A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
     async fn composite_authorize(
         &self,
@@ -308,5 +355,21 @@ where
         request: tonic::Request<CompositeGetRequest>,
     ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
         self.process_composite_get(request).await
+    }
+}
+
+#[tonic::async_trait]
+impl<P, M, C, A> CompositePaymentMethodAuthenticationService for Payments<P, M, C, A>
+where
+    P: PaymentService + Clone + Send + Sync + 'static,
+    M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
+    C: CustomerService + Clone + Send + Sync + 'static,
+    A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
+{
+    async fn composite_preauthenticate(
+        &self,
+        request: tonic::Request<CompositePreauthenticateRequest>,
+    ) -> Result<tonic::Response<CompositePreauthenticateResponse>, tonic::Status> {
+        self.process_composite_pre_authenticate(request).await
     }
 }

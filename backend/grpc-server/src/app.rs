@@ -103,6 +103,13 @@ pub struct Service {
         crate::server::payments::Payments,
         crate::server::payments::MerchantAuthentication,
         crate::server::payments::Customer,
+        crate::server::payments::PaymentMethodAuthentication,
+    >,
+    pub composite_payment_method_authentication_service: composite_service::payments::Payments<
+        crate::server::payments::Payments,
+        crate::server::payments::MerchantAuthentication,
+        crate::server::payments::Customer,
+        crate::server::payments::PaymentMethodAuthentication,
     >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
@@ -132,6 +139,8 @@ impl Service {
         }
         let customer_service = crate::server::payments::Customer;
         let merchant_authentication_service = crate::server::payments::MerchantAuthentication;
+        let payment_method_authentication_service =
+            crate::server::payments::PaymentMethodAuthentication;
 
         let payments_service = crate::server::payments::Payments {
             customer_service: customer_service.clone(),
@@ -141,11 +150,20 @@ impl Service {
             payments_service.clone(),
             merchant_authentication_service.clone(),
             customer_service.clone(),
+            payment_method_authentication_service.clone(),
         );
+        let composite_payment_method_authentication_service =
+            composite_service::payments::Payments::new(
+                payments_service.clone(),
+                merchant_authentication_service.clone(),
+                customer_service.clone(),
+                payment_method_authentication_service.clone(),
+            );
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             composite_payments_service,
+            composite_payment_method_authentication_service,
             payments_service,
             refunds_service: crate::server::refunds::Refunds,
             disputes_service: crate::server::disputes::Disputes,
@@ -154,8 +172,7 @@ impl Service {
             payment_method_service: crate::server::payments::PaymentMethod,
             merchant_authentication_service,
             customer_service,
-            payment_method_authentication_service:
-                crate::server::payments::PaymentMethodAuthentication,
+            payment_method_authentication_service,
         }
     }
 
@@ -191,6 +208,7 @@ impl Service {
         let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
         let app_state = crate::http::AppState::new(
             self.composite_payments_service,
+            self.composite_payment_method_authentication_service,
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
