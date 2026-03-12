@@ -148,7 +148,7 @@ def build_authorize_request(
     amt = amount or DEFAULT_AMOUNT
     
     req = PaymentServiceAuthorizeRequest()
-    req.merchant_transaction_id.id = f"smoke_test_{os.urandom(4).hex()}"
+    req.merchant_transaction_id = f"smoke_test_{os.urandom(4).hex()}"
     req.amount.minor_amount = amt["minor_amount"]
     req.amount.currency = amt["currency"]
     req.capture_method = AUTOMATIC

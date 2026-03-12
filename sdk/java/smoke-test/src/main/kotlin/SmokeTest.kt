@@ -146,7 +146,7 @@ fun buildAuthorizeRequest(cardType: String = "visa"): PaymentServiceAuthorizeReq
     val card = TEST_CARDS[cardType] ?: TEST_CARDS["visa"]!!
     
     return PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionIdBuilder.id = "smoke_test_${System.currentTimeMillis()}_${(0..9999).random()}"
+        merchantTransactionId = "smoke_test_${System.currentTimeMillis()}_${(0..9999).random()}"
         amountBuilder.apply {
             minorAmount = DEFAULT_AMOUNT["minorAmount"] as Long
             currency = DEFAULT_AMOUNT["currency"] as Currency

@@ -102,7 +102,7 @@ function buildAuthorizeRequest(cardType: string = "visa"): any {
   const card = TEST_CARDS[cardType] || TEST_CARDS.visa;
 
   return PaymentServiceAuthorizeRequest.create({
-    merchantTransactionId: { id: `smoke_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` },
+    merchantTransactionId: `smoke_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     amount: {
       minorAmount: DEFAULT_AMOUNT.minorAmount,
       currency: DEFAULT_AMOUNT.currency,

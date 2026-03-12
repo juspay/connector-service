@@ -119,9 +119,7 @@ async function testAccessTokenFlow(): Promise<void> {
   console.log("\n--- Step 2: Authorize with Access Token ---");
   const authorizeRequest: types.IPaymentServiceAuthorizeRequest =
     PaymentServiceAuthorizeRequest.create({
-      merchantTransactionId: {
-        id: "authorize_with_token_" + Date.now(),
-      },
+      merchantTransactionId: "authorize_with_token_" + Date.now(),
       amount: {
         minorAmount: 1000, // $10.00
         currency: Currency.USD,
