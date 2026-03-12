@@ -38,7 +38,7 @@ pub trait BodyDecoding {
         secrets: Option<ConnectorSourceVerificationSecrets>,
         body: &[u8],
     ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
-        let secrets = secrets.ok_or(domain_types::errors::ConnectorError::DecodingFailed)?;
+        let secrets = secrets.ok_or(domain_types::errors::ConnectorError::DecodingFailed(None))?;
 
         let algorithm = self.get_algorithm()?;
         let extracted_secrets = self.get_secrets(secrets)?;
@@ -46,6 +46,6 @@ pub trait BodyDecoding {
 
         algorithm
             .decode_message(&extracted_secrets, message.into())
-            .change_context(domain_types::errors::ConnectorError::DecodingFailed)
+            .change_context(domain_types::errors::ConnectorError::DecodingFailed(None))
     }
 }
