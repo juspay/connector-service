@@ -287,7 +287,7 @@ impl HttpClient {
             .map_err(|e| NetworkError {
                 code: NetworkErrorCode::ResponseDecodingFailed,
                 message: format!("Failed to read response body: {}", e),
-                status_code: Some(response.status().as_u16() as u32),
+                status_code: Some(status_code as u32),
             })?
             .to_vec();
 

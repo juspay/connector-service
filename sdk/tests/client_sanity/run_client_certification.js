@@ -57,10 +57,10 @@ async function main() {
   const echoServer = await startEchoServer();
 
   for (const lang of languages) {
-    console.log(`\n🚀 [ORCHESTRATOR]: Testing ${lang.toUpperCase()} SDK...`);
+    console.log(`\n[ORCHESTRATOR]: Testing ${lang.toUpperCase()} SDK...`);
 
     for (const scenario of manifest.scenarios) {
-      console.log(`   👉 Scenario: ${scenario.id}`);
+      console.log(`   Scenario: ${scenario.id}`);
 
       const sourceId = `${lang}_${scenario.id}`;
       const actualStore = path.join(ARTIFACTS_DIR, `actual_${lang}_${scenario.id}.json`);

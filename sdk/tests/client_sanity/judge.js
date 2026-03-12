@@ -181,12 +181,12 @@ async function runCertification() {
       const skipReason = scenario[`skip_reason_${lang}`] || scenario.skip_reason || '';
 
       if (result.status === 'SUCCESS') {
-        console.log(`   ✅ ${scenario.id}: Passed`);
+        console.log(`   PASS ${scenario.id}`);
       } else {
         const optionalMarker = isOptional ? ' [OPTIONAL]' : '';
         const reasonSuffix = skipReason ? ` — ${skipReason}` : '';
-        const icon = isOptional ? '⚠️' : '❌';
-        console.error(`   ${icon} ${scenario.id}${optionalMarker}: ${result.status} (${result.message})${reasonSuffix}`);
+        const prefix = isOptional ? 'WARN' : 'FAIL';
+        console.error(`   ${prefix} ${scenario.id}${optionalMarker}: ${result.status} (${result.message})${reasonSuffix}`);
       }
     }
 
@@ -201,18 +201,18 @@ async function runCertification() {
     reportData.push({ lang, results: langResults });
   }
 
-  // GENERATE MARKDOWN REPORT
-  let markdown = `# 🛡️ HTTP Client Sanity Report\n\n**Verdict**: ${totalFailed === 0 ? '✅ PASS' : '❌ FAIL'}\n\n`;
-  markdown += '## 📊 Language Scorecard\n| Language | Certified | Success Rate | Status |\n| :--- | :--- | :--- | :--- |\n';
+  // GENERATE MARKDOWN REPORT (plain text, neutral, no emojis)
+  let markdown = `# HTTP Client Sanity Report\n\n**Verdict**: ${totalFailed === 0 ? 'PASS' : 'FAIL'}\n\n`;
+  markdown += '## Language Scorecard\n| Language | Certified | Success Rate | Status |\n| :--- | :--- | :--- | :--- |\n';
 
   reportData.forEach(entry => {
     const passed = entry.results.filter(r => r.status === 'SUCCESS').length;
     const total = entry.results.length;
     const pct = Math.round((passed / total) * 100);
-    markdown += `| **${entry.lang.toUpperCase()}** | ${passed}/${total} | ${pct}% | ${passed === total ? '✅' : '⚠️'} |\n`;
+    markdown += `| **${entry.lang.toUpperCase()}** | ${passed}/${total} | ${pct}% | ${passed === total ? 'PASS' : 'WARN'} |\n`;
   });
 
-  markdown += '\n## 🔍 Detailed Scenario Audit\n| ID | Description | ' + languages.map(l => l.toUpperCase()).join(' | ') + ' |\n| :--- | :--- | ' + languages.map(() => ':---:').join(' | ') + ' |\n';
+  markdown += '\n## Detailed Scenario Audit\n| ID | Description | ' + languages.map(l => l.toUpperCase()).join(' | ') + ' |\n| :--- | :--- | ' + languages.map(() => ':---:').join(' | ') + ' |\n';
 
   manifest.scenarios.forEach(scenario => {
     const globallyOptional = scenario.optional;
@@ -220,10 +220,10 @@ async function runCertification() {
     let row = `| **${scenario.id}**${optionalTag} | ${scenario.description} | `;
     const statuses = reportData.map(entry => {
       const res = entry.results.find(r => r.id === scenario.id);
-      if (!res) return '➖';
-      if (res.status === 'SUCCESS') return '✅';
+      if (!res) return '-';
+      if (res.status === 'SUCCESS') return 'PASS';
       const isOptional = globallyOptional || (Array.isArray(scenario.skip_langs) && scenario.skip_langs.includes(entry.lang));
-      return isOptional ? '⚠️' : '❌';
+      return isOptional ? 'WARN' : 'FAIL';
     });
     markdown += row + statuses.join(' | ') + ' |\n';
   });
@@ -240,13 +240,13 @@ async function runCertification() {
     }
   });
   if (optionalNotes.length > 0) {
-    markdown += '\n## ℹ️ Optional / Skipped Scenarios\n\nThese failures do not block certification.\n\n';
+    markdown += '\n## Optional / Skipped Scenarios\n\nThese failures do not block certification.\n\n';
     markdown += optionalNotes.join('\n') + '\n';
   }
 
   const reportPath = path.join(ARTIFACTS_DIR, 'REPORT.md');
   fs.writeFileSync(reportPath, markdown);
-  console.log('\n✨ Certification Complete. Report: sdk/tests/client_sanity/artifacts/REPORT.md');
+  console.log('\nCertification Complete. Report: sdk/tests/client_sanity/artifacts/REPORT.md');
 
   process.exit(totalFailed === 0 ? 0 : 1);
 }

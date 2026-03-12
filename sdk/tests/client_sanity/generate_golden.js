@@ -60,4 +60,4 @@ manifest.scenarios.forEach((scenario) => {
   console.log(`   📄 golden_${scenario.id}.json`);
 });
 
-console.log('✅ Golden captures generated from manifest.');
+console.log('Golden captures generated from manifest.');
