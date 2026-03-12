@@ -187,7 +187,7 @@ mod tests {
             assertions.get("status"),
             Some(FieldAssert::OneOf { one_of }) if one_of == &vec![Value::String("CHARGED".to_string())]
         ));
-        assert!(assertions.get("error").is_none());
+        assert!(!assertions.contains_key("error"));
         assert!(matches!(
             assertions.get("connector_transaction_id"),
             Some(FieldAssert::MustExist { must_exist: true })

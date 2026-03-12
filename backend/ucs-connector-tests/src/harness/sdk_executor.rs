@@ -324,10 +324,26 @@ fn build_ffi_options(
     let proto_auth = build_proto_connector_auth(connector, connector_auth)?;
 
     Ok(FfiOptions {
-        environment: ffi_environment() as i32,
-        connector: proto_connector as i32,
+        environment: environment_discriminant(ffi_environment()),
+        connector: connector_discriminant(proto_connector),
         auth: Some(proto_auth),
     })
+}
+
+fn environment_discriminant(environment: Environment) -> i32 {
+    match environment {
+        Environment::Sandbox => 0,
+        Environment::Production => 1,
+    }
+}
+
+fn connector_discriminant(connector: Connector) -> i32 {
+    match connector {
+        Connector::Authorizedotnet => 5,
+        Connector::Paypal => 62,
+        Connector::Stripe => 75,
+        _ => 0,
+    }
 }
 
 /// Converts harness credential shape into connector-specific protobuf auth oneof.

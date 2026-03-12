@@ -2519,8 +2519,8 @@ mod tests {
             crate::harness::scenario_types::FieldAssert::Contains { contains }
                 if contains == "declin"
         ));
-        assert!(base_assertions.get("status").is_some());
-        assert!(overridden_assertions.get("status").is_none());
+        assert!(base_assertions.contains_key("status"));
+        assert!(!overridden_assertions.contains_key("status"));
     }
 
     #[test]

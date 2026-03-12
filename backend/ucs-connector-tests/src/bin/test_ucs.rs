@@ -1,4 +1,4 @@
-#![allow(clippy::print_stderr, clippy::print_stdout)]
+#![allow(clippy::print_stderr, clippy::print_stdout, clippy::too_many_arguments)]
 
 //! Interactive UCS test runner.
 //!
@@ -559,7 +559,7 @@ fn load_defaults() -> StoredDefaults {
 /// Prints usage/help text for interactive runner.
 fn print_usage() {
     eprintln!(
-        "Usage:\n  cargo run -p ucs-connector-tests --bin test_ucs [--report]\n\nInteractive flow:\n  1) Select connectors (all or specific)\n  2) Select suites (all or specific)\n  3) If suite is specific: select scenarios (all or specific)\n  4) Select interface (gRPC or SDK)\n\nNotes:\n  - Pass --report to generate report.json + test_report.md\n  - Without --report, only test execution output is printed\n  - Exits with non-zero when any scenario fails"
+        "Usage:\n  cargo run -p ucs-connector-tests --bin test_ucs [--report]\n\nInteractive flow:\n  1) Select connectors (all or specific)\n  2) Select suites (all or specific)\n  3) If suite is specific: select scenarios (all or specific)\n  4) Select interface (gRPC or SDK)\n\nNotes:\n  - Pass --report to generate report.json + test_report/ markdown files\n  - Without --report, only test execution output is printed\n  - Exits with non-zero when any scenario fails"
     );
 }
 

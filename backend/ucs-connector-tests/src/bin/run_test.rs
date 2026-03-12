@@ -413,7 +413,7 @@ fn save_defaults(defaults: &StoredDefaults) -> Result<(), String> {
     })
 }
 
-/// Appends one run result into `report.json` / `test_report.md`.
+/// Appends one run result into `report.json` / `test_report/` markdown outputs.
 fn write_report_entry(
     report: bool,
     suite: &str,
@@ -552,7 +552,7 @@ fn parse_args(args: impl Iterator<Item = String>) -> Result<CliArgs, String> {
 /// Prints CLI usage/help text.
 fn print_usage() {
     eprintln!(
-        "Usage:\n  cargo run -p ucs-connector-tests --bin run_test -- [--suite <suite>] [--scenario <scenario>] [--connector <name>] [--endpoint <host:port>] [--creds-file <path>] [--merchant-id <id>] [--tenant-id <id>] [--report] [--tls]\n  cargo run -p ucs-connector-tests --bin run_test -- [suite] [scenario] [connector]\n\nDefault mode behavior:\n  - Loads scenario request JSON\n  - Executes grpcurl\n  - Runs assertions and prints PASS/FAIL\n\nOptional report output:\n  - Pass --report to clear previous report.json at start\n  - Pass --report to write run details into report.json and auto-generate test_report.md\n\nSave once and reuse auth/endpoint:\n  cargo run -p ucs-connector-tests --bin run_test -- --set-defaults --endpoint <host:port> --creds-file <path>\n  cargo run -p ucs-connector-tests --bin run_test -- --show-defaults\n\nDefaults:\n  suite: {DEFAULT_SUITE}\n  scenario: {DEFAULT_SCENARIO}\n  connector: {DEFAULT_CONNECTOR}\n  endpoint: {DEFAULT_ENDPOINT}\n  merchant-id: test_merchant\n  tenant-id: default\n  transport: plaintext\n\nConfig path:\n  $UCS_RUN_TEST_DEFAULTS_PATH or ~/.config/ucs-connector-tests/run_test_defaults.json\nReport path:\n  $UCS_RUN_TEST_REPORT_PATH or backend/ucs-connector-tests/report.json"
+        "Usage:\n  cargo run -p ucs-connector-tests --bin run_test -- [--suite <suite>] [--scenario <scenario>] [--connector <name>] [--endpoint <host:port>] [--creds-file <path>] [--merchant-id <id>] [--tenant-id <id>] [--report] [--tls]\n  cargo run -p ucs-connector-tests --bin run_test -- [suite] [scenario] [connector]\n\nDefault mode behavior:\n  - Loads scenario request JSON\n  - Executes grpcurl\n  - Runs assertions and prints PASS/FAIL\n\nOptional report output:\n  - Pass --report to clear previous report.json at start\n  - Pass --report to write run details into report.json and auto-generate test_report/ markdown files\n\nSave once and reuse auth/endpoint:\n  cargo run -p ucs-connector-tests --bin run_test -- --set-defaults --endpoint <host:port> --creds-file <path>\n  cargo run -p ucs-connector-tests --bin run_test -- --show-defaults\n\nDefaults:\n  suite: {DEFAULT_SUITE}\n  scenario: {DEFAULT_SCENARIO}\n  connector: {DEFAULT_CONNECTOR}\n  endpoint: {DEFAULT_ENDPOINT}\n  merchant-id: test_merchant\n  tenant-id: default\n  transport: plaintext\n\nConfig path:\n  $UCS_RUN_TEST_DEFAULTS_PATH or ~/.config/ucs-connector-tests/run_test_defaults.json\nReport path:\n  $UCS_RUN_TEST_REPORT_PATH or backend/ucs-connector-tests/report.json"
     );
 }
 

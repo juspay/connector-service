@@ -3,8 +3,9 @@
 //! Report persistence and markdown rendering for harness runs.
 //!
 //! This module appends `ReportEntry` rows into `report.json` and regenerates
-//! `test_report.md` after each write so the latest execution state is always
-//! available in both machine-readable and human-readable formats.
+//! a markdown report directory (`test_report/`) after each write so the latest
+//! execution state is always available in both machine-readable and
+//! human-readable formats.
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -78,6 +79,16 @@ pub fn report_path() -> PathBuf {
 }
 
 fn md_path(json_path: &Path) -> PathBuf {
+    json_path
+        .with_file_name("test_report")
+        .join("test_overview.md")
+}
+
+fn report_dir_path(json_path: &Path) -> PathBuf {
+    json_path.with_file_name("test_report")
+}
+
+fn legacy_md_path(json_path: &Path) -> PathBuf {
     json_path.with_file_name("test_report.md")
 }
 
@@ -85,7 +96,7 @@ fn md_path(json_path: &Path) -> PathBuf {
 // Report operations
 // ---------------------------------------------------------------------------
 
-/// Resets report artifacts (`report.json` and `test_report.md`).
+/// Resets report artifacts (`report.json` and `test_report/`).
 pub fn clear_report() {
     let path = report_path();
     if let Some(parent) = path.parent() {
@@ -93,10 +104,15 @@ pub fn clear_report() {
     }
     let _ = fs::write(&path, "{\"runs\":[]}");
 
-    // Also clear the md file so it stays in sync
-    let md = md_path(&path);
-    if md.exists() {
-        let _ = fs::remove_file(&md);
+    // Also clear markdown report outputs so they stay in sync.
+    let report_dir = report_dir_path(&path);
+    if report_dir.exists() {
+        let _ = fs::remove_dir_all(&report_dir);
+    }
+
+    let legacy_md = legacy_md_path(&path);
+    if legacy_md.exists() {
+        let _ = fs::remove_file(&legacy_md);
     }
 }
 
@@ -412,17 +428,13 @@ struct ConnectorResult {
     result: String,
 }
 
-fn scenario_detail_anchor(suite: &str, scenario: &str) -> String {
-    format!(
-        "scenario-detail-{}-{}",
-        sanitize_anchor(suite),
-        sanitize_anchor(scenario)
-    )
-}
-
-fn scenario_detail_link(suite: &str, scenario: &str) -> String {
-    let anchor = scenario_detail_anchor(suite, scenario);
-    format!("[`{scenario}`](#{anchor})")
+#[derive(Debug, Clone)]
+struct RowData {
+    suite: String,
+    scenario: String,
+    pm: String,
+    pmt: String,
+    results: BTreeMap<String, ConnectorResult>,
 }
 
 fn sanitize_anchor(value: &str) -> String {
@@ -450,22 +462,34 @@ fn sanitize_anchor(value: &str) -> String {
     }
 }
 
-fn connector_anchor(connector: &str) -> String {
+fn connector_section_anchor(connector: &str) -> String {
     format!("connector-{}", sanitize_anchor(connector))
 }
 
-fn scenario_connector_detail_anchor(suite: &str, scenario: &str, connector: &str) -> String {
+fn scenario_relative_path(suite: &str, scenario: &str) -> String {
     format!(
-        "scenario-connector-detail-{}-{}-{}",
+        "./scenarios/{}/{}.md",
         sanitize_anchor(suite),
-        sanitize_anchor(scenario),
-        sanitize_anchor(connector)
+        sanitize_anchor(scenario)
     )
 }
 
 fn linked_result_cell(suite: &str, scenario: &str, connector: &str, result: &str) -> String {
-    let anchor = scenario_connector_detail_anchor(suite, scenario, connector);
-    format!("[{result}](#{anchor})")
+    let rel_path = scenario_relative_path(suite, scenario);
+    let anchor = connector_section_anchor(connector);
+    format!("[{result}]({rel_path}#{anchor})")
+}
+
+fn scenario_detail_link(suite: &str, scenario: &str) -> String {
+    let rel_path = scenario_relative_path(suite, scenario);
+    format!("[`{scenario}`]({rel_path})")
+}
+
+fn scenario_file_path(report_dir: &Path, suite: &str, scenario: &str) -> PathBuf {
+    report_dir
+        .join("scenarios")
+        .join(sanitize_anchor(suite))
+        .join(format!("{}.md", sanitize_anchor(scenario)))
 }
 
 fn split_dependency_label(label: &str) -> Option<(&str, &str)> {
@@ -494,7 +518,9 @@ fn latest_dependency_entry_before(
 ) -> Option<ReportEntry> {
     let (dep_suite, dep_scenario) = split_dependency_label(dependency_label)?;
 
-    report.runs[..main.run_index]
+    report
+        .runs
+        .get(..main.run_index)?
         .iter()
         .rev()
         .find(|entry| {
@@ -523,6 +549,30 @@ fn dependency_chain_summary(report: &ScenarioRunReport, main: &MatrixEntry) -> S
 }
 
 fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), String> {
+    let report_dir = report_dir_path(json_path);
+    fs::create_dir_all(&report_dir).map_err(|e| {
+        format!(
+            "failed to create report directory '{}': {e}",
+            report_dir.display()
+        )
+    })?;
+
+    let scenarios_dir = report_dir.join("scenarios");
+    if scenarios_dir.exists() {
+        fs::remove_dir_all(&scenarios_dir).map_err(|e| {
+            format!(
+                "failed to clear scenario report directory '{}': {e}",
+                scenarios_dir.display()
+            )
+        })?;
+    }
+    fs::create_dir_all(&scenarios_dir).map_err(|e| {
+        format!(
+            "failed to create scenario report directory '{}': {e}",
+            scenarios_dir.display()
+        )
+    })?;
+
     // 1. Filter out dependency entries and deduplicate by (suite, scenario, connector).
     //    When duplicates exist, keep the latest by run_at_epoch_ms.
     let mut deduped: BTreeMap<(String, String, String), MatrixEntry> = BTreeMap::new();
@@ -556,15 +606,11 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
             grpc_response: entry.grpc_response.clone(),
         };
 
-        let should_insert = deduped
-            .get(&key)
-            // Keep latest result; if timestamps are equal (same millisecond),
-            // prefer the later entry from report order by replacing on equality.
-            .is_none_or(|existing| {
-                candidate.run_at > existing.run_at
-                    || (candidate.run_at == existing.run_at
-                        && candidate.run_index >= existing.run_index)
-            });
+        let should_insert = deduped.get(&key).is_none_or(|existing| {
+            candidate.run_at > existing.run_at
+                || (candidate.run_at == existing.run_at
+                    && candidate.run_index >= existing.run_index)
+        });
 
         if should_insert {
             deduped.insert(key, candidate);
@@ -572,11 +618,26 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
     }
 
     if deduped.is_empty() {
-        let md = md_path(json_path);
-        let _ = fs::write(
-            &md,
-            "# UCS Connector Test Report\n\n> No test results found.\n",
-        );
+        let overview_path = md_path(json_path);
+        fs::write(
+            &overview_path,
+            "# UCS Connector Test Report
+
+> No test results found.
+",
+        )
+        .map_err(|e| {
+            format!(
+                "failed to write markdown '{}': {e}",
+                overview_path.display()
+            )
+        })?;
+
+        let legacy_md = legacy_md_path(json_path);
+        if legacy_md.exists() {
+            let _ = fs::remove_file(legacy_md);
+        }
+
         return Ok(());
     }
 
@@ -588,16 +649,6 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
         }
         set.into_iter().collect()
     };
-
-    // Row key = (suite_sort_key, scenario) for ordering.
-    // We need (suite, scenario) -> { pm, pmt, per-connector result }.
-    struct RowData {
-        suite: String,
-        scenario: String,
-        pm: String,
-        pmt: String,
-        results: BTreeMap<String, ConnectorResult>,
-    }
 
     let mut rows_map: BTreeMap<(usize, String, String), RowData> = BTreeMap::new();
 
@@ -621,70 +672,45 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
         );
     }
 
-    // 3. Compute summary stats.
-    let total_scenarios = rows_map.len();
-    let total_connectors = connectors.len();
-    let mut total_pass = 0usize;
-    let mut total_fail = 0usize;
-    for row in rows_map.values() {
-        for result in row.results.values() {
-            match result.result.as_str() {
-                "PASS" => total_pass += 1,
-                _ => total_fail += 1,
-            }
-        }
-    }
-    let total_cells = total_pass + total_fail;
-    let pass_rate = percent(total_pass, total_cells);
-
-    // 4. Build markdown string.
+    // 3. Build overview markdown (only matrices).
     let mut md = String::with_capacity(4096);
+    md.push_str(
+        "# UCS Connector Test Report
 
-    // Header
-    md.push_str("# UCS Connector Test Report\n\n");
-
-    // Timestamp
+",
+    );
     let epoch_secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    md.push_str(&format!("> Generated: epoch {epoch_secs}\n\n"));
+    md.push_str(&format!(
+        "> Generated: epoch {epoch_secs}
 
-    // Table of contents
-    md.push_str("## Table of Contents\n\n");
-    md.push_str("- [Summary](#summary)\n");
-    md.push_str("- [Scenario Performance Matrix](#scenario-performance-matrix)\n");
-    md.push_str("- [Test Matrix](#test-matrix)\n");
-    md.push_str("- [Scenario Details](#scenario-details)\n");
-    md.push_str("- [Scenario Connector Details](#scenario-connector-details)\n");
-    if total_fail > 0 {
-        md.push_str("- [Failed Scenarios](#failed-scenarios)\n");
-    }
-    md.push_str("- [Results by Connector](#results-by-connector)\n");
-    for connector in &connectors {
-        let anchor = connector_anchor(connector);
-        md.push_str(&format!("  - [{connector}](#{anchor})\n"));
-    }
-    md.push('\n');
+"
+    ));
 
-    // Summary table
-    md.push_str("## Summary\n\n");
-    md.push_str("| Metric | Count |\n");
-    md.push_str("|--------|------:|\n");
-    md.push_str(&format!("| Connectors Tested | {total_connectors} |\n"));
-    md.push_str(&format!("| Total Scenarios | {total_scenarios} |\n"));
-    md.push_str(&format!("| Passed | {total_pass} |\n"));
-    md.push_str(&format!("| Failed | {total_fail} |\n"));
-    md.push_str(&format!("| Pass Rate | {pass_rate:.1}% |\n"));
-    md.push_str("\n[Back to Table of Contents](#table-of-contents)\n");
-    md.push_str("\n---\n\n");
+    md.push_str(
+        "## Scenario Performance Matrix
 
-    // Scenario Performance Matrix
-    md.push_str("## Scenario Performance Matrix\n\n");
-    md.push_str("<details>\n");
-    md.push_str("<summary><strong>Show/Hide Scenario Performance Matrix</strong></summary>\n\n");
-    md.push_str("| Scenario | PM | PMT | Connectors Tested | Passed | Failed | Pass Rate |\n");
-    md.push_str("|:---------|:--:|:---:|------------------:|------:|------:|---------:|\n");
+",
+    );
+    md.push_str(
+        "<details open>
+",
+    );
+    md.push_str(
+        "<summary><strong>Show/Hide Scenario Performance Matrix</strong></summary>
+
+",
+    );
+    md.push_str(
+        "| Scenario | PM | PMT | Connectors Tested | Passed | Failed | Pass Rate |
+",
+    );
+    md.push_str(
+        "|:---------|:--:|:---:|------------------:|------:|------:|---------:|
+",
+    );
 
     for row in rows_map.values() {
         let scenario_cell = scenario_detail_link(&row.suite, &row.scenario);
@@ -696,7 +722,8 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
             .count();
         let scenario_pass_rate = percent(passed_connectors, tested_connectors);
         md.push_str(&format!(
-            "| {} | {} | {} | {} | {} | {} | {:.1}% |\n",
+            "| {} | {} | {} | {} | {} | {} | {:.1}% |
+",
             scenario_cell,
             row.pm,
             row.pmt,
@@ -707,30 +734,45 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
         ));
     }
 
-    md.push_str("\n</details>\n\n");
-    md.push_str("[Back to Table of Contents](#table-of-contents)\n\n");
-    md.push_str("\n---\n\n");
+    md.push_str(
+        "
+</details>
 
-    // Test Matrix — one flat table
-    md.push_str("## Test Matrix\n\n");
-    md.push_str("<details open>\n");
-    md.push_str("<summary><strong>Show/Hide Test Matrix</strong></summary>\n\n");
+",
+    );
+    md.push_str(
+        "---
 
-    // Header row
+",
+    );
+
+    md.push_str(
+        "## Test Matrix
+
+",
+    );
+    md.push_str(
+        "<details open>
+",
+    );
+    md.push_str(
+        "<summary><strong>Show/Hide Test Matrix</strong></summary>
+
+",
+    );
+
     md.push_str("| Scenario | PM | PMT |");
     for connector in &connectors {
         md.push_str(&format!(" {} |", connector));
     }
     md.push('\n');
 
-    // Alignment row
     md.push_str("|:---------|:--:|:---:|");
     for _ in &connectors {
         md.push_str(":------:|");
     }
     md.push('\n');
 
-    // Data rows (already sorted by suite_sort_key then scenario)
     for row in rows_map.values() {
         let scenario_cell = scenario_detail_link(&row.suite, &row.scenario);
         md.push_str(&format!("| {} | {} | {} |", scenario_cell, row.pm, row.pmt));
@@ -745,283 +787,329 @@ fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), Strin
         md.push('\n');
     }
 
-    md.push_str("\n</details>\n\n");
-    md.push_str("[Back to Scenario Performance Matrix](#scenario-performance-matrix) | [Back to Table of Contents](#table-of-contents)\n\n");
+    md.push_str(
+        "
+</details>
+",
+    );
 
-    // Results grouped by connector
-    md.push_str("## Results by Connector\n\n");
-    for connector in &connectors {
-        let anchor = connector_anchor(connector);
+    // 4. Write overview markdown.
+    let out_path = md_path(json_path);
+    fs::write(&out_path, &md)
+        .map_err(|e| format!("failed to write markdown '{}': {e}", out_path.display()))?;
 
-        let mut connector_total = 0usize;
-        let mut connector_pass = 0usize;
-        for row in rows_map.values() {
-            if let Some(cell) = row.results.get(connector) {
-                connector_total += 1;
-                if cell.result == "PASS" {
-                    connector_pass += 1;
-                }
-            }
-        }
-        let connector_fail = connector_total.saturating_sub(connector_pass);
-        let connector_pass_rate = percent(connector_pass, connector_total);
-
-        md.push_str(&format!("<a id=\"{anchor}\"></a>\n"));
-        md.push_str("<details>\n");
-        md.push_str(&format!(
-            "<summary><strong>{connector}</strong> • Passed: {connector_pass}/{connector_total} • Failed: {connector_fail} • Pass Rate: {connector_pass_rate:.1}%</summary>\n\n"
-        ));
-
-        md.push_str("| Scenario | PM | PMT | Result |\n");
-        md.push_str("|:---------|:--:|:---:|:------:|\n");
-
-        for row in rows_map.values() {
-            if let Some(cell) = row.results.get(connector) {
-                let result_cell =
-                    linked_result_cell(&row.suite, &row.scenario, connector, &cell.result);
-                md.push_str(&format!(
-                    "| {} | {} | {} | {} |\n",
-                    scenario_detail_link(&row.suite, &row.scenario),
-                    row.pm,
-                    row.pmt,
-                    result_cell,
-                ));
-            }
+    // 5. Write one scenario detail file per (suite, scenario).
+    for row in rows_map.values() {
+        let detail_path = scenario_file_path(&report_dir, &row.suite, &row.scenario);
+        if let Some(parent) = detail_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| {
+                format!(
+                    "failed to create detail report directory '{}': {e}",
+                    parent.display()
+                )
+            })?;
         }
 
-        md.push_str("[Back to Results by Connector](#results-by-connector) | [Back to Table of Contents](#table-of-contents)\n\n");
-        md.push_str("\n</details>\n\n");
+        let detail_content = render_scenario_markdown(report, row, &connectors, &deduped);
+        fs::write(&detail_path, detail_content).map_err(|e| {
+            format!(
+                "failed to write detail markdown '{}': {e}",
+                detail_path.display()
+            )
+        })?;
     }
 
-    md.push_str("[Back to Table of Contents](#table-of-contents)\n\n");
+    let legacy_md = legacy_md_path(json_path);
+    if legacy_md.exists() {
+        let _ = fs::remove_file(legacy_md);
+    }
 
-    md.push_str("## Scenario Details\n\n");
-    for row in rows_map.values() {
-        let detail_anchor = scenario_detail_anchor(&row.suite, &row.scenario);
+    Ok(())
+}
 
-        md.push_str(&format!("<a id=\"{detail_anchor}\"></a>\n"));
-        md.push_str(&format!("### `{}`\n\n", row.scenario));
-        md.push_str("| Property | Value |\n");
-        md.push_str("|:---------|:------|\n");
-        md.push_str(&format!("| Suite | `{}` |\n", row.suite));
+fn push_collapsible_code_block(
+    md: &mut String,
+    summary: &str,
+    language: &str,
+    content: Option<&str>,
+    empty_message: &str,
+) {
+    md.push_str(
+        "<details>
+",
+    );
+    md.push_str(&format!(
+        "<summary>{summary}</summary>
+
+"
+    ));
+    if let Some(content) = content {
         md.push_str(&format!(
-            "| Service | `{}` |\n",
-            suite_service_name(&row.suite)
+            "```{language}
+"
         ));
-        md.push_str(&format!("| PM / PMT | `{}` / `{}` |\n", row.pm, row.pmt));
+        md.push_str(content);
+        md.push_str(
+            "
+```
 
-        md.push_str("\n| Connector | Result | Prerequisites |\n");
-        md.push_str("|:----------|:------:|:--------------|\n");
-        for connector in &connectors {
-            let key = (row.suite.clone(), row.scenario.clone(), connector.clone());
-            if let Some(entry) = deduped.get(&key) {
-                let linked_result =
-                    linked_result_cell(&row.suite, &row.scenario, connector, &entry.result);
-                let prerequisites = dependency_chain_summary(report, entry);
-                md.push_str(&format!(
-                    "| `{}` | {} | {} |\n",
-                    connector, linked_result, prerequisites
-                ));
-            }
+",
+        );
+    } else {
+        md.push_str(empty_message);
+        md.push_str(
+            "
+
+",
+        );
+    }
+    md.push_str(
+        "</details>
+
+",
+    );
+}
+
+fn render_scenario_markdown(
+    report: &ScenarioRunReport,
+    row: &RowData,
+    connectors: &[String],
+    deduped: &BTreeMap<(String, String, String), MatrixEntry>,
+) -> String {
+    let mut md = String::with_capacity(4096);
+    md.push_str(&format!(
+        "# Scenario `{}`
+
+",
+        row.scenario
+    ));
+    md.push_str(&format!(
+        "- Suite: `{}`
+",
+        row.suite
+    ));
+    md.push_str(&format!(
+        "- Service: `{}`
+",
+        suite_service_name(&row.suite)
+    ));
+    md.push_str(&format!(
+        "- PM / PMT: `{}` / `{}`
+
+",
+        row.pm, row.pmt
+    ));
+
+    md.push_str(
+        "## Connector Summary
+
+",
+    );
+    md.push_str(
+        "| Connector | Result | Prerequisites |
+",
+    );
+    md.push_str(
+        "|:----------|:------:|:--------------|
+",
+    );
+    for connector in connectors {
+        let key = (row.suite.clone(), row.scenario.clone(), connector.clone());
+        if let Some(entry) = deduped.get(&key) {
+            let link = linked_result_cell(&row.suite, &row.scenario, connector, &entry.result);
+            let prerequisites = dependency_chain_summary(report, entry);
+            md.push_str(&format!(
+                "| `{}` | {} | {} |
+",
+                connector, link, prerequisites
+            ));
+        }
+    }
+
+    for connector in connectors {
+        let key = (row.suite.clone(), row.scenario.clone(), connector.clone());
+        let Some(entry) = deduped.get(&key) else {
+            continue;
+        };
+
+        let anchor = connector_section_anchor(connector);
+        md.push_str(
+            "
+---
+
+",
+        );
+        md.push_str(&format!("<a id=\"{anchor}\"></a>\n"));
+        md.push_str(&format!(
+            "## Connector `{}` — `{}`
+
+",
+            connector, entry.result
+        ));
+        if let Some(status) = &entry.response_status {
+            md.push_str(&format!(
+                "- Response Status: `{status}`
+"
+            ));
+        }
+        if let Some(error) = &entry.error {
+            md.push_str(
+                "
+**Error**
+
+",
+            );
+            md.push_str(
+                "```text
+",
+            );
+            md.push_str(error);
+            md.push_str(
+                "
+```
+",
+            );
         }
 
         md.push_str(
-            "\n[Back to Scenario Performance Matrix](#scenario-performance-matrix) | [Back to Test Matrix](#test-matrix) | [Back to Table of Contents](#table-of-contents)\n\n",
+            "
+**Pre Requisites Executed**
+
+",
+        );
+        if entry.dependency.is_empty() {
+            md.push_str(
+                "- None
+",
+            );
+        } else {
+            for (index, dependency_label) in entry.dependency.iter().enumerate() {
+                if let Some(dep_entry) =
+                    latest_dependency_entry_before(report, entry, dependency_label)
+                {
+                    md.push_str(
+                        "<details>
+",
+                    );
+                    md.push_str(&format!(
+                        "<summary>{}. {} — {}</summary>
+
+",
+                        index + 1,
+                        dependency_label,
+                        dep_entry.assertion_result
+                    ));
+                    if let Some(dep_error) = dep_entry.error.as_deref() {
+                        md.push_str(
+                            "**Dependency Error**
+
+",
+                        );
+                        md.push_str(
+                            "```text
+",
+                        );
+                        md.push_str(dep_error);
+                        md.push_str(
+                            "
+```
+
+",
+                        );
+                    }
+
+                    push_collapsible_code_block(
+                        &mut md,
+                        "Show Dependency gRPC Request (masked)",
+                        "bash",
+                        dep_entry.grpc_request.as_deref(),
+                        "_gRPC request trace not available._",
+                    );
+                    push_collapsible_code_block(
+                        &mut md,
+                        "Show Dependency gRPC Response (masked)",
+                        "text",
+                        dep_entry.grpc_response.as_deref(),
+                        "_gRPC response trace not available._",
+                    );
+
+                    let dep_req_body = dep_entry
+                        .req_body
+                        .as_ref()
+                        .and_then(|value| serde_json::to_string_pretty(value).ok());
+                    push_collapsible_code_block(
+                        &mut md,
+                        "Show Dependency Request Body",
+                        "json",
+                        dep_req_body.as_deref(),
+                        "_Request body not available._",
+                    );
+
+                    let dep_res_body = dep_entry
+                        .res_body
+                        .as_ref()
+                        .and_then(|value| serde_json::to_string_pretty(value).ok());
+                    push_collapsible_code_block(
+                        &mut md,
+                        "Show Dependency Response Body",
+                        "json",
+                        dep_res_body.as_deref(),
+                        "_Response body not available._",
+                    );
+                    md.push_str("</details>\n");
+                } else {
+                    md.push_str(&format!(
+                        "- {}. {} — NOT_FOUND\n",
+                        index + 1,
+                        dependency_label
+                    ));
+                }
+            }
+        }
+
+        push_collapsible_code_block(
+            &mut md,
+            "Show gRPC Request (masked)",
+            "bash",
+            entry.grpc_request.as_deref(),
+            "_gRPC request trace not available._",
+        );
+        push_collapsible_code_block(
+            &mut md,
+            "Show gRPC Response (masked)",
+            "text",
+            entry.grpc_response.as_deref(),
+            "_gRPC response trace not available._",
+        );
+
+        let req_body = entry
+            .req_body
+            .as_ref()
+            .and_then(|value| serde_json::to_string_pretty(value).ok());
+        push_collapsible_code_block(
+            &mut md,
+            "Show Request Body",
+            "json",
+            req_body.as_deref(),
+            "_Request body not available._",
+        );
+
+        let res_body = entry
+            .res_body
+            .as_ref()
+            .and_then(|value| serde_json::to_string_pretty(value).ok());
+        push_collapsible_code_block(
+            &mut md,
+            "Show Response Body",
+            "json",
+            res_body.as_deref(),
+            "_Response body not available._",
         );
     }
 
-    md.push_str("[Back to Table of Contents](#table-of-contents)\n\n");
+    md.push_str("\n[Back to Overview](../../test_overview.md)\n");
 
-    md.push_str("---\n\n");
-    md.push_str("## Scenario Connector Details\n\n");
-    for row in rows_map.values() {
-        for connector in &connectors {
-            let key = (row.suite.clone(), row.scenario.clone(), connector.clone());
-            let Some(entry) = deduped.get(&key) else {
-                continue;
-            };
-
-            let detail_anchor =
-                scenario_connector_detail_anchor(&row.suite, &row.scenario, connector);
-            md.push_str(&format!("<a id=\"{detail_anchor}\"></a>\n"));
-            md.push_str(&format!(
-                "#### {} `{}` - connector `{}`\n\n",
-                entry.result, row.scenario, connector
-            ));
-            md.push_str(&format!(
-                "- Scenario: {}\n",
-                scenario_detail_link(&row.suite, &row.scenario)
-            ));
-            md.push_str(&format!("- Suite: `{}`\n", row.suite));
-            md.push_str(&format!(
-                "- Service: `{}`\n",
-                suite_service_name(&row.suite)
-            ));
-            md.push_str(&format!("- Connector: `{}`\n", connector));
-            md.push_str(&format!("- PM / PMT: `{}` / `{}`\n", row.pm, row.pmt));
-            md.push_str(&format!("- Result: `{}`\n", entry.result));
-            if let Some(status) = &entry.response_status {
-                md.push_str(&format!("- Response Status: `{status}`\n"));
-            }
-            if let Some(error) = &entry.error {
-                md.push_str("\n**Error**\n\n");
-                md.push_str("```text\n");
-                md.push_str(error);
-                md.push_str("\n```\n");
-            }
-
-            md.push_str("\n**Pre Requisites Executed**\n\n");
-            if entry.dependency.is_empty() {
-                md.push_str("- None\n");
-            } else {
-                for (index, dependency_label) in entry.dependency.iter().enumerate() {
-                    if let Some(dep_entry) =
-                        latest_dependency_entry_before(report, entry, dependency_label)
-                    {
-                        md.push_str("<details>\n");
-                        md.push_str(&format!(
-                            "<summary>{}. {} — {}</summary>\n\n",
-                            index + 1,
-                            dependency_label,
-                            dep_entry.assertion_result
-                        ));
-                        if let Some(dep_error) = dep_entry.error.as_deref() {
-                            md.push_str("**Dependency Error**\n\n");
-                            md.push_str("```text\n");
-                            md.push_str(dep_error);
-                            md.push_str("\n```\n\n");
-                        }
-                        md.push_str("**gRPC Request (masked)**\n\n");
-                        if let Some(grpc_request) = dep_entry.grpc_request.as_deref() {
-                            md.push_str("```bash\n");
-                            md.push_str(grpc_request);
-                            md.push_str("\n```\n\n");
-                        } else {
-                            md.push_str("_gRPC request trace not available._\n\n");
-                        }
-                        md.push_str("**gRPC Response (masked)**\n\n");
-                        if let Some(grpc_response) = dep_entry.grpc_response.as_deref() {
-                            md.push_str("```text\n");
-                            md.push_str(grpc_response);
-                            md.push_str("\n```\n\n");
-                        } else {
-                            md.push_str("_gRPC response trace not available._\n\n");
-                        }
-                        md.push_str("**Request Body**\n\n");
-                        if let Some(req_body) = dep_entry.req_body.as_ref() {
-                            if let Ok(pretty) = serde_json::to_string_pretty(req_body) {
-                                md.push_str("```json\n");
-                                md.push_str(&pretty);
-                                md.push_str("\n```\n\n");
-                            } else {
-                                md.push_str("_Request body serialization failed._\n\n");
-                            }
-                        } else {
-                            md.push_str("_Request body not available._\n\n");
-                        }
-                        md.push_str("**Response Body**\n\n");
-                        if let Some(res_body) = dep_entry.res_body.as_ref() {
-                            if let Ok(pretty) = serde_json::to_string_pretty(res_body) {
-                                md.push_str("```json\n");
-                                md.push_str(&pretty);
-                                md.push_str("\n```\n\n");
-                            } else {
-                                md.push_str("_Response body serialization failed._\n\n");
-                            }
-                        } else {
-                            md.push_str("_Response body not available._\n\n");
-                        }
-                        md.push_str("</details>\n");
-                    } else {
-                        md.push_str(&format!(
-                            "- {}. {} — NOT_FOUND\n",
-                            index + 1,
-                            dependency_label
-                        ));
-                    }
-                }
-            }
-
-            md.push_str("\n<details>\n");
-            md.push_str("<summary>Show Details (Main Scenario Request/Response)</summary>\n\n");
-            md.push_str("**gRPC Request (masked)**\n\n");
-            if let Some(grpc_request) = entry.grpc_request.as_deref() {
-                md.push_str("```bash\n");
-                md.push_str(grpc_request);
-                md.push_str("\n```\n\n");
-            } else {
-                md.push_str("_gRPC request trace not available._\n\n");
-            }
-            md.push_str("**gRPC Response (masked)**\n\n");
-            if let Some(grpc_response) = entry.grpc_response.as_deref() {
-                md.push_str("```text\n");
-                md.push_str(grpc_response);
-                md.push_str("\n```\n\n");
-            } else {
-                md.push_str("_gRPC response trace not available._\n\n");
-            }
-            md.push_str("**Request Body**\n\n");
-            if let Some(req_body) = entry.req_body.as_ref() {
-                if let Ok(pretty) = serde_json::to_string_pretty(req_body) {
-                    md.push_str("```json\n");
-                    md.push_str(&pretty);
-                    md.push_str("\n```\n\n");
-                } else {
-                    md.push_str("_Request body serialization failed._\n\n");
-                }
-            } else {
-                md.push_str("_Request body not available._\n\n");
-            }
-            md.push_str("**Response Body**\n\n");
-            if let Some(res_body) = entry.res_body.as_ref() {
-                if let Ok(pretty) = serde_json::to_string_pretty(res_body) {
-                    md.push_str("```json\n");
-                    md.push_str(&pretty);
-                    md.push_str("\n```\n\n");
-                } else {
-                    md.push_str("_Response body serialization failed._\n\n");
-                }
-            } else {
-                md.push_str("_Response body not available._\n\n");
-            }
-            md.push_str("</details>\n\n");
-            let scenario_anchor = scenario_detail_anchor(&row.suite, &row.scenario);
-            md.push_str(&format!(
-                "[Back to Scenario Detail](#{scenario_anchor}) | [Back to Scenario Performance Matrix](#scenario-performance-matrix) | [Back to Test Matrix](#test-matrix) | [Back to Table of Contents](#table-of-contents)\n\n"
-            ));
-            md.push_str("---\n\n");
-        }
-    }
-
-    md.push_str("[Back to Table of Contents](#table-of-contents)\n\n");
-
-    let mut failures: Vec<(String, String, String)> = Vec::new();
-    for row in rows_map.values() {
-        for connector in &connectors {
-            if let Some(cell) = row.results.get(connector) {
-                if cell.result != "PASS" {
-                    failures.push((row.suite.clone(), row.scenario.clone(), connector.clone()));
-                }
-            }
-        }
-    }
-
-    if !failures.is_empty() {
-        md.push_str("## Failed Scenarios\n\n");
-        for (suite, scenario, connector) in failures {
-            let anchor = scenario_connector_detail_anchor(&suite, &scenario, &connector);
-            md.push_str(&format!(
-                "- [{} / {} / {}](#{})\n",
-                suite, scenario, connector, anchor
-            ));
-        }
-        md.push_str("\n[Back to Table of Contents](#table-of-contents)\n\n");
-    }
-
-    // 5. Write
-    let out_path = md_path(json_path);
-    fs::write(&out_path, &md)
-        .map_err(|e| format!("failed to write markdown '{}': {e}", out_path.display()))
+    md
 }
 
 fn percent(numerator: usize, denominator: usize) -> f64 {
@@ -1124,8 +1212,9 @@ mod tests {
 
         generate_md(&json_path, &report).expect("markdown generation should succeed");
 
-        let md_path = md_path(&json_path);
-        let content = fs::read_to_string(&md_path).expect("generated markdown should be readable");
+        let overview_path = md_path(&json_path);
+        let content =
+            fs::read_to_string(&overview_path).expect("generated markdown should be readable");
 
         assert!(!content.contains("img.shields.io"));
         assert!(!content.contains("![Result]"));
@@ -1133,17 +1222,29 @@ mod tests {
         assert!(!content.contains("![Passed]"));
         assert!(!content.contains("![Failed]"));
 
-        assert!(content.contains("| Passed | 1 |"));
-        assert!(content.contains("| Failed | 1 |"));
-        assert!(content.contains("| Pass Rate | 50.0% |"));
+        assert!(content.contains("## Scenario Performance Matrix"));
+        assert!(content.contains("## Test Matrix"));
+        assert!(!content.contains("## Summary"));
+        assert!(!content.contains("## Scenario Details"));
         assert!(content.contains(
-            "[PASS](#scenario-connector-detail-authorize-no3ds-auto-capture-credit-card-stripe)"
+            "[PASS](./scenarios/authorize/no3ds-auto-capture-credit-card.md#connector-stripe)"
         ));
         assert!(content.contains(
-            "[FAIL](#scenario-connector-detail-authorize-no3ds-auto-capture-credit-card-paypal)"
+            "[FAIL](./scenarios/authorize/no3ds-auto-capture-credit-card.md#connector-paypal)"
         ));
 
-        let _ = fs::remove_file(md_path);
+        let stripe_detail = temp_root
+            .join("test_report")
+            .join("scenarios")
+            .join("authorize")
+            .join("no3ds-auto-capture-credit-card.md");
+        let stripe_detail_content =
+            fs::read_to_string(&stripe_detail).expect("detail markdown should be readable");
+        assert!(stripe_detail_content.contains("# Scenario `no3ds_auto_capture_credit_card`"));
+        assert!(stripe_detail_content.contains("## Connector `stripe` — `PASS`"));
+        assert!(stripe_detail_content.contains("<summary>Show gRPC Request (masked)</summary>"));
+        assert!(stripe_detail_content.contains("[Back to Overview](../../test_overview.md)"));
+
         let _ = fs::remove_dir_all(temp_root);
     }
 
@@ -1202,13 +1303,26 @@ mod tests {
         let req_body = entry.req_body.expect("request body should exist");
         let res_body = entry.res_body.expect("response body should exist");
 
-        assert_eq!(req_body["api_key"], MASKED_VALUE);
         assert_eq!(
-            req_body["payment_method"]["card"]["card_number"],
-            MASKED_VALUE
+            req_body.get("api_key").and_then(Value::as_str),
+            Some(MASKED_VALUE)
         );
-        assert_eq!(req_body["payment_method"]["card"]["card_cvc"], MASKED_VALUE);
-        assert_eq!(res_body["access_token"], MASKED_VALUE);
+        assert_eq!(
+            req_body
+                .pointer("/payment_method/card/card_number")
+                .and_then(Value::as_str),
+            Some(MASKED_VALUE)
+        );
+        assert_eq!(
+            req_body
+                .pointer("/payment_method/card/card_cvc")
+                .and_then(Value::as_str),
+            Some(MASKED_VALUE)
+        );
+        assert_eq!(
+            res_body.get("access_token").and_then(Value::as_str),
+            Some(MASKED_VALUE)
+        );
     }
 
     #[test]
