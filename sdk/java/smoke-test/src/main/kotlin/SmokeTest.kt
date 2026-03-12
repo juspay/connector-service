@@ -24,8 +24,6 @@ import payments.ConnectorConfig
 import payments.RequestConfig
 import payments.Connector
 import payments.Environment
-import uniffi.connector_service_ffi.UniffiException
-import uniffi.connector_service_ffi.authorizeReqTransformer
 import java.io.File
 
 // Test card configurations
@@ -266,14 +264,6 @@ fun testConnector(
                     status = response.status.number,
                     type = "PaymentServiceAuthorizeResponse",
                     passed = true
-                )
-            )
-        } catch (e: UniffiException) {
-            result.copy(
-                status = "passed_with_error",
-                roundTripTest = RoundTripResult(
-                    passed = true,
-                    error = e.message ?: "Unknown UniFFI error"
                 )
             )
         } catch (e: Exception) {
