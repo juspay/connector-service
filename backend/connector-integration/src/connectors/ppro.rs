@@ -292,125 +292,47 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Ppro<T>
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
-    {
-        let mut header = self.get_auth_header(&req.connector_auth_type)?;
-        header.push((
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        ));
-        Ok(header)
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Ppro,
+    curl_request: Json(PproAgreementChargeRequest),
+    curl_response: PproPaymentsResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
+            let mut header = self.get_auth_header(&req.connector_auth_type)?;
+            header.push((
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            ));
+            Ok(header)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let agr_id = req.request.connector_mandate_id().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "mandate_reference.connector_mandate_id",
+                },
+            )?;
+            Ok(format!(
+                "{}/v1/payment-agreements/{}/payment-charges",
+                self.base_url(&req.resource_common_data.connectors),
+                agr_id
+            ))
+        }
     }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let agr_id = req.request.connector_mandate_id().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "mandate_reference.connector_mandate_id",
-            },
-        )?;
-        Ok(format!(
-            "{}/v1/payment-agreements/{}/payment-charges",
-            self.base_url(&req.resource_common_data.connectors),
-            agr_id
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
-        let ppro_req = PproAgreementChargeRequest::try_from(PproRouterData {
-            connector: self.to_owned(),
-            router_data: req.clone(),
-        })?;
-        Ok(Some(common_utils::request::RequestContent::Json(Box::new(
-            ppro_req,
-        ))))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
-        let request = common_utils::request::RequestBuilder::new()
-            .method(common_utils::request::Method::Post)
-            .url(&self.get_url(req)?)
-            .attach_default_headers()
-            .headers(self.get_headers(req)?)
-            .set_optional_body(self.get_request_body(req)?)
-            .build();
-        Ok(Some(request))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData<T>,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut events::Event>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: PproPaymentsResponse = res
-            .response
-            .parse_struct("PproPaymentsResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-        with_error_response_body!(event_builder, response);
-        RouterDataV2::try_from(ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        })
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
@@ -804,17 +726,6 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
 
     ppro_supported_payment_methods.add(
         common_enums::PaymentMethod::Upi,
-        common_enums::PaymentMethodType::UpiCollect,
-        PaymentMethodDetails {
-            mandates: FeatureStatus::NotSupported,
-            refunds: FeatureStatus::Supported,
-            supported_capture_methods: ppro_bridge_supported_capture_methods.clone(),
-            specific_features: None,
-        },
-    );
-
-    ppro_supported_payment_methods.add(
-        common_enums::PaymentMethod::Upi,
         common_enums::PaymentMethodType::UpiIntent,
         PaymentMethodDetails {
             mandates: FeatureStatus::NotSupported,
@@ -835,7 +746,7 @@ static PPRO_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
         ),
         (
             common_enums::PaymentMethodType::Trustly,
-            FeatureStatus::NotSupported,
+            FeatureStatus::Supported,
         ),
         (
             common_enums::PaymentMethodType::Blik,

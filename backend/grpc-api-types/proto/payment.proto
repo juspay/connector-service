@@ -714,6 +714,8 @@ message MandateAmountData {
   Currency currency = 2;         // Currency code (ISO 4217)
   optional int64 start_date = 3;              // Unix timestamp for start date
   optional int64 end_date = 4;                // Unix timestamp for end date
+  optional string amount_type = 5;    // Amount type for variable mandates ("exact", "max", "variable")
+  optional string frequency = 6;     // Frequency for recurring mandates ("daily", "weekly", "monthly")
 }
 
 // Mandate type with amount details

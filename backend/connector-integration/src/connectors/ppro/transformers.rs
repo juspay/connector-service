@@ -1,6 +1,6 @@
 use common_enums;
 use common_utils::consts;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use super::PproRouterData;
@@ -13,6 +13,7 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors,
+    mandates::MandateDataType,
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
@@ -56,11 +57,14 @@ pub struct PproPaymentsRequest {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PproAuthenticationType {
-    ScanCode,
-    MultiFactor,
-    AppNotification,
-    AppIntent,
     Redirect,
+    // TODO: Uncomment when adding support for other authentication flows
+    // ScanCode,
+    // MultiFactor,
+    // AppNotification,
+    // AppIntent,
+    #[serde(other)]
+    Unknown,
 }
 
 #[derive(Debug, Serialize)]
@@ -76,10 +80,11 @@ pub struct PproAuthenticationSettings {
 pub struct PproAuthSettingsDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scan_by: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mobile_intent_uri: Option<String>,
+    // TODO: Uncomment when adding support for other authentication flows
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub scan_by: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub mobile_intent_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -93,7 +98,7 @@ pub struct PproConsumer {
     pub country: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amount {
     pub currency: String,
     pub value: common_utils::MinorUnit,
@@ -119,8 +124,7 @@ where
         let router_data = item.router_data;
         let payment_method = match router_data.request.payment_method_type {
             Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
-            Some(common_enums::PaymentMethodType::UpiCollect)
-            | Some(common_enums::PaymentMethodType::UpiIntent) => "UPI".to_string(),
+            Some(common_enums::PaymentMethodType::UpiIntent) => "UPI".to_string(),
             Some(common_enums::PaymentMethodType::AliPay) => "ALIPAY".to_string(),
             Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
             Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
@@ -138,40 +142,42 @@ where
             value: common_utils::MinorUnit::new(router_data.request.amount.get_amount_as_i64()),
         };
 
-        let mut authentication_settings = vec![];
-        if let Some(return_url) = &router_data.request.router_return_url {
-            authentication_settings.push(PproAuthenticationSettings {
-                r#type: PproAuthenticationType::Redirect,
-                settings: Some(PproAuthSettingsDetails {
-                    return_url: Some(return_url.to_string()),
-                    scan_by: None,
-                    mobile_intent_uri: None,
-                }),
-            });
-        }
-
-        authentication_settings.extend(vec![
-            PproAuthenticationSettings {
-                r#type: PproAuthenticationType::ScanCode,
-                settings: None,
-            },
-            PproAuthenticationSettings {
-                r#type: PproAuthenticationType::MultiFactor,
-                settings: None,
-            },
-            PproAuthenticationSettings {
-                r#type: PproAuthenticationType::AppNotification,
-                settings: None,
-            },
-            PproAuthenticationSettings {
-                r#type: PproAuthenticationType::AppIntent,
-                settings: Some(PproAuthSettingsDetails {
-                    return_url: None,
-                    scan_by: None,
-                    mobile_intent_uri: router_data.request.router_return_url.clone(),
-                }),
-            },
-        ]);
+        // Currently only Redirect authentication is requested.
+        // TODO: When adding other authentication flows, extend this list based on payment method:
+        //
+        // authentication_settings.push(PproAuthenticationSettings {
+        //     r#type: PproAuthenticationType::ScanCode,
+        //     settings: None,
+        // });
+        // authentication_settings.push(PproAuthenticationSettings {
+        //     r#type: PproAuthenticationType::MultiFactor,
+        //     settings: None,
+        // });
+        // authentication_settings.push(PproAuthenticationSettings {
+        //     r#type: PproAuthenticationType::AppNotification,
+        //     settings: None,
+        // });
+        // authentication_settings.push(PproAuthenticationSettings {
+        //     r#type: PproAuthenticationType::AppIntent,
+        //     settings: Some(PproAuthSettingsDetails {
+        //         return_url: None,
+        //         scan_by: None,
+        //         mobile_intent_uri: router_data.request.router_return_url.clone(),
+        //     }),
+        // });
+        let authentication_settings =
+            router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .map(|return_url| {
+                    vec![PproAuthenticationSettings {
+                        r#type: PproAuthenticationType::Redirect,
+                        settings: Some(PproAuthSettingsDetails {
+                            return_url: Some(return_url.to_string()),
+                        }),
+                    }]
+                });
 
         let consumer = router_data
             .resource_common_data
@@ -193,7 +199,7 @@ where
             payment_descriptor: router_data.resource_common_data.description.clone(),
             amount,
             consumer,
-            authentication_settings: Some(authentication_settings),
+            authentication_settings,
         })
     }
 }
@@ -280,18 +286,19 @@ pub struct PproAuthDetailsResponse {
     pub request_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub request_method: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code_type: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code_image: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code_payload: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code_document: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scan_by: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mobile_intent_uri: Option<String>,
+    // TODO: Uncomment when adding support for other authentication flows
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub code_type: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub code_image: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub code_payload: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub code_document: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub scan_by: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub mobile_intent_uri: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -512,85 +519,44 @@ impl<F, Req> TryFrom<ResponseRouterData<PproPaymentsResponse, Self>>
         let mut redirection_data: Option<domain_types::router_response_types::RedirectForm> = None;
         if status == common_enums::AttemptStatus::AuthenticationPending {
             if let Some(auth_methods) = item.response.authentication_methods.as_ref() {
-                let methods_array: &Vec<PproAuthenticationResponse> = auth_methods;
-                let mut is_sdk_flow = false;
-                if let Some(meta_data) = item
-                    .router_data
-                    .resource_common_data
-                    .connector_meta_data
-                    .clone()
-                {
-                    let meta_val = meta_data.expose();
-                    if let Some(sdk_params) = meta_val.get("sdk_params").and_then(|v| v.as_bool()) {
-                        is_sdk_flow = sdk_params;
-                    }
-                }
-
-                let priorities: Vec<PproAuthenticationType> = if is_sdk_flow {
-                    vec![
-                        PproAuthenticationType::AppIntent,
-                        PproAuthenticationType::ScanCode,
-                        PproAuthenticationType::AppNotification,
-                        PproAuthenticationType::Redirect,
-                        PproAuthenticationType::MultiFactor,
-                    ]
-                } else {
-                    vec![
-                        PproAuthenticationType::Redirect,
-                        PproAuthenticationType::AppNotification,
-                        PproAuthenticationType::MultiFactor,
-                        PproAuthenticationType::ScanCode,
-                        PproAuthenticationType::AppIntent,
-                    ]
-                };
-                for priority in priorities {
-                    if let Some(matched) = methods_array.iter().find(|m| m.r#type == priority) {
-                        if let Some(details) = &matched.details {
-                            match priority {
-                                PproAuthenticationType::ScanCode => {
-                                    if let Some(payload) = &details.code_payload {
-                                        redirection_data = Some(domain_types::router_response_types::RedirectForm::Uri {
-                                              uri: payload.to_string(),
-                                          });
-                                        break;
-                                    }
-                                }
-                                PproAuthenticationType::AppIntent => {
-                                    if let Some(intent_uri) = &details.mobile_intent_uri {
-                                        redirection_data = Some(domain_types::router_response_types::RedirectForm::Uri {
-                                              uri: intent_uri.to_string(),
-                                          });
-                                        break;
-                                    }
-                                }
-                                PproAuthenticationType::Redirect => {
-                                    if let Some(url) = &details.request_url {
-                                        // Use Uri for UPI payment methods, Form for others
-                                        let is_upi =
-                                            item.router_data.resource_common_data.payment_method
-                                                == common_enums::PaymentMethod::Upi;
-                                        redirection_data = if is_upi {
-                                            Some(domain_types::router_response_types::RedirectForm::Uri {
-                                                uri: url.to_string(),
-                                            })
-                                        } else {
-                                            let method = match details.request_method.as_deref() {
-                                                Some("POST") => common_utils::request::Method::Post,
-                                                _ => common_utils::request::Method::Get,
-                                            };
-                                            Some(domain_types::router_response_types::RedirectForm::Form {
-                                                endpoint: url.to_string(),
-                                                method,
-                                                form_fields: std::collections::HashMap::new(),
-                                            })
-                                        };
-                                        break;
-                                    }
-                                }
-                                PproAuthenticationType::AppNotification
-                                | PproAuthenticationType::MultiFactor => {
-                                    break;
-                                }
+                // Currently only Redirect flow is supported.
+                // TODO: When adding other authentication flows, use priority-based selection:
+                //
+                // let priorities: Vec<PproAuthenticationType> = match &item.router_data.request.payment_method_data {
+                //     PaymentMethodData::Wallet(WalletData::SatispaySdk(_)) => {
+                //         vec![PproAuthenticationType::AppIntent, PproAuthenticationType::ScanCode, PproAuthenticationType::Redirect]
+                //     }
+                //     PaymentMethodData::Wallet(WalletData::MbWaySdk(_)) => {
+                //         vec![PproAuthenticationType::AppNotification, PproAuthenticationType::Redirect]
+                //     }
+                //     PaymentMethodData::Upi(UpiData::UpiIntent(_)) => {
+                //         vec![PproAuthenticationType::Redirect, PproAuthenticationType::ScanCode]
+                //     }
+                //     _ => vec![PproAuthenticationType::Redirect],
+                // };
+                //
+                // Then iterate priorities and match:
+                //   ScanCode   -> details.code_payload  -> RedirectForm::Uri
+                //   AppIntent  -> details.mobile_intent_uri -> RedirectForm::Uri
+                //   Redirect   -> details.request_url   -> RedirectForm::Form
+                //   AppNotification / MultiFactor -> no redirect needed
+                //
+                // Find the Redirect authentication method from PPRO's response
+                for method in auth_methods {
+                    if method.r#type == PproAuthenticationType::Redirect {
+                        if let Some(details) = &method.details {
+                            if let Some(url) = &details.request_url {
+                                let http_method = match details.request_method.as_deref() {
+                                    Some("POST") => common_utils::request::Method::Post,
+                                    _ => common_utils::request::Method::Get,
+                                };
+                                redirection_data =
+                                    Some(domain_types::router_response_types::RedirectForm::Form {
+                                        endpoint: url.to_string(),
+                                        method: http_method,
+                                        form_fields: std::collections::HashMap::new(),
+                                    });
+                                break;
                             }
                         }
                     }
@@ -827,32 +793,19 @@ where
             ),
         };
 
-        let mut authentication_settings = vec![];
-        if let Some(return_url) = &router_data.request.router_return_url {
-            authentication_settings.push(PproAuthenticationSettings {
-                r#type: PproAuthenticationType::Redirect,
-                settings: Some(PproAuthSettingsDetails {
-                    return_url: Some(return_url.clone()),
-                    scan_by: None,
-                    mobile_intent_uri: None,
-                }),
-            });
-        }
-
-        authentication_settings.extend(vec![
-            PproAuthenticationSettings {
-                r#type: PproAuthenticationType::ScanCode,
-                settings: None,
-            },
-            PproAuthenticationSettings {
-                r#type: PproAuthenticationType::MultiFactor,
-                settings: None,
-            },
-            PproAuthenticationSettings {
-                r#type: PproAuthenticationType::AppNotification,
-                settings: None,
-            },
-        ]);
+        let authentication_settings =
+            router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .map(|return_url| {
+                    vec![PproAuthenticationSettings {
+                        r#type: PproAuthenticationType::Redirect,
+                        settings: Some(PproAuthSettingsDetails {
+                            return_url: Some(return_url.clone()),
+                        }),
+                    }]
+                });
 
         let consumer = router_data
             .resource_common_data
@@ -876,9 +829,9 @@ where
             .as_ref()
             .and_then(|m| m.mandate_type.as_ref())
             .and_then(|t| match t {
-                domain_types::mandates::MandateDataType::SingleUse(a) => a.start_date,
-                domain_types::mandates::MandateDataType::MultiUse(Some(a)) => a.start_date,
-                domain_types::mandates::MandateDataType::MultiUse(None) => None,
+                MandateDataType::SingleUse(a) => a.start_date,
+                MandateDataType::MultiUse(Some(a)) => a.start_date,
+                MandateDataType::MultiUse(None) => None,
             })
             .map(|dt| format!("{}Z", dt.to_string().replace(" ", "T")));
 
@@ -888,43 +841,54 @@ where
             .as_ref()
             .and_then(|m| m.mandate_type.as_ref())
             .and_then(|t| match t {
-                domain_types::mandates::MandateDataType::SingleUse(a) => a.end_date,
-                domain_types::mandates::MandateDataType::MultiUse(Some(a)) => a.end_date,
-                domain_types::mandates::MandateDataType::MultiUse(None) => None,
+                MandateDataType::SingleUse(a) => a.end_date,
+                MandateDataType::MultiUse(Some(a)) => a.end_date,
+                MandateDataType::MultiUse(None) => None,
             })
             .map(|dt| format!("{}Z", dt.to_string().replace(" ", "T")));
 
-        let metadata = router_data
+        // Read amount_type and frequency from setup_mandate_details
+        let (amount_type, frequency) = router_data
             .request
-            .metadata
+            .setup_mandate_details
             .as_ref()
-            .map(|m| m.clone().expose());
+            .and_then(|mandate_data| match &mandate_data.mandate_type {
+                Some(MandateDataType::MultiUse(Some(amount_data)))
+                | Some(MandateDataType::SingleUse(amount_data)) => {
+                    let amt_type = amount_data
+                        .amount_type
+                        .as_ref()
+                        .map(|s: &String| match s.to_uppercase().as_str() {
+                            "MAX" => PproAmountType::Max,
+                            "VARIABLE" => PproAmountType::Variable,
+                            _ => PproAmountType::Exact,
+                        })
+                        .unwrap_or_default();
 
-        let amount_type = metadata
-            .as_ref()
-            .and_then(|m| m.get("amount_type"))
-            .and_then(|v| v.as_str())
-            .map(|s| match s.to_uppercase().as_str() {
-                "MAX" => PproAmountType::Max,
-                "VARIABLE" => PproAmountType::Variable,
-                _ => PproAmountType::Exact,
-            })
-            .unwrap_or_default();
+                    let freq = amount_data.frequency.as_ref().and_then(|f: &String| {
+                        let parts: Vec<&str> = f.split(':').collect();
+                        let f_type = parts.first()?;
+                        let interval = parts
+                            .get(1)
+                            .and_then(|s: &&str| s.parse::<u32>().ok())
+                            .unwrap_or(1);
+                        let r_type = match f_type.to_uppercase().as_str() {
+                            "DAILY" => PproFrequencyType::Daily,
+                            "WEEKLY" => PproFrequencyType::Weekly,
+                            "YEARLY" => PproFrequencyType::Yearly,
+                            _ => PproFrequencyType::Monthly,
+                        };
+                        Some(PproFrequency {
+                            r#type: r_type,
+                            interval,
+                        })
+                    });
 
-        let frequency = metadata.as_ref().and_then(|m| {
-            let f_type = m.get("frequency_type")?.as_str()?;
-            let interval = u32::try_from(m.get("frequency_interval")?.as_u64()?).ok()?;
-            let r_type = match f_type.to_uppercase().as_str() {
-                "DAILY" => PproFrequencyType::Daily,
-                "WEEKLY" => PproFrequencyType::Weekly,
-                "YEARLY" => PproFrequencyType::Yearly,
-                _ => PproFrequencyType::Monthly,
-            };
-            Some(PproFrequency {
-                r#type: r_type,
-                interval,
+                    Some((amt_type, freq))
+                }
+                _ => None,
             })
-        });
+            .unwrap_or((PproAmountType::Exact, None));
 
         // Build instrument details based on payment method type.
         // Most payment methods don't require instrument details upfront - PPRO creates it during authentication.
@@ -948,11 +912,7 @@ where
             frequency,
             consumer,
             initial_payment_charge: None, // Can be extended if needed for Link & Pay
-            authentication_settings: if authentication_settings.is_empty() {
-                None
-            } else {
-                Some(authentication_settings)
-            },
+            authentication_settings,
             instrument,
         })
     }
