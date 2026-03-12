@@ -17,6 +17,8 @@ use grpc_api_types::payments::{
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServiceAuthenticateResponse,
+    PaymentMethodAuthenticationServicePostAuthenticateRequest,
+    PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
@@ -236,6 +238,10 @@ where
         let create_customer_response = self
             .create_connector_customer(&connector, &payload, &metadata, &extensions)
             .await?;
+        let post_authenticate_response = self
+            .post_authenticate(&connector, &payload, &metadata, &extensions)
+            .await?;
+
         let authorize_response = self
             .authorize(
                 &payload,
@@ -250,6 +256,7 @@ where
             access_token_response,
             create_customer_response,
             authorize_response: Some(authorize_response),
+            post_authenticate_response,
         }))
     }
 
@@ -357,6 +364,43 @@ where
             .into_inner();
 
         Ok(authenticate_response)
+    }
+
+    async fn post_authenticate(
+        &self,
+        connector: &ConnectorEnum,
+        payload: &CompositeAuthorizeRequest,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<Option<PaymentMethodAuthenticationServicePostAuthenticateResponse>, tonic::Status> {
+        let connector_data = ConnectorData::<
+            domain_types::payment_method_data::DefaultPCIHolder,
+        >::get_connector_by_name(connector);
+        let should_do_post_authenticate = false //connector_data
+        //     .connector
+        //     .is_post_authentication_flow_required(&payload.redirection_response);
+
+        let post_authenticate_response = match should_do_post_authenticate {
+            true => {
+                let post_authenticate_payload =
+                    PaymentMethodAuthenticationServicePostAuthenticateRequest::foreign_from(payload);
+
+                let mut post_authenticate_request = tonic::Request::new(post_authenticate_payload);
+                *post_authenticate_request.metadata_mut() = metadata.clone();
+                *post_authenticate_request.extensions_mut() = extensions.clone();
+
+                let post_authenticate_response = self
+                    .payment_method_authentication_service
+                    .post_authenticate(post_authenticate_request)
+                    .await?
+                    .into_inner();
+
+                Some(post_authenticate_response)
+            }
+            false => None,
+        };
+
+        Ok(post_authenticate_response)
     }
 
     async fn process_composite_authenticate(
