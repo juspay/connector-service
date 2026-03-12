@@ -77,30 +77,29 @@ fn parse_connector_config_from_deprecated_header(
     header_value: &metadata::MetadataValue<metadata::Ascii>,
 ) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), ApplicationErrorResponse>
 {
-    let header_str = header_value.to_str().change_context(
-        ApplicationErrorResponse::BadRequest(ApiError {
+    let header_str = header_value
+        .to_str()
+        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
             sub_code: "INVALID_CONNECTOR_CONFIG_HEADER".to_string(),
             error_identifier: 400,
             error_message: "x-connector-auth header contains non-ASCII characters".to_string(),
             error_object: None,
-        }),
-    )?;
+        }))?;
 
     // Rewrite old field name to new: "auth_type" → "config"
     let rewritten = header_str.replace("\"auth_type\"", "\"config\"");
 
-    let typed_config: grpc_api_types::payments::ConnectorSpecificConfig =
-        serde_json::from_str(&rewritten).change_context(ApplicationErrorResponse::BadRequest(
-            ApiError {
-                sub_code: "INVALID_CONNECTOR_CONFIG_JSON".to_string(),
-                error_identifier: 400,
-                error_message:
-                    "Failed to parse x-connector-auth JSON into ConnectorSpecificConfig. \
+    let typed_config: grpc_api_types::payments::ConnectorSpecificConfig = serde_json::from_str(
+        &rewritten,
+    )
+    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+        sub_code: "INVALID_CONNECTOR_CONFIG_JSON".to_string(),
+        error_identifier: 400,
+        error_message: "Failed to parse x-connector-auth JSON into ConnectorSpecificConfig. \
                      Migrate to x-connector-config with {\"config\":{...}} format."
-                        .to_string(),
-                error_object: None,
-            },
-        ))?;
+            .to_string(),
+        error_object: None,
+    }))?;
 
     let config = typed_config.config.as_ref().ok_or_else(|| {
         Report::new(ApplicationErrorResponse::BadRequest(ApiError {
@@ -363,9 +362,7 @@ mod tests {
     #[test]
     fn new_header_takes_precedence_over_deprecated() {
         let new_json = stripe_config_json("new-key");
-        let old_json = format!(
-            r#"{{"auth_type":{{"Stripe":{{"api_key":"old-key"}}}}}}"#
-        );
+        let old_json = format!(r#"{{"auth_type":{{"Stripe":{{"api_key":"old-key"}}}}}}"#);
         let mut metadata = MetadataMap::new();
         metadata.insert(
             consts::X_CONNECTOR_CONFIG,
