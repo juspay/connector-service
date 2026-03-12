@@ -11,6 +11,7 @@ Defaults = sdk_config_pb2.HttpDefault
 # Type alias for proto-generated HttpConfig and sub-configs
 HttpConfig = sdk_config_pb2.HttpConfig
 ProxyOptions = sdk_config_pb2.ProxyOptions
+NetworkErrorCode = sdk_config_pb2.NetworkErrorCode
 
 @dataclass
 class HttpRequest:
@@ -26,11 +27,34 @@ class HttpResponse:
     body: bytes
     latency_ms: float
 
-class ConnectorError(Exception):
-    def __init__(self, message: str, status_code: Optional[int] = None, error_code: Optional[str] = None):
+class NetworkError(Exception):
+    """Network error for HTTP transport failures. Uses proto NetworkErrorCode for cross-SDK parity."""
+
+    def __init__(
+        self,
+        message: str,
+        code: int = sdk_config_pb2.NetworkErrorCode.NETWORK_ERROR_CODE_UNSPECIFIED,
+        status_code: Optional[int] = None,
+    ):
         super().__init__(message)
+        self.code = code
         self.status_code = status_code
-        self.error_code = error_code
+
+    @property
+    def error_code(self) -> str:
+        """String error code for parity with RequestError/ResponseError (e.g. 'CONNECT_TIMEOUT')."""
+        names = {
+            sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT: "CONNECT_TIMEOUT",
+            sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT: "RESPONSE_TIMEOUT",
+            sdk_config_pb2.NetworkErrorCode.TOTAL_TIMEOUT: "TOTAL_TIMEOUT",
+            sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE: "NETWORK_FAILURE",
+            sdk_config_pb2.NetworkErrorCode.INVALID_CONFIGURATION: "INVALID_CONFIGURATION",
+            sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION: "CLIENT_INITIALIZATION",
+            sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED: "URL_PARSING_FAILED",
+            sdk_config_pb2.NetworkErrorCode.RESPONSE_DECODING_FAILED: "RESPONSE_DECODING_FAILED",
+            sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION: "INVALID_PROXY_CONFIGURATION",
+        }
+        return names.get(self.code, "NETWORK_ERROR_CODE_UNSPECIFIED")
 
 def resolve_proxies(proxy_options: Optional[ProxyOptions]) -> Optional[Dict[str, Optional[str]]]:
     """
@@ -90,11 +114,11 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
                 read=read_timeout
             )
         )
-    except ConnectorError:
+    except NetworkError:
         raise  # already classified, pass through
     except Exception as e:
-        code = "INVALID_PROXY_CONFIGURATION" if "proxy" in str(e).lower() else "CLIENT_INITIALIZATION"
-        raise ConnectorError(f"Internal HTTP setup failed: {e}", 500, code)
+        code = sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION if "proxy" in str(e).lower() else sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION
+        raise NetworkError(f"Internal HTTP setup failed: {e}", code, 500)
 
 async def execute(
     request: HttpRequest,
@@ -109,11 +133,11 @@ async def execute(
     try:
         parsed_url = httpx.URL(request.url)
         if parsed_url.scheme not in ('http', 'https'):
-            raise ConnectorError(f"Invalid URL (missing or unsupported scheme): {request.url}", None, "URL_PARSING_FAILED")
-    except ConnectorError:
+            raise NetworkError(f"Invalid URL (missing or unsupported scheme): {request.url}", sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED)
+    except NetworkError:
         raise
     except Exception:
-        raise ConnectorError(f"Invalid URL: {request.url}", None, "URL_PARSING_FAILED")
+        raise NetworkError(f"Invalid URL: {request.url}", sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED)
     start_time = time.time()
 
     # Per-request timeout override merged with the already-resolved client defaults.
@@ -150,7 +174,7 @@ async def execute(
         try:
             body = response.content
         except Exception as e:
-            raise ConnectorError(f"Failed to read response body: {e}", response.status_code, "RESPONSE_DECODING_FAILED")
+            raise NetworkError(f"Failed to read response body: {e}", sdk_config_pb2.NetworkErrorCode.RESPONSE_DECODING_FAILED, response.status_code)
 
         return HttpResponse(
             status_code=response.status_code,
@@ -160,8 +184,8 @@ async def execute(
         )
 
     except httpx.ConnectTimeout:
-        raise ConnectorError(f"Connection Timeout: {request.url}", 504, "CONNECT_TIMEOUT")
+        raise NetworkError(f"Connection Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT, 504)
     except (httpx.ReadTimeout, httpx.WriteTimeout):
-        raise ConnectorError(f"Response Timeout: {request.url}", 504, "RESPONSE_TIMEOUT")
+        raise NetworkError(f"Response Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT, 504)
     except Exception as e:
-        raise ConnectorError(f"Network Error: {str(e)}", 500, "NETWORK_FAILURE")
+        raise NetworkError(f"Network Error: {str(e)}", sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE, 500)

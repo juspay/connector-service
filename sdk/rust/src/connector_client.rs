@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use crate::http_client::{
-    merge_http_options, HttpClient, HttpClientError, HttpOptions as NativeHttpOptions,
-    HttpRequest as ClientHttpRequest,
+    merge_http_options, HttpClient, HttpOptions as NativeHttpOptions,
+    HttpRequest as ClientHttpRequest, NetworkError,
 };
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
@@ -39,7 +39,7 @@ impl ConnectorClient {
     pub fn new(
         config: ConnectorConfig,
         options: Option<RequestConfig>,
-    ) -> Result<Self, HttpClientError> {
+    ) -> Result<Self, NetworkError> {
         let defaults = options.unwrap_or_default();
 
         // Map the Protobuf options to native transport options

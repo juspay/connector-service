@@ -14,7 +14,7 @@
 
 import { Dispatcher } from "undici";
 import { UniffiClient } from "./uniffi_client";
-import { execute, createDispatcher, HttpRequest, ConnectorError } from "../http_client";
+import { execute, createDispatcher, HttpRequest, NetworkError } from "../http_client";
 // @ts-ignore - protobuf generated files might not have types yet
 import { types } from "./generated/proto";
 
@@ -43,10 +43,10 @@ export class ConnectorClient {
     this.defaults = defaults;
 
     if (config.connector === undefined) {
-      throw new ConnectorError(
+      throw new NetworkError(
         "Connector is required in ConnectorConfig",
-        400,
-        "CLIENT_INITIALIZATION"
+        types.NetworkErrorCode.CLIENT_INITIALIZATION,
+        400
       );
     }
 

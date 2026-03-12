@@ -86,6 +86,7 @@ function verifyScenario(lang, scenarioId, goldenPath, actualPath, capturePath, e
   const captureExists = fs.existsSync(capturePath);
 
   // Error scenarios: certify the SDK error code only. No request reaches server, so no capture.
+  // Supports NetworkError codes (CONNECT_TIMEOUT, URL_PARSING_FAILED, etc.) and other SDK error types.
   if (expectedError) {
     if (!actualExists) {
       return { status: 'MISSING', message: 'Actual error capture missing' };
@@ -205,10 +206,10 @@ async function runCertification() {
   markdown += '## 📊 Language Scorecard\n| Language | Certified | Success Rate | Status |\n| :--- | :--- | :--- | :--- |\n';
 
   reportData.forEach(entry => {
-    const success = entry.results.filter(r => r.status === 'SUCCESS').length;
+    const passed = entry.results.filter(r => r.status === 'SUCCESS').length;
     const total = entry.results.length;
-    const pct = Math.round((success / total) * 100);
-    markdown += `| **${entry.lang.toUpperCase()}** | ${total}/${total} | ${pct}% | ${success === total ? '✅' : '⚠️'} |\n`;
+    const pct = Math.round((passed / total) * 100);
+    markdown += `| **${entry.lang.toUpperCase()}** | ${passed}/${total} | ${pct}% | ${passed === total ? '✅' : '⚠️'} |\n`;
   });
 
   markdown += '\n## 🔍 Detailed Scenario Audit\n| ID | Description | ' + languages.map(l => l.toUpperCase()).join(' | ') + ' |\n| :--- | :--- | ' + languages.map(() => ':---:').join(' | ') + ' |\n';

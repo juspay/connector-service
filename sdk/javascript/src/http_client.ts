@@ -24,19 +24,31 @@ export interface HttpResponse {
   latencyMs: number; // Flat field for cross-language parity
 }
 
+/** Network error codes from proto (single source of truth). */
+export const NetworkErrorCode = types.NetworkErrorCode;
+
 /**
- * Specialized error class for HTTP failures in the Connector Service.
+ * Network error for HTTP transport failures (timeouts, connection errors, config).
+ * Uses proto-generated NetworkErrorCode for cross-SDK parity with RequestError/ResponseError.
  */
-export class ConnectorError extends Error {
+export class NetworkError extends Error {
   constructor(
-    public message: string,
+    message: string,
+    public code: types.NetworkErrorCode = types.NetworkErrorCode.NETWORK_ERROR_CODE_UNSPECIFIED,
     public statusCode?: number,
-    public errorCode?: 'CONNECT_TIMEOUT' | 'RESPONSE_TIMEOUT' | 'TOTAL_TIMEOUT' | 'NETWORK_FAILURE' | 'INVALID_CONFIGURATION' | 'CLIENT_INITIALIZATION' | 'URL_PARSING_FAILED' | 'RESPONSE_DECODING_FAILED' | 'INVALID_PROXY_CONFIGURATION' | string,
     public body?: string,
     public headers?: Record<string, string>
   ) {
     super(message);
-    this.name = "ConnectorError";
+    this.name = "NetworkError";
+  }
+
+  /**
+   * String error code for parity with RequestError/ResponseError (e.g. "CONNECT_TIMEOUT").
+   * Use for logging, display, and simple comparisons.
+   */
+  get errorCode(): string {
+    return types.NetworkErrorCode[this.code as number] ?? "NETWORK_ERROR_CODE_UNSPECIFIED";
   }
 }
 
@@ -80,13 +92,8 @@ export function createDispatcher(config: types.IHttpConfig): Dispatcher {
       ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
       : new Agent(dispatcherOptions);
   } catch (error: any) {
-    // If we were attempting proxy setup, any constructor failure is a proxy config error.
-    const code = proxyUrl ? 'INVALID_PROXY_CONFIGURATION' : 'CLIENT_INITIALIZATION';
-    throw new ConnectorError(
-      `Internal HTTP setup failed: ${error.message}`,
-      500,
-      code
-    );
+    const code = proxyUrl ? types.NetworkErrorCode.INVALID_PROXY_CONFIGURATION : types.NetworkErrorCode.CLIENT_INITIALIZATION;
+    throw new NetworkError(`Internal HTTP setup failed: ${error.message}`, code, 500);
   }
 }
 
@@ -103,7 +110,7 @@ export async function execute(
   try {
     new URL(url);
   } catch {
-    throw new ConnectorError(`Invalid URL: ${url}`, undefined, 'URL_PARSING_FAILED');
+    throw new NetworkError(`Invalid URL: ${url}`, types.NetworkErrorCode.URL_PARSING_FAILED);
   }
 
   const totalTimeout = options.totalTimeoutMs ?? Defaults.TOTAL_TIMEOUT_MS;
@@ -130,7 +137,7 @@ export async function execute(
     try {
       responseBody = new Uint8Array(await response.arrayBuffer());
     } catch (e: any) {
-      throw new ConnectorError(`Failed to read response body: ${e?.message || e}`, response.status, 'RESPONSE_DECODING_FAILED');
+      throw new NetworkError(`Failed to read response body: ${e?.message || e}`, types.NetworkErrorCode.RESPONSE_DECODING_FAILED, response.status);
     }
 
     return {
@@ -140,34 +147,34 @@ export async function execute(
       latencyMs: Date.now() - startTime
     };
   } catch (error: any) {
-    if (error instanceof ConnectorError) throw error;
+    if (error instanceof NetworkError) throw error;
     if (error.name === 'AbortError') {
-      throw new ConnectorError(
+      throw new NetworkError(
         `Total Request Timeout: ${method} ${url} exceeded ${totalTimeout}ms`,
-        504,
-        'TOTAL_TIMEOUT'
+        types.NetworkErrorCode.TOTAL_TIMEOUT,
+        504
       );
     }
 
     const cause = error.cause;
     if (cause) {
       if (cause.code === 'UND_ERR_CONNECT_TIMEOUT') {
-        throw new ConnectorError(
+        throw new NetworkError(
           `Connection Timeout: Failed to connect to ${url}`,
-          504,
-          'CONNECT_TIMEOUT'
+          types.NetworkErrorCode.CONNECT_TIMEOUT,
+          504
         );
       }
       if (cause.code === 'UND_ERR_BODY_TIMEOUT' || cause.code === 'UND_ERR_HEADERS_TIMEOUT') {
-        throw new ConnectorError(
+        throw new NetworkError(
           `Response Timeout: Gateway ${url} accepted connection but failed to respond`,
-          504,
-          'RESPONSE_TIMEOUT'
+          types.NetworkErrorCode.RESPONSE_TIMEOUT,
+          504
         );
       }
     }
 
-    throw new ConnectorError(`Network Error: ${error.message}`, 500, error.code || 'NETWORK_FAILURE');
+    throw new NetworkError(`Network Error: ${error.message}`, types.NetworkErrorCode.NETWORK_FAILURE, 500);
   } finally {
     clearTimeout(timeoutId);
   }
