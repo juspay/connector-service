@@ -290,6 +290,11 @@ macros::create_all_prerequisites!(
 
 // After adding the ConnectorIntegrationV2 implementation, we can now implement PaymentSessionToken
 // Type alias for non-generic trait implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Novalnet<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Novalnet<T>
 {

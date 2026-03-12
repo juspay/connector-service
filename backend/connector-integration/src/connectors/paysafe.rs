@@ -280,6 +280,11 @@ macros::create_all_prerequisites!(
     }
 );
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Paysafe<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Paysafe<T>
 {

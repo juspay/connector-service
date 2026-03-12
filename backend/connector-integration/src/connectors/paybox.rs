@@ -53,6 +53,24 @@ pub(crate) mod headers {
 }
 
 // ============================================================================
+// CONNECTOR SPECIFICATIONS IMPLEMENTATION
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Paybox<T>
+{
+}
+
+// ============================================================================
+// CONNECTOR SPECIFICATIONS IMPLEMENTATION
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Paybox<T>
+{
+}
+
+// ============================================================================
 // CONNECTOR COMMON IMPLEMENTATION - Must be defined before macros
 // ============================================================================
 

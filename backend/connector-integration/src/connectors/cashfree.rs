@@ -304,6 +304,11 @@ macros::macro_connector_implementation!(
 
 // Type alias for non-generic trait implementations
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Cashfree<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Cashfree<T>
 {

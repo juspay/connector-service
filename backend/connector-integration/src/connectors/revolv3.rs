@@ -36,6 +36,11 @@ pub(crate) mod headers {
     pub(crate) const REVOLV3_TOKEN: &str = "x-revolv3-token";
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Revolv3<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Revolv3<T>
 {
