@@ -435,7 +435,7 @@ impl Customer {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_config: connector_config,
+            connector_config,
             request: connector_customer_request_data,
             response: Err(ErrorResponse::default()),
         };
@@ -703,7 +703,7 @@ impl Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         let connectors =
-            utils::connectors_with_connector_config_overrides(&connector_config, &config).map_err(
+            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
                 |err| {
                     tracing::error!("Failed to resolve connector overrides: {:?}", err);
                     PaymentAuthorizationError::new(
@@ -822,7 +822,7 @@ impl Payments {
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
                     resource_common_data: payment_flow_data,
-                    connector_config: connector_config,
+                    connector_config,
                     request: PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(
                         |err| {
                             tracing::error!(
@@ -966,7 +966,7 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_config: connector_config,
+            connector_config,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
         };
@@ -1108,7 +1108,7 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_config: connector_config,
+            connector_config,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
         };
@@ -1205,7 +1205,7 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_config: connector_config,
+            connector_config,
             request: payment_method_tokenization_data,
             response: Err(ErrorResponse::default()),
         };
@@ -2727,7 +2727,7 @@ impl MerchantAuthentication {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_config: connector_config,
+            connector_config,
             request: session_token_request_data,
             response: Err(ErrorResponse::default()),
         };
@@ -2866,7 +2866,7 @@ impl MerchantAuthentication {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_config: connector_config,
+            connector_config,
             request: access_token_request_data,
             response: Err(ErrorResponse::default()),
         };
@@ -3707,7 +3707,7 @@ async fn verify_webhook_source_external(
     metadata_payload: &utils::MetadataPayload,
     service_name: &str,
 ) -> Result<bool, tonic::Status> {
-    let connectors = utils::connectors_with_connector_config_overrides(connector_config, &config)
+    let connectors = utils::connectors_with_connector_config_overrides(connector_config, config)
         .into_grpc_status()?;
 
     let verify_webhook_flow_data = VerifyWebhookSourceFlowData {

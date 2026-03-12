@@ -43,9 +43,9 @@ macro_rules! build_router_data {
             &$connector_config,
             $config,
         )
-        .map_err(|err| FfiError::IntegrationError {
-            message: err.to_string(),
-        })?;
+            .map_err(|err| $crate::errors::FfiError::IntegrationError {
+                message: err.to_string(),
+            })?;
 
         let flow_data: $resource_common_data_type =
             domain_types::utils::ForeignTryFrom::foreign_try_from((
@@ -53,13 +53,13 @@ macro_rules! build_router_data {
                 connectors,
                 $metadata,
             ))
-            .map_err(|err| FfiError::IntegrationError {
+            .map_err(|err| $crate::errors::FfiError::IntegrationError {
                     message: err.to_string(),
             })?;
 
         let payment_request_data: $request_data_type =
             domain_types::utils::ForeignTryFrom::foreign_try_from($payload.clone())
-                .map_err(|err| FfiError::IntegrationError {
+                .map_err(|err| $crate::errors::FfiError::IntegrationError {
                         message: err.to_string(),
                 })?;
 
@@ -71,7 +71,7 @@ macro_rules! build_router_data {
             response: Err(domain_types::router_data::ErrorResponse::default()),
         };
 
-        Result::<_, FfiPaymentError>::Ok((connector_integration, router_data))
+        Result::<_, $crate::errors::FfiPaymentError>::Ok((connector_integration, router_data))
     }};
 }
 
@@ -113,8 +113,8 @@ macro_rules! req_transformer {
             connector: domain_types::connector_types::ConnectorEnum,
             connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
-        ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
-            let (connector_integration, router_data) = crate::build_router_data!(
+        ) -> Result<Option<common_utils::request::Request>, $crate::errors::FfiPaymentError> {
+            let (connector_integration, router_data) = $crate::build_router_data!(
                 connector,
                 payload,
                 config,
@@ -128,7 +128,7 @@ macro_rules! req_transformer {
 
             let connector_request = connector_integration
                 .build_request_v2(&router_data)
-                .map_err(|err| FfiError::IntegrationError {
+                .map_err(|err| $crate::errors::FfiError::IntegrationError {
                     message: err.to_string(),
                 })?;
 
@@ -179,8 +179,8 @@ macro_rules! res_transformer {
             connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
-        ) -> Result<$response_type, FfiPaymentError> {
-            let (connector_integration, router_data) = crate::build_router_data!(
+        ) -> Result<$response_type, $crate::errors::FfiPaymentError> {
+            let (connector_integration, router_data) = $crate::build_router_data!(
                 connector,
                 payload,
                 config,
@@ -203,9 +203,9 @@ macro_rules! res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(
-                |e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                    FfiPaymentError::new(
+                    .map_err(
+                    |e: error_stack::Report<domain_types::errors::ConnectorError>| {
+                    $crate::errors::FfiPaymentError::new(
                         grpc_api_types::payments::PaymentStatus::Pending,
                         Some(e.to_string()),
                         None,
@@ -215,7 +215,7 @@ macro_rules! res_transformer {
             )?;
 
             domain_types::types::$generate_response_fn(response).map_err(|e| {
-                FfiPaymentError::new(
+                $crate::errors::FfiPaymentError::new(
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(e.to_string()),
                     None,

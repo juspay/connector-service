@@ -1,4 +1,5 @@
 use external_services;
+use crate::errors::FfiPaymentError;
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest, CustomerServiceCreateResponse, EventServiceHandleRequest,
     EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -20,7 +21,6 @@ use grpc_api_types::payments::{
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 
-use crate::errors::{FfiError, FfiPaymentError};
 use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
@@ -410,35 +410,24 @@ pub fn handle_event_transformer(
 ) -> Result<EventServiceHandleResponse, FfiPaymentError> {
     use domain_types::utils::ForeignTryFrom as _;
 
-    let map_app_err = |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        FfiPaymentError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
-            Some(e.to_string()),
-            None,
-            Some(500),
-        )
-    };
-
     let request_details = payload
         .request_details
         .ok_or_else(|| {
             FfiPaymentError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
-                Some("missing request_details in payload".to_string()),
+                Some("Missing required field: request_details".to_string()),
                 None,
-                Some(400),
+                Some(500),
             )
-        })
-        .and_then(|rd| {
-            RequestDetails::foreign_try_from(rd).map_err(|e| {
-                FfiPaymentError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(e.to_string()),
-                    None,
-                    Some(400),
-                )
-            })
         })?;
+    let request_details = RequestDetails::foreign_try_from(request_details).map_err(|e| {
+        FfiPaymentError::new(
+            grpc_api_types::payments::PaymentStatus::Pending,
+            Some(format!("ForeignTryFrom failed: {e}")),
+            None,
+            Some(500),
+        )
+    })?;
 
     let webhook_secrets = payload
         .webhook_secrets
@@ -446,9 +435,9 @@ pub fn handle_event_transformer(
             ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
                 FfiPaymentError::new(
                     grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(e.to_string()),
+                    Some(format!("ForeignTryFrom failed: {e}")),
                     None,
-                    Some(400),
+                    Some(500),
                 )
             })
         })
@@ -475,5 +464,14 @@ pub fn handle_event_transformer(
         Some(connector_config),
         source_verified,
     )
-    .map_err(map_app_err)
+    .map_err(
+        |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
+            FfiPaymentError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(e.to_string()),
+                None,
+                Some(500),
+            )
+        },
+    )
 }

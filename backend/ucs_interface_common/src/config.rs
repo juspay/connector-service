@@ -101,6 +101,21 @@ pub fn connectors_with_connector_config_overrides(
     }
 }
 
+pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
+    match (base_val, override_val) {
+        (Value::Object(base_map), Value::Object(override_map)) => {
+            let mut merged = base_map.clone();
+            for (key, override_value) in override_map {
+                let base_value = base_map.get(key).unwrap_or(&Value::Null);
+                merged.insert(key.clone(), merge_configs(override_value, base_value));
+            }
+            Value::Object(merged)
+        }
+        // override replaces base for primitive, null, or array
+        (_, override_val) => override_val.clone(),
+    }
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -130,20 +145,5 @@ mod tests {
             connectors.adyen.dispute_base_url.as_deref(),
             Some("https://override-dispute.adyen.example")
         );
-    }
-}
-
-pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
-    match (base_val, override_val) {
-        (Value::Object(base_map), Value::Object(override_map)) => {
-            let mut merged = base_map.clone();
-            for (key, override_value) in override_map {
-                let base_value = base_map.get(key).unwrap_or(&Value::Null);
-                merged.insert(key.clone(), merge_configs(override_value, base_value));
-            }
-            Value::Object(merged)
-        }
-        // override replaces base for primitive, null, or array
-        (_, override_val) => override_val.clone(),
     }
 }

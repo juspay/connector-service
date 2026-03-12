@@ -961,14 +961,13 @@ impl ConnectorSpecificConfig {
 
         match self {
             Self::Adyen {
-                dispute_base_url, ..
+                dispute_base_url: Some(dispute_base_url),
+                ..
             } => {
-                if let Some(dispute_base_url) = dispute_base_url {
-                    connector_patch.insert(
-                        "dispute_base_url".to_string(),
-                        serde_json::Value::String(dispute_base_url.clone()),
-                    );
-                }
+                connector_patch.insert(
+                    "dispute_base_url".to_string(),
+                    serde_json::Value::String(dispute_base_url.clone()),
+                );
             }
             Self::Billwerk {
                 secondary_base_url, ..
@@ -1017,15 +1016,13 @@ impl ConnectorSpecificConfig {
                 }
             }
             Self::Trustpay {
-                base_url_bank_redirects,
+                base_url_bank_redirects: Some(base_url_bank_redirects),
                 ..
             } => {
-                if let Some(base_url_bank_redirects) = base_url_bank_redirects {
-                    connector_patch.insert(
-                        "base_url_bank_redirects".to_string(),
-                        serde_json::Value::String(base_url_bank_redirects.clone()),
-                    );
-                }
+                connector_patch.insert(
+                    "base_url_bank_redirects".to_string(),
+                    serde_json::Value::String(base_url_bank_redirects.clone()),
+                );
             }
             _ => {}
         }

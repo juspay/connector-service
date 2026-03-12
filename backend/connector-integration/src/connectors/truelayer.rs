@@ -312,10 +312,10 @@ macros::create_all_prerequisites!(
 
             let payload = self.build_payload(method, path, headers, body);
             let pem = base64_decode(private_key)
-                .change_context(errors::ConnectorError::DecodingFailed)?;
+                .change_context(errors::ConnectorError::DecodingFailed(None))?;
 
             let signer = ES512.signer_from_pem(&pem)
-                .change_context(errors::ConnectorError::DecodingFailed)?;
+                .change_context(errors::ConnectorError::DecodingFailed(None))?;
 
             let tl_headers = headers.keys().cloned().collect::<Vec<_>>().join(",");
 

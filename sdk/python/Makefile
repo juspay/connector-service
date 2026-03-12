@@ -1,5 +1,5 @@
 .PHONY: install-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package dist clean
+        generate-flows pack-archive install test-package test-composite dist clean
 	#
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -142,9 +142,30 @@ test-package: generate-all pack-archive
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
 		--force-reinstall
-	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) 
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS)
+	@echo "Running composite flow test..."
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.py /tmp/test-hyperswitch-py/
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke_composite.py
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Package test passed."
+
+# ---------------------------------------------------------------------------
+# test-composite
+# Runs the composite flow smoke test (access token + authorize flow).
+# Tests the PayPal access token composite flow in an isolated environment.
+# ---------------------------------------------------------------------------
+test-composite: generate-all pack-archive
+	@echo "Testing composite flow in isolation..."
+	@rm -rf /tmp/test-hyperswitch-py-composite
+	@mkdir -p /tmp/test-hyperswitch-py-composite
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.py /tmp/test-hyperswitch-py-composite/
+	@python3 -m pip install \
+		--target /tmp/test-hyperswitch-py-composite \
+		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		--force-reinstall
+	@cd /tmp/test-hyperswitch-py-composite && python3 test_smoke_composite.py
+	@rm -rf /tmp/test-hyperswitch-py-composite
+	@echo "Composite flow test passed."
 
 # ---------------------------------------------------------------------------
 # dist

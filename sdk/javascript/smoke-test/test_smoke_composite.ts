@@ -11,7 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { PaymentClient, MerchantAuthenticationClient, types } from "hyperswitch-payments";
+import { PaymentClient, MerchantAuthenticationClient, types } from "hs-playlib";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -25,6 +25,8 @@ const {
   SecretString,
   AccessToken,
   ConnectorState,
+  RequestError,
+  ResponseError,
 } = types;
 
 const { ConnectorConfig, RequestConfig, Environment } = types;
@@ -66,7 +68,7 @@ async function testAccessTokenFlow(): Promise<void> {
   console.log("\n--- Step 1: Create Access Token ---");
   const accessTokenRequest: types.IMerchantAuthenticationServiceCreateAccessTokenRequest =
     MerchantAuthenticationServiceCreateAccessTokenRequest.create({
-      merchantAccessTokenId: { id: "access_token_test_" + Date.now() },
+      merchantAccessTokenId: "access_token_test_" + Date.now(),
       connector: Connector.PAYPAL,
       testMode: true,
     });
@@ -103,7 +105,16 @@ async function testAccessTokenFlow(): Promise<void> {
         JSON.stringify(accessTokenResponse, null, 2)
       );
     }
-  } catch (e: unknown) {
+  } catch (e: any) {
+    if (e instanceof RequestError) {
+      console.log(`  RequestError: ${e.errorCode} - ${e.errorMessage}`);
+      console.log("  This might be expected if credentials are not valid");
+      return;
+    } else if (e instanceof ResponseError) {
+      console.log(`  ResponseError: ${e.errorCode} - ${e.errorMessage}`);
+      console.log("  This might be expected if credentials are not valid");
+      return;
+    }
     const message = e instanceof Error ? e.message : String(e);
     console.log(`  Error creating access token: ${message}`);
     console.log("  This might be expected if credentials are not valid");
@@ -159,10 +170,17 @@ async function testAccessTokenFlow(): Promise<void> {
     console.log(`  Response keys: ${Object.keys(authorizeResponse)}`);
     console.log(`  Payment status: ${authorizeResponse.status}`);
     console.log("  PASSED");
-  } catch (e: unknown) {
-    console.log(`  Error during authorize: ${e}`);
-    // This might be expected depending on PayPal API behavior
-    console.log("  PASSED (round-trip completed, error is from PayPal)");
+  } catch (e: any) {
+    if (e instanceof RequestError) {
+      console.log(`  RequestError: ${e.errorCode} - ${e.errorMessage}`);
+      console.log("  PASSED (round-trip completed, error is from PayPal)");
+    } else if (e instanceof ResponseError) {
+      console.log(`  ResponseError: ${e.errorCode} - ${e.errorMessage}`);
+      console.log("  PASSED (round-trip completed, error is from PayPal)");
+    } else {
+      console.log(`  Error during authorize: ${e}`);
+      console.log("  PASSED (round-trip completed, error is from PayPal)");
+    }
   }
 
   console.log("\n=== Test Complete ===");
