@@ -1316,8 +1316,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
         }));
 
-        println!("Carddd = {:?}", payment_information);
-
         let processing_information = ProcessingInformation::try_from((
             item,
             None,

@@ -317,7 +317,6 @@ fn extract_payment_method_and_data<
                 expiry_year: card_data.card_exp_year.clone(),
                 cvv: Some(card_data.card_cvc.clone()),
             });
-             println!("Carddd = {:?}", card);
 
             Ok((PaymentMethodType::Card, card))
         }
@@ -366,7 +365,6 @@ fn extract_payment_method_and_data<
                 last4: Some(last4),
                 provider_type: Some("network".to_string()),
             });
-            println!("Network Token = {:?}", card);
 
             Ok((PaymentMethodType::Card, card))
         }
