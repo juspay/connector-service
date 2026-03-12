@@ -81,25 +81,35 @@ fn print_usage() {
 #[cfg(test)]
 mod tests {
     use super::parse_args;
+    use std::path::Path;
 
     #[test]
     fn parses_help_flag() {
-        let parsed = parse_args(["--help"]).expect("--help should parse");
-        assert!(parsed.help);
+        assert!(matches!(
+            parse_args(["--help"]),
+            Ok(super::CliArgs {
+                help: true,
+                path: None
+            })
+        ));
     }
 
     #[test]
     fn parses_path_flag() {
-        let parsed = parse_args(["--path", "./custom-report.json"]).expect("--path should parse");
-        assert_eq!(
-            parsed.path.as_deref().and_then(std::path::Path::to_str),
-            Some("./custom-report.json")
-        );
+        assert!(matches!(
+            parse_args(["--path", "./custom-report.json"]),
+            Ok(super::CliArgs {
+                help: false,
+                path: Some(path)
+            }) if path == Path::new("./custom-report.json")
+        ));
     }
 
     #[test]
     fn errors_on_unknown_flag() {
-        let err = parse_args(["--nope"]).expect_err("unknown flag should fail");
-        assert!(err.contains("unknown argument"));
+        assert!(matches!(
+            parse_args(["--nope"]),
+            Err(err) if err.contains("unknown argument")
+        ));
     }
 }
