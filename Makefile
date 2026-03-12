@@ -63,14 +63,14 @@ certify-client-sanity:
 	@rm -rf sdk/tests/client_sanity/artifacts || true
 	@mkdir -p sdk/tests/client_sanity/artifacts
 	@echo "Starting Client Sanity Certification..."
-	@pkill -f echo_server.js || true
-	@pkill -f simple_proxy.js || true
+	@pkill -f "[/]echo_server\\.js" || true
+	@pkill -f "[/]simple_proxy\\.js" || true
 	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 1
 	@echo "Generating golden captures from manifest..."
 	@node sdk/tests/client_sanity/generate_golden.js
 	@echo "[CERTIFICATION]: Running client sanity suite..."
 	@node sdk/tests/client_sanity/run_client_certification.js rust python node kotlin
-	@pkill -f echo_server.js; pkill -f simple_proxy.js || true
+	@pkill -f "[/]echo_server\\.js"; pkill -f "[/]simple_proxy\\.js" || true
 
 # Format proto files
 proto-format:
