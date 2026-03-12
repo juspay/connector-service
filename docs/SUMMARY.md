@@ -8,9 +8,8 @@
 - [Concepts](getting-started/concepts.md)
 
 ## SDKs
-- [Overview](sdks/README.md)
-- [Node.js](sdks/nodejs/README.md)
-- [Python](sdks/python/README.md)
+- [Node.js SDK](sdks/nodejs/README.md)
+- [Python SDK](sdks/python/README.md)
 
 ## Connectors
 - [Overview](connectors/README.md)
