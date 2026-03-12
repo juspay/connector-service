@@ -80,7 +80,7 @@ grpcurl -H "x-connector: stripe" \
     }
   }' \
   localhost:8080 \
-  ucs.v2.MerchantAuthenticationService/CreateSdkSessionToken
+  types.MerchantAuthenticationService/CreateSdkSessionToken
 ```
 
 ### Response

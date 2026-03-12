@@ -133,7 +133,7 @@ grpcurl -H "x-connector: stripe" \
     "setup_future_usage": "OFF_SESSION"
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/SetupRecurring
+  types.PaymentService/SetupRecurring
 ```
 
 ### Response
