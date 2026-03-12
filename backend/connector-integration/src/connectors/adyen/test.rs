@@ -15,7 +15,7 @@ mod tests {
                 ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             },
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, RawCardNumber},
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -83,10 +83,12 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Adyen {
+                connector_config: ConnectorSpecificConfig::Adyen {
                     api_key: Secret::new(api_key),
                     merchant_account: Secret::new(key1),
                     review_key: None,
+                    base_url: None,
+                    dispute_base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -276,10 +278,12 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Adyen {
+                connector_config: ConnectorSpecificConfig::Adyen {
                     api_key: Secret::new(api_key),
                     merchant_account: Secret::new(key1),
                     review_key: None,
+                    base_url: None,
+                    dispute_base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -401,9 +405,10 @@ mod tests {
         //             },
         //             external_latency: None,
         //         },
-        //         connector_auth_type: ConnectorSpecificAuth::BodyKey {
+        //         connector_config: ConnectorSpecificConfig::BodyKey {
         //             api_key: Secret::new(api_key.into()),
         //             key1: Secret::new(key1.into()),
+        //,
         //         },
         //         request: PaymentsAuthorizeData {
         //             payment_method_data: PaymentMethodData::Card(

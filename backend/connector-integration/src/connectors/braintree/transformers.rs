@@ -24,7 +24,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorSpecificAuth, PaymentMethodToken as PaymentMethodTokenFlow},
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
     router_request_types,
     router_response_types::RedirectForm,
@@ -173,20 +173,27 @@ pub struct ApiErrorResponse {
 pub struct BraintreeAuthType {
     pub(super) public_key: Secret<String>,
     pub(super) private_key: Secret<String>,
+    pub(super) merchant_account_id: Option<Secret<String>>,
+    pub(super) merchant_config_currency: Option<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for BraintreeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for BraintreeAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Braintree {
+    fn try_from(item: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Braintree {
             public_key,
             private_key,
+            merchant_account_id,
+            merchant_config_currency,
+            ..
         } = item
         {
             Ok(Self {
                 public_key: public_key.to_owned(),
                 private_key: private_key.to_owned(),
+                merchant_account_id: merchant_account_id.clone(),
+                merchant_config_currency: merchant_config_currency.clone(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?
@@ -1060,6 +1067,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
         let metadata: BraintreeMeta = if let (Some(merchant_account_id), merchant_config_currency) = (
             item.router_data.request.merchant_account_id.clone(),
             item.router_data.request.currency,
@@ -1069,10 +1077,22 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 merchant_config_currency,
             }
         } else {
-            utils::to_connector_meta_from_secret(
-                item.router_data.request.merchant_account_metadata.clone(),
-            )
-            .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
+            let merchant_account_id =
+                auth.merchant_account_id
+                    .ok_or(ConnectorError::InvalidConnectorConfig {
+                        config: "merchant_account_id",
+                    })?;
+            let merchant_config_currency = auth
+                .merchant_config_currency
+                .as_deref()
+                .and_then(|s| s.parse::<enums::Currency>().ok())
+                .ok_or(ConnectorError::InvalidConnectorConfig {
+                    config: "merchant_config_currency",
+                })?;
+            BraintreeMeta {
+                merchant_account_id,
+                merchant_config_currency,
+            }
         };
 
         validate_currency(
@@ -1237,6 +1257,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
         let metadata: BraintreeMeta =
             if let (Some(merchant_account_id), Some(merchant_config_currency)) = (
                 extract_metadata_string_field(
@@ -1255,10 +1276,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     merchant_config_currency,
                 }
             } else {
-                utils::to_connector_meta_from_secret(
-                    item.router_data.request.merchant_account_metadata.clone(),
-                )
-                .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
+                let merchant_account_id =
+                    auth.merchant_account_id
+                        .ok_or(ConnectorError::InvalidConnectorConfig {
+                            config: "merchant_account_id",
+                        })?;
+                let merchant_config_currency = auth
+                    .merchant_config_currency
+                    .as_deref()
+                    .and_then(|s| s.parse::<enums::Currency>().ok())
+                    .ok_or(ConnectorError::InvalidConnectorConfig {
+                        config: "merchant_config_currency",
+                    })?;
+                BraintreeMeta {
+                    merchant_account_id,
+                    merchant_config_currency,
+                }
             };
         let currency = extract_metadata_field(
             &item.router_data.request.refund_connector_metadata,

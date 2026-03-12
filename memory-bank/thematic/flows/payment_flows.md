@@ -479,10 +479,10 @@ Connector credentials are resolved entirely from gRPC metadata headers — the r
 
 ### Auth Paths (in priority order)
 
-1. **Typed header** (`x-connector-auth`): A JSON-serialized `ConnectorAuth` proto message containing connector-specific credentials. Format uses PascalCase enum variant names (matching prost serde):
+1. **Typed header** (`x-connector-config`): A JSON-serialized `ConnectorSpecificConfig` proto message containing the full connector config payload. This now includes auth credentials plus connector-scoped metadata such as base URLs or typed config fields. Format uses PascalCase enum variant names (matching prost serde):
    ```
-   x-connector-auth: {"auth_type":{"Stripe":{"api_key":"sk_test_..."}}}
-   x-connector-auth: {"auth_type":{"Adyen":{"api_key":"...","merchant_account":"...","review_key":"..."}}}
+   x-connector-config: {"config":{"Stripe":{"api_key":"sk_test_..."}}}
+   x-connector-config: {"config":{"Adyen":{"api_key":"...","merchant_account":"...","review_key":"..."}}}
    ```
 
 2. **Legacy headers** (fallback): Generic auth spread across multiple headers:
@@ -497,17 +497,17 @@ Connector credentials are resolved entirely from gRPC metadata headers — the r
 ### Resolution Flow
 
 ```
-x-connector-auth present?
-├─ YES → parse JSON → ForeignTryFrom<ConnectorAuth> → ConnectorSpecificAuth
-└─ NO  → read x-auth + x-api-key + ... → ConnectorAuthType → ForeignTryFrom<(&AuthType, &Connector)> → ConnectorSpecificAuth
+x-connector-config present?
+├─ YES → parse JSON → ForeignTryFrom<ConnectorSpecificConfig proto> → ConnectorSpecificConfig
+└─ NO  → read x-auth + x-api-key + ... → ConnectorAuthType → ForeignTryFrom<(&AuthType, &Connector)> → ConnectorSpecificConfig
 ```
 
-Both paths produce `ConnectorSpecificAuth` (e.g., `Stripe { api_key }`, `Adyen { api_key, merchant_account, review_key }`), which connector transformers consume via `TryFrom<&ConnectorSpecificAuth>`.
+Both paths produce `ConnectorSpecificConfig` (e.g., `Stripe { api_key, base_url }`, `Adyen { api_key, merchant_account, review_key, base_url }`), which connector transformers consume via `TryFrom<&ConnectorSpecificConfig>`.
 
 ### Key files
-- `backend/grpc-server/src/utils.rs`: `resolve_connector_auth()`, `extract_connector_auth_from_header()`
-- `backend/common_utils/src/consts.rs`: `X_CONNECTOR_AUTH` header constant
-- `backend/domain_types/src/router_data.rs`: `ConnectorSpecificAuth` enum, `ForeignTryFrom` impls
+- `backend/ucs_interface_common/src/auth.rs`: `connector_and_auth_from_metadata()`
+- `backend/common_utils/src/consts.rs`: `X_CONNECTOR_CONFIG` header constant
+- `backend/domain_types/src/router_data.rs`: `ConnectorSpecificConfig` enum, `ForeignTryFrom` impls
 
 ## Flow Execution
 
@@ -516,7 +516,7 @@ The flow execution process follows these steps:
 1. Client sends a request to the gRPC server with auth in metadata headers
 2. Server resolves connector auth from headers (`resolve_connector_auth`)
 3. Server identifies the connector and flow type
-4. Server creates the appropriate `RouterDataV2` instance with resolved `ConnectorSpecificAuth`
+4. Server creates the appropriate `RouterDataV2` instance with resolved `ConnectorSpecificConfig`
 5. Server calls the `execute_connector_processing_step` function with the connector integration and router data
 6. Connector integration processes the request and sends it to the payment processor
 7. Connector integration processes the response and returns it to the server

@@ -26,7 +26,7 @@ use domain_types::{
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -144,7 +144,7 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             )];
-            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+            let mut auth_header = self.get_auth_header(&req.connector_config)?;
             header.append(&mut auth_header);
             Ok(header)
         }
@@ -376,7 +376,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             // GET request - only auth headers needed
-            self.get_auth_header(&req.connector_auth_type)
+            self.get_auth_header(&req.connector_config)
         }
         fn get_url(
             &self,
@@ -576,7 +576,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             // GET request - only auth headers needed
-            self.get_auth_header(&req.connector_auth_type)
+            self.get_auth_header(&req.connector_config)
         }
         fn get_url(
             &self,
@@ -806,7 +806,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = nexixpay::NexixpayAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

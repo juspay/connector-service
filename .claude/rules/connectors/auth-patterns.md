@@ -94,18 +94,18 @@ Connector credentials are passed via **gRPC metadata headers only** (not in the 
 
 ### Typed path (preferred)
 ```
-x-connector-auth: {"auth_type":{"Stripe":{"api_key":"sk_test_..."}}}
+x-connector-config: {"config":{"Stripe":{"api_key":"sk_test_..."}}}
 ```
-JSON-serialized `ConnectorAuth` proto message. Uses PascalCase variant names. Parsed by `extract_connector_auth_from_header()` in `utils.rs`.
+JSON-serialized `ConnectorSpecificConfig` proto message. Uses PascalCase variant names. Parsed by `connector_and_auth_from_metadata()` in `auth.rs`.
 
 ### Legacy path (fallback)
 ```
 x-auth: header-key
 x-api-key: sk_test_...
 ```
-Generic headers parsed by `auth_from_metadata()`. Used when `x-connector-auth` is absent.
+Generic headers parsed by `auth_from_metadata()`. Used when `x-connector-config` is absent.
 
-Both paths produce `ConnectorSpecificAuth`, which connector code consumes via `TryFrom<&ConnectorSpecificAuth>`.
+Both paths produce `ConnectorSpecificConfig`, which connector code consumes via `TryFrom<&ConnectorSpecificConfig>`.
 
 > **Note**: The `connector_auth` field was removed from all proto request messages. Auth is never in the payload.
 

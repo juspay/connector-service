@@ -72,7 +72,7 @@ The `Get` RPC retrieves the current status and details of a dispute from the pay
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_dispute_id": "dispute_001",
     "connector_dispute_id": "dp_1Oxxx..."

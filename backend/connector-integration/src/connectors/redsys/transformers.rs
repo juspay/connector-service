@@ -23,7 +23,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types,
 };
@@ -255,13 +255,14 @@ where
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for RedsysAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for RedsysAuthType {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Redsys {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Redsys {
             merchant_id,
             terminal_id,
             sha256_pwd,
+            ..
         } = auth_type
         {
             Ok(Self {
@@ -729,7 +730,7 @@ where
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = RedsysAuthType::try_from(&router_data.connector_config)?;
         let card_data =
             requests::RedsysCardData::try_from(&router_data.request.payment_method_data.clone())?;
         let is_auto_capture = router_data.request.is_auto_capture()?;
@@ -898,7 +899,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = RedsysAuthType::try_from(&router_data.connector_config)?;
 
         let is_auto_capture = router_data.request.is_auto_capture()?;
 
@@ -1086,7 +1087,7 @@ where
         let card_data = requests::RedsysCardData::try_from(&Some(
             item.router_data.request.payment_method_data.clone(),
         ))?;
-        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = RedsysAuthType::try_from(&router_data.connector_config)?;
 
         let redirect_response = router_data.request.redirect_response.as_ref().ok_or(
             errors::ConnectorError::MissingRequiredField {
@@ -1303,7 +1304,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = RedsysAuthType::try_from(&router_data.connector_config)?;
         let connector_transaction_id = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => Ok(id.clone()),
             _ => Err(errors::ConnectorError::MissingConnectorTransactionID),
@@ -1412,7 +1413,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = RedsysAuthType::try_from(&router_data.connector_config)?;
         let connector_transaction_id = router_data.request.connector_transaction_id.clone();
         let currency =
             router_data
@@ -1731,7 +1732,7 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = RedsysAuthType::try_from(&router_data.connector_config)?;
         let refund_amount = common_utils::types::MinorUnit::new(router_data.request.refund_amount);
 
         let refund_request = requests::RedsysOperationRequest {

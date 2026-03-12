@@ -17,7 +17,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::AuthenticationData,
 };
@@ -59,12 +59,12 @@ pub struct NexixpayAuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for NexixpayAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for NexixpayAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nexixpay { api_key } => Ok(Self {
+            ConnectorSpecificConfig::Nexixpay { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(

@@ -20,7 +20,7 @@ mod tests {
                 ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             },
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, WalletData},
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -105,8 +105,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Calida {
+                connector_config: ConnectorSpecificConfig::Calida {
                     api_key: Secret::new(api_key),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
@@ -262,8 +263,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Calida {
+                connector_config: ConnectorSpecificConfig::Calida {
                     api_key: Secret::new(api_key),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),

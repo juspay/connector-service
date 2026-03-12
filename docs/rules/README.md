@@ -74,7 +74,7 @@ REQUIREMENTS:
 - **Stripe Authentication (Rule 6.1):**
   - Use headers:
     - `-H "x-connector: stripe"` (specifies the connector)
-    - `-H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}"` (authentication)
+    - `-H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}"` (authentication)
   - NOT `Authorization: Bearer` format
   - Developer should be able to set STRIPE_API_KEY and run the command directly
 - Example must use realistic test data (Rule 6.2)

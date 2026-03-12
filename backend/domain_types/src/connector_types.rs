@@ -38,7 +38,7 @@ use crate::{
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
-use grpc_api_types::payments::connector_auth::AuthType;
+use grpc_api_types::payments::connector_specific_config::Config as AuthType;
 use url::Url;
 
 // snake case for enum variants
@@ -3620,10 +3620,10 @@ pub struct BillingDescriptor {
     /// A reference to be shown on billing description
     pub reference: Option<String>,
 }
-impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for ConnectorEnum {
+impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config> for ConnectorEnum {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
-        auth_type: grpc_api_types::payments::connector_auth::AuthType,
+        auth_type: grpc_api_types::payments::connector_specific_config::Config,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match auth_type {
             AuthType::Adyen(_) => Ok(Self::Adyen),

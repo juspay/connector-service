@@ -31,7 +31,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::{Response, VerifyWebhookSourceResponseData},
@@ -166,7 +166,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         _request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<ConnectorError>> {
         // This is a fallback for connectors that don't require external verification
         // For PayPal, this should never be called due to requires_external_verification check
@@ -182,7 +182,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorError>> {
         let payload: paypal::PaypalWebooksEventType = request
             .body
@@ -207,7 +207,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<ConnectorError>,
@@ -255,7 +255,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
         error_stack::Report<ConnectorError>,
@@ -298,7 +298,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         error_stack::Report<ConnectorError>,
@@ -543,10 +543,10 @@ macros::create_all_prerequisites!(
             &self,
             access_token: &str,
             connector_request_reference_id: &str,
-            connector_auth_type: &ConnectorSpecificAuth,
+            connector_config: &ConnectorSpecificConfig,
             connector_metadata: Option<&serde_json::Value>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let auth = paypal::PaypalAuthType::try_from(connector_auth_type)?;
+            let auth = paypal::PaypalAuthType::try_from(connector_config)?;
             let mut headers = vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
@@ -716,7 +716,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         self.build_headers(
             &access_token.access_token.expose(),
             &req.resource_common_data.connector_request_reference_id,
-            &req.connector_auth_type,
+            &req.connector_config,
             connector_metadata.as_ref(),
         )
     }
@@ -844,7 +844,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let auth = paypal::PaypalAuthType::try_from(&req.connector_auth_type)?;
+            let auth = paypal::PaypalAuthType::try_from(&req.connector_config)?;
             let credentials = auth.get_credentials()?;
             let auth_val = credentials.generate_authorization_value();
 
@@ -915,7 +915,7 @@ macros::macro_connector_implementation!(
             self.build_headers(
                 &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
+                &req.connector_config,
                 connector_metadata.as_ref(),
             )
         }
@@ -999,7 +999,7 @@ macros::macro_connector_implementation!(
             self.build_headers(
                 &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
+                &req.connector_config,
                 connector_metadata.as_ref(),
             )
         }
@@ -1048,7 +1048,7 @@ macros::macro_connector_implementation!(
             self.build_headers(
                 &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
+                &req.connector_config,
                 connector_metadata.as_ref(),
             )
         }
@@ -1100,7 +1100,7 @@ macros::macro_connector_implementation!(
             self.build_headers(
                 &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
+                &req.connector_config,
                 connector_metadata.as_ref(),
             )
         }
@@ -1149,7 +1149,7 @@ macros::macro_connector_implementation!(
             self.build_headers(
                 &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
+                &req.connector_config,
                 connector_metadata.as_ref(),
             )
         }
@@ -1193,7 +1193,7 @@ macros::macro_connector_implementation!(
             self.build_headers(
                 &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
+                &req.connector_config,
                 connector_metadata.as_ref(),
             )
         }
@@ -1236,7 +1236,7 @@ macros::macro_connector_implementation!(
             self.build_headers(
                 &access_token.access_token.expose(),
                 &req.resource_common_data.connector_request_reference_id,
-                &req.connector_auth_type,
+                &req.connector_config,
                 connector_metadata.as_ref(),
             )
         }
@@ -1370,7 +1370,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         self.build_headers(
             &access_token.access_token.expose(),
             &req.resource_common_data.connector_request_reference_id,
-            &req.connector_auth_type,
+            &req.connector_config,
             connector_metadata.as_ref(),
         )
     }
@@ -1511,7 +1511,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         // PayPal verify-webhook-signature uses Basic Auth (client_id:client_secret), not Bearer token
-        let auth = transformers::PaypalAuthType::try_from(&req.connector_auth_type)
+        let auth = transformers::PaypalAuthType::try_from(&req.connector_config)
             .change_context(ConnectorError::FailedToObtainAuthType)?;
         let credentials = auth.get_credentials()?;
         let auth_val = credentials.generate_authorization_value();
@@ -1723,7 +1723,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         let auth = paypal::PaypalAuthType::try_from(auth_type)?;
         let credentials = auth.get_credentials()?;

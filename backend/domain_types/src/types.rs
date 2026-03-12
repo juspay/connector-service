@@ -267,7 +267,7 @@ use crate::{
     },
     router_data::{
         self, AdditionalPaymentMethodConnectorResponse, ConnectorResponseData,
-        ConnectorSpecificAuth, RecurringMandatePaymentData,
+        ConnectorSpecificConfig, RecurringMandatePaymentData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -8531,11 +8531,11 @@ impl ForeignTryFrom<grpc_api_types::payments::MerchantAuthenticationServiceCreat
 }
 
 // Generic implementation for access token request from connector auth
-impl ForeignTryFrom<&ConnectorSpecificAuth> for AccessTokenRequestData {
+impl ForeignTryFrom<&ConnectorSpecificConfig> for AccessTokenRequestData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        _auth_type: &ConnectorSpecificAuth,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Default to client_credentials grant type for OAuth
         // Connectors can override this with their own specific implementations

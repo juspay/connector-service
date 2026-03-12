@@ -11,7 +11,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorSpecificAuth, ErrorResponse, PaymentMethodToken},
+    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -111,7 +111,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_config)?;
 
         let authentication = Authentication {
             user: auth.user,
@@ -264,20 +264,27 @@ pub struct WorldpayvantivAuthType {
     pub user: Secret<String>,
     pub password: Secret<String>,
     pub merchant_id: Secret<String>,
+    pub report_group: Option<String>,
+    pub merchant_config_currency: Option<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for WorldpayvantivAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for WorldpayvantivAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Worldpayvantiv {
+            ConnectorSpecificConfig::Worldpayvantiv {
                 user,
                 password,
                 merchant_id,
+                report_group,
+                merchant_config_currency,
+                ..
             } => Ok(Self {
                 user: user.to_owned(),
                 password: password.to_owned(),
                 merchant_id: merchant_id.to_owned(),
+                report_group: report_group.clone(),
+                merchant_config_currency: merchant_config_currency.clone(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -1794,7 +1801,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_config)?;
 
         let authentication = Authentication {
             user: auth.user,
@@ -1859,7 +1866,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_config)?;
 
         let authentication = Authentication {
             user: auth.user,
@@ -1920,7 +1927,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_config)?;
+
+        // Extract report_group from connector config before moving auth fields
+        let report_group = auth.report_group.unwrap_or_else(|| "rtpGrp".to_string());
 
         let authentication = Authentication {
             user: auth.user,
@@ -1933,15 +1943,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_request_reference_id
             .clone();
-
-        // Extract report_group from merchant_account_metadata
-        let report_group = item
-            .router_data
-            .request
-            .merchant_account_metadata
-            .as_ref()
-            .and_then(|metadata| extract_report_group(&Some(metadata.clone())))
-            .unwrap_or_else(|| "rtpGrp".to_string());
 
         // Extract customer_id from RefundsData - since RefundsData stores it as String, we convert it to CustomerId to use with extract_customer_id function
         let customer_id = item
@@ -2007,7 +2008,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_config)?;
 
         let authentication = Authentication {
             user: auth.user,
@@ -2151,7 +2152,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_config)?;
 
         let authentication = Authentication {
             user: auth.user,
@@ -2293,7 +2294,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_config)?;
 
         let authentication = Authentication {
             user: auth.user,

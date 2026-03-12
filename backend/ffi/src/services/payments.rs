@@ -405,7 +405,7 @@ pub fn handle_event_transformer(
     payload: EventServiceHandleRequest,
     _config: &std::sync::Arc<ucs_env::configs::Config>,
     connector: domain_types::connector_types::ConnectorEnum,
-    connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
+    connector_config: domain_types::router_data::ConnectorSpecificConfig,
     _metadata: &common_utils::metadata::MaskedMetadata,
 ) -> Result<EventServiceHandleResponse, FfiPaymentError> {
     use domain_types::utils::ForeignTryFrom as _;
@@ -464,7 +464,7 @@ pub fn handle_event_transformer(
         .verify_webhook_source(
             request_details.clone(),
             webhook_secrets.clone(),
-            Some(connector_auth_details.clone()),
+            Some(connector_config.clone()),
         )
         .unwrap_or(false);
 
@@ -472,7 +472,7 @@ pub fn handle_event_transformer(
         connector_data,
         request_details,
         webhook_secrets,
-        Some(connector_auth_details),
+        Some(connector_config),
         source_verified,
     )
     .map_err(map_app_err)

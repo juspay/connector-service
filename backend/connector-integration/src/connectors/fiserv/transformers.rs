@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -244,20 +244,24 @@ pub struct FiservAuthType {
     pub api_key: Secret<String>,
     pub merchant_account: Secret<String>,
     pub api_secret: Secret<String>,
+    pub terminal_id: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for FiservAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for FiservAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Fiserv {
+            ConnectorSpecificConfig::Fiserv {
                 api_key,
                 merchant_account,
                 api_secret,
+                terminal_id,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
+                terminal_id: terminal_id.clone(),
             }),
             _ => Err(report!(ConnectorError::FailedToObtainAuthType)),
         }
@@ -486,7 +490,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?
         }
 
-        let auth: FiservAuthType = FiservAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth: FiservAuthType = FiservAuthType::try_from(&item.router_data.connector_config)?;
         let total = item
             .connector
             .amount_converter
@@ -499,21 +503,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             total,
             currency: item.router_data.request.currency.to_string(),
         };
-        let metadata = item
-            .router_data
-            .request
-            .merchant_account_metadata
-            .ok_or(ConnectorError::RequestEncodingFailed)?;
-        let session: FiservSessionObject = metadata
-            .expose()
-            .parse_value("FiservSessionObject")
-            .change_context(ConnectorError::InvalidConnectorConfig {
-                config: "Merchant connector account metadata",
-            })?;
-
         let merchant_details = MerchantDetails {
             merchant_id: auth.merchant_account,
-            terminal_id: Some(session.terminal_id),
+            terminal_id: auth.terminal_id,
         };
 
         let checkout_charges_request = match item.router_data.request.payment_method_data.clone() {
@@ -604,7 +596,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
 
         let metadata = router_data
             .resource_common_data
@@ -684,7 +676,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
         Ok(Self {
             merchant_details: MerchantDetails {
                 merchant_id: auth.merchant_account.clone(),
@@ -718,7 +710,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
 
         // Get session information
         let metadata = router_data
@@ -770,20 +762,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
-
-        let metadata = item
-            .router_data
-            .request
-            .merchant_account_metadata
-            .clone()
-            .ok_or(ConnectorError::RequestEncodingFailed)?;
-        let session: FiservSessionObject = metadata
-            .expose()
-            .parse_value("FiservSessionObject")
-            .change_context(ConnectorError::InvalidConnectorConfig {
-                config: "Merchant connector account metadata",
-            })?;
+        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
 
         // Convert minor amount to float major unit
         let converter = FloatMajorUnitForConnector;
@@ -801,7 +780,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             merchant_details: MerchantDetails {
                 merchant_id: auth.merchant_account.clone(),
-                terminal_id: Some(session.terminal_id.clone()),
+                terminal_id: auth.terminal_id.clone(),
             },
             reference_transaction_details: ReferenceTransactionDetails {
                 reference_transaction_id: router_data.request.connector_transaction_id.to_string(),
@@ -827,7 +806,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
         Ok(Self {
             merchant_details: MerchantDetails {
                 merchant_id: auth.merchant_account.clone(),

@@ -357,7 +357,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_auth_type)
+            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(self.build_headers(&auth))
         }
@@ -387,7 +387,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_auth_type)
+            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(self.build_headers(&auth))
         }
@@ -419,7 +419,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_auth_type)
+            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(self.build_headers(&auth))
         }
@@ -462,7 +462,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_auth_type)
+            let auth = hyperpg::HyperpgAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(self.build_headers(&auth))
         }

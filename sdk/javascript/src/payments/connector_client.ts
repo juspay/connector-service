@@ -29,7 +29,7 @@ export class ConnectorClient {
   /**
    * Initialize the client with mandatory config and optional request defaults.
    *
-   * @param config - Immutable connector identity and environment (Connector, Auth, Environment).
+   * @param config - Immutable connector config and environment (ConnectorSpecificConfig, SdkOptions).
    * @param defaults - Optional per-request defaults (Http, Vault).
    * @param libPath - optional path to the UniFFI shared library.
    */
@@ -42,9 +42,12 @@ export class ConnectorClient {
     this.config = types.ConnectorConfig.create(config);
     this.defaults = defaults;
 
-    if (config.connector === undefined) {
+    const hasConnectorVariant = !!config.connectorConfig
+      && Object.values(config.connectorConfig).some((value) => value != null);
+
+    if (!hasConnectorVariant) {
       throw new ConnectorError(
-        "Connector is required in ConnectorConfig",
+        "connectorConfig with a connector variant is required in ConnectorConfig",
         400,
         "CLIENT_INITIALIZATION"
       );
@@ -75,9 +78,8 @@ export class ConnectorClient {
     };
 
     const ffi = types.FfiOptions.create({
-      environment: this.config.environment ?? types.Environment.SANDBOX,
-      connector: this.config.connector,
-      auth: this.config.auth,
+      environment: this.config.options?.environment ?? types.Environment.SANDBOX,
+      connectorConfig: this.config.connectorConfig,
     });
 
     return { ffi, http };

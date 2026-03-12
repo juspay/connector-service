@@ -13,7 +13,7 @@ use domain_types::{
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -326,15 +326,16 @@ pub struct ForteAuthType {
     pub(super) api_secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for ForteAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for ForteAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Forte {
+            ConnectorSpecificConfig::Forte {
                 api_access_id,
                 organization_id,
                 location_id,
                 api_secret_key,
+                ..
             } => {
                 let organization_id_str = organization_id.peek();
                 let location_id_str = location_id.peek();

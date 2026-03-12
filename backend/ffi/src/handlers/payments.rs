@@ -40,7 +40,7 @@ macro_rules! impl_flow_handlers {
                     request.payload,
                     &config,
                     request.extracted_metadata.connector,
-                    request.extracted_metadata.connector_auth_type,
+                    request.extracted_metadata.connector_config,
                     &request.masked_metadata.unwrap_or_default(),
                 )
             }
@@ -55,7 +55,7 @@ macro_rules! impl_flow_handlers {
                     request.payload,
                     &config,
                     request.extracted_metadata.connector,
-                    request.extracted_metadata.connector_auth_type,
+                    request.extracted_metadata.connector_config,
                     &request.masked_metadata.unwrap_or_default(),
                     response,
                 )
@@ -86,7 +86,7 @@ pub fn handle_event_handler(
         request.payload,
         &config,
         request.extracted_metadata.connector,
-        request.extracted_metadata.connector_auth_type,
+        request.extracted_metadata.connector_config,
         &request.masked_metadata.unwrap_or_default(),
     )
 }

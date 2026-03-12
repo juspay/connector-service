@@ -21,7 +21,7 @@ macro_rules! build_router_data {
         $connector:expr,
         $payload:expr,
         $config:expr,
-        $connector_auth_details:expr,
+        $connector_config:expr,
         $metadata:expr,
         $flow_marker:ty,
         $resource_common_data_type:ty,
@@ -39,10 +39,18 @@ macro_rules! build_router_data {
             $response_data_type,
         > = connector_data.connector.get_connector_integration_v2();
 
+        let connectors = ucs_interface_common::config::connectors_with_connector_config_overrides(
+            &$connector_config,
+            $config,
+        )
+        .map_err(|err| FfiError::IntegrationError {
+            message: err.to_string(),
+        })?;
+
         let flow_data: $resource_common_data_type =
             domain_types::utils::ForeignTryFrom::foreign_try_from((
                 $payload.clone(),
-                $config.connectors.clone(),
+                connectors,
                 $metadata,
             ))
             .map_err(|err| FfiError::IntegrationError {
@@ -58,7 +66,7 @@ macro_rules! build_router_data {
         let router_data = domain_types::router_data_v2::RouterDataV2 {
             flow: std::marker::PhantomData,
             resource_common_data: flow_data,
-            connector_auth_type: $connector_auth_details,
+            connector_config: $connector_config,
             request: payment_request_data,
             response: Err(domain_types::router_data::ErrorResponse::default()),
         };
@@ -103,14 +111,14 @@ macro_rules! req_transformer {
             payload: $request_type,
             config: &std::sync::Arc<ucs_env::configs::Config>,
             connector: domain_types::connector_types::ConnectorEnum,
-            connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
+            connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
         ) -> Result<Option<common_utils::request::Request>, FfiPaymentError> {
             let (connector_integration, router_data) = crate::build_router_data!(
                 connector,
                 payload,
                 config,
-                connector_auth_details,
+                connector_config,
                 metadata,
                 $flow_marker,
                 $resource_common_data_type,
@@ -168,7 +176,7 @@ macro_rules! res_transformer {
             payload: $request_type,
             config: &std::sync::Arc<ucs_env::configs::Config>,
             connector: domain_types::connector_types::ConnectorEnum,
-            connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
+            connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
         ) -> Result<$response_type, FfiPaymentError> {
@@ -176,7 +184,7 @@ macro_rules! res_transformer {
                 connector,
                 payload,
                 config,
-                connector_auth_details,
+                connector_config,
                 metadata,
                 $flow_marker,
                 $resource_common_data_type,

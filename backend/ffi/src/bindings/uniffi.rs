@@ -11,7 +11,7 @@ mod uniffi_bindings_inner {
     use bytes::Bytes;
     use common_utils::request::Request;
     use domain_types::connector_types::ConnectorEnum;
-    use domain_types::router_data::ConnectorSpecificAuth;
+    use domain_types::router_data::ConnectorSpecificConfig;
     use domain_types::router_response_types::Response;
     use domain_types::utils::ForeignTryFrom;
     use grpc_api_types::payments::{
@@ -23,33 +23,43 @@ mod uniffi_bindings_inner {
     // ── Shared helpers ────────────────────────────────────────────────────────
 
     /// Build FfiMetadataPayload from FfiOptions.
+    /// The connector identity is inferred from which ConnectorSpecificConfig variant is set.
     fn parse_metadata(
         options: &FfiOptions,
     ) -> Result<crate::types::FfiMetadataPayload, UniffiError> {
-        // 1. Resolve Connector (Taken from FfiOptions)
-        let proto_connector = options.connector(); // Direct enum access via generated method
-        let connector = ConnectorEnum::foreign_try_from(proto_connector).map_err(|e| {
+        // 1. Resolve ConnectorSpecificConfig from FfiOptions
+        let proto_config =
+            options
+                .connector_config
+                .as_ref()
+                .ok_or_else(|| UniffiError::MissingMetadata {
+                    key: "connector_config".to_string(),
+                })?;
+
+        // 2. Infer connector from which oneof variant is set
+        let config_variant =
+            proto_config
+                .config
+                .as_ref()
+                .ok_or_else(|| UniffiError::MissingMetadata {
+                    key: "connector_config.config".to_string(),
+                })?;
+
+        let connector = ConnectorEnum::foreign_try_from(config_variant.clone()).map_err(|e| {
             UniffiError::MetadataParseError {
                 msg: format!("Connector mapping failed: {e}"),
             }
         })?;
 
-        // 2. Resolve Auth (Taken from typed Protobuf in FfiOptions)
-        let proto_auth = options
-            .auth
-            .as_ref()
-            .ok_or_else(|| UniffiError::MissingMetadata {
-                key: "auth".to_string(),
-            })?;
-
-        let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
+        // 3. Convert proto config to domain ConnectorSpecificConfig
+        let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
             .map_err(|e| UniffiError::MetadataParseError {
-                msg: format!("Typed auth mapping failed: {e}"),
+                msg: format!("Typed connector config mapping failed: {e}"),
             })?;
 
         Ok(crate::types::FfiMetadataPayload {
             connector,
-            connector_auth_type,
+            connector_config,
         })
     }
 
