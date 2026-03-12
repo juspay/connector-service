@@ -47,12 +47,8 @@ impl From<&HttpConfig> for HttpOptions {
 /// Merges client defaults with per-request overrides. Per-request values take precedence.
 pub fn merge_http_options(base: &HttpOptions, override_opts: &HttpOptions) -> HttpOptions {
     HttpOptions {
-        total_timeout_ms: override_opts
-            .total_timeout_ms
-            .or(base.total_timeout_ms),
-        connect_timeout_ms: override_opts
-            .connect_timeout_ms
-            .or(base.connect_timeout_ms),
+        total_timeout_ms: override_opts.total_timeout_ms.or(base.total_timeout_ms),
+        connect_timeout_ms: override_opts.connect_timeout_ms.or(base.connect_timeout_ms),
         response_timeout_ms: override_opts
             .response_timeout_ms
             .or(base.response_timeout_ms),
@@ -60,7 +56,10 @@ pub fn merge_http_options(base: &HttpOptions, override_opts: &HttpOptions) -> Ht
             .keep_alive_timeout_ms
             .or(base.keep_alive_timeout_ms),
         proxy: override_opts.proxy.clone().or_else(|| base.proxy.clone()),
-        ca_cert: override_opts.ca_cert.clone().or_else(|| base.ca_cert.clone()),
+        ca_cert: override_opts
+            .ca_cert
+            .clone()
+            .or_else(|| base.ca_cert.clone()),
     }
 }
 

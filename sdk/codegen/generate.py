@@ -519,34 +519,28 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
     # FlowRegistry object
     lines += [
         "object FlowRegistry {",
-        "    val reqTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(",
+        "    val reqTransformers: Map<String, (ByteArray, ByteArray) -> ByteArray> = mapOf(",
     ]
     for f in flows:
         camel = to_camel(f["name"])
-        lines.append(
-            f'        "{f["name"]}" to {{ requestBytes, optionsBytes -> {camel}ReqTransformer(requestBytes, emptyMap(), optionsBytes) }},'
-        )
+        lines.append(f'        "{f["name"]}" to ::{camel}ReqTransformer,')
     lines += [
         "    )",
         "",
-        "    val resTransformers: Map<String, (ByteArray, ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(",
+        "    val resTransformers: Map<String, (ByteArray, ByteArray, ByteArray) -> ByteArray> = mapOf(",
     ]
     for f in flows:
         camel = to_camel(f["name"])
-        lines.append(
-            f'        "{f["name"]}" to {{ responseBytes, requestBytes, optionsBytes -> {camel}ResTransformer(responseBytes, requestBytes, emptyMap(), optionsBytes) }},'
-        )
+        lines.append(f'        "{f["name"]}" to ::{camel}ResTransformer,')
     lines += ["    )", ""]
     if single_flows:
         lines += [
             "    // Single-step flows: direct transformer, no HTTP round-trip.",
-            "    val directTransformers: Map<String, (ByteArray, Map<String, String>, ByteArray) -> ByteArray> = mapOf(",
+            "    val directTransformers: Map<String, (ByteArray, ByteArray) -> ByteArray> = mapOf(",
         ]
         for f in single_flows:
             camel = to_camel(f["name"])
-            lines.append(
-                f'        "{f["name"]}" to {{ requestBytes, optionsBytes -> {camel}Transformer(requestBytes, emptyMap(), optionsBytes) }},'
-            )
+            lines.append(f'        "{f["name"]}" to ::{camel}Transformer,')
         lines += ["    )", ""]
     lines += ["}", ""]
 
