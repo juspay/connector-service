@@ -159,8 +159,8 @@ message CompositeGetResponse {
 // Request message for composite void flow.
 message CompositeVoidRequest {
   // Payment Identification
-  Identifier merchant_void_id = 1;
-  Identifier connector_transaction_id = 2;
+  optional string merchant_void_id = 1;
+  string connector_transaction_id = 2;
 
   // Void Details
   optional string cancellation_reason = 3;
@@ -189,7 +189,7 @@ message CompositeVoidRequest {
   optional PaymentMethod payment_method = 12;
 
   // Access Token ID
-  Identifier merchant_access_token_id = 13;
+  optional string merchant_access_token_id = 13;
 }
 
 // Response message for composite void flow.
@@ -201,8 +201,8 @@ message CompositeVoidResponse {
 // Request message for composite capture flow.
 message CompositeCaptureRequest {
   // Payment Identification
-  Identifier merchant_capture_id = 1;
-  Identifier connector_transaction_id = 2;
+  optional string merchant_capture_id = 1;
+  string connector_transaction_id = 2;
 
   // Capture Details
   Money amount_to_capture = 3;
@@ -233,7 +233,7 @@ message CompositeCaptureRequest {
   optional PaymentMethod payment_method = 12;
 
   // Access Token ID
-  Identifier merchant_access_token_id = 13;
+  optional string merchant_access_token_id = 13;
 }
 
 // Response message for composite capture flow.
