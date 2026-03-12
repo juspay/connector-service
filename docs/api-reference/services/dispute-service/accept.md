@@ -4,7 +4,7 @@
 ---
 title: Accept
 description: Concede dispute and accept chargeback loss when evidence is insufficient
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -41,8 +41,8 @@ The `Accept` RPC concedes a chargeback dispute and accepts the loss. Use this wh
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_dispute_id` | Identifier | Yes | Your unique dispute reference |
-| `connector_transaction_id` | Identifier | Yes | Original transaction ID |
+| `merchant_dispute_id` | string | Yes | Your unique dispute reference |
+| `connector_transaction_id` | string | Yes | Original transaction ID |
 | `dispute_id` | string | Yes | Connector's dispute identifier |
 
 ## Response Fields
@@ -55,7 +55,7 @@ The `Accept` RPC concedes a chargeback dispute and accepts the loss. Use this wh
 | `error` | ErrorInfo | Error details if acceptance failed |
 | `status_code` | uint32 | HTTP-style status code |
 | `response_headers` | map<string,string> | Connector-specific response headers |
-| `merchant_dispute_id` | Identifier | Your dispute reference (echoed back) |
+| `merchant_dispute_id` | string | Your dispute reference (echoed back) |
 | `raw_connector_request` | SecretString | Raw API request sent to connector (debugging) |
 
 ## Example
@@ -66,8 +66,8 @@ The `Accept` RPC concedes a chargeback dispute and accepts the loss. Use this wh
 grpcurl -H "x-connector: stripe" \
   -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
   -d '{
-    "merchant_dispute_id": {"id": "dispute_001"},
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "merchant_dispute_id": "dispute_001",
+    "connector_transaction_id": "pi_3Oxxx...",
     "dispute_id": "dp_1Oxxx..."
   }' \
   localhost:8080 \
