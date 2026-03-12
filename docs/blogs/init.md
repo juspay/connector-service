@@ -1,20 +1,20 @@
-# One Integration to Rule Them All: How We Built the Connector Service
+# Building a Unified Payment Integration Layer
 
 If you have ever integrated a payment processor, you know the drill. You read through a PDF that was last updated in 2019, figure out what combination of API keys goes in which header, discover that "decline code 51" means something subtly different on this processor than the last one you dealt with, and then do it all over again when your business decides to add a second processor.
 
-We have been living in this world for years as part of Hyperswitch, an open-source payment orchestrator. At some point we had integrations for 50+ connectors. The integrations worked well — but they were locked inside our orchestrator, not usable by anyone who just needed to talk to Stripe or Adyen without adopting an entire platform.
+We have been living in this world for years building Hyperswitch, an open-source payment orchestrator. At some point we had integrations for 50+ connectors. The integrations worked well — but they were locked inside our orchestrator, not usable by anyone who just needed to talk to Stripe or Adyen without adopting an entire platform.
 
-This post is about what we did next: unbundling those integrations into a standalone, community-owned library called the **Connector Service**, and the interesting engineering decisions we made along the way.
+This post is about what we did next: unbundling those integrations into a standalone library called the **Connector Service**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
 
 ---
 
 ## Why unbundle at all?
 
-Here's the thing we kept running into: the payment integration problem is not new. Databases have JDBC. Observability has OpenTelemetry. LLMs have LiteLLM. Feature flags have OpenFeature. All of these started as "we just need a common interface over these N things" and eventually became de-facto standards that the whole industry converged on.
+The connector integrations inside Hyperswitch were not designed to be embedded in an orchestrator forever. They were always a self-contained layer: translate a unified request into a connector-specific HTTP call, make the call, translate the response back. The orchestrator was just the first thing to use them.
 
-Payments never got that. There are orchestrators — Spreedly, Primer, and yes, Hyperswitch — but all of them are managed by a single company. None of them emerged as a neutral, community-maintained standard. Which means that today, if you integrate Stripe directly, you are vendor-locked from day one. Not because you want to be, but because your integration code only speaks Stripe's language.
+The more we looked at it, the more it seemed wrong to keep that capability locked behind a full platform deployment. If you just need to accept payments through Stripe, you should not have to adopt an orchestrator to get a well-tested, maintained integration. And if you want to switch to Adyen later, that should be a config change, not a rewrite.
 
-We think the right answer is a specification — a protobuf schema for payment operations that any connector can implement and any application can consume — maintained by the community, not by any one company. The Connector Service is our attempt to seed that.
+So we separated the integration layer out. The result is a library with a well-defined specification — a protobuf schema covering the full payment lifecycle — that can be embedded directly in any application or deployed as a standalone service. The rest of this post is about how that works.
 
 ---
 
@@ -44,7 +44,7 @@ Everything is strongly typed. `PaymentService.Authorize` takes a `PaymentService
 
 ## The implementation: Rust at the core
 
-> **Q: Why Rust? Wouldn't Go or Java be easier for a community project?**
+> **Q: Why Rust? Wouldn't Go or Java be simpler?**
 >
 > A few reasons. First, we already had 50+ connector implementations in Rust from Hyperswitch, so starting there was practical. But more importantly: the library needs to be embeddable in Python, JavaScript, and Java applications without a separate process or a runtime dependency like the JVM or a Python interpreter. The only realistic way to distribute a native library that loads cleanly into all of those runtimes is as a compiled shared library — `.so` on Linux, `.dylib` on macOS. Rust produces exactly that, with no garbage collector pauses, no runtime to ship, and memory safety that does not require a GC.
 
@@ -60,7 +60,7 @@ The Rust codebase is organized into a handful of internal crates:
 The single most important design decision in the Rust core is that **the library never makes HTTP calls itself**. Every payment operation is split into two pure functions:
 
 ```
-┌─────────────┐    req_transformer     ┌──────────────────┐
+┌─────────────┐    req_transformer      ┌──────────────────┐
 │  Unified    │ ──────────────────────▶ │ Connector HTTP   │
 │  Request    │                         │ Request          │
 │  (proto)    │                         │ (URL, headers,   │
@@ -68,7 +68,7 @@ The single most important design decision in the Rust core is that **the library
                                         └────────┬─────────┘
                                                  │  you make this call
                                                  ▼
-┌─────────────┐    res_transformer     ┌──────────────────┐
+┌─────────────┐    res_transformer      ┌──────────────────┐
 │  Unified    │ ◀────────────────────── │ Connector HTTP   │
 │  Response   │                         │ Response         │
 │  (proto)    │                         │ (raw bytes)      │
@@ -116,7 +116,7 @@ This is where things get interesting. We wanted the library to work both as an *
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    Your Application                       │
+│                    Your Application                      │
 └─────────────────────┬────────────────────────────────────┘
                       │
          ┌────────────┴────────────┐
@@ -129,8 +129,8 @@ This is where things get interesting. We wanted the library to work both as an *
         │  in-process call         │  network call
         ▼                          ▼
  ┌──────────────────────────────────────────────┐
- │          Rust Core (connector-service)        │
- │  req_transformer → [HTTP] → res_transformer   │
+ │          Rust Core (connector-service)       │
+ │  req_transformer → [HTTP] → res_transformer  │
  └──────────────────────────────────────────────┘
 ```
 
@@ -317,19 +317,24 @@ In gRPC mode, steps ③b through ③f happen inside the `grpc-server` process. T
 
 ---
 
-## What we are hoping the community does with this
+## Where we go from here — together
 
-We have two asks.
+We want to be upfront about what this is and what it is not.
 
-The first is **use it and break it**. We have 50+ connectors implemented, but payment APIs are a long tail of edge cases. 3DS flows differ between processors. Webhook schemas change without notice. Authorization responses that technically succeeded but should be treated as soft declines. The only way to harden this is real-world usage across a wider set of applications and processors than we can test internally.
+What it is: a working implementation with 50+ connectors, a protobuf specification that covers the full payment lifecycle, and SDKs in four languages. It is ready to use today.
 
-The second is **contribute connectors and flows**. The architecture is specifically designed to make both straightforward:
+What it is not: a finished standard. The spec reflects our understanding of what payment integrations need to look like. That understanding is incomplete, and we know it. Payment APIs have a very long tail of edge cases — 3DS flows that differ between processors, webhook schemas that change without notice, authorization responses that technically succeeded but should be treated as soft declines. There is no team small enough to have seen all of it.
 
-- **Adding a connector** means implementing a Rust trait in `connector-integration/`. The FFI layer, gRPC server, and all language SDKs pick it up automatically. You do not need to write Python or JavaScript.
-- **Adding a flow** means extending `services.proto` (which is a community discussion), implementing the transformer pair in Rust, and running `make generate`. All SDKs get the new method in every language.
+That is why community ownership matters here, not as a marketing posture, but as a practical necessity.
 
-The longer-term goal is for `services.proto` to evolve into something the payments community — developers, processors, orchestrators — maintains together. The same way OpenTelemetry's semantic conventions did not come from one company. The same way JDBC ended up being the right abstraction because it was simple enough to implement and strict enough to actually abstract.
+**If you want to use it:** install the SDK, run `make generate` to see what flows are available, and point it at your test credentials. When something breaks — and something will — open an issue. The more connectors and flows get exercised in real environments, the faster the rough edges get found.
 
-Payment APIs are not that different from database drivers. We just have not agreed on the interface yet.
+**If you want to contribute a connector:** implement a Rust trait in `connector-integration/`. The FFI layer, gRPC server, and all language SDKs pick it up automatically. You do not need to write Python or JavaScript or maintain anything outside that one crate.
 
-The Connector Service is our proposal for what that interface should look like.
+**If you want to contribute a flow:** start with a discussion on the `services.proto` shape — that is the community contract, so it deserves a conversation before code gets written. Once there is agreement, implement the transformer pair in Rust, run `make generate`, and every SDK gets the new method in every language.
+
+**If you disagree with a spec decision:** open a discussion. The whole point of making this community-owned is that no single team's assumptions should be baked in permanently. If you have seen payment edge cases that the current schema cannot express, that is exactly the kind of feedback that shapes a standard.
+
+The longer arc here is for `services.proto` to evolve into something the payments community — developers, processors, orchestrators, and everyone else in the stack — maintains collectively. The same way OpenTelemetry's semantic conventions emerged from broad input, not from one company's opinions. The same way JDBC worked because it was simple enough to implement and strict enough to actually abstract.
+
+Payment APIs are not more complicated than database drivers. We have just not agreed on the interface yet. We hope this is a useful starting point for that conversation.
