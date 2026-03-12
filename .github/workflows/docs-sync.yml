@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - docs-ci-workflow
     paths:
       - 'docs/**'
       - '.github/workflows/docs-sync.yml'
