@@ -355,3 +355,4 @@ Made with by [Juspay hyperswitch](https://hyperswitch.io)
 This is a test to verify docs sync workflow.
 
 
+Test auto-trigger
