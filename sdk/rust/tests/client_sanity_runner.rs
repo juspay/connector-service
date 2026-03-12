@@ -1,8 +1,6 @@
-use common_utils::request::Method;
 use base64::{engine::general_purpose, Engine as _};
-use hyperswitch_payments_client::http_client::{
-    HttpClient, HttpOptions, HttpRequest, ProxyConfig,
-};
+use common_utils::request::Method;
+use hyperswitch_payments_client::http_client::{HttpClient, HttpOptions, HttpRequest, ProxyConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{self, Read};
@@ -121,7 +119,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let out = match sdk_result {
         Ok(resp) => {
-            let ct = resp.headers.get("content-type").map(|s| s.to_lowercase()).unwrap_or_default();
+            let ct = resp
+                .headers
+                .get("content-type")
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
             let body_str = if ct.contains("application/octet-stream") {
                 general_purpose::STANDARD.encode(&resp.body)
             } else {

@@ -86,7 +86,7 @@ open class ConnectorClient(
         val httpConfig = resolveHttpConfig(options)
 
         // 2. Build connector HTTP request via FFI
-        val connectorRequestBytes = reqTransformer(requestBytes, emptyMap(), optionsBytes)
+        val connectorRequestBytes = reqTransformer(requestBytes, optionsBytes)
         val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
 
         val httpRequest = HttpRequest(
@@ -111,7 +111,6 @@ open class ConnectorClient(
         val resultBytes = resTransformer(
             ffiResponseBytes,
             requestBytes,
-            emptyMap(),
             optionsBytes,
         )
 
@@ -140,7 +139,7 @@ open class ConnectorClient(
         val ffiOptions = resolveFfiOptions(options)
         val optionsBytes = ffiOptions.toByteArray()
 
-        val resultBytes = transformer(requestBytes, emptyMap(), optionsBytes)
+        val resultBytes = transformer(requestBytes, optionsBytes)
         return responseParser.parseFrom(resultBytes)
     }
 }
