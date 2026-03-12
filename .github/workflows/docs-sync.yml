@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: juspay/hyperswitch-docs
-          token: ${{ secrets.HYPERSWITCH_DOCS_PAT }}
+          token: ${{ secrets.CONNECTOR_SERVICE_DOCS_CI }}
           path: hyperswitch-docs
 
       - name: Sync documentation
