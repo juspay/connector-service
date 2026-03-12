@@ -155,3 +155,89 @@ message CompositeGetResponse {
   optional MerchantAuthenticationServiceCreateAccessTokenResponse access_token_response = 1; // Access token flow response
   optional PaymentServiceGetResponse get_response = 2; // Get flow response
 }
+
+// Request message for composite void flow.
+message CompositeVoidRequest {
+  // Payment Identification
+  Identifier merchant_void_id = 1;
+  Identifier connector_transaction_id = 2;
+
+  // Void Details
+  optional string cancellation_reason = 3;
+  optional bool all_keys_required = 4;
+
+  // Browser Information
+  optional BrowserInformation browser_info = 5;
+
+  // Amount Information
+  optional Money amount = 6;
+
+  // Metadata
+  optional SecretString metadata = 7;
+  optional SecretString connector_feature_data = 8;
+
+  // State Information (for access token)
+  optional ConnectorState state = 9;
+
+  // Environment Configuration
+  optional bool test_mode = 10;
+
+  // Additional Context
+  optional string merchant_order_id = 11;
+
+  // Payment Method for access token creation
+  optional PaymentMethod payment_method = 12;
+
+  // Access Token ID
+  Identifier merchant_access_token_id = 13;
+}
+
+// Response message for composite void flow.
+message CompositeVoidResponse {
+  optional MerchantAuthenticationServiceCreateAccessTokenResponse access_token_response = 1;
+  optional PaymentServiceVoidResponse void_response = 2;
+}
+
+// Request message for composite capture flow.
+message CompositeCaptureRequest {
+  // Payment Identification
+  Identifier merchant_capture_id = 1;
+  Identifier connector_transaction_id = 2;
+
+  // Capture Details
+  Money amount_to_capture = 3;
+
+  // Metadata
+  optional SecretString metadata = 4;
+  optional SecretString connector_feature_data = 5;
+
+  // Multiple Capture Information
+  optional MultipleCaptureRequestData multiple_capture_data = 6;
+
+  // Browser Information
+  optional BrowserInformation browser_info = 7;
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 8;
+
+  // State Information (for access token)
+  optional ConnectorState state = 9;
+
+  // Environment Configuration
+  optional bool test_mode = 10;
+
+  // Additional Context
+  optional string merchant_order_id = 11;
+
+  // Payment Method for access token creation
+  optional PaymentMethod payment_method = 12;
+
+  // Access Token ID
+  Identifier merchant_access_token_id = 13;
+}
+
+// Response message for composite capture flow.
+message CompositeCaptureResponse {
+  optional MerchantAuthenticationServiceCreateAccessTokenResponse access_token_response = 1;
+  optional PaymentServiceCaptureResponse capture_response = 2;
+}
