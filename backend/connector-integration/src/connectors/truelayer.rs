@@ -949,7 +949,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificAuth>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
     {
         let webhook_body: truelayer::TruelayerWebhookEventTypeBody = request
@@ -964,7 +964,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificAuth>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
@@ -1013,7 +1013,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificAuth>,
+        _connector_account_details: Option<domain_types::router_data::ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
