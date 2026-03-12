@@ -65,7 +65,7 @@ certify-client-sanity:
 	@echo "Starting Client Sanity Certification..."
 	@pkill -f "[/]echo_server\\.js" || true
 	@pkill -f "[/]simple_proxy\\.js" || true
-	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 1
+	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 2
 	@echo "Generating golden captures from manifest..."
 	@node sdk/tests/client_sanity/generate_golden.js
 	@echo "[CERTIFICATION]: Running client sanity suite..."
