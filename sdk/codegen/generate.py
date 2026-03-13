@@ -20,6 +20,7 @@ Usage:
     python3 sdk/codegen/generate.py --lang javascript
     python3 sdk/codegen/generate.py --lang kotlin
     python3 sdk/codegen/generate.py --lang rust
+    python3 sdk/codegen/generate.py --lang php
 
     # Via individual SDK Makefiles
     make -C sdk/python generate
@@ -633,6 +634,148 @@ def gen_rust_ffi_flows(flows: list[dict]) -> None:
     write(RUST_FFI_FLOWS_OUT, "\n".join(lines))
 
 
+# ── PHP generators ───────────────────────────────────────────────────────────
+
+def to_php_method(snake: str) -> str:
+    """'setup_recurring' -> 'setupRecurring'  (PHP convention: camelCase)"""
+    return to_camel(snake)
+
+
+def gen_php(flows: list[dict], single_flows: list[dict]) -> None:
+    gen_php_flows(flows, single_flows)
+    gen_php_service_clients(flows, single_flows)
+
+
+def gen_php_flows(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate _GeneratedFlows.php — PHP flow registry used by UniffiClient."""
+    max_len = max((len(f["name"]) for f in flows), default=0)
+    lines = [
+        "<?php",
+        "",
+        "// AUTO-GENERATED — do not edit by hand.",
+        "// Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
+        "",
+        "declare(strict_types=1);",
+        "",
+        "namespace Payments;",
+        "",
+        "class GeneratedFlows",
+        "{",
+        "    /**",
+        "     * Standard flows: req_transformer → HTTP → res_transformer.",
+        "     *",
+        "     * @var array<string, array{request: string, response: string}>",
+        "     */",
+        "    const FLOWS = [",
+    ]
+    for f in flows:
+        padding = " " * (max_len - len(f["name"]) + 1)
+        lines.append(f"        {flow_comment(f, '//')}")
+        lines.append(
+            f"        '{f['name']}'{padding}=> "
+            f"['request' => '{f['request']}', 'response' => '{f['response']}'],"
+        )
+        lines.append("")
+    lines.append("    ];")
+    lines.append("")
+
+    if single_flows:
+        max_len_s = max((len(f["name"]) for f in single_flows), default=0)
+        lines += [
+            "    /**",
+            "     * Single-step flows: transformer called directly, no HTTP round-trip.",
+            "     * Used for inbound flows such as webhook processing.",
+            "     *",
+            "     * @var array<string, array{request: string, response: string}>",
+            "     */",
+            "    const SINGLE_FLOWS = [",
+        ]
+        for f in single_flows:
+            padding = " " * (max_len_s - len(f["name"]) + 1)
+            lines.append(f"        {flow_comment(f, '//')}")
+            lines.append(
+                f"        '{f['name']}'{padding}=> "
+                f"['request' => '{f['request']}', 'response' => '{f['response']}'],"
+            )
+            lines.append("")
+        lines.append("    ];")
+    else:
+        lines += [
+            "    /** @var array<string, array{request: string, response: string}> */",
+            "    const SINGLE_FLOWS = [];",
+        ]
+
+    lines += ["}", ""]
+    write(SDK_ROOT / "php/src/Payments/_GeneratedFlows.php", "\n".join(lines))
+
+
+def gen_php_service_clients(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate _GeneratedServiceClients.php — per-service PHP client classes."""
+    groups = group_by_service(flows)
+    single_groups = group_by_service(single_flows)
+    all_services = sorted(set(groups) | set(single_groups))
+
+    lines = [
+        "<?php",
+        "",
+        "// AUTO-GENERATED — do not edit by hand.",
+        "// Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate",
+        "",
+        "declare(strict_types=1);",
+        "",
+        "namespace Payments;",
+        "",
+        "use Types\\RequestConfig;",
+        "",
+    ]
+
+    for service in all_services:
+        client_name = service_to_client_name(service)
+        lines.append(f"class {client_name} extends ConnectorClientBase")
+        lines.append("{")
+
+        for f in groups.get(service, []):
+            n, res = f["name"], f["response"]
+            method = to_php_method(n)
+            lines.append(
+                f"    /** {f['service']}.{f['rpc']} — {f['description']} */"
+            )
+            lines.append(
+                f"    public function {method}($request, ?RequestConfig $options = null)"
+                f": \\Types\\{res}"
+            )
+            lines.append("    {")
+            lines.append(
+                f"        return $this->executeFlow('{n}', $request, \\Types\\{res}::class, $options);"
+            )
+            lines.append("    }")
+            lines.append("")
+
+        for f in single_groups.get(service, []):
+            n, res = f["name"], f["response"]
+            method = to_php_method(n)
+            lines.append(
+                f"    /** {f['service']}.{f['rpc']} — {f['description']} */"
+            )
+            lines.append(
+                f"    public function {method}($request, ?RequestConfig $options = null)"
+                f": \\Types\\{res}"
+            )
+            lines.append("    {")
+            lines.append(
+                f"        return $this->executeDirect('{n}', $request, \\Types\\{res}::class, $options);"
+            )
+            lines.append("    }")
+            lines.append("")
+
+        lines += ["}", ""]
+
+    write(
+        SDK_ROOT / "php/src/Payments/_GeneratedServiceClients.php",
+        "\n".join(lines),
+    )
+
+
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -643,7 +786,7 @@ def main() -> None:
 
     parser.add_argument(
         "--lang",
-        choices=["python", "javascript", "kotlin", "rust", "all"],
+        choices=["python", "javascript", "kotlin", "rust", "php", "all"],
         default="all",
         help="Which language/SDK to generate (default: all)"
     )
@@ -680,6 +823,10 @@ def main() -> None:
     if args.lang in ("kotlin", "all"):
         print("Generating Kotlin SDK...")
         gen_kotlin(flows, single_flows)
+
+    if args.lang in ("php", "all"):
+        print("Generating PHP SDK...")
+        gen_php(flows, single_flows)
 
     print("\nDone.")
 

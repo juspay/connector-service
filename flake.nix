@@ -31,6 +31,22 @@
           extensions = [ "rust-src" "clippy" "rustfmt" "rust-analyzer" ];
         };
 
+        # PHP 8.3 with FFI extension enabled and configured.
+        # ffi.enable=1 is required for the PHP SDK to load the shared library.
+        phpWithFfi = pkgs.php83.buildEnv {
+          extensions = exts: with exts; [
+            ffi      # Foreign Function Interface — required for the PHP SDK
+            curl     # HTTP client support
+            openssl  # TLS/SSL support
+            mbstring # Multi-byte string functions
+            json     # JSON encode/decode
+            tokenizer
+          ];
+          extraConfig = ''
+            ffi.enable = 1
+          '';
+        };
+
       in
       {
         # Development shell - what you get when you run `nix develop`
@@ -38,12 +54,12 @@
           # Build inputs are available in the shell environment
           buildInputs = with pkgs; [
             rustToolchain
-            
+
             # Additional development tools
             cargo-watch    # Auto-rebuild on file changes
             cargo-edit     # Commands like cargo add, cargo rm
             cargo-audit    # Security vulnerability scanner
-            
+
             # System dependencies that some Rust crates might need
             pkg-config
             openssl
@@ -69,6 +85,10 @@
             jdk17             # Java Development Kit (matches protobuf-java 4.x needs)
             gradle            # Gradle build tool
 
+            # PHP runtime and tools (for PHP SDK)
+            phpWithFfi           # PHP 8.3 with FFI extension enabled (ffi.enable=1)
+            php83Packages.composer  # Composer package manager for PHP dependencies
+
             # Optional: database tools if you're building web apps
             # postgresql
             # sqlite
@@ -80,13 +100,15 @@
 
           # Environment variables
           shellHook = "
-            echo 'Rust development environment loaded!'
-            echo \"Rust version: \$(rustc --version)\"
-            echo \"Cargo version: \$(cargo --version)\"
+            echo 'Multi-language SDK development environment loaded!'
+            echo \"Rust version:    \$(rustc --version)\"
+            echo \"Cargo version:   \$(cargo --version)\"
             echo \"Node.js version: \$(node --version)\"
-            echo \"Python version: \$(python3 --version)\"
-            echo \"Java version: \$(java --version | head -1)\"
-            echo \"Gradle version: \$(gradle --version | grep Gradle)\"
+            echo \"Python version:  \$(python3 --version)\"
+            echo \"Java version:    \$(java --version 2>&1 | head -1)\"
+            echo \"Gradle version:  \$(gradle --version 2>/dev/null | grep Gradle || echo 'not available')\"
+            echo \"PHP version:     \$(php --version | head -1)\"
+            echo \"Composer:        \$(composer --version 2>/dev/null | head -1 || echo 'not available')\"
 
             # Optional: set environment variables
             export RUST_BACKTRACE=1
