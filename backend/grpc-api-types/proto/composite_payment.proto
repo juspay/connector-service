@@ -239,9 +239,14 @@ message CompositeAuthenticateRequest {
 
   // Capture Settings
   optional CaptureMethod capture_method = 14;
+
+  // Fields from CompositePreauthenticateRequest for pre-authenticate flow
+  bool enrolled_for_3ds = 15;
+  optional string description = 16;
 }
 
 // Response message for composite authenticate flow.
 message CompositeAuthenticateResponse {
   optional PaymentMethodAuthenticationServiceAuthenticateResponse authenticate_response = 1;
+  optional PaymentMethodAuthenticationServicePreAuthenticateResponse pre_authenticate_response = 2;
 }

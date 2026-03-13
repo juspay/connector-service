@@ -5,12 +5,14 @@ use grpc_api_types::payments::{
     CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
-    PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentServiceAuthorizeRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceGetRequest,
 };
 
 use crate::utils::{
-    get_access_token, get_connector_customer_id, grpc_connector_from_connector_enum,
+    get_access_token, get_authentication_data, get_connector_customer_id,
+    grpc_connector_from_connector_enum,
 };
 
 pub trait ForeignFrom<F>: Sized {
@@ -228,17 +230,31 @@ impl ForeignFrom<&CompositePreauthenticateRequest>
     }
 }
 
-impl ForeignFrom<&CompositeAuthenticateRequest>
-    for PaymentMethodAuthenticationServiceAuthenticateRequest
+impl
+    ForeignFrom<(
+        &CompositeAuthenticateRequest,
+        Option<&PaymentMethodAuthenticationServicePreAuthenticateResponse>,
+    )> for PaymentMethodAuthenticationServiceAuthenticateRequest
 {
-    fn foreign_from(item: &CompositeAuthenticateRequest) -> Self {
+    fn foreign_from(
+        (item, pre_authenticate_response): (
+            &CompositeAuthenticateRequest,
+            Option<&PaymentMethodAuthenticationServicePreAuthenticateResponse>,
+        ),
+    ) -> Self {
+        let authentication_data_from_req = item.authentication_data.clone();
+        let authentication_data = get_authentication_data(
+            authentication_data_from_req.clone(),
+            pre_authenticate_response,
+        );
+
         Self {
             merchant_order_id: item.merchant_order_id.clone(),
             amount: item.amount,
             payment_method: item.payment_method.clone(),
             customer: item.customer.clone(),
             address: item.address.clone(),
-            authentication_data: item.authentication_data.clone(),
+            authentication_data,
             metadata: item.metadata.clone(),
             connector_feature_data: item.connector_feature_data.clone(),
             return_url: item.return_url.clone(),
@@ -247,6 +263,29 @@ impl ForeignFrom<&CompositeAuthenticateRequest>
             state: item.state.clone(),
             redirection_response: item.redirection_response.clone(),
             capture_method: item.capture_method,
+        }
+    }
+}
+
+impl ForeignFrom<&CompositeAuthenticateRequest>
+    for PaymentMethodAuthenticationServicePreAuthenticateRequest
+{
+    fn foreign_from(item: &CompositeAuthenticateRequest) -> Self {
+        Self {
+            merchant_order_id: item.merchant_order_id.clone(),
+            amount: item.amount,
+            payment_method: item.payment_method.clone(),
+            customer: item.customer.clone(),
+            address: item.address.clone(),
+            enrolled_for_3ds: item.enrolled_for_3ds,
+            metadata: item.metadata.clone(),
+            connector_feature_data: item.connector_feature_data.clone(),
+            return_url: item.return_url.clone(),
+            continue_redirection_url: item.continue_redirection_url.clone(),
+            browser_info: item.browser_info.clone(),
+            state: item.state.clone(),
+            capture_method: item.capture_method,
+            description: item.description.clone(),
         }
     }
 }

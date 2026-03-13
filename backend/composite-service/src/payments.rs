@@ -35,6 +35,13 @@ pub trait CompositeAccessTokenRequest {
     ) -> MerchantAuthenticationServiceCreateAccessTokenRequest;
 }
 
+/// Trait for abstracting pre-authenticate request conversion.
+pub trait PreAuthenticatePayload {
+    fn build_pre_authenticate_request(
+        &self,
+    ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest;
+}
+
 impl CompositeAccessTokenRequest for CompositeAuthorizeRequest {
     fn payment_method(&self) -> Option<PaymentMethod> {
         self.payment_method.clone()
@@ -66,6 +73,22 @@ impl CompositeAccessTokenRequest for CompositeGetRequest {
         connector: &ConnectorEnum,
     ) -> MerchantAuthenticationServiceCreateAccessTokenRequest {
         MerchantAuthenticationServiceCreateAccessTokenRequest::foreign_from((self, connector))
+    }
+}
+
+impl PreAuthenticatePayload for CompositePreauthenticateRequest {
+    fn build_pre_authenticate_request(
+        &self,
+    ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
+        PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(self)
+    }
+}
+
+impl PreAuthenticatePayload for CompositeAuthenticateRequest {
+    fn build_pre_authenticate_request(
+        &self,
+    ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
+        PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(self)
     }
 }
 
@@ -300,14 +323,13 @@ where
         }))
     }
 
-    async fn pre_authenticate(
+    async fn pre_authenticate<R: PreAuthenticatePayload>(
         &self,
-        payload: &CompositePreauthenticateRequest,
+        payload: &R,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<PaymentMethodAuthenticationServicePreAuthenticateResponse, tonic::Status> {
-        let pre_authenticate_payload =
-            PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(payload);
+        let pre_authenticate_payload = payload.build_pre_authenticate_request();
 
         let mut pre_authenticate_request = tonic::Request::new(pre_authenticate_payload);
         *pre_authenticate_request.metadata_mut() = metadata.clone();
@@ -340,11 +362,17 @@ where
     async fn authenticate(
         &self,
         payload: &CompositeAuthenticateRequest,
+        pre_authenticate_response: Option<
+            &PaymentMethodAuthenticationServicePreAuthenticateResponse,
+        >,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<PaymentMethodAuthenticationServiceAuthenticateResponse, tonic::Status> {
         let authenticate_payload =
-            PaymentMethodAuthenticationServiceAuthenticateRequest::foreign_from(payload);
+            PaymentMethodAuthenticationServiceAuthenticateRequest::foreign_from((
+                payload,
+                pre_authenticate_response,
+            ));
 
         let mut authenticate_request = tonic::Request::new(authenticate_payload);
         *authenticate_request.metadata_mut() = metadata.clone();
@@ -365,10 +393,22 @@ where
     ) -> Result<tonic::Response<CompositeAuthenticateResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let authenticate_response = self.authenticate(&payload, &metadata, &extensions).await?;
+        let pre_authenticate_response = self
+            .pre_authenticate(&payload, &metadata, &extensions)
+            .await?;
+
+        let authenticate_response = self
+            .authenticate(
+                &payload,
+                Some(&pre_authenticate_response),
+                &metadata,
+                &extensions,
+            )
+            .await?;
 
         Ok(tonic::Response::new(CompositeAuthenticateResponse {
             authenticate_response: Some(authenticate_response),
+            pre_authenticate_response: Some(pre_authenticate_response),
         }))
     }
 }

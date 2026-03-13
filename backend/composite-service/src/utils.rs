@@ -3,8 +3,9 @@ use std::str::FromStr;
 use common_utils::consts::X_CONNECTOR_NAME;
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    AccessToken, CustomerServiceCreateResponse,
+    AccessToken, AuthenticationData, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse,
 };
 
 pub fn connector_from_composite_authorize_metadata(
@@ -67,4 +68,14 @@ pub fn get_access_token(
 ) -> Option<AccessToken> {
     access_token_from_request
         .or_else(|| access_token_from_create_access_token_response(access_token_response))
+}
+
+pub fn get_authentication_data(
+    auth_data_from_request: Option<AuthenticationData>,
+    pre_authenticate_response: Option<&PaymentMethodAuthenticationServicePreAuthenticateResponse>,
+) -> Option<AuthenticationData> {
+    println!("auth_data_from_request: {auth_data_from_request:?}");
+    auth_data_from_request.or_else(|| {
+        pre_authenticate_response.and_then(|response| response.authentication_data.clone())
+    })
 }
