@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ".types.SecretString",
         "::hyperswitch_masking::Secret<String>",
     );
-    
+
     // Add serde rename_all = "snake_case" for oneof enum types to output proper proto JSON
     // This ensures variant names like "ApplePay" serialize as "apple_pay"
     config.type_attribute(
@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "#[serde(rename_all = \"snake_case\")]",
     );
     config.type_attribute(
-        ".types.AppleWallet.PaymentData.payment_data", 
+        ".types.AppleWallet.PaymentData.payment_data",
         "#[serde(rename_all = \"snake_case\")]",
     );
     config.type_attribute(

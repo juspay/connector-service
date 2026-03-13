@@ -14,8 +14,16 @@
 //! Configuration: See probe-config.toml for OAuth connectors, payment methods,
 //! and connector-specific metadata.
 
+// This is a build-time tool, not production code. Allow certain patterns that would
+// be problematic in production but are acceptable here.
 #![allow(clippy::print_stdout)]
 #![allow(clippy::print_stderr)]
+#![allow(clippy::panic)] // Panics are acceptable in build tools
+#![allow(clippy::unwrap_used)] // unwrap is fine in build tools
+#![allow(clippy::expect_used)] // expect is fine in build tools
+#![allow(clippy::as_conversions)] // as conversions are needed for proto enums
+#![allow(clippy::type_complexity)] // Complex types are fine
+#![allow(clippy::clone_on_copy)] // clone on Copy types is harmless
 
 extern crate connector_service_ffi as ffi;
 
@@ -25,39 +33,31 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
+use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
+use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificAuth};
 use grpc_api_types::payments::{
-    self as proto,
-    mandate_reference::MandateIdType,
-    payment_method::PaymentMethod as PmVariant,
-    AcceptanceType, Address, BrowserInformation, CardDetails, CaptureMethod, ConnectorMandateReferenceId,
-    Customer, CustomerAcceptance, MandateReference, Money,
-    PaymentAddress, PaymentMethod,
-    PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest,
-    PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
-    PaymentServiceReverseRequest, PaymentServiceCreateOrderRequest,
-    PaymentServiceSetupRecurringRequest,
-    RecurringPaymentServiceChargeRequest,
-    CustomerServiceCreateRequest,
-    PaymentMethodServiceTokenizeRequest,
+    self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,
+    AcceptanceType, Address, BrowserInformation, CaptureMethod, CardDetails,
+    ConnectorMandateReferenceId, Customer, CustomerAcceptance, CustomerServiceCreateRequest,
+    DisputeServiceAcceptRequest, DisputeServiceDefendRequest, DisputeServiceSubmitEvidenceRequest,
+    EvidenceDocument, EvidenceType, MandateReference,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateSessionTokenRequest,
-    PaymentMethodAuthenticationServicePreAuthenticateRequest,
+    MerchantAuthenticationServiceCreateSessionTokenRequest, Money, PaymentAddress, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
-    DisputeServiceAcceptRequest,
-    DisputeServiceSubmitEvidenceRequest,
-    DisputeServiceDefendRequest,
-    EvidenceDocument, EvidenceType,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,
+    PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceCreateOrderRequest,
+    PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
+    PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest,
+    RecurringPaymentServiceChargeRequest,
 };
 use hyperswitch_masking::Secret;
-use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificAuth};
-use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
 
-use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 
 mod flow_metadata;
-use flow_metadata::{FlowMetadata, parse_services_proto};
+use flow_metadata::{parse_services_proto, FlowMetadata};
 
 // ---------------------------------------------------------------------------
 // Proto JSON conversion helpers
@@ -76,7 +76,7 @@ fn pascal_to_snake(name: &str) -> String {
 }
 
 /// Convert Rust serde JSON format to proper proto JSON format.
-/// 
+///
 /// Transformations:
 /// - oneof variant names: "ApplePay" → "apple_pay" (snake_case)
 /// - Nested oneof: {"payment_method": {"ApplePay": {...}}} → {"payment_method": {"apple_pay": {...}}}
@@ -90,15 +90,24 @@ fn convert_rust_to_proto_json(value: &serde_json::Value) -> serde_json::Value {
                     if inner_map.len() == 1 {
                         let inner_key = inner_map.keys().next().unwrap();
                         // If inner key starts with uppercase and isn't all uppercase, it's a oneof variant
-                        if inner_key.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) 
-                            && !inner_key.chars().all(|c| c.is_uppercase() || c == '_') {
+                        if inner_key
+                            .chars()
+                            .next()
+                            .map(|c| c.is_uppercase())
+                            .unwrap_or(false)
+                            && !inner_key.chars().all(|c| c.is_uppercase() || c == '_')
+                        {
                             let snake_key = pascal_to_snake(inner_key);
-                            let converted_inner = convert_rust_to_proto_json(inner_map.values().next().unwrap());
-                            result.insert(key.clone(), serde_json::Value::Object({
-                                let mut m = serde_json::Map::new();
-                                m.insert(snake_key, converted_inner);
-                                m
-                            }));
+                            let converted_inner =
+                                convert_rust_to_proto_json(inner_map.values().next().unwrap());
+                            result.insert(
+                                key.clone(),
+                                serde_json::Value::Object({
+                                    let mut m = serde_json::Map::new();
+                                    m.insert(snake_key, converted_inner);
+                                    m
+                                }),
+                            );
                             continue;
                         }
                     }
@@ -123,7 +132,7 @@ fn is_default_enum(value: &str) -> bool {
 }
 
 /// Flatten proto3 oneof wrappers that serde adds as an extra nesting level.
-/// 
+///
 /// Prost generates oneof fields as `Option<Enum>` stored under a field with the
 /// same name as the oneof itself. When serde serializes, we get:
 ///   {"payment_method": {"payment_method": {"card": {...}}}}
@@ -137,7 +146,9 @@ fn flatten_oneof_wrappers(value: &serde_json::Value) -> serde_json::Value {
                 let v = flatten_oneof_wrappers(v);
                 // Collapse the oneof wrapper: {"k": {"k": inner}} → {"k": inner}
                 if let serde_json::Value::Object(inner_map) = &v {
-                    if inner_map.len() == 1 && inner_map.keys().next().map(|ik| ik == k).unwrap_or(false) {
+                    if inner_map.len() == 1
+                        && inner_map.keys().next().map(|ik| ik == k).unwrap_or(false)
+                    {
                         let inner_value = inner_map.values().next().unwrap();
                         result.insert(k.clone(), flatten_oneof_wrappers(inner_value));
                         continue;
@@ -237,7 +248,7 @@ impl ProbeConfig {
             "probe-config.toml",
             concat!(env!("CARGO_MANIFEST_DIR"), "/probe-config.toml"),
         ];
-        
+
         for path in &config_paths {
             if let Ok(contents) = std::fs::read_to_string(path) {
                 eprintln!("Loaded config from: {path}");
@@ -245,18 +256,20 @@ impl ProbeConfig {
                     .unwrap_or_else(|e| panic!("Failed to parse {path}: {e}"));
             }
         }
-        
+
         // Fallback to defaults if no config file found
         eprintln!("Warning: No probe-config.toml found, using defaults");
         Self::default()
     }
-    
+
     /// Check if a connector is an OAuth connector that needs a cached access token
     fn is_oauth_connector(&self, connector: &ConnectorEnum) -> bool {
         let name = format!("{connector:?}").to_lowercase();
-        self.oauth_connectors.iter().any(|c| c.name.to_lowercase() == name)
+        self.oauth_connectors
+            .iter()
+            .any(|c| c.name.to_lowercase() == name)
     }
-    
+
     /// Get payment methods enabled in config
     fn get_enabled_payment_methods(&self) -> Vec<(&'static str, fn() -> PaymentMethod)> {
         let all_methods = authorize_pm_variants_static();
@@ -277,15 +290,33 @@ impl Default for ProbeConfig {
                 expires_in_seconds: 3600,
             },
             oauth_connectors: vec![
-                OAuthConnector { name: "airwallex".to_string() },
-                OAuthConnector { name: "globalpay".to_string() },
-                OAuthConnector { name: "jpmorgan".to_string() },
-                OAuthConnector { name: "iatapay".to_string() },
-                OAuthConnector { name: "getnet".to_string() },
-                OAuthConnector { name: "payload".to_string() },
-                OAuthConnector { name: "paypal".to_string() },
-                OAuthConnector { name: "truelayer".to_string() },
-                OAuthConnector { name: "volt".to_string() },
+                OAuthConnector {
+                    name: "airwallex".to_string(),
+                },
+                OAuthConnector {
+                    name: "globalpay".to_string(),
+                },
+                OAuthConnector {
+                    name: "jpmorgan".to_string(),
+                },
+                OAuthConnector {
+                    name: "iatapay".to_string(),
+                },
+                OAuthConnector {
+                    name: "getnet".to_string(),
+                },
+                OAuthConnector {
+                    name: "payload".to_string(),
+                },
+                OAuthConnector {
+                    name: "paypal".to_string(),
+                },
+                OAuthConnector {
+                    name: "truelayer".to_string(),
+                },
+                OAuthConnector {
+                    name: "volt".to_string(),
+                },
             ],
             skip_connectors: vec![],
             payment_methods: HashMap::new(),
@@ -475,8 +506,7 @@ fn card_payment_method() -> PaymentMethod {
     PaymentMethod {
         payment_method: Some(PmVariant::Card(CardDetails {
             card_number: Some(
-                cards::CardNumber::from_str("4111111111111111")
-                    .expect("static test card"),
+                cards::CardNumber::from_str("4111111111111111").expect("static test card"),
             ),
             card_exp_month: Some(Secret::new("03".to_string())),
             card_exp_year: Some(Secret::new("2030".to_string())),
@@ -539,18 +569,15 @@ fn google_pay_decrypted_method() -> PaymentMethod {
                 assurance_details: None,
             }),
             tokenization_data: Some(TokenizationData {
-                tokenization_data: Some(TD::DecryptedData(
-                    proto::GooglePayDecryptedData {
-                        card_exp_month: Some(Secret::new("03".to_string())),
-                        card_exp_year: Some(Secret::new("2030".to_string())),
-                        application_primary_account_number: Some(
-                            cards::CardNumber::from_str("4111111111111111")
-                                .expect("static test card"),
-                        ),
-                        cryptogram: Some(Secret::new("AAAAAA==".to_string())),
-                        eci_indicator: Some("05".to_string()),
-                    },
-                )),
+                tokenization_data: Some(TD::DecryptedData(proto::GooglePayDecryptedData {
+                    card_exp_month: Some(Secret::new("03".to_string())),
+                    card_exp_year: Some(Secret::new("2030".to_string())),
+                    application_primary_account_number: Some(
+                        cards::CardNumber::from_str("4111111111111111").expect("static test card"),
+                    ),
+                    cryptogram: Some(Secret::new("AAAAAA==".to_string())),
+                    eci_indicator: Some("05".to_string()),
+                })),
             }),
         })),
     }
@@ -597,7 +624,8 @@ fn apple_pay_encrypted_method() -> PaymentMethod {
                 payment_data: Some(PD::EncryptedData(
                     // Valid base64 encoding of a minimal Apple Pay token JSON stub.
                     // Decodes to: {"version":"EC_v1","data":"probe","signature":"probe"}
-                    "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9".to_string(),
+                    "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
+                        .to_string(),
                 )),
             }),
             payment_method: Some(proto::apple_wallet::PaymentMethod {
@@ -612,9 +640,7 @@ fn apple_pay_encrypted_method() -> PaymentMethod {
 
 fn ideal_payment_method() -> PaymentMethod {
     PaymentMethod {
-        payment_method: Some(PmVariant::Ideal(proto::Ideal {
-            bank_name: None,
-        })),
+        payment_method: Some(PmVariant::Ideal(proto::Ideal { bank_name: None })),
     }
 }
 
@@ -679,8 +705,7 @@ fn apple_pay_method() -> PaymentMethod {
             payment_data: Some(PaymentData {
                 payment_data: Some(PD::DecryptedData(proto::ApplePayDecryptedData {
                     application_primary_account_number: Some(
-                        cards::CardNumber::from_str("4111111111111111")
-                            .expect("static test card"),
+                        cards::CardNumber::from_str("4111111111111111").expect("static test card"),
                     ),
                     application_expiration_month: Some(Secret::new("03".to_string())),
                     application_expiration_year: Some(Secret::new("2030".to_string())),
@@ -704,7 +729,10 @@ fn apple_pay_method() -> PaymentMethod {
 // Base request builders
 // ---------------------------------------------------------------------------
 
-fn base_authorize_request_with_meta(pm: PaymentMethod, connector_meta: Option<String>) -> PaymentServiceAuthorizeRequest {
+fn base_authorize_request_with_meta(
+    pm: PaymentMethod,
+    connector_meta: Option<String>,
+) -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         amount: Some(usd_money(1000)),
         payment_method: Some(pm),
@@ -726,7 +754,11 @@ fn base_authorize_request_with_meta(pm: PaymentMethod, connector_meta: Option<St
 }
 
 /// Build an authorize request with OAuth state (access token) for OAuth connectors.
-fn base_authorize_request_with_state(pm: PaymentMethod, connector_meta: Option<String>, state: proto::ConnectorState) -> PaymentServiceAuthorizeRequest {
+fn base_authorize_request_with_state(
+    pm: PaymentMethod,
+    connector_meta: Option<String>,
+    state: proto::ConnectorState,
+) -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         amount: Some(usd_money(1000)),
         payment_method: Some(pm),
@@ -1388,9 +1420,7 @@ fn patch_authorize_request(req: &mut PaymentServiceAuthorizeRequest, field_name:
             }
         }
         "customer" => req.customer = Some(full_customer()),
-        "billing_name"
-        | "card_holder_name"
-        | "payment_method_data.card.card_holder_name" => {
+        "billing_name" | "card_holder_name" | "payment_method_data.card.card_holder_name" => {
             if let Some(ref mut pm) = req.payment_method {
                 if let Some(PmVariant::Card(ref mut card)) = pm.payment_method {
                     card.card_holder_name = Some(Secret::new("John Doe".to_string()));
@@ -1465,16 +1495,16 @@ fn patch_authorize_request(req: &mut PaymentServiceAuthorizeRequest, field_name:
         }
         // customer_id in the domain layer reads from customer.connector_customer_id
         // (not customer.id), so set the connector_customer_id field.
-        "customer_id" | "customer.id" => {
-            match req.customer {
-                Some(ref mut c) => c.connector_customer_id = Some("probe_cust_connector_001".to_string()),
-                None => {
-                    let mut c = full_customer();
-                    c.connector_customer_id = Some("probe_cust_connector_001".to_string());
-                    req.customer = Some(c);
-                }
+        "customer_id" | "customer.id" => match req.customer {
+            Some(ref mut c) => {
+                c.connector_customer_id = Some("probe_cust_connector_001".to_string())
             }
-        }
+            None => {
+                let mut c = full_customer();
+                c.connector_customer_id = Some("probe_cust_connector_001".to_string());
+                req.customer = Some(c);
+            }
+        },
         "customer_name" => {
             if req.customer.is_none() {
                 req.customer = Some(full_customer());
@@ -1536,7 +1566,10 @@ fn patch_capture_request(req: &mut PaymentServiceCaptureRequest, field_name: &st
         "browser_info" | "browser_info.ip_address" | "ip_address" => {
             req.browser_info = Some(full_browser_info());
         }
-        "connector_meta_data" | "connector_metadata" | "connector_request_id" | "connector_transaction_id" => {
+        "connector_meta_data"
+        | "connector_metadata"
+        | "connector_request_id"
+        | "connector_transaction_id" => {
             req.metadata = Some(Secret::new(
                 r#"{"reference_id":"probe_ref_001","connector_request_id":"probe_req_001","transaction_id":"probe_txn_001"}"#
                     .to_string(),
@@ -1644,14 +1677,15 @@ fn extract_sample(req: &common_utils::request::Request) -> SamplePayload {
 
 type PciFfi = domain_types::payment_method_data::DefaultPCIHolder;
 
-fn run_probe<Req, F>(
-    mut req: Req,
-    mut call: F,
-    mut patch: impl FnMut(&mut Req, &str),
-) -> FlowResult
+fn run_probe<Req, F>(mut req: Req, mut call: F, mut patch: impl FnMut(&mut Req, &str)) -> FlowResult
 where
     Req: Clone + Serialize,
-    F: FnMut(Req) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::RequestError>,
+    F: FnMut(
+        Req,
+    ) -> Result<
+        Option<common_utils::request::Request>,
+        grpc_api_types::payments::RequestError,
+    >,
 {
     let mut required_fields: Vec<String> = Vec::new();
     let mut seen_fields: HashSet<String> = HashSet::new();
@@ -1773,7 +1807,11 @@ fn probe_capture(
         req,
         |req| {
             ffi::services::payments::capture_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_capture_request,
@@ -1797,7 +1835,11 @@ fn probe_refund(
         req,
         |req| {
             ffi::services::payments::refund_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_refund_request,
@@ -1821,7 +1863,11 @@ fn probe_void(
         req,
         |req| {
             ffi::services::payments::void_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_void_request,
@@ -1845,7 +1891,11 @@ fn probe_get(
         req,
         |req| {
             ffi::services::payments::get_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_get_request,
@@ -1866,7 +1916,11 @@ fn probe_reverse(
         req,
         |req| {
             ffi::services::payments::reverse_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -1890,7 +1944,11 @@ fn probe_create_order(
         req,
         |req| {
             ffi::services::payments::create_order_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -1928,14 +1986,21 @@ fn probe_setup_recurring(
         req,
         |req| {
             ffi::services::payments::setup_recurring_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_setup_recurring_request,
     );
     // Debug: log setup_recurring result for Stripe
     if format!("{connector:?}").to_lowercase() == "stripe" && result.status != "supported" {
-        eprintln!("  DEBUG setup_recurring for {:?}: status={}, error={:?}", connector, result.status, result.error);
+        eprintln!(
+            "  DEBUG setup_recurring for {:?}: status={}, error={:?}",
+            connector, result.status, result.error
+        );
     }
     result
 }
@@ -1957,7 +2022,11 @@ fn probe_recurring_charge(
         req,
         |req| {
             ffi::services::payments::charge_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -1978,7 +2047,11 @@ fn probe_create_customer(
         req,
         |req| {
             ffi::services::payments::create_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -1999,7 +2072,11 @@ fn probe_tokenize(
         req,
         |req| {
             ffi::services::payments::tokenize_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -2017,7 +2094,11 @@ fn probe_create_access_token(
         req,
         |req| {
             ffi::services::payments::create_access_token_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -2038,7 +2119,11 @@ fn probe_create_session_token(
         req,
         |req| {
             ffi::services::payments::create_session_token_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -2062,7 +2147,11 @@ fn probe_pre_authenticate(
         req,
         |req| {
             ffi::services::payments::pre_authenticate_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -2086,7 +2175,11 @@ fn probe_authenticate(
         req,
         |req| {
             ffi::services::payments::authenticate_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -2110,7 +2203,11 @@ fn probe_post_authenticate(
         req,
         |req| {
             ffi::services::payments::post_authenticate_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         |_, _| {},
@@ -2121,12 +2218,12 @@ fn probe_post_authenticate(
 fn connector_feature_data_json(connector: &ConnectorEnum) -> Option<String> {
     let config = get_config();
     let name = format!("{connector:?}").to_lowercase();
-    
+
     // First check if config has metadata for this connector
     if let Some(meta) = config.connector_metadata.get(&name) {
         return Some(meta.clone());
     }
-    
+
     // Fall back to default if available
     config.connector_metadata.get("default").cloned()
 }
@@ -2204,7 +2301,11 @@ fn probe_authorize(
             base_authorize_request_with_state(pm, connector_meta, mock_connector_state()),
             |req| {
                 ffi::services::payments::authorize_req_transformer::<PciFfi>(
-                    req, config, connector.clone(), auth.clone(), metadata,
+                    req,
+                    config,
+                    connector.clone(),
+                    auth.clone(),
+                    metadata,
                 )
             },
             patch_authorize_request,
@@ -2214,7 +2315,11 @@ fn probe_authorize(
             base_authorize_request_with_meta(pm, connector_meta),
             |req| {
                 ffi::services::payments::authorize_req_transformer::<PciFfi>(
-                    req, config, connector.clone(), auth.clone(), metadata,
+                    req,
+                    config,
+                    connector.clone(),
+                    auth.clone(),
+                    metadata,
                 )
             },
             patch_authorize_request,
@@ -2250,13 +2355,22 @@ fn authorize_pm_variants() -> Vec<(&'static str, fn() -> PaymentMethod)> {
         ("GooglePay", google_pay_method as fn() -> PaymentMethod),
         ("ApplePay", apple_pay_method as fn() -> PaymentMethod),
         ("Ideal", ideal_payment_method as fn() -> PaymentMethod),
-        ("PaypalRedirect", paypal_redirect_method as fn() -> PaymentMethod),
+        (
+            "PaypalRedirect",
+            paypal_redirect_method as fn() -> PaymentMethod,
+        ),
         ("Blik", blik_payment_method as fn() -> PaymentMethod),
         ("Klarna", klarna_payment_method as fn() -> PaymentMethod),
         ("Afterpay", afterpay_payment_method as fn() -> PaymentMethod),
-        ("UpiCollect", upi_collect_payment_method as fn() -> PaymentMethod),
+        (
+            "UpiCollect",
+            upi_collect_payment_method as fn() -> PaymentMethod,
+        ),
         ("Affirm", affirm_payment_method as fn() -> PaymentMethod),
-        ("SamsungPay", samsung_pay_payment_method as fn() -> PaymentMethod),
+        (
+            "SamsungPay",
+            samsung_pay_payment_method as fn() -> PaymentMethod,
+        ),
     ]
 }
 
@@ -2402,7 +2516,11 @@ fn base_defend_dispute_request() -> DisputeServiceDefendRequest {
 
 fn patch_accept_dispute_request(_req: &mut DisputeServiceAcceptRequest, _field_name: &str) {}
 
-fn patch_submit_evidence_request(_req: &mut DisputeServiceSubmitEvidenceRequest, _field_name: &str) {}
+fn patch_submit_evidence_request(
+    _req: &mut DisputeServiceSubmitEvidenceRequest,
+    _field_name: &str,
+) {
+}
 
 fn patch_defend_dispute_request(_req: &mut DisputeServiceDefendRequest, _field_name: &str) {}
 
@@ -2417,7 +2535,11 @@ fn probe_accept_dispute(
         req,
         |req| {
             ffi::services::payments::accept_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_accept_dispute_request,
@@ -2435,7 +2557,11 @@ fn probe_submit_evidence(
         req,
         |req| {
             ffi::services::payments::submit_evidence_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_submit_evidence_request,
@@ -2453,7 +2579,11 @@ fn probe_defend_dispute(
         req,
         |req| {
             ffi::services::payments::defend_req_transformer::<PciFfi>(
-                req, config, connector.clone(), auth.clone(), metadata,
+                req,
+                config,
+                connector.clone(),
+                auth.clone(),
+                metadata,
             )
         },
         patch_defend_dispute_request,
@@ -2644,7 +2774,10 @@ fn probe_connector(connector: &ConnectorEnum) -> ConnectorResult {
         flows.insert("defend_dispute".to_string(), m);
     }
 
-    ConnectorResult { connector: name, flows }
+    ConnectorResult {
+        connector: name,
+        flows,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -2654,8 +2787,12 @@ fn probe_connector(connector: &ConnectorEnum) -> ConnectorResult {
 fn main() {
     // Load config first (initializes PROBE_CONFIG)
     let config = get_config();
-    let skip_set: HashSet<String> = config.skip_connectors.iter().map(|s| s.to_lowercase()).collect();
-    
+    let skip_set: HashSet<String> = config
+        .skip_connectors
+        .iter()
+        .map(|s| s.to_lowercase())
+        .collect();
+
     let connectors: Vec<ConnectorEnum> = all_connectors()
         .into_iter()
         .filter(|c| {
@@ -2664,7 +2801,11 @@ fn main() {
         })
         .collect();
 
-    eprintln!("Probing {} connectors ({} skipped)...", connectors.len(), skip_set.len());
+    eprintln!(
+        "Probing {} connectors ({} skipped)...",
+        connectors.len(),
+        skip_set.len()
+    );
 
     // Generate flow metadata from services.proto
     eprintln!("Generating flow metadata from services.proto...");
@@ -2693,7 +2834,10 @@ fn main() {
 
     // Create output directory
     if let Err(e) = std::fs::create_dir_all(&output_dir) {
-        eprintln!("Error: Failed to create output directory {:?}: {e}", output_dir);
+        eprintln!(
+            "Error: Failed to create output directory {:?}: {e}",
+            output_dir
+        );
         std::process::exit(1);
     }
 
@@ -2701,16 +2845,17 @@ fn main() {
     let mut connector_names: Vec<String> = Vec::new();
     let mut total_supported = 0;
     let mut total_not_supported = 0;
-    
+
     for result in results {
         let connector_name = result.connector.clone();
         connector_names.push(connector_name.clone());
-        
+
         // Convert to compact format (omits not_supported entries and null fields)
-        let mut compact_flows: BTreeMap<String, BTreeMap<String, CompactFlowResult>> = BTreeMap::new();
+        let mut compact_flows: BTreeMap<String, BTreeMap<String, CompactFlowResult>> =
+            BTreeMap::new();
         let mut supported_count = 0;
         let mut not_supported_count = 0;
-        
+
         for (flow_name, flow_data) in result.flows {
             let mut compact_flow_data: BTreeMap<String, CompactFlowResult> = BTreeMap::new();
             for (entry_name, flow_result) in flow_data {
@@ -2728,23 +2873,25 @@ fn main() {
                 compact_flows.insert(flow_name, compact_flow_data);
             }
         }
-        
+
         total_supported += supported_count;
         total_not_supported += not_supported_count;
-        
+
         let compact_result = CompactConnectorResult {
             connector: result.connector,
             flows: compact_flows,
         };
-        
+
         // Write formatted JSON with proper indentation
         let connector_json = serde_json::to_string_pretty(&compact_result)
             .expect("Failed to serialize connector results");
-        
+
         let connector_file = output_dir.join(format!("{}.json", connector_name));
         match std::fs::write(&connector_file, &connector_json) {
-            Ok(()) => eprintln!("  Wrote {:?} ({} supported, {} not_supported)", 
-                               connector_file, supported_count, not_supported_count),
+            Ok(()) => eprintln!(
+                "  Wrote {:?} ({} supported, {} not_supported)",
+                connector_file, supported_count, not_supported_count
+            ),
             Err(e) => eprintln!("  Warning: Failed to write {:?}: {e}", connector_file),
         }
     }
@@ -2755,10 +2902,9 @@ fn main() {
         connectors: connector_names,
         schema_version: "2.0.0".to_string(),
     };
-    
-    let manifest_json = serde_json::to_string(&manifest)
-        .expect("Failed to serialize manifest");
-    
+
+    let manifest_json = serde_json::to_string(&manifest).expect("Failed to serialize manifest");
+
     let manifest_path = output_dir.join("manifest.json");
     match std::fs::write(&manifest_path, &manifest_json) {
         Ok(()) => eprintln!("Wrote manifest to {:?}", manifest_path),
@@ -2767,6 +2913,8 @@ fn main() {
 
     eprintln!(
         "\nSummary: {} connectors, {} supported entries, {} not_supported entries omitted",
-        connectors.len(), total_supported, total_not_supported
+        connectors.len(),
+        total_supported,
+        total_not_supported
     );
 }
