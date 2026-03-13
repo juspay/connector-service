@@ -2094,7 +2094,7 @@ fn test_normalize_content() {
         r#"{"TransactionIdentifier":"6700473c-d3d1-4b5e-aafd-5b6447fa2ef3","TotalAmount":10.0}"#;
     let output = normalize_content(input);
     assert!(
-        output.contains("probe_transaction_identifier"),
+        output.contains("00000000-0000-0000-0000-000000000000"),
         "Expected UUID to be replaced, got: {}",
         output
     );
