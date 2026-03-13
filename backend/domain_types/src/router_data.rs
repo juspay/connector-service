@@ -187,6 +187,10 @@ pub enum ConnectorSpecificAuth {
         merchant_id: Secret<String>,
         api_key: Secret<String>,
     },
+    Ppro {
+        api_key: Secret<String>,
+        merchant_id: Secret<String>,
+    },
 
     // --- Two-field connectors ---
     Razorpay {
@@ -1624,6 +1628,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     finix_password: api_secret.clone(),
                     merchant_identity_id: key1.clone(),
                     merchant_id: key2.clone(),
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Ppro => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(ConnectorSpecificAuth::Ppro {
+                    api_key: api_key.clone(),
+                    merchant_id: key1.clone(),
                 }),
                 _ => Err(err().into()),
             },

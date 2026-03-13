@@ -121,6 +121,7 @@ pub enum ConnectorEnum {
     Hyperpg,
     Zift,
     Revolv3,
+    Ppro,
     Truelayer,
     Finix,
 }
@@ -203,6 +204,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Hyperpg => Ok(Self::Hyperpg),
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
+            grpc_api_types::payments::Connector::Ppro => Ok(Self::Ppro),
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Unspecified => {
@@ -1868,6 +1870,7 @@ pub enum EventType {
 
     // Mandate events
     MandateActive,
+    MandateFailed,
     MandateRevoked,
 
     // Misc events
@@ -1946,7 +1949,10 @@ impl EventType {
 
     /// Returns true if this event type is mandate-related
     pub fn is_mandate_event(&self) -> bool {
-        matches!(self, Self::MandateActive | Self::MandateRevoked)
+        matches!(
+            self,
+            Self::MandateActive | Self::MandateFailed | Self::MandateRevoked
+        )
     }
 
     /// Returns true if this event type is payout-related
@@ -2060,6 +2066,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::WebhookDisputeWon => Ok(Self::DisputeWon),
             grpc_api_types::payments::WebhookEventType::WebhookDisputeLost => Ok(Self::DisputeLost),
             grpc_api_types::payments::WebhookEventType::MandateActive => Ok(Self::MandateActive),
+            grpc_api_types::payments::WebhookEventType::MandateFailed => Ok(Self::MandateFailed),
             grpc_api_types::payments::WebhookEventType::MandateRevoked => Ok(Self::MandateRevoked),
             grpc_api_types::payments::WebhookEventType::EndpointVerification => {
                 Ok(Self::EndpointVerification)
@@ -2132,6 +2139,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::DisputeWon => Ok(Self::WebhookDisputeWon),
             EventType::DisputeLost => Ok(Self::WebhookDisputeLost),
             EventType::MandateActive => Ok(Self::MandateActive),
+            EventType::MandateFailed => Ok(Self::MandateFailed),
             EventType::MandateRevoked => Ok(Self::MandateRevoked),
             EventType::EndpointVerification => Ok(Self::EndpointVerification),
             EventType::ExternalAuthenticationAres => Ok(Self::ExternalAuthenticationAres),
@@ -2770,6 +2778,9 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::WalletData::AmazonPayRedirect(_) => Self::AmazonPayRedirect,
                 payment_method_data::WalletData::Paze(_) => Self::Paze,
                 payment_method_data::WalletData::RevolutPay(_) => Self::RevolutPay,
+                payment_method_data::WalletData::MbWay(_) => Self::MbWay,
+                payment_method_data::WalletData::Satispay(_) => Self::Satispay,
+                payment_method_data::WalletData::Wero(_) => Self::Wero,
             },
             PaymentMethodData::PayLater(pay_later_data) => match pay_later_data {
                 payment_method_data::PayLaterData::KlarnaRedirect { .. } => Self::KlarnaRedirect,
