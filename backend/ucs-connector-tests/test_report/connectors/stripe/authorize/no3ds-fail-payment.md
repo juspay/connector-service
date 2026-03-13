@@ -23,62 +23,28 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_d92522a041a5443b99cb65df6418603d",
-  "customer_name": "Liam Taylor",
+  "merchant_customer_id": "mcui_8868c11f10d046b2bbb8105c3d0aa25a",
+  "customer_name": "Ethan Johnson",
   "email": {
-    "value": "jordan.1845@sandbox.example.com"
+    "value": "alex.9274@testmail.io"
   },
-  "phone_number": "+913762400819",
+  "phone_number": "+16852706485",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Ethan"
+        "value": "Liam"
       },
       "last_name": {
-        "value": "Johnson"
+        "value": "Brown"
       },
       "line1": {
-        "value": "8628 Lake Dr"
+        "value": "1527 Oak Ave"
       },
       "line2": {
-        "value": "63 Lake St"
+        "value": "5546 Pine Rd"
       },
       "line3": {
-        "value": "501 Oak Ln"
-      },
-      "city": {
-        "value": "Austin"
-      },
-      "state": {
-        "value": "CA"
-      },
-      "zip_code": {
-        "value": "95996"
-      },
-      "country_alpha2_code": "US",
-      "email": {
-        "value": "jordan.5450@testmail.io"
-      },
-      "phone_number": {
-        "value": "1001378882"
-      },
-      "phone_country_code": "+91"
-    },
-    "billing_address": {
-      "first_name": {
-        "value": "Emma"
-      },
-      "last_name": {
-        "value": "Miller"
-      },
-      "line1": {
-        "value": "7297 Market St"
-      },
-      "line2": {
-        "value": "2736 Main Dr"
-      },
-      "line3": {
-        "value": "3134 Sunset Rd"
+        "value": "3766 Sunset Dr"
       },
       "city": {
         "value": "Chicago"
@@ -87,14 +53,48 @@ grpcurl -plaintext \
         "value": "CA"
       },
       "zip_code": {
-        "value": "83242"
+        "value": "67054"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "casey.3657@sandbox.example.com"
+        "value": "riley.3141@testmail.io"
       },
       "phone_number": {
-        "value": "1001673800"
+        "value": "7533376162"
+      },
+      "phone_country_code": "+91"
+    },
+    "billing_address": {
+      "first_name": {
+        "value": "Liam"
+      },
+      "last_name": {
+        "value": "Smith"
+      },
+      "line1": {
+        "value": "9223 Oak Dr"
+      },
+      "line2": {
+        "value": "3785 Oak Blvd"
+      },
+      "line3": {
+        "value": "677 Pine Dr"
+      },
+      "city": {
+        "value": "San Francisco"
+      },
+      "state": {
+        "value": "CA"
+      },
+      "zip_code": {
+        "value": "91760"
+      },
+      "country_alpha2_code": "US",
+      "email": {
+        "value": "sam.4359@sandbox.example.com"
+      },
+      "phone_number": {
+        "value": "2636705954"
       },
       "phone_country_code": "+91"
     }
@@ -126,13 +126,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:34 GMT
+date: Fri, 13 Mar 2026 06:48:33 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "cus_U8SIyZsBbJaaAz",
-  "connectorCustomerId": "cus_U8SIyZsBbJaaAz",
+  "merchantCustomerId": "cus_U8guMznrikWGgF",
+  "connectorCustomerId": "cus_U8guMznrikWGgF",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -142,13 +142,13 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "680",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-length": "672",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:42:34 GMT",
-    "idempotency-key": "a13ca5a4-f8ac-4732-9f6f-bd3996f61df4",
-    "original-request": "req_IuNPjC6h0JR6qe",
-    "request-id": "req_IuNPjC6h0JR6qe",
+    "date": "Fri, 13 Mar 2026 06:48:33 GMT",
+    "idempotency-key": "6025604e-9e73-4b53-be3f-46524029783f",
+    "original-request": "req_rguYJKJv6apgq2",
+    "request-id": "req_rguYJKJv6apgq2",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",
@@ -182,7 +182,7 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/Authorize <<'JSON'
 {
-  "merchant_transaction_id": "mti_209abdd925ce4f06b3d7eaca27e1cfc1",
+  "merchant_transaction_id": "mti_434f370fdeef485d8c1ae841a5e9e4b7",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -204,72 +204,38 @@ grpcurl -plaintext \
         "value": "123"
       },
       "card_holder_name": {
-        "value": "Ava Taylor"
+        "value": "Emma Johnson"
       },
       "card_type": "credit"
     }
   },
   "capture_method": "AUTOMATIC",
   "customer": {
-    "name": "Emma Smith",
+    "name": "Mia Johnson",
     "email": {
-      "value": "jordan.3074@example.com"
+      "value": "riley.5070@example.com"
     },
-    "id": "cust_020fe5a1ae5649088629258d99bac4f3",
-    "phone_number": "+444300152810",
-    "connector_customer_id": "cus_U8SIyZsBbJaaAz"
+    "id": "cust_47932674e08949b9b6ad027a600c6c9c",
+    "phone_number": "+914157578828",
+    "connector_customer_id": "cus_U8guMznrikWGgF"
   },
   "locale": "en-US",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Ethan"
+        "value": "Liam"
       },
       "last_name": {
-        "value": "Johnson"
+        "value": "Brown"
       },
       "line1": {
-        "value": "8628 Lake Dr"
+        "value": "1527 Oak Ave"
       },
       "line2": {
-        "value": "63 Lake St"
+        "value": "5546 Pine Rd"
       },
       "line3": {
-        "value": "501 Oak Ln"
-      },
-      "city": {
-        "value": "Austin"
-      },
-      "state": {
-        "value": "CA"
-      },
-      "zip_code": {
-        "value": "95996"
-      },
-      "country_alpha2_code": "US",
-      "email": {
-        "value": "jordan.5450@testmail.io"
-      },
-      "phone_number": {
-        "value": "1001378882"
-      },
-      "phone_country_code": "+91"
-    },
-    "billing_address": {
-      "first_name": {
-        "value": "Emma"
-      },
-      "last_name": {
-        "value": "Miller"
-      },
-      "line1": {
-        "value": "7297 Market St"
-      },
-      "line2": {
-        "value": "2736 Main Dr"
-      },
-      "line3": {
-        "value": "3134 Sunset Rd"
+        "value": "3766 Sunset Dr"
       },
       "city": {
         "value": "Chicago"
@@ -278,14 +244,48 @@ grpcurl -plaintext \
         "value": "CA"
       },
       "zip_code": {
-        "value": "83242"
+        "value": "67054"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "casey.3657@sandbox.example.com"
+        "value": "riley.3141@testmail.io"
       },
       "phone_number": {
-        "value": "1001673800"
+        "value": "7533376162"
+      },
+      "phone_country_code": "+91"
+    },
+    "billing_address": {
+      "first_name": {
+        "value": "Liam"
+      },
+      "last_name": {
+        "value": "Smith"
+      },
+      "line1": {
+        "value": "9223 Oak Dr"
+      },
+      "line2": {
+        "value": "3785 Oak Blvd"
+      },
+      "line3": {
+        "value": "677 Pine Dr"
+      },
+      "city": {
+        "value": "San Francisco"
+      },
+      "state": {
+        "value": "CA"
+      },
+      "zip_code": {
+        "value": "91760"
+      },
+      "country_alpha2_code": "US",
+      "email": {
+        "value": "sam.4359@sandbox.example.com"
+      },
+      "phone_number": {
+        "value": "2636705954"
       },
       "phone_country_code": "+91"
     }
@@ -327,13 +327,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:38 GMT
+date: Fri, 13 Mar 2026 06:48:37 GMT
 x-request-id: authorize_no3ds_fail_payment_req
 
 Response contents:
 {
-  "merchantTransactionId": "pi_3TABNhD5R7gDAGff0WnEUvCQ",
-  "connectorTransactionId": "pi_3TABNhD5R7gDAGff0WnEUvCQ",
+  "merchantTransactionId": "pi_3TAPWSD5R7gDAGff12t9f1QC",
+  "connectorTransactionId": "pi_3TAPWSD5R7gDAGff12t9f1QC",
   "error": {
     "issuerDetails": {
       "message": "generic_decline",
@@ -357,13 +357,13 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "5908",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-length": "5910",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:42:38 GMT",
-    "idempotency-key": "69b0925a-dc9e-46d8-be38-e19c92220170",
-    "original-request": "req_9ovBJTrD0tr4Ew",
-    "request-id": "req_9ovBJTrD0tr4Ew",
+    "date": "Fri, 13 Mar 2026 06:48:37 GMT",
+    "idempotency-key": "e6646a3c-43ab-4618-9167-f2bcace25b6e",
+    "original-request": "req_Gg6xjxpJeQQJ0l",
+    "request-id": "req_Gg6xjxpJeQQJ0l",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",
@@ -374,13 +374,13 @@ Response contents:
     "x-wc": "ABGHIJ"
   },
   "state": {
-    "connectorCustomerId": "cus_U8SIyZsBbJaaAz"
+    "connectorCustomerId": "cus_U8guMznrikWGgF"
   },
   "rawConnectorResponse": {
-    "value": "{\n  \"error\": {\n    \"advice_code\": \"try_again_later\",\n    \"charge\": \"ch_3TABNhD5R7gDAGff0Lyw0yhv\",\n    \"code\": \"card_declined\",\n    \"decline_code\": \"generic_decline\",\n    \"doc_url\": \"https://stripe.com/docs/error-codes/card-declined\",\n    \"message\": \"Your card was declined.\",\n    \"network_decline_code\": \"01\",\n    \"payment_intent\": {\n      \"id\": \"pi_3TABNhD5R7gDAGff0WnEUvCQ\",\n      \"object\": \"payment_intent\",\n      \"amount\": 6000,\n      \"amount_capturable\": 0,\n      \"amount_details\": {\n        \"tip\": {}\n      },\n      \"amount_received\": 0,\n      \"application\": null,\n      \"application_fee_amount\": null,\n      \"automatic_payment_methods\": null,\n      \"canceled_at\": null,\n      \"cancellation_reason\": null,\n      \"capture_method\": \"automatic\",\n      \"client_secret\": \"pi_3TABNhD5R7gDAGff0WnEUvCQ_secret_pxFH8BNk90K3PQ8UVzDUUgpb4\",\n      \"confirmation_method\": \"automatic\",\n      \"created\": 1773330157,\n      \"currency\": \"usd\",\n      \"customer\": \"cus_U8SIyZsBbJaaAz\",\n      \"customer_account\": null,\n      \"description\": \"No3DS fail payment flow\",\n      \"excluded_payment_method_types\": null,\n      \"invoice\": null,\n      \"last_payment_error\": {\n        \"advice_code\": \"try_again_later\",\n        \"charge\": \"ch_3TABNhD5R7gDAGff0Lyw0yhv\",\n        \"code\": \"card_declined\",\n        \"decline_code\": \"generic_decline\",\n        \"doc_url\": \"https://stripe.com/docs/error-codes/card-declined\",\n        \"message\": \"Your card was declined.\",\n        \"network_decline_code\": \"01\",\n        \"payment_method\": {\n          \"id\": \"pm_1TABNhD5R7gDAGffQfNBYZPL\",\n          \"object\": \"payment_method\",\n          \"allow_redisplay\": \"unspecified\",\n          \"billing_details\": {\n            \"address\": {\n              \"city\": \"Chicago\",\n              \"country\": \"US\",\n              \"line1\": \"7297 Market St\",\n              \"line2\": \"2736 Main Dr\",\n              \"postal_code\": \"83242\",\n              \"state\": \"CA\"\n            },\n            \"email\": \"casey.3657@sandbox.example.com\",\n            \"name\": \"Emma Miller\",\n            \"phone\": \"1001673800\",\n            \"tax_id\": null\n          },\n          \"card\": {\n            \"brand\": \"visa\",\n            \"checks\": {\n              \"address_line1_check\": \"pass\",\n              \"address_postal_code_check\": \"pass\",\n              \"cvc_check\": \"pass\"\n            },\n            \"country\": \"US\",\n            \"display_brand\": \"visa\",\n            \"exp_month\": 1,\n            \"exp_year\": 2035,\n            \"fingerprint\": \"Xxnq9tzcR7ZXkksL\",\n            \"funding\": \"credit\",\n            \"generated_from\": null,\n            \"last4\": \"0002\",\n            \"networks\": {\n              \"available\": [\n                \"visa\"\n              ],\n              \"preferred\": null\n            },\n            \"regulated_status\": \"unregulated\",\n            \"three_d_secure_usage\": {\n              \"supported\": true\n            },\n            \"wallet\": null\n          },\n          \"created\": 1773330157,\n          \"customer\": null,\n          \"customer_account\": null,\n          \"livemode\": false,\n          \"metadata\": {},\n          \"type\": \"card\"\n        },\n        \"type\": \"card_error\"\n      },\n      \"latest_charge\": \"ch_3TABNhD5R7gDAGff0Lyw0yhv\",\n      \"livemode\": false,\n      \"metadata\": {\n        \"order_id\": \"mti_209abdd925ce4f06b3d7eaca27e1cfc1\"\n      },\n      \"next_action\": null,\n      \"on_behalf_of\": null,\n      \"payment_method\": null,\n      \"payment_method_configuration_details\": null,\n      \"payment_method_options\": {\n        \"card\": {\n          \"installments\": null,\n          \"mandate_options\": null,\n          \"network\": null,\n          \"request_three_d_secure\": \"automatic\"\n        }\n      },\n      \"payment_method_types\": [\n        \"card\"\n      ],\n      \"processing\": null,\n      \"receipt_email\": null,\n      \"review\": null,\n      \"setup_future_usage\": \"on_session\",\n      \"shipping\": {\n        \"address\": {\n          \"city\": \"Austin\",\n          \"country\": \"US\",\n          \"line1\": \"8628 Lake Dr\",\n          \"line2\": \"63 Lake St\",\n          \"postal_code\": \"95996\",\n          \"state\": \"CA\"\n        },\n        \"carrier\": null,\n        \"name\": \"Ethan Johnson\",\n        \"phone\": \"+911001378882\",\n        \"tracking_number\": null\n      },\n      \"source\": null,\n      \"statement_descriptor\": null,\n      \"statement_descriptor_suffix\": null,\n      \"status\": \"requires_payment_method\",\n      \"transfer_data\": null,\n      \"transfer_group\": null\n    },\n    \"payment_method\": {\n      \"id\": \"pm_1TABNhD5R7gDAGffQfNBYZPL\",\n      \"object\": \"payment_method\",\n      \"allow_redisplay\": \"unspecified\",\n      \"billing_details\": {\n        \"address\": {\n          \"city\": \"Chicago\",\n          \"country\": \"US\",\n          \"line1\": \"7297 Market St\",\n          \"line2\": \"2736 Main Dr\",\n          \"postal_code\": \"83242\",\n          \"state\": \"CA\"\n        },\n        \"email\": \"casey.3657@sandbox.example.com\",\n        \"name\": \"Emma Miller\",\n        \"phone\": \"1001673800\",\n        \"tax_id\": null\n      },\n      \"card\": {\n        \"brand\": \"visa\",\n        \"checks\": {\n          \"address_line1_check\": \"pass\",\n          \"address_postal_code_check\": \"pass\",\n          \"cvc_check\": \"pass\"\n        },\n        \"country\": \"US\",\n        \"display_brand\": \"visa\",\n        \"exp_month\": 1,\n        \"exp_year\": 2035,\n        \"fingerprint\": \"Xxnq9tzcR7ZXkksL\",\n        \"funding\": \"credit\",\n        \"generated_from\": null,\n        \"last4\": \"0002\",\n        \"networks\": {\n          \"available\": [\n            \"visa\"\n          ],\n          \"preferred\": null\n        },\n        \"regulated_status\": \"unregulated\",\n        \"three_d_secure_usage\": {\n          \"supported\": true\n        },\n        \"wallet\": null\n      },\n      \"created\": 1773330157,\n      \"customer\": null,\n      \"customer_account\": null,\n      \"livemode\": false,\n      \"metadata\": {},\n      \"type\": \"card\"\n    },\n    \"request_log_url\": \"https://dashboard.stripe.com/acct_1M7fTaD5R7gDAGff/test/workbench/logs?object=req_9ovBJTrD0tr4Ew\",\n    \"type\": \"card_error\"\n  }\n}\n"
+    "value": "{\n  \"error\": {\n    \"advice_code\": \"try_again_later\",\n    \"charge\": \"ch_3TAPWSD5R7gDAGff1ObfNR1p\",\n    \"code\": \"card_declined\",\n    \"decline_code\": \"generic_decline\",\n    \"doc_url\": \"https://stripe.com/docs/error-codes/card-declined\",\n    \"message\": \"Your card was declined.\",\n    \"network_decline_code\": \"01\",\n    \"payment_intent\": {\n      \"id\": \"pi_3TAPWSD5R7gDAGff12t9f1QC\",\n      \"object\": \"payment_intent\",\n      \"amount\": 6000,\n      \"amount_capturable\": 0,\n      \"amount_details\": {\n        \"tip\": {}\n      },\n      \"amount_received\": 0,\n      \"application\": null,\n      \"application_fee_amount\": null,\n      \"automatic_payment_methods\": null,\n      \"canceled_at\": null,\n      \"cancellation_reason\": null,\n      \"capture_method\": \"automatic\",\n      \"client_secret\": \"pi_3TAPWSD5R7gDAGff12t9f1QC_secret_qmknwErXX7pHjvrqRDGpHr796\",\n      \"confirmation_method\": \"automatic\",\n      \"created\": 1773384516,\n      \"currency\": \"usd\",\n      \"customer\": \"cus_U8guMznrikWGgF\",\n      \"customer_account\": null,\n      \"description\": \"No3DS fail payment flow\",\n      \"excluded_payment_method_types\": null,\n      \"invoice\": null,\n      \"last_payment_error\": {\n        \"advice_code\": \"try_again_later\",\n        \"charge\": \"ch_3TAPWSD5R7gDAGff1ObfNR1p\",\n        \"code\": \"card_declined\",\n        \"decline_code\": \"generic_decline\",\n        \"doc_url\": \"https://stripe.com/docs/error-codes/card-declined\",\n        \"message\": \"Your card was declined.\",\n        \"network_decline_code\": \"01\",\n        \"payment_method\": {\n          \"id\": \"pm_1TAPWSD5R7gDAGffGPq49gD2\",\n          \"object\": \"payment_method\",\n          \"allow_redisplay\": \"unspecified\",\n          \"billing_details\": {\n            \"address\": {\n              \"city\": \"San Francisco\",\n              \"country\": \"US\",\n              \"line1\": \"9223 Oak Dr\",\n              \"line2\": \"3785 Oak Blvd\",\n              \"postal_code\": \"91760\",\n              \"state\": \"CA\"\n            },\n            \"email\": \"sam.4359@sandbox.example.com\",\n            \"name\": \"Liam Smith\",\n            \"phone\": \"2636705954\",\n            \"tax_id\": null\n          },\n          \"card\": {\n            \"brand\": \"visa\",\n            \"checks\": {\n              \"address_line1_check\": \"pass\",\n              \"address_postal_code_check\": \"pass\",\n              \"cvc_check\": \"pass\"\n            },\n            \"country\": \"US\",\n            \"display_brand\": \"visa\",\n            \"exp_month\": 1,\n            \"exp_year\": 2035,\n            \"fingerprint\": \"Xxnq9tzcR7ZXkksL\",\n            \"funding\": \"credit\",\n            \"generated_from\": null,\n            \"last4\": \"0002\",\n            \"networks\": {\n              \"available\": [\n                \"visa\"\n              ],\n              \"preferred\": null\n            },\n            \"regulated_status\": \"unregulated\",\n            \"three_d_secure_usage\": {\n              \"supported\": true\n            },\n            \"wallet\": null\n          },\n          \"created\": 1773384516,\n          \"customer\": null,\n          \"customer_account\": null,\n          \"livemode\": false,\n          \"metadata\": {},\n          \"type\": \"card\"\n        },\n        \"type\": \"card_error\"\n      },\n      \"latest_charge\": \"ch_3TAPWSD5R7gDAGff1ObfNR1p\",\n      \"livemode\": false,\n      \"metadata\": {\n        \"order_id\": \"mti_434f370fdeef485d8c1ae841a5e9e4b7\"\n      },\n      \"next_action\": null,\n      \"on_behalf_of\": null,\n      \"payment_method\": null,\n      \"payment_method_configuration_details\": null,\n      \"payment_method_options\": {\n        \"card\": {\n          \"installments\": null,\n          \"mandate_options\": null,\n          \"network\": null,\n          \"request_three_d_secure\": \"automatic\"\n        }\n      },\n      \"payment_method_types\": [\n        \"card\"\n      ],\n      \"processing\": null,\n      \"receipt_email\": null,\n      \"review\": null,\n      \"setup_future_usage\": \"on_session\",\n      \"shipping\": {\n        \"address\": {\n          \"city\": \"Chicago\",\n          \"country\": \"US\",\n          \"line1\": \"1527 Oak Ave\",\n          \"line2\": \"5546 Pine Rd\",\n          \"postal_code\": \"67054\",\n          \"state\": \"CA\"\n        },\n        \"carrier\": null,\n        \"name\": \"Liam Brown\",\n        \"phone\": \"+917533376162\",\n        \"tracking_number\": null\n      },\n      \"source\": null,\n      \"statement_descriptor\": null,\n      \"statement_descriptor_suffix\": null,\n      \"status\": \"requires_payment_method\",\n      \"transfer_data\": null,\n      \"transfer_group\": null\n    },\n    \"payment_method\": {\n      \"id\": \"pm_1TAPWSD5R7gDAGffGPq49gD2\",\n      \"object\": \"payment_method\",\n      \"allow_redisplay\": \"unspecified\",\n      \"billing_details\": {\n        \"address\": {\n          \"city\": \"San Francisco\",\n          \"country\": \"US\",\n          \"line1\": \"9223 Oak Dr\",\n          \"line2\": \"3785 Oak Blvd\",\n          \"postal_code\": \"91760\",\n          \"state\": \"CA\"\n        },\n        \"email\": \"sam.4359@sandbox.example.com\",\n        \"name\": \"Liam Smith\",\n        \"phone\": \"2636705954\",\n        \"tax_id\": null\n      },\n      \"card\": {\n        \"brand\": \"visa\",\n        \"checks\": {\n          \"address_line1_check\": \"pass\",\n          \"address_postal_code_check\": \"pass\",\n          \"cvc_check\": \"pass\"\n        },\n        \"country\": \"US\",\n        \"display_brand\": \"visa\",\n        \"exp_month\": 1,\n        \"exp_year\": 2035,\n        \"fingerprint\": \"Xxnq9tzcR7ZXkksL\",\n        \"funding\": \"credit\",\n        \"generated_from\": null,\n        \"last4\": \"0002\",\n        \"networks\": {\n          \"available\": [\n            \"visa\"\n          ],\n          \"preferred\": null\n        },\n        \"regulated_status\": \"unregulated\",\n        \"three_d_secure_usage\": {\n          \"supported\": true\n        },\n        \"wallet\": null\n      },\n      \"created\": 1773384516,\n      \"customer\": null,\n      \"customer_account\": null,\n      \"livemode\": false,\n      \"metadata\": {},\n      \"type\": \"card\"\n    },\n    \"request_log_url\": \"https://dashboard.stripe.com/acct_1M7fTaD5R7gDAGff/test/workbench/logs?object=req_Gg6xjxpJeQQJ0l\",\n    \"type\": \"card_error\"\n  }\n}\n"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api.stripe.com/v1/payment_intents\",\"method\":\"POST\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"via\":\"HyperSwitch\",\"stripe-version\":\"2022-11-15\",\"Content-Type\":\"application/x-www-form-urlencoded\"},\"body\":\"amount=6000\u0026currency=USD\u0026metadata%5Border_id%5D=mti_209abdd925ce4f06b3d7eaca27e1cfc1\u0026return_url=https%3A%2F%2Fexample.com%2Fpayment%2Freturn\u0026confirm=true\u0026customer=cus_U8SIyZsBbJaaAz\u0026description=No3DS+fail+payment+flow\u0026shipping%5Baddress%5D%5Bcity%5D=Austin\u0026shipping%5Baddress%5D%5Bcountry%5D=US\u0026shipping%5Baddress%5D%5Bline1%5D=8628+Lake+Dr\u0026shipping%5Baddress%5D%5Bline2%5D=63+Lake+St\u0026shipping%5Baddress%5D%5Bpostal_code%5D=95996\u0026shipping%5Baddress%5D%5Bstate%5D=CA\u0026shipping%5Bname%5D=Ethan+Johnson\u0026shipping%5Bphone%5D=%2B911001378882\u0026payment_method_data%5Bbilling_details%5D%5Bemail%5D=casey.3657%40sandbox.example.com\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US\u0026payment_method_data%5Bbilling_details%5D%5Bname%5D=Emma+Miller\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Chicago\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=7297+Market+St\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline2%5D=2736+Main+Dr\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=83242\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=CA\u0026payment_method_data%5Bbilling_details%5D%5Bphone%5D=1001673800\u0026payment_method_data%5Btype%5D=card\u0026payment_method_data%5Bcard%5D%5Bnumber%5D=4000000000000002\u0026payment_method_data%5Bcard%5D%5Bexp_month%5D=01\u0026payment_method_data%5Bcard%5D%5Bexp_year%5D=35\u0026payment_method_data%5Bcard%5D%5Bcvc%5D=123\u0026payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic\u0026capture_method=automatic\u0026setup_future_usage=on_session\u0026off_session=false\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_charge\"}"
+    "value": "{\"url\":\"https://api.stripe.com/v1/payment_intents\",\"method\":\"POST\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"stripe-version\":\"2022-11-15\",\"via\":\"HyperSwitch\",\"Content-Type\":\"application/x-www-form-urlencoded\"},\"body\":\"amount=6000\u0026currency=USD\u0026metadata%5Border_id%5D=mti_434f370fdeef485d8c1ae841a5e9e4b7\u0026return_url=https%3A%2F%2Fexample.com%2Fpayment%2Freturn\u0026confirm=true\u0026customer=cus_U8guMznrikWGgF\u0026description=No3DS+fail+payment+flow\u0026shipping%5Baddress%5D%5Bcity%5D=Chicago\u0026shipping%5Baddress%5D%5Bcountry%5D=US\u0026shipping%5Baddress%5D%5Bline1%5D=1527+Oak+Ave\u0026shipping%5Baddress%5D%5Bline2%5D=5546+Pine+Rd\u0026shipping%5Baddress%5D%5Bpostal_code%5D=67054\u0026shipping%5Baddress%5D%5Bstate%5D=CA\u0026shipping%5Bname%5D=Liam+Brown\u0026shipping%5Bphone%5D=%2B917533376162\u0026payment_method_data%5Bbilling_details%5D%5Bemail%5D=sam.4359%40sandbox.example.com\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US\u0026payment_method_data%5Bbilling_details%5D%5Bname%5D=Liam+Smith\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=San+Francisco\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=9223+Oak+Dr\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline2%5D=3785+Oak+Blvd\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=91760\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=CA\u0026payment_method_data%5Bbilling_details%5D%5Bphone%5D=2636705954\u0026payment_method_data%5Btype%5D=card\u0026payment_method_data%5Bcard%5D%5Bnumber%5D=4000000000000002\u0026payment_method_data%5Bcard%5D%5Bexp_month%5D=01\u0026payment_method_data%5Bcard%5D%5Bexp_year%5D=35\u0026payment_method_data%5Bcard%5D%5Bcvc%5D=123\u0026payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic\u0026capture_method=automatic\u0026setup_future_usage=on_session\u0026off_session=false\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_charge\"}"
   }
 }
 

@@ -54,15 +54,15 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:20 GMT
+date: Fri, 13 Mar 2026 06:48:17 GMT
 x-request-id: create_access_token_create_access_token_req
 
 Response contents:
 {
   "accessToken": ***MASKED***
-    "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+    "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
   },
-  "expiresInSeconds": "30458",
+  "expiresInSeconds": "29549",
   "status": "OPERATION_STATUS_SUCCESS",
   "statusCode": 200
 }
@@ -90,7 +90,7 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/SetupRecurring <<'JSON'
 {
-  "merchant_recurring_payment_id": "mrpi_7350e2513ae04ff38ace78a72bce38c9",
+  "merchant_recurring_payment_id": "mrpi_be1b9375b4d74fe2981911fcf8b3ac04",
   "amount": {
     "minor_amount": 4500,
     "currency": "USD"
@@ -110,59 +110,59 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Liam Smith"
+        "value": "Emma Taylor"
       },
       "card_type": "credit"
     }
   },
   "customer": {
-    "name": "Mia Taylor",
+    "name": "Liam Wilson",
     "email": {
-      "value": "morgan.2104@testmail.io"
+      "value": "alex.9826@sandbox.example.com"
     },
-    "id": "cust_c8c8cd164bf34505875d01a047051f34",
-    "phone_number": "+13070218085"
+    "id": "cust_cee6134a7ab84e78b7562e624569cf61",
+    "phone_number": "+13712337108"
   },
   "state": {
     "access_token": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expires_in_seconds": "30458"
+      "expires_in_seconds": "29549"
     }
   },
   "address": {
     "billing_address": {
       "first_name": {
-        "value": "Ava"
+        "value": "Emma"
       },
       "last_name": {
-        "value": "Smith"
+        "value": "Miller"
       },
       "line1": {
-        "value": "8890 Oak St"
+        "value": "8424 Sunset Dr"
       },
       "line2": {
-        "value": "7713 Main St"
+        "value": "7708 Pine St"
       },
       "line3": {
-        "value": "5493 Sunset Blvd"
+        "value": "3964 Pine Blvd"
       },
       "city": {
-        "value": "Chicago"
+        "value": "San Francisco"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "44916"
+        "value": "71811"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "riley.1060@example.com"
+        "value": "alex.9683@sandbox.example.com"
       },
       "phone_number": {
-        "value": "9476309675"
+        "value": "8776529918"
       },
       "phone_country_code": "+91"
     }
@@ -202,12 +202,12 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:23 GMT
+date: Fri, 13 Mar 2026 06:48:20 GMT
 x-request-id: setup_recurring_setup_recurring_with_webhook_req
 
 Response contents:
 {
-  "connectorRecurringPaymentId": "1wx22740vg684892j",
+  "connectorRecurringPaymentId": "23f25213uv881292j",
   "status": "CHARGED",
   "statusCode": 201,
   "responseHeaders": {
@@ -215,39 +215,39 @@ Response contents:
     "access-control-expose-headers": "Server-Timing",
     "cache-control": "max-age=0, no-cache, no-store, must-revalidate",
     "connection": "keep-alive",
-    "content-length": "574",
+    "content-length": "585",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:42:23 GMT",
+    "date": "Fri, 13 Mar 2026 06:48:20 GMT",
     "edge-control": "max-age=0",
     "http_x_pp_az_locator": "ccg18.slc",
-    "paypal-debug-id": "f348522db65d9",
+    "paypal-debug-id": "f932344f32ccd",
     "server": "nginx",
-    "server-timing": "traceparent;desc=\"00-0000000000000000000f348522db65d9-7f0f59b9a1ce08e8-01\"",
+    "server-timing": "traceparent;desc=\"00-0000000000000000000f932344f32ccd-8a761f3c6497b2fe-01\"",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "vary": "Accept-Encoding",
     "via": "1.1 varnish, 1.1 varnish",
     "x-cache": "MISS, MISS",
     "x-cache-hits": "0, 0",
-    "x-served-by": "cache-sin-wsss1830083-SIN, cache-bom-vanm7210086-BOM",
-    "x-timer": "S1773330143.432467,VS0,VE446"
+    "x-served-by": "cache-sin-wsat1880075-SIN, cache-bom-vanm7210067-BOM",
+    "x-timer": "S1773384500.140073,VS0,VE648"
   },
   "mandateReference": {
     "connectorMandateId": {
-      "connectorMandateId": "1wx22740vg684892j"
+      "connectorMandateId": "23f25213uv881292j"
     }
   },
-  "merchantRecurringPaymentId": "1wx22740vg684892j",
+  "merchantRecurringPaymentId": "23f25213uv881292j",
   "capturedAmount": "0",
   "state": {
     "accessToken": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expiresInSeconds": "30458"
+      "expiresInSeconds": "29549"
     }
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v3/vault/payment-tokens/\",\"method\":\"POST\",\"headers\":{\"PayPal-Request-Id\":\"mrpi_7350e2513ae04ff38ace78a72bce38c9\",\"via\":\"HyperSwitch\",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer ***MASKED***",\"Prefer\":\"return=representation\"},\"body\":{\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"8890 Oak St\",\"postal_code\":\"44916\",\"country_code\":\"US\",\"admin_area_2\":\"Chicago\"},\"expiry\":\"2030-08\",\"name\":\"Ava Smith\",\"number\":\"4111111111111111\"}}}}"
+    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v3/vault/payment-tokens/\",\"method\":\"POST\",\"headers\":{\"Prefer\":\"return=representation\",\"Content-Type\":\"application/json\",\"PayPal-Request-Id\":\"mrpi_be1b9375b4d74fe2981911fcf8b3ac04\",\"via\":\"HyperSwitch\",\"Authorization\":\"Bearer ***MASKED***",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\"},\"body\":{\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"8424 Sunset Dr\",\"postal_code\":\"71811\",\"country_code\":\"US\",\"admin_area_2\":\"San Francisco\"},\"expiry\":\"2030-08\",\"name\":\"Emma Miller\",\"number\":\"4111111111111111\"}}}}"
   }
 }
 

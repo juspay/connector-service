@@ -21,78 +21,78 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_83489bc461fe456d89b4a9b77473de73",
-  "customer_name": "Noah Brown",
+  "merchant_customer_id": "mcui_9527be36299446b5a9256ad0ac64e8cb",
+  "customer_name": "Mia Miller",
   "email": {
-    "value": "riley.4066@testmail.io"
+    "value": "sam.2258@sandbox.example.com"
   },
-  "phone_number": "+448122500454",
+  "phone_number": "+12259000682",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Ethan"
+        "value": "Liam"
       },
       "last_name": {
-        "value": "Brown"
+        "value": "Wilson"
       },
       "line1": {
-        "value": "1363 Main Ln"
+        "value": "2921 Pine Blvd"
       },
       "line2": {
-        "value": "8933 Pine Dr"
+        "value": "859 Main Rd"
       },
       "line3": {
-        "value": "3755 Main St"
+        "value": "9687 Oak Blvd"
       },
       "city": {
-        "value": "San Francisco"
+        "value": "Los Angeles"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "72906"
+        "value": "43198"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "jordan.1784@testmail.io"
+        "value": "casey.6980@example.com"
       },
       "phone_number": {
-        "value": "1868198982"
+        "value": "1129083218"
       },
       "phone_country_code": "+91"
     },
     "billing_address": {
       "first_name": {
-        "value": "Ava"
+        "value": "Liam"
       },
       "last_name": {
-        "value": "Smith"
+        "value": "Wilson"
       },
       "line1": {
-        "value": "8602 Oak Ln"
+        "value": "1045 Lake Blvd"
       },
       "line2": {
-        "value": "8843 Sunset Rd"
+        "value": "3666 Main Ave"
       },
       "line3": {
-        "value": "3223 Oak Blvd"
+        "value": "7228 Pine Dr"
       },
       "city": {
-        "value": "Seattle"
+        "value": "Austin"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "18024"
+        "value": "20467"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "casey.6895@testmail.io"
+        "value": "morgan.5349@sandbox.example.com"
       },
       "phone_number": {
-        "value": "4078821476"
+        "value": "8518162761"
       },
       "phone_country_code": "+91"
     }
@@ -124,13 +124,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:33 GMT
+date: Fri, 13 Mar 2026 06:48:32 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "cus_U8SINPZPkrgRCk",
-  "connectorCustomerId": "cus_U8SINPZPkrgRCk",
+  "merchantCustomerId": "cus_U8guXw4YUbS6tv",
+  "connectorCustomerId": "cus_U8guXw4YUbS6tv",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -140,13 +140,13 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "670",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-length": "676",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:42:33 GMT",
-    "idempotency-key": "81b91bca-527f-412d-bfd5-a1b4090fcda6",
-    "original-request": "req_Ts03rAAyOukmuh",
-    "request-id": "req_Ts03rAAyOukmuh",
+    "date": "Fri, 13 Mar 2026 06:48:32 GMT",
+    "idempotency-key": "814ffca1-df6b-48a5-8619-fdc368b96e8e",
+    "original-request": "req_z94rSgcDsmHSaA",
+    "request-id": "req_z94rSgcDsmHSaA",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",

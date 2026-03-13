@@ -23,78 +23,78 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_5a39981a17144828b894f63f4d3a1792",
-  "customer_name": "Emma Taylor",
+  "merchant_customer_id": "mcui_3f7f83b91e9a4c2c9b721c45c0daa498",
+  "customer_name": "Noah Taylor",
   "email": {
-    "value": "sam.2742@sandbox.example.com"
+    "value": "sam.2524@testmail.io"
   },
-  "phone_number": "+447569802362",
+  "phone_number": "+11761182680",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Mia"
+        "value": "Ava"
       },
       "last_name": {
         "value": "Miller"
       },
       "line1": {
-        "value": "9489 Main Ave"
+        "value": "882 Sunset Ave"
       },
       "line2": {
-        "value": "3007 Main Dr"
+        "value": "3579 Market Blvd"
       },
       "line3": {
-        "value": "2068 Sunset St"
+        "value": "4054 Market St"
       },
       "city": {
-        "value": "Los Angeles"
+        "value": "New York"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "30219"
+        "value": "74157"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "jordan.5487@example.com"
+        "value": "casey.8319@testmail.io"
       },
       "phone_number": {
-        "value": "1519315685"
+        "value": "9425382386"
       },
       "phone_country_code": "+91"
     },
     "billing_address": {
       "first_name": {
-        "value": "Liam"
+        "value": "Ava"
       },
       "last_name": {
         "value": "Wilson"
       },
       "line1": {
-        "value": "7312 Oak Ave"
+        "value": "3790 Pine Blvd"
       },
       "line2": {
-        "value": "8969 Pine St"
+        "value": "7894 Oak Dr"
       },
       "line3": {
-        "value": "977 Market Ln"
+        "value": "3167 Lake St"
       },
       "city": {
-        "value": "Seattle"
+        "value": "Austin"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "15145"
+        "value": "63918"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "alex.9111@testmail.io"
+        "value": "riley.4921@testmail.io"
       },
       "phone_number": {
-        "value": "5938054180"
+        "value": "8973730982"
       },
       "phone_country_code": "+91"
     }
@@ -126,13 +126,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:43:09 GMT
+date: Fri, 13 Mar 2026 06:49:09 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "cus_U8SI8Xv2Fm1dPw",
-  "connectorCustomerId": "cus_U8SI8Xv2Fm1dPw",
+  "merchantCustomerId": "cus_U8guURsrOcJQ9d",
+  "connectorCustomerId": "cus_U8guURsrOcJQ9d",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -142,13 +142,13 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "677",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-length": "669",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:43:09 GMT",
-    "idempotency-key": "e6ed23d0-bb8f-4a94-b44f-6a7c0013f00e",
-    "original-request": "req_NQnSZbz6Hjs79Q",
-    "request-id": "req_NQnSZbz6Hjs79Q",
+    "date": "Fri, 13 Mar 2026 06:49:09 GMT",
+    "idempotency-key": "5e3957e4-8828-437a-b43b-8ae16815c08a",
+    "original-request": "req_koMytBMM3uxlGp",
+    "request-id": "req_koMytBMM3uxlGp",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",
@@ -185,7 +185,7 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/Authorize <<'JSON'
 {
-  "merchant_transaction_id": "mti_f834d6ff47b648b786e737f3c3fb2da3",
+  "merchant_transaction_id": "mti_fa4b7716287f4ab883a3e67d8a8511a9",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -207,88 +207,88 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Emma Brown"
+        "value": "Liam Johnson"
       },
       "card_type": "credit"
     }
   },
   "capture_method": "AUTOMATIC",
   "customer": {
-    "name": "Emma Taylor",
+    "name": "Emma Miller",
     "email": {
-      "value": "casey.6855@testmail.io"
+      "value": "jordan.5074@example.com"
     },
-    "id": "cust_bd9c48ad1a3b4e4f8942357a7c88ddb8",
-    "phone_number": "+913812389851",
-    "connector_customer_id": "cus_U8SI8Xv2Fm1dPw"
+    "id": "cust_50ec053a5c1841fe844383fb3cbbf9ce",
+    "phone_number": "+913236346514",
+    "connector_customer_id": "cus_U8guURsrOcJQ9d"
   },
   "locale": "en-US",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Mia"
+        "value": "Ava"
       },
       "last_name": {
         "value": "Miller"
       },
       "line1": {
-        "value": "9489 Main Ave"
+        "value": "882 Sunset Ave"
       },
       "line2": {
-        "value": "3007 Main Dr"
+        "value": "3579 Market Blvd"
       },
       "line3": {
-        "value": "2068 Sunset St"
+        "value": "4054 Market St"
       },
       "city": {
-        "value": "Los Angeles"
+        "value": "New York"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "30219"
+        "value": "74157"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "jordan.5487@example.com"
+        "value": "casey.8319@testmail.io"
       },
       "phone_number": {
-        "value": "1519315685"
+        "value": "9425382386"
       },
       "phone_country_code": "+91"
     },
     "billing_address": {
       "first_name": {
-        "value": "Liam"
+        "value": "Ava"
       },
       "last_name": {
         "value": "Wilson"
       },
       "line1": {
-        "value": "7312 Oak Ave"
+        "value": "3790 Pine Blvd"
       },
       "line2": {
-        "value": "8969 Pine St"
+        "value": "7894 Oak Dr"
       },
       "line3": {
-        "value": "977 Market Ln"
+        "value": "3167 Lake St"
       },
       "city": {
-        "value": "Seattle"
+        "value": "Austin"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "15145"
+        "value": "63918"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "alex.9111@testmail.io"
+        "value": "riley.4921@testmail.io"
       },
       "phone_number": {
-        "value": "5938054180"
+        "value": "8973730982"
       },
       "phone_country_code": "+91"
     }
@@ -330,13 +330,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:43:11 GMT
+date: Fri, 13 Mar 2026 06:49:10 GMT
 x-request-id: authorize_no3ds_auto_capture_credit_card_req
 
 Response contents:
 {
-  "merchantTransactionId": "pi_3TABOED5R7gDAGff0EGOPlt7",
-  "connectorTransactionId": "pi_3TABOED5R7gDAGff0EGOPlt7",
+  "merchantTransactionId": "pi_3TAPWzD5R7gDAGff0Za80A3J",
+  "connectorTransactionId": "pi_3TAPWzD5R7gDAGff0Za80A3J",
   "status": "CHARGED",
   "statusCode": 200,
   "responseHeaders": {
@@ -347,13 +347,13 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "5535",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-length": "5539",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:43:11 GMT",
-    "idempotency-key": "007b0635-6c97-43f9-baac-e65bb9bb2c6e",
-    "original-request": "req_3DCC5A4DFkAt58",
-    "request-id": "req_3DCC5A4DFkAt58",
+    "date": "Fri, 13 Mar 2026 06:49:10 GMT",
+    "idempotency-key": "ddab36ae-23cb-40be-90ac-7ae9c4908e33",
+    "original-request": "req_HpsF6cTQeRUlOy",
+    "request-id": "req_HpsF6cTQeRUlOy",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",
@@ -365,19 +365,19 @@ Response contents:
   },
   "networkTransactionId": "976910110049114",
   "state": {
-    "connectorCustomerId": "cus_U8SI8Xv2Fm1dPw"
+    "connectorCustomerId": "cus_U8guURsrOcJQ9d"
   },
   "rawConnectorResponse": {
-    "value": "{\n  \"id\": \"pi_3TABOED5R7gDAGff0EGOPlt7\",\n  \"object\": \"payment_intent\",\n  \"amount\": 6000,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 6000,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": null,\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3TABOED5R7gDAGff0EGOPlt7_secret_uaPbmqOdaoeZ0JSoxKHRyfTqz\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1773330190,\n  \"currency\": \"usd\",\n  \"customer\": \"cus_U8SI8Xv2Fm1dPw\",\n  \"customer_account\": null,\n  \"description\": \"No3DS auto capture card payment (credit)\",\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": {\n    \"id\": \"ch_3TABOED5R7gDAGff0Elcng4K\",\n    \"object\": \"charge\",\n    \"amount\": 6000,\n    \"amount_captured\": 6000,\n    \"amount_refunded\": 0,\n    \"amount_updates\": [],\n    \"application\": null,\n    \"application_fee\": null,\n    \"application_fee_amount\": null,\n    \"balance_transaction\": \"txn_3TABOED5R7gDAGff0JGZwKXY\",\n    \"billing_details\": {\n      \"address\": {\n        \"city\": \"Seattle\",\n        \"country\": \"US\",\n        \"line1\": \"7312 Oak Ave\",\n        \"line2\": \"8969 Pine St\",\n        \"postal_code\": \"15145\",\n        \"state\": \"CA\"\n      },\n      \"email\": \"alex.9111@testmail.io\",\n      \"name\": \"Liam Wilson\",\n      \"phone\": \"5938054180\",\n      \"tax_id\": null\n    },\n    \"calculated_statement_descriptor\": \"BERNARD\",\n    \"captured\": true,\n    \"created\": 1773330190,\n    \"currency\": \"usd\",\n    \"customer\": \"cus_U8SI8Xv2Fm1dPw\",\n    \"description\": \"No3DS auto capture card payment (credit)\",\n    \"destination\": null,\n    \"dispute\": null,\n    \"disputed\": false,\n    \"failure_balance_transaction\": null,\n    \"failure_code\": null,\n    \"failure_message\": null,\n    \"fraud_details\": {},\n    \"invoice\": null,\n    \"livemode\": false,\n    \"metadata\": {\n      \"order_id\": \"mti_f834d6ff47b648b786e737f3c3fb2da3\"\n    },\n    \"on_behalf_of\": null,\n    \"order\": null,\n    \"outcome\": {\n      \"advice_code\": null,\n      \"network_advice_code\": null,\n      \"network_decline_code\": null,\n      \"network_status\": \"approved_by_network\",\n      \"reason\": null,\n      \"risk_level\": \"normal\",\n      \"risk_score\": 34,\n      \"seller_message\": \"Payment complete.\",\n      \"type\": \"authorized\"\n    },\n    \"paid\": true,\n    \"payment_intent\": \"pi_3TABOED5R7gDAGff0EGOPlt7\",\n    \"payment_method\": \"pm_1TABOED5R7gDAGffvZoe5iF8\",\n    \"payment_method_details\": {\n      \"card\": {\n        \"amount_authorized\": 6000,\n        \"authorization_code\": \"829356\",\n        \"brand\": \"visa\",\n        \"checks\": {\n          \"address_line1_check\": \"pass\",\n          \"address_postal_code_check\": \"pass\",\n          \"cvc_check\": \"pass\"\n        },\n        \"country\": \"US\",\n        \"exp_month\": 8,\n        \"exp_year\": 2030,\n        \"extended_authorization\": {\n          \"status\": \"disabled\"\n        },\n        \"fingerprint\": \"aEed1rfhfa5JNpoz\",\n        \"funding\": \"credit\",\n        \"incremental_authorization\": {\n          \"status\": \"unavailable\"\n        },\n        \"installments\": null,\n        \"last4\": \"1111\",\n        \"mandate\": null,\n        \"moto\": null,\n        \"multicapture\": {\n          \"status\": \"unavailable\"\n        },\n        \"network\": \"visa\",\n        \"network_token\": {\n          \"used\": false\n        },\n        \"network_transaction_id\": \"976910110049114\",\n        \"overcapture\": {\n          \"maximum_amount_capturable\": 6000,\n          \"status\": \"unavailable\"\n        },\n        \"regulated_status\": \"unregulated\",\n        \"three_d_secure\": null,\n        \"wallet\": null\n      },\n      \"type\": \"card\"\n    },\n    \"radar_options\": {},\n    \"receipt_email\": null,\n    \"receipt_number\": null,\n    \"receipt_url\": \"https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xTTdmVGFENVI3Z0RBR2ZmKI--y80GMgYKEUxy3H46LBZU9Nj8--HM-EQT4nFeAdWH4X-miQMxHzmMpMzkv6v0aqiCbJMrLROmTLq7\",\n    \"refunded\": false,\n    \"review\": null,\n    \"shipping\": {\n      \"address\": {\n        \"city\": \"Los Angeles\",\n        \"country\": \"US\",\n        \"line1\": \"9489 Main Ave\",\n        \"line2\": \"3007 Main Dr\",\n        \"postal_code\": \"30219\",\n        \"state\": \"CA\"\n      },\n      \"carrier\": null,\n      \"name\": \"Mia Miller\",\n      \"phone\": \"+911519315685\",\n      \"tracking_number\": null\n    },\n    \"source\": null,\n    \"source_transfer\": null,\n    \"statement_descriptor\": null,\n    \"statement_descriptor_suffix\": null,\n    \"status\": \"succeeded\",\n    \"transfer_data\": null,\n    \"transfer_group\": null\n  },\n  \"livemode\": false,\n  \"metadata\": {\n    \"order_id\": \"mti_f834d6ff47b648b786e737f3c3fb2da3\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1TABOED5R7gDAGffvZoe5iF8\",\n  \"payment_method_configuration_details\": null,\n  \"payment_method_options\": {\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    }\n  },\n  \"payment_method_types\": [\n    \"card\"\n  ],\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": \"on_session\",\n  \"shipping\": {\n    \"address\": {\n      \"city\": \"Los Angeles\",\n      \"country\": \"US\",\n      \"line1\": \"9489 Main Ave\",\n      \"line2\": \"3007 Main Dr\",\n      \"postal_code\": \"30219\",\n      \"state\": \"CA\"\n    },\n    \"carrier\": null,\n    \"name\": \"Mia Miller\",\n    \"phone\": \"+911519315685\",\n    \"tracking_number\": null\n  },\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}"
+    "value": "{\n  \"id\": \"pi_3TAPWzD5R7gDAGff0Za80A3J\",\n  \"object\": \"payment_intent\",\n  \"amount\": 6000,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 6000,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": null,\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3TAPWzD5R7gDAGff0Za80A3J_secret_6vKPzD2wpRVA0xU8uOkOXNKDP\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1773384549,\n  \"currency\": \"usd\",\n  \"customer\": \"cus_U8guURsrOcJQ9d\",\n  \"customer_account\": null,\n  \"description\": \"No3DS auto capture card payment (credit)\",\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": {\n    \"id\": \"ch_3TAPWzD5R7gDAGff0RoJTJkw\",\n    \"object\": \"charge\",\n    \"amount\": 6000,\n    \"amount_captured\": 6000,\n    \"amount_refunded\": 0,\n    \"amount_updates\": [],\n    \"application\": null,\n    \"application_fee\": null,\n    \"application_fee_amount\": null,\n    \"balance_transaction\": \"txn_3TAPWzD5R7gDAGff0zV3iflo\",\n    \"billing_details\": {\n      \"address\": {\n        \"city\": \"Austin\",\n        \"country\": \"US\",\n        \"line1\": \"3790 Pine Blvd\",\n        \"line2\": \"7894 Oak Dr\",\n        \"postal_code\": \"63918\",\n        \"state\": \"CA\"\n      },\n      \"email\": \"riley.4921@testmail.io\",\n      \"name\": \"Ava Wilson\",\n      \"phone\": \"8973730982\",\n      \"tax_id\": null\n    },\n    \"calculated_statement_descriptor\": \"BERNARD\",\n    \"captured\": true,\n    \"created\": 1773384550,\n    \"currency\": \"usd\",\n    \"customer\": \"cus_U8guURsrOcJQ9d\",\n    \"description\": \"No3DS auto capture card payment (credit)\",\n    \"destination\": null,\n    \"dispute\": null,\n    \"disputed\": false,\n    \"failure_balance_transaction\": null,\n    \"failure_code\": null,\n    \"failure_message\": null,\n    \"fraud_details\": {},\n    \"invoice\": null,\n    \"livemode\": false,\n    \"metadata\": {\n      \"order_id\": \"mti_fa4b7716287f4ab883a3e67d8a8511a9\"\n    },\n    \"on_behalf_of\": null,\n    \"order\": null,\n    \"outcome\": {\n      \"advice_code\": null,\n      \"network_advice_code\": null,\n      \"network_decline_code\": null,\n      \"network_status\": \"approved_by_network\",\n      \"reason\": null,\n      \"risk_level\": \"normal\",\n      \"risk_score\": 41,\n      \"seller_message\": \"Payment complete.\",\n      \"type\": \"authorized\"\n    },\n    \"paid\": true,\n    \"payment_intent\": \"pi_3TAPWzD5R7gDAGff0Za80A3J\",\n    \"payment_method\": \"pm_1TAPWzD5R7gDAGffh01O9AD1\",\n    \"payment_method_details\": {\n      \"card\": {\n        \"amount_authorized\": 6000,\n        \"authorization_code\": \"990403\",\n        \"brand\": \"visa\",\n        \"checks\": {\n          \"address_line1_check\": \"pass\",\n          \"address_postal_code_check\": \"pass\",\n          \"cvc_check\": \"pass\"\n        },\n        \"country\": \"US\",\n        \"exp_month\": 8,\n        \"exp_year\": 2030,\n        \"extended_authorization\": {\n          \"status\": \"disabled\"\n        },\n        \"fingerprint\": \"aEed1rfhfa5JNpoz\",\n        \"funding\": \"credit\",\n        \"incremental_authorization\": {\n          \"status\": \"unavailable\"\n        },\n        \"installments\": null,\n        \"last4\": \"1111\",\n        \"mandate\": null,\n        \"moto\": null,\n        \"multicapture\": {\n          \"status\": \"unavailable\"\n        },\n        \"network\": \"visa\",\n        \"network_token\": {\n          \"used\": false\n        },\n        \"network_transaction_id\": \"976910110049114\",\n        \"overcapture\": {\n          \"maximum_amount_capturable\": 6000,\n          \"status\": \"unavailable\"\n        },\n        \"regulated_status\": \"unregulated\",\n        \"three_d_secure\": null,\n        \"wallet\": null\n      },\n      \"type\": \"card\"\n    },\n    \"radar_options\": {},\n    \"receipt_email\": null,\n    \"receipt_number\": null,\n    \"receipt_url\": \"https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xTTdmVGFENVI3Z0RBR2ZmKObmzs0GMgZKSihv-cU6LBY2eQKp1Ik2pkKSaowo9cZNttle7B3t6XUtZyhNauW0aqtNpN5DqtAhI_8c\",\n    \"refunded\": false,\n    \"review\": null,\n    \"shipping\": {\n      \"address\": {\n        \"city\": \"New York\",\n        \"country\": \"US\",\n        \"line1\": \"882 Sunset Ave\",\n        \"line2\": \"3579 Market Blvd\",\n        \"postal_code\": \"74157\",\n        \"state\": \"CA\"\n      },\n      \"carrier\": null,\n      \"name\": \"Ava Miller\",\n      \"phone\": \"+919425382386\",\n      \"tracking_number\": null\n    },\n    \"source\": null,\n    \"source_transfer\": null,\n    \"statement_descriptor\": null,\n    \"statement_descriptor_suffix\": null,\n    \"status\": \"succeeded\",\n    \"transfer_data\": null,\n    \"transfer_group\": null\n  },\n  \"livemode\": false,\n  \"metadata\": {\n    \"order_id\": \"mti_fa4b7716287f4ab883a3e67d8a8511a9\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1TAPWzD5R7gDAGffh01O9AD1\",\n  \"payment_method_configuration_details\": null,\n  \"payment_method_options\": {\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    }\n  },\n  \"payment_method_types\": [\n    \"card\"\n  ],\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": \"on_session\",\n  \"shipping\": {\n    \"address\": {\n      \"city\": \"New York\",\n      \"country\": \"US\",\n      \"line1\": \"882 Sunset Ave\",\n      \"line2\": \"3579 Market Blvd\",\n      \"postal_code\": \"74157\",\n      \"state\": \"CA\"\n    },\n    \"carrier\": null,\n    \"name\": \"Ava Miller\",\n    \"phone\": \"+919425382386\",\n    \"tracking_number\": null\n  },\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api.stripe.com/v1/payment_intents\",\"method\":\"POST\",\"headers\":{\"stripe-version\":\"2022-11-15\",\"Authorization\":\"Bearer ***MASKED***",\"via\":\"HyperSwitch\",\"Content-Type\":\"application/x-www-form-urlencoded\"},\"body\":\"amount=6000\u0026currency=USD\u0026metadata%5Border_id%5D=mti_f834d6ff47b648b786e737f3c3fb2da3\u0026return_url=https%3A%2F%2Fexample.com%2Fpayment%2Freturn\u0026confirm=true\u0026customer=cus_U8SI8Xv2Fm1dPw\u0026description=No3DS+auto+capture+card+payment+%28credit%29\u0026shipping%5Baddress%5D%5Bcity%5D=Los+Angeles\u0026shipping%5Baddress%5D%5Bcountry%5D=US\u0026shipping%5Baddress%5D%5Bline1%5D=9489+Main+Ave\u0026shipping%5Baddress%5D%5Bline2%5D=3007+Main+Dr\u0026shipping%5Baddress%5D%5Bpostal_code%5D=30219\u0026shipping%5Baddress%5D%5Bstate%5D=CA\u0026shipping%5Bname%5D=Mia+Miller\u0026shipping%5Bphone%5D=%2B911519315685\u0026payment_method_data%5Bbilling_details%5D%5Bemail%5D=alex.9111%40testmail.io\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US\u0026payment_method_data%5Bbilling_details%5D%5Bname%5D=Liam+Wilson\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=7312+Oak+Ave\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline2%5D=8969+Pine+St\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=15145\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=CA\u0026payment_method_data%5Bbilling_details%5D%5Bphone%5D=5938054180\u0026payment_method_data%5Btype%5D=card\u0026payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111\u0026payment_method_data%5Bcard%5D%5Bexp_month%5D=08\u0026payment_method_data%5Bcard%5D%5Bexp_year%5D=30\u0026payment_method_data%5Bcard%5D%5Bcvc%5D=999\u0026payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic\u0026capture_method=automatic\u0026setup_future_usage=on_session\u0026off_session=false\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_charge\"}"
+    "value": "{\"url\":\"https://api.stripe.com/v1/payment_intents\",\"method\":\"POST\",\"headers\":{\"via\":\"HyperSwitch\",\"Content-Type\":\"application/x-www-form-urlencoded\",\"stripe-version\":\"2022-11-15\",\"Authorization\":\"Bearer ***MASKED***"},\"body\":\"amount=6000\u0026currency=USD\u0026metadata%5Border_id%5D=mti_fa4b7716287f4ab883a3e67d8a8511a9\u0026return_url=https%3A%2F%2Fexample.com%2Fpayment%2Freturn\u0026confirm=true\u0026customer=cus_U8guURsrOcJQ9d\u0026description=No3DS+auto+capture+card+payment+%28credit%29\u0026shipping%5Baddress%5D%5Bcity%5D=New+York\u0026shipping%5Baddress%5D%5Bcountry%5D=US\u0026shipping%5Baddress%5D%5Bline1%5D=882+Sunset+Ave\u0026shipping%5Baddress%5D%5Bline2%5D=3579+Market+Blvd\u0026shipping%5Baddress%5D%5Bpostal_code%5D=74157\u0026shipping%5Baddress%5D%5Bstate%5D=CA\u0026shipping%5Bname%5D=Ava+Miller\u0026shipping%5Bphone%5D=%2B919425382386\u0026payment_method_data%5Bbilling_details%5D%5Bemail%5D=riley.4921%40testmail.io\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US\u0026payment_method_data%5Bbilling_details%5D%5Bname%5D=Ava+Wilson\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Austin\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=3790+Pine+Blvd\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline2%5D=7894+Oak+Dr\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=63918\u0026payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=CA\u0026payment_method_data%5Bbilling_details%5D%5Bphone%5D=8973730982\u0026payment_method_data%5Btype%5D=card\u0026payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111\u0026payment_method_data%5Bcard%5D%5Bexp_month%5D=08\u0026payment_method_data%5Bcard%5D%5Bexp_year%5D=30\u0026payment_method_data%5Bcard%5D%5Bcvc%5D=999\u0026payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic\u0026capture_method=automatic\u0026setup_future_usage=on_session\u0026off_session=false\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_charge\"}"
   },
   "capturedAmount": "6000",
   "mandateReference": {
     "connectorMandateId": {
-      "connectorMandateId": "pm_1TABOED5R7gDAGffvZoe5iF8",
-      "paymentMethodId": "pm_1TABOED5R7gDAGffvZoe5iF8"
+      "connectorMandateId": "pm_1TAPWzD5R7gDAGffh01O9AD1",
+      "paymentMethodId": "pm_1TAPWzD5R7gDAGffh01O9AD1"
     }
   },
   "connectorResponse": {
@@ -415,15 +415,15 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/Refund <<'JSON'
 {
-  "merchant_refund_id": "mri_9b203cca0a814291b5e28400c632d424",
-  "connector_transaction_id": "pi_3TABOED5R7gDAGff0EGOPlt7",
+  "merchant_refund_id": "mri_5b674c9159714a768ac3e97259b74ab3",
+  "connector_transaction_id": "pi_3TAPWzD5R7gDAGff0Za80A3J",
   "payment_amount": 6000,
   "refund_amount": {
     "minor_amount": 6000,
     "currency": "USD"
   },
   "state": {
-    "connector_customer_id": "cus_U8SI8Xv2Fm1dPw"
+    "connector_customer_id": "cus_U8guURsrOcJQ9d"
   },
   "reason": "customer_requested"
 }
@@ -452,12 +452,12 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:43:13 GMT
+date: Fri, 13 Mar 2026 06:49:12 GMT
 x-request-id: refund_refund_with_reason_req
 
 Response contents:
 {
-  "connectorRefundId": "re_3TABOED5R7gDAGff0jj134LO",
+  "connectorRefundId": "re_3TAPWzD5R7gDAGff0O5UosHt",
   "status": "REFUND_SUCCESS",
   "statusCode": 200,
   "responseHeaders": {
@@ -469,12 +469,12 @@ Response contents:
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
     "content-length": "714",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:43:13 GMT",
-    "idempotency-key": "eb204422-5e46-4f8d-8b39-f0e411103bc7",
-    "original-request": "req_KxxR1RF8XxzAzE",
-    "request-id": "req_KxxR1RF8XxzAzE",
+    "date": "Fri, 13 Mar 2026 06:49:12 GMT",
+    "idempotency-key": "8006911e-3261-4ea4-a614-bbe245139912",
+    "original-request": "req_qExFogweZi1YS7",
+    "request-id": "req_qExFogweZi1YS7",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",
@@ -485,10 +485,10 @@ Response contents:
     "x-wc": "ABGHIJ"
   },
   "rawConnectorResponse": {
-    "value": "{\n  \"id\": \"re_3TABOED5R7gDAGff0jj134LO\",\n  \"object\": \"refund\",\n  \"amount\": 6000,\n  \"balance_transaction\": \"txn_3TABOED5R7gDAGff0h5ePZl1\",\n  \"charge\": \"ch_3TABOED5R7gDAGff0Elcng4K\",\n  \"created\": 1773330192,\n  \"currency\": \"usd\",\n  \"destination_details\": {\n    \"card\": {\n      \"reference_status\": \"pending\",\n      \"reference_type\": \"acquirer_reference_number\",\n      \"type\": \"refund\"\n    },\n    \"type\": \"card\"\n  },\n  \"metadata\": {\n    \"is_refund_id_as_reference\": \"true\",\n    \"order_id\": \"mri_9b203cca0a814291b5e28400c632d424\"\n  },\n  \"payment_intent\": \"pi_3TABOED5R7gDAGff0EGOPlt7\",\n  \"reason\": null,\n  \"receipt_number\": null,\n  \"source_transfer_reversal\": null,\n  \"status\": \"succeeded\",\n  \"transfer_reversal\": null\n}"
+    "value": "{\n  \"id\": \"re_3TAPWzD5R7gDAGff0O5UosHt\",\n  \"object\": \"refund\",\n  \"amount\": 6000,\n  \"balance_transaction\": \"txn_3TAPWzD5R7gDAGff01Di505F\",\n  \"charge\": \"ch_3TAPWzD5R7gDAGff0RoJTJkw\",\n  \"created\": 1773384551,\n  \"currency\": \"usd\",\n  \"destination_details\": {\n    \"card\": {\n      \"reference_status\": \"pending\",\n      \"reference_type\": \"acquirer_reference_number\",\n      \"type\": \"refund\"\n    },\n    \"type\": \"card\"\n  },\n  \"metadata\": {\n    \"is_refund_id_as_reference\": \"true\",\n    \"order_id\": \"mri_5b674c9159714a768ac3e97259b74ab3\"\n  },\n  \"payment_intent\": \"pi_3TAPWzD5R7gDAGff0Za80A3J\",\n  \"reason\": null,\n  \"receipt_number\": null,\n  \"source_transfer_reversal\": null,\n  \"status\": \"succeeded\",\n  \"transfer_reversal\": null\n}"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api.stripe.com/v1/refunds\",\"method\":\"POST\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"via\":\"HyperSwitch\",\"Content-Type\":\"application/x-www-form-urlencoded\",\"stripe-version\":\"2022-11-15\"},\"body\":\"amount=6000\u0026payment_intent=pi_3TABOED5R7gDAGff0EGOPlt7\u0026metadata%5Border_id%5D=mri_9b203cca0a814291b5e28400c632d424\u0026metadata%5Bis_refund_id_as_reference%5D=true\"}"
+    "value": "{\"url\":\"https://api.stripe.com/v1/refunds\",\"method\":\"POST\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"stripe-version\":\"2022-11-15\",\"via\":\"HyperSwitch\",\"Content-Type\":\"application/x-www-form-urlencoded\"},\"body\":\"amount=6000\u0026payment_intent=pi_3TAPWzD5R7gDAGff0Za80A3J\u0026metadata%5Border_id%5D=mri_5b674c9159714a768ac3e97259b74ab3\u0026metadata%5Bis_refund_id_as_reference%5D=true\"}"
   }
 }
 

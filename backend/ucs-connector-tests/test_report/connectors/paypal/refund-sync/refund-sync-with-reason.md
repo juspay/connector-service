@@ -54,15 +54,15 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:14 GMT
+date: Fri, 13 Mar 2026 06:48:11 GMT
 x-request-id: create_access_token_create_access_token_req
 
 Response contents:
 {
   "accessToken": ***MASKED***
-    "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+    "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
   },
-  "expiresInSeconds": "30464",
+  "expiresInSeconds": "29555",
   "status": "OPERATION_STATUS_SUCCESS",
   "statusCode": 200
 }
@@ -93,7 +93,7 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/Authorize <<'JSON'
 {
-  "merchant_transaction_id": "mti_58b0165dfc374ff1abd7b56d1754ce5c",
+  "merchant_transaction_id": "mti_8a7aed3efe0a4660968fef77ec0ef040",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -115,44 +115,78 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Ethan Taylor"
+        "value": "Ava Brown"
       },
       "card_type": "credit"
     }
   },
   "capture_method": "AUTOMATIC",
   "customer": {
-    "name": "Noah Smith",
+    "name": "Noah Brown",
     "email": {
-      "value": "riley.8561@testmail.io"
+      "value": "sam.5526@testmail.io"
     },
-    "id": "cust_9c4a87fb40594b0ea83dc005ae385bbe",
-    "phone_number": "+15971803615"
+    "id": "cust_476e05136ef34befbb62dcc3fd3760a6",
+    "phone_number": "+915977490673"
   },
   "state": {
     "access_token": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expires_in_seconds": "30464"
+      "expires_in_seconds": "29555"
     }
   },
   "address": {
     "shipping_address": {
       "first_name": {
+        "value": "Ava"
+      },
+      "last_name": {
+        "value": "Taylor"
+      },
+      "line1": {
+        "value": "619 Pine Rd"
+      },
+      "line2": {
+        "value": "4248 Oak Ln"
+      },
+      "line3": {
+        "value": "4951 Oak St"
+      },
+      "city": {
+        "value": "Chicago"
+      },
+      "state": {
+        "value": "CA"
+      },
+      "zip_code": {
+        "value": "17723"
+      },
+      "country_alpha2_code": "US",
+      "email": {
+        "value": "riley.3801@example.com"
+      },
+      "phone_number": {
+        "value": "1471354242"
+      },
+      "phone_country_code": "+91"
+    },
+    "billing_address": {
+      "first_name": {
         "value": "Mia"
       },
       "last_name": {
-        "value": "Miller"
+        "value": "Johnson"
       },
       "line1": {
-        "value": "5132 Market Rd"
+        "value": "6960 Lake Ave"
       },
       "line2": {
-        "value": "3671 Market Dr"
+        "value": "476 Main Blvd"
       },
       "line3": {
-        "value": "765 Market Ln"
+        "value": "8589 Sunset Ln"
       },
       "city": {
         "value": "Seattle"
@@ -161,48 +195,14 @@ grpcurl -plaintext \
         "value": "CA"
       },
       "zip_code": {
-        "value": "25610"
+        "value": "37061"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "jordan.9360@example.com"
+        "value": "jordan.1851@example.com"
       },
       "phone_number": {
-        "value": "7054857763"
-      },
-      "phone_country_code": "+91"
-    },
-    "billing_address": {
-      "first_name": {
-        "value": "Liam"
-      },
-      "last_name": {
-        "value": "Miller"
-      },
-      "line1": {
-        "value": "5124 Pine Ln"
-      },
-      "line2": {
-        "value": "3000 Market Dr"
-      },
-      "line3": {
-        "value": "891 Pine Blvd"
-      },
-      "city": {
-        "value": "San Francisco"
-      },
-      "state": {
-        "value": "CA"
-      },
-      "zip_code": {
-        "value": "79486"
-      },
-      "country_alpha2_code": "US",
-      "email": {
-        "value": "alex.5745@example.com"
-      },
-      "phone_number": {
-        "value": "9601084945"
+        "value": "1302483685"
       },
       "phone_country_code": "+91"
     }
@@ -246,13 +246,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:17 GMT
+date: Fri, 13 Mar 2026 06:48:13 GMT
 x-request-id: authorize_no3ds_auto_capture_credit_card_req
 
 Response contents:
 {
-  "merchantTransactionId": "mti_58b0165dfc374ff1abd7b56d1754ce5c",
-  "connectorTransactionId": "3LT08776YK767443Y",
+  "merchantTransactionId": "mti_8a7aed3efe0a4660968fef77ec0ef040",
+  "connectorTransactionId": "83667241NH279522S",
   "status": "CHARGED",
   "statusCode": 201,
   "responseHeaders": {
@@ -260,41 +260,41 @@ Response contents:
     "access-control-expose-headers": "Server-Timing",
     "cache-control": "max-age=0, no-cache, no-store, must-revalidate",
     "connection": "keep-alive",
-    "content-length": "2392",
+    "content-length": "2389",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:42:17 GMT",
+    "date": "Fri, 13 Mar 2026 06:48:13 GMT",
     "edge-control": "max-age=0",
     "http_x_pp_az_locator": "ccg18.slc",
-    "paypal-debug-id": "f215211344ba0",
+    "paypal-debug-id": "f3831488f5604",
     "server": "nginx",
-    "server-timing": "traceparent;desc=\"00-0000000000000000000f215211344ba0-554175614337c7b3-01\"",
+    "server-timing": "traceparent;desc=\"00-0000000000000000000f3831488f5604-0184b4ec54491665-01\"",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "vary": "Accept-Encoding",
     "via": "1.1 varnish, 1.1 varnish",
     "x-cache": "MISS, MISS",
     "x-cache-hits": "0, 0",
-    "x-served-by": "cache-sin-wsat1880092-SIN, cache-bom-vanm7210086-BOM",
-    "x-timer": "S1773330135.629894,VS0,VE2697"
+    "x-served-by": "cache-sin-wsat1880061-SIN, cache-bom-vanm7210067-BOM",
+    "x-timer": "S1773384491.359730,VS0,VE2065"
   },
   "state": {
     "accessToken": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expiresInSeconds": "30464"
+      "expiresInSeconds": "29555"
     }
   },
   "rawConnectorResponse": {
-    "value": "{\"id\":\"3LT08776YK767443Y\",\"intent\":\"CAPTURE\",\"status\":\"COMPLETED\",\"payment_source\":{\"card\":{\"name\":\"Liam Miller\",\"last_digits\":\"1111\",\"expiry\":\"2030-08\",\"brand\":\"VISA\",\"type\":\"CREDIT\",\"bin_details\":{}}},\"purchase_units\":[{\"reference_id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"handling\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"tax_total\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"insurance\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"shipping_discount\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"payee\":{\"email_address\":\"sb-itwmi27136406@business.example.com\",\"merchant_id\":\"DUM69V9DDNYEJ\"},\"description\":\"Payment for invoice mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"invoice_id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"soft_descriptor\":\"TEST STORE\",\"items\":[{\"name\":\"Payment for invoice mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"quantity\":\"1\"}],\"shipping\":{\"name\":{\"full_name\":\"Mia\"},\"address\":{\"address_line_1\":\"5132 Market Rd\",\"admin_area_2\":\"Seattle\",\"postal_code\":\"25610\",\"country_code\":\"US\"}},\"payments\":{\"captures\":[{\"id\":\"12M76512BW189654C\",\"status\":\"COMPLETED\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"final_capture\":true,\"seller_protection\":{\"status\":\"NOT_ELIGIBLE\"},\"seller_receivable_breakdown\":{\"gross_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"net_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}},\"invoice_id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/12M76512BW189654C\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/12M76512BW189654C/refund\",\"rel\":\"refund\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/3LT08776YK767443Y\",\"rel\":\"up\",\"method\":\"GET\"}],\"create_time\":\"2026-03-12T15:42:16Z\",\"update_time\":\"2026-03-12T15:42:16Z\",\"network_transaction_reference\":{\"id\":\"085257092786111\",\"network\":\"VISA\"},\"processor_response\":{\"avs_code\":\"A\",\"cvv_code\":\"M\",\"response_code\":\"0000\"}}]}}],\"create_time\":\"2026-03-12T15:42:16Z\",\"update_time\":\"2026-03-12T15:42:16Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/3LT08776YK767443Y\",\"rel\":\"self\",\"method\":\"GET\"}]}"
+    "value": "{\"id\":\"83667241NH279522S\",\"intent\":\"CAPTURE\",\"status\":\"COMPLETED\",\"payment_source\":{\"card\":{\"name\":\"Mia Johnson\",\"last_digits\":\"1111\",\"expiry\":\"2030-08\",\"brand\":\"VISA\",\"type\":\"CREDIT\",\"bin_details\":{}}},\"purchase_units\":[{\"reference_id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"handling\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"tax_total\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"insurance\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"shipping_discount\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"payee\":{\"email_address\":\"sb-itwmi27136406@business.example.com\",\"merchant_id\":\"DUM69V9DDNYEJ\"},\"description\":\"Payment for invoice mti_8a7aed3efe0a4660968fef77ec0ef040\",\"invoice_id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\",\"soft_descriptor\":\"TEST STORE\",\"items\":[{\"name\":\"Payment for invoice mti_8a7aed3efe0a4660968fef77ec0ef040\",\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"quantity\":\"1\"}],\"shipping\":{\"name\":{\"full_name\":\"Ava\"},\"address\":{\"address_line_1\":\"619 Pine Rd\",\"admin_area_2\":\"Chicago\",\"postal_code\":\"17723\",\"country_code\":\"US\"}},\"payments\":{\"captures\":[{\"id\":\"9DW8065711210961C\",\"status\":\"COMPLETED\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"final_capture\":true,\"seller_protection\":{\"status\":\"NOT_ELIGIBLE\"},\"seller_receivable_breakdown\":{\"gross_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"net_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}},\"invoice_id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/9DW8065711210961C\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/9DW8065711210961C/refund\",\"rel\":\"refund\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/83667241NH279522S\",\"rel\":\"up\",\"method\":\"GET\"}],\"create_time\":\"2026-03-13T06:48:13Z\",\"update_time\":\"2026-03-13T06:48:13Z\",\"network_transaction_reference\":{\"id\":\"635824445739918\",\"network\":\"VISA\"},\"processor_response\":{\"avs_code\":\"A\",\"cvv_code\":\"M\",\"response_code\":\"0000\"}}]}}],\"create_time\":\"2026-03-13T06:48:13Z\",\"update_time\":\"2026-03-13T06:48:13Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/83667241NH279522S\",\"rel\":\"self\",\"method\":\"GET\"}]}"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/checkout/orders\",\"method\":\"POST\",\"headers\":{\"PayPal-Request-Id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"Content-Type\":\"application/json\",\"via\":\"HyperSwitch\",\"Prefer\":\"return=representation\",\"Authorization\":\"Bearer ***MASKED***",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\"},\"body\":{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"invoice_id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":{\"address_line_1\":\"5132 Market Rd\",\"postal_code\":\"25610\",\"country_code\":\"US\",\"admin_area_2\":\"Seattle\"},\"name\":{\"full_name\":\"Mia\"}},\"items\":[{\"name\":\"Payment for invoice mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":null}]}],\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"5124 Pine Ln\",\"postal_code\":\"79486\",\"country_code\":\"US\",\"admin_area_2\":\"San Francisco\"},\"expiry\":\"2030-08\",\"name\":\"Liam Miller\",\"number\":\"4111111111111111\",\"security_code\":\"999\",\"attributes\":{\"vault\":null,\"verification\":null}}}}}"
+    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/checkout/orders\",\"method\":\"POST\",\"headers\":{\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"Authorization\":\"Bearer ***MASKED***",\"Content-Type\":\"application/json\",\"via\":\"HyperSwitch\",\"Prefer\":\"return=representation\",\"PayPal-Request-Id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\"},\"body\":{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\",\"invoice_id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":{\"address_line_1\":\"619 Pine Rd\",\"postal_code\":\"17723\",\"country_code\":\"US\",\"admin_area_2\":\"Chicago\"},\"name\":{\"full_name\":\"Ava\"}},\"items\":[{\"name\":\"Payment for invoice mti_8a7aed3efe0a4660968fef77ec0ef040\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":null}]}],\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"6960 Lake Ave\",\"postal_code\":\"37061\",\"country_code\":\"US\",\"admin_area_2\":\"Seattle\"},\"expiry\":\"2030-08\",\"name\":\"Mia Johnson\",\"number\":\"4111111111111111\",\"security_code\":\"999\",\"attributes\":{\"vault\":null,\"verification\":null}}}}}"
   },
   "mandateReference": {
     "connectorMandateId": {}
   },
   "connectorFeatureData": {
-    "value": "{\"authorize_id\":null,\"capture_id\":\"12M76512BW189654C\",\"incremental_authorization_id\":null,\"psync_flow\":\"CAPTURE\",\"next_action\":null,\"order_id\":null}"
+    "value": "{\"authorize_id\":null,\"capture_id\":\"9DW8065711210961C\",\"incremental_authorization_id\":null,\"psync_flow\":\"CAPTURE\",\"next_action\":null,\"order_id\":null}"
   }
 }
 
@@ -324,8 +324,8 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/Refund <<'JSON'
 {
-  "merchant_refund_id": "mri_22cc4cf2b0364c0e9f35454776e8d0a2",
-  "connector_transaction_id": "3LT08776YK767443Y",
+  "merchant_refund_id": "mri_9bc376bf6a03471a9119752adc6165da",
+  "connector_transaction_id": "83667241NH279522S",
   "payment_amount": 6000,
   "refund_amount": {
     "minor_amount": 6000,
@@ -334,13 +334,13 @@ grpcurl -plaintext \
   "state": {
     "access_token": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expires_in_seconds": "30464"
+      "expires_in_seconds": "29555"
     }
   },
   "connector_feature_data": {
-    "value": "{\"authorize_id\":null,\"capture_id\":\"12M76512BW189654C\",\"incremental_authorization_id\":null,\"psync_flow\":\"CAPTURE\",\"next_action\":null,\"order_id\":null}"
+    "value": "{\"authorize_id\":null,\"capture_id\":\"9DW8065711210961C\",\"incremental_authorization_id\":null,\"psync_flow\":\"CAPTURE\",\"next_action\":null,\"order_id\":null}"
   }
 }
 JSON
@@ -369,12 +369,12 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:19 GMT
+date: Fri, 13 Mar 2026 06:48:15 GMT
 x-request-id: refund_refund_full_amount_req
 
 Response contents:
 {
-  "connectorRefundId": "94M084504X2284024",
+  "connectorRefundId": "19E08322XA2972132",
   "status": "REFUND_SUCCESS",
   "statusCode": 201,
   "responseHeaders": {
@@ -384,25 +384,25 @@ Response contents:
     "connection": "keep-alive",
     "content-length": "710",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:42:19 GMT",
+    "date": "Fri, 13 Mar 2026 06:48:15 GMT",
     "edge-control": "max-age=0",
     "http_x_pp_az_locator": "ccg18.slc",
-    "paypal-debug-id": "f29944952715d",
+    "paypal-debug-id": "f37522777b3f1",
     "server": "nginx",
-    "server-timing": "traceparent;desc=\"00-0000000000000000000f29944952715d-d78a0a30e4432350-01\"",
+    "server-timing": "traceparent;desc=\"00-0000000000000000000f37522777b3f1-45d65248ccdd3713-01\"",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "vary": "Accept-Encoding",
     "via": "1.1 varnish, 1.1 varnish",
     "x-cache": "MISS, MISS",
     "x-cache-hits": "0, 0",
-    "x-served-by": "cache-sin-wsss1830032-SIN, cache-bom-vanm7210086-BOM",
-    "x-timer": "S1773330137.493033,VS0,VE1731"
+    "x-served-by": "cache-sin-wsss1830095-SIN, cache-bom-vanm7210067-BOM",
+    "x-timer": "S1773384494.639438,VS0,VE1942"
   },
   "rawConnectorResponse": {
-    "value": "{\"id\":\"94M084504X2284024\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"seller_payable_breakdown\":{\"gross_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"paypal_fee\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"net_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"total_refunded_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}},\"invoice_id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"status\":\"COMPLETED\",\"create_time\":\"2026-03-12T08:42:18-07:00\",\"update_time\":\"2026-03-12T08:42:18-07:00\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/refunds/94M084504X2284024\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/12M76512BW189654C\",\"rel\":\"up\",\"method\":\"GET\"}]}"
+    "value": "{\"id\":\"19E08322XA2972132\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"seller_payable_breakdown\":{\"gross_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"paypal_fee\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"net_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"total_refunded_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}},\"invoice_id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\",\"status\":\"COMPLETED\",\"create_time\":\"2026-03-12T23:48:14-07:00\",\"update_time\":\"2026-03-12T23:48:14-07:00\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/refunds/19E08322XA2972132\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/9DW8065711210961C\",\"rel\":\"up\",\"method\":\"GET\"}]}"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/payments/captures/12M76512BW189654C/refund\",\"method\":\"POST\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"Content-Type\":\"application/json\",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"PayPal-Request-Id\":\"mri_22cc4cf2b0364c0e9f35454776e8d0a2\",\"via\":\"HyperSwitch\",\"Prefer\":\"return=representation\"},\"body\":{\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}}}"
+    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/payments/captures/9DW8065711210961C/refund\",\"method\":\"POST\",\"headers\":{\"PayPal-Request-Id\":\"mri_9bc376bf6a03471a9119752adc6165da\",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"Prefer\":\"return=representation\",\"via\":\"HyperSwitch\",\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer ***MASKED***"},\"body\":{\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}}}"
   }
 }
 
@@ -429,19 +429,19 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.RefundService/Get <<'JSON'
 {
-  "connector_transaction_id": "3LT08776YK767443Y",
-  "refund_id": "94M084504X2284024",
+  "connector_transaction_id": "83667241NH279522S",
+  "refund_id": "19E08322XA2972132",
   "state": {
     "access_token": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expires_in_seconds": "30464"
+      "expires_in_seconds": "29555"
     }
   },
   "refund_reason": "customer_requested",
   "connector_feature_data": {
-    "value": "{\"authorize_id\":null,\"capture_id\":\"12M76512BW189654C\",\"incremental_authorization_id\":null,\"psync_flow\":\"CAPTURE\",\"next_action\":null,\"order_id\":null}"
+    "value": "{\"authorize_id\":null,\"capture_id\":\"9DW8065711210961C\",\"incremental_authorization_id\":null,\"psync_flow\":\"CAPTURE\",\"next_action\":null,\"order_id\":null}"
   }
 }
 JSON
@@ -470,13 +470,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:42:19 GMT
+date: Fri, 13 Mar 2026 06:48:16 GMT
 x-request-id: refund_sync_refund_sync_with_reason_req
 
 Response contents:
 {
-  "merchantRefundId": "94M084504X2284024",
-  "connectorRefundId": "94M084504X2284024",
+  "merchantRefundId": "19E08322XA2972132",
+  "connectorRefundId": "19E08322XA2972132",
   "status": "REFUND_SUCCESS",
   "statusCode": 200,
   "responseHeaders": {
@@ -485,26 +485,26 @@ Response contents:
     "cache-control": "max-age=0, no-cache, no-store, must-revalidate",
     "connection": "keep-alive",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:42:19 GMT",
+    "date": "Fri, 13 Mar 2026 06:48:16 GMT",
     "edge-control": "max-age=0",
     "http_x_pp_az_locator": "ccg18.slc",
-    "paypal-debug-id": "f9573610a6ce8",
+    "paypal-debug-id": "f7233408f1f15",
     "server": "nginx",
-    "server-timing": "traceparent;desc=\"00-0000000000000000000f9573610a6ce8-6a690caec4b25630-01\"",
+    "server-timing": "traceparent;desc=\"00-0000000000000000000f7233408f1f15-fac0ed1855d1eb1b-01\"",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "transfer-encoding": "chunked",
     "vary": "Accept-Encoding",
     "via": "1.1 varnish, 1.1 varnish",
     "x-cache": "MISS, MISS",
     "x-cache-hits": "0, 0",
-    "x-served-by": "cache-sin-wsat1880022-SIN, cache-bom-vanm7210086-BOM",
-    "x-timer": "S1773330139.389664,VS0,VE402"
+    "x-served-by": "cache-sin-wsat1880084-SIN, cache-bom-vanm7210067-BOM",
+    "x-timer": "S1773384496.764374,VS0,VE935"
   },
   "rawConnectorResponse": {
-    "value": "{\"id\":\"94M084504X2284024\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"seller_payable_breakdown\":{\"gross_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"paypal_fee\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"net_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"total_refunded_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}},\"invoice_id\":\"mti_58b0165dfc374ff1abd7b56d1754ce5c\",\"status\":\"COMPLETED\",\"create_time\":\"2026-03-12T08:42:18-07:00\",\"update_time\":\"2026-03-12T08:42:18-07:00\",\"payer\":{\"email_address\":\"sb-itwmi27136406@business.example.com\",\"merchant_id\":\"DUM69V9DDNYEJ\"},\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/refunds/94M084504X2284024\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/12M76512BW189654C\",\"rel\":\"up\",\"method\":\"GET\"}]}"
+    "value": "{\"id\":\"19E08322XA2972132\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"seller_payable_breakdown\":{\"gross_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"paypal_fee\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"net_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"total_refunded_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"}},\"invoice_id\":\"mti_8a7aed3efe0a4660968fef77ec0ef040\",\"status\":\"COMPLETED\",\"create_time\":\"2026-03-12T23:48:14-07:00\",\"update_time\":\"2026-03-12T23:48:14-07:00\",\"payer\":{\"email_address\":\"sb-itwmi27136406@business.example.com\",\"merchant_id\":\"DUM69V9DDNYEJ\"},\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/refunds/19E08322XA2972132\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/captures/9DW8065711210961C\",\"rel\":\"up\",\"method\":\"GET\"}]}"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/payments/refunds/94M084504X2284024\",\"method\":\"GET\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"Content-Type\":\"application/json\",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"via\":\"HyperSwitch\",\"Prefer\":\"return=representation\",\"PayPal-Request-Id\":\"\"},\"body\":null}"
+    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/payments/refunds/19E08322XA2972132\",\"method\":\"GET\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"Prefer\":\"return=representation\",\"Content-Type\":\"application/json\",\"PayPal-Request-Id\":\"\",\"via\":\"HyperSwitch\"},\"body\":null}"
   }
 }
 

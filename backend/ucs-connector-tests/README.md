@@ -141,6 +141,53 @@ Optional custom report path:
 cargo run -p ucs-connector-tests --bin render_report -- --path backend/ucs-connector-tests/report.json
 ```
 
+## Dependency field mapping (`context_map`)
+
+Dependency data is propagated in two steps:
+
+1. Implicit mapping (`add_context`):
+   - Tries same-path lookup first.
+   - Applies built-in aliases for known shape differences (snake/camel/pascal case,
+     `state.*` flattening, identifier oneof wrappers, etc.).
+2. Explicit mapping (`context_map`):
+   - Declared in `suite_spec.json` under `depends_on`.
+   - Applied after implicit mapping, so explicit values override inferred ones.
+
+When one suite depends on another, request/response names can still differ across
+flows (for example `setup_recurring` response uses `mandate_reference.*`, while
+`recurring_charge` request expects `connector_recurring_payment_id.*`).
+
+Use `context_map` inside `depends_on` to make these mappings explicit and reviewable in JSON:
+
+```json
+{
+  "suite": "recurring_charge",
+  "depends_on": [
+    {
+      "suite": "setup_recurring",
+      "context_map": {
+        "connector_recurring_payment_id.connector_mandate_id.connector_mandate_id": "res.mandate_reference.connector_mandate_id.connector_mandate_id"
+      }
+    }
+  ]
+}
+```
+
+Rules:
+
+- Left side: target path in downstream request.
+- Right side: source path in dependency payload (`res.` or `req.` prefix; `res.` default).
+- Explicit `context_map` values are applied after implicit auto-matching, so explicit mappings win.
+- If source path is missing/null, mapping is skipped.
+
+When to use `context_map`:
+
+- Required: source and target names/paths differ (`refund_id <- res.connector_refund_id`).
+- Required: one dependency field can come from multiple places and source must be pinned.
+- Optional: exact same-name, unambiguous fields (implicit mapping is enough).
+
+Detailed walkthrough: `docs/context-mapping.md`
+
 ## Proto/schema drift checks
 
 Run strict scenario-to-proto compatibility checks:

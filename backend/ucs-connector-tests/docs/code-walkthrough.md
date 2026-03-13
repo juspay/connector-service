@@ -9,7 +9,8 @@ This document explains the harness as implementation documentation: what each mo
 3. Connector override patch (if present) is merged into request + assertions.
 4. `auto_generate` placeholders are resolved for non-context-deferred fields.
 5. Dependency suites/scenarios run first (based on `suite_spec.json`).
-6. Dependency response/request values are mapped into the target request.
+6. Dependency response/request values are mapped into the target request
+   (implicit matching + explicit `context_map`).
 7. Request executes through selected backend:
    - grpcurl backend
    - SDK/FFI backend
@@ -55,7 +56,19 @@ This document explains the harness as implementation documentation: what each mo
   - If false, suite can continue depending on orchestration path.
 - `context_map`
   - Explicit mapping from dependency output/input paths into target request fields.
-  - Example: map `res.access_token` to `state.access_token.token.value`.
+  - Example: map `res.connector_refund_id` to `refund_id`.
+  - Applied after implicit mapping so explicit values override inferred ones.
+- `add_context` (implicit mapping)
+  - Default propagation path used for all dependencies.
+  - Matches same-name fields first, then known alias candidates.
+  - Alias examples: `refund_id <- connector_refund_id`,
+    `state.access_token.token_type <- token_type`,
+    `*.id <- *.id_type.id`.
+
+#### When explicit `context_map` is needed
+
+- Keep explicit entries for cross-flow name/path mismatches or when source selection must be deterministic.
+- Skip explicit entries for exact same-name and unambiguous fields; implicit mapping already covers those.
 
 ### 3.2 Auto-generation behavior
 

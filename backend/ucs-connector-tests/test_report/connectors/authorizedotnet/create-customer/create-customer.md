@@ -22,14 +22,48 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_d610ca9abc874f39aee3fdba67e8d68d",
-  "customer_name": "Mia Wilson",
+  "merchant_customer_id": "mcui_7461b382ec47401c91bac9b1b2ac3fee",
+  "customer_name": "Emma Wilson",
   "email": {
-    "value": "casey.7356@sandbox.example.com"
+    "value": "alex.2547@example.com"
   },
-  "phone_number": "+914797306635",
+  "phone_number": "+441435075727",
   "address": {
     "shipping_address": {
+      "first_name": {
+        "value": "Mia"
+      },
+      "last_name": {
+        "value": "Smith"
+      },
+      "line1": {
+        "value": "6405 Lake Dr"
+      },
+      "line2": {
+        "value": "5543 Sunset Blvd"
+      },
+      "line3": {
+        "value": "2578 Pine St"
+      },
+      "city": {
+        "value": "New York"
+      },
+      "state": {
+        "value": "CA"
+      },
+      "zip_code": {
+        "value": "56387"
+      },
+      "country_alpha2_code": "US",
+      "email": {
+        "value": "morgan.3492@testmail.io"
+      },
+      "phone_number": {
+        "value": "7989778555"
+      },
+      "phone_country_code": "+91"
+    },
+    "billing_address": {
       "first_name": {
         "value": "Mia"
       },
@@ -37,63 +71,29 @@ grpcurl -plaintext \
         "value": "Taylor"
       },
       "line1": {
-        "value": "635 Oak Ln"
+        "value": "5960 Pine St"
       },
       "line2": {
-        "value": "5231 Sunset Ave"
+        "value": "968 Market Ave"
       },
       "line3": {
-        "value": "4027 Sunset Blvd"
+        "value": "5284 Lake Ave"
       },
       "city": {
-        "value": "Seattle"
+        "value": "Los Angeles"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "13356"
+        "value": "88268"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "sam.3835@testmail.io"
+        "value": "sam.9778@testmail.io"
       },
       "phone_number": {
-        "value": "8463688357"
-      },
-      "phone_country_code": "+91"
-    },
-    "billing_address": {
-      "first_name": {
-        "value": "Noah"
-      },
-      "last_name": {
-        "value": "Brown"
-      },
-      "line1": {
-        "value": "4905 Pine St"
-      },
-      "line2": {
-        "value": "3942 Pine Dr"
-      },
-      "line3": {
-        "value": "5757 Market Rd"
-      },
-      "city": {
-        "value": "Chicago"
-      },
-      "state": {
-        "value": "CA"
-      },
-      "zip_code": {
-        "value": "58450"
-      },
-      "country_alpha2_code": "US",
-      "email": {
-        "value": "riley.9038@sandbox.example.com"
-      },
-      "phone_number": {
-        "value": "4608507927"
+        "value": "5300347744"
       },
       "phone_country_code": "+91"
     }
@@ -126,13 +126,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:40:05 GMT
+date: Fri, 13 Mar 2026 06:46:10 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "934839049",
-  "connectorCustomerId": "934839049",
+  "merchantCustomerId": "525893640",
+  "connectorCustomerId": "525893640",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -142,13 +142,13 @@ Response contents:
     "cache-control": "no-cache, no-store, max-age=0",
     "content-length": "232",
     "content-type": "application/json; charset=utf-8",
-    "date": "Thu, 12 Mar 2026 15:40:04 GMT",
+    "date": "Fri, 13 Mar 2026 06:46:09 GMT",
     "expires": "-1",
     "pragma": "no-cache",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-cnection": "close",
     "x-download-options": "noopen",
-    "x-opnet-transaction-trace": "6275c255-1f58-458f-b516-e5c061e8590b-12436-10988499"
+    "x-opnet-transaction-trace": "53649f1c-cce8-4d4d-9a6c-f2139cb719a0-17392-4049818"
   }
 }
 

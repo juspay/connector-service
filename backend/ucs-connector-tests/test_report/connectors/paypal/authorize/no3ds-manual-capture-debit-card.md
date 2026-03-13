@@ -54,15 +54,15 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:40:54 GMT
+date: Fri, 13 Mar 2026 06:46:53 GMT
 x-request-id: create_access_token_create_access_token_req
 
 Response contents:
 {
   "accessToken": ***MASKED***
-    "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+    "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
   },
-  "expiresInSeconds": "30544",
+  "expiresInSeconds": "29633",
   "status": "OPERATION_STATUS_SUCCESS",
   "statusCode": 200
 }
@@ -90,7 +90,7 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/Authorize <<'JSON'
 {
-  "merchant_transaction_id": "mti_f7a165da034e43e998e0329cae3e6f7a",
+  "merchant_transaction_id": "mti_7f71c843a4254cada5b9baf0d0e7ab31",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -112,26 +112,26 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Ethan Miller"
+        "value": "Noah Miller"
       },
       "card_type": "debit"
     }
   },
   "capture_method": "MANUAL",
   "customer": {
-    "name": "Liam Johnson",
+    "name": "Liam Smith",
     "email": {
-      "value": "sam.6822@example.com"
+      "value": "jordan.3095@example.com"
     },
-    "id": "cust_a55ade7b48be4a05a6466250577c5074",
-    "phone_number": "+18576214186"
+    "id": "cust_ab9548b5c304489e9d862432d3c14d79",
+    "phone_number": "+16139895794"
   },
   "state": {
     "access_token": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expires_in_seconds": "30544"
+      "expires_in_seconds": "29633"
     }
   },
   "address": {
@@ -140,50 +140,50 @@ grpcurl -plaintext \
         "value": "Liam"
       },
       "last_name": {
-        "value": "Brown"
+        "value": "Wilson"
       },
       "line1": {
-        "value": "7507 Pine Ln"
+        "value": "2096 Lake Ave"
       },
       "line2": {
-        "value": "960 Market Blvd"
+        "value": "8063 Sunset St"
       },
       "line3": {
-        "value": "3812 Market Rd"
+        "value": "8381 Lake Blvd"
       },
       "city": {
-        "value": "Los Angeles"
+        "value": "New York"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "11212"
+        "value": "53612"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "casey.3471@sandbox.example.com"
+        "value": "riley.8890@sandbox.example.com"
       },
       "phone_number": {
-        "value": "6403060868"
+        "value": "8257021763"
       },
       "phone_country_code": "+91"
     },
     "billing_address": {
       "first_name": {
-        "value": "Emma"
+        "value": "Mia"
       },
       "last_name": {
-        "value": "Brown"
+        "value": "Johnson"
       },
       "line1": {
-        "value": "4725 Main St"
+        "value": "3363 Market Ln"
       },
       "line2": {
-        "value": "2691 Market St"
+        "value": "8470 Lake Blvd"
       },
       "line3": {
-        "value": "4242 Sunset Ave"
+        "value": "6392 Lake Ave"
       },
       "city": {
         "value": "San Francisco"
@@ -192,14 +192,14 @@ grpcurl -plaintext \
         "value": "CA"
       },
       "zip_code": {
-        "value": "88499"
+        "value": "31057"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "sam.8882@testmail.io"
+        "value": "riley.4523@example.com"
       },
       "phone_number": {
-        "value": "4029324526"
+        "value": "3326107812"
       },
       "phone_country_code": "+91"
     }
@@ -243,13 +243,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:41:08 GMT
+date: Fri, 13 Mar 2026 06:47:06 GMT
 x-request-id: authorize_no3ds_manual_capture_debit_card_req
 
 Response contents:
 {
-  "merchantTransactionId": "mti_f7a165da034e43e998e0329cae3e6f7a",
-  "connectorTransactionId": "85W115642J019391F",
+  "merchantTransactionId": "mti_7f71c843a4254cada5b9baf0d0e7ab31",
+  "connectorTransactionId": "4UT722985X160360R",
   "status": "AUTHORIZED",
   "statusCode": 201,
   "responseHeaders": {
@@ -257,41 +257,41 @@ Response contents:
     "access-control-expose-headers": "Server-Timing",
     "cache-control": "max-age=0, no-cache, no-store, must-revalidate",
     "connection": "keep-alive",
-    "content-length": "2520",
+    "content-length": "2519",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:41:08 GMT",
+    "date": "Fri, 13 Mar 2026 06:47:06 GMT",
     "edge-control": "max-age=0",
     "http_x_pp_az_locator": "ccg18.slc",
-    "paypal-debug-id": "f4812072d6b97",
+    "paypal-debug-id": "f2100154a0bae",
     "server": "nginx",
-    "server-timing": "traceparent;desc=\"00-0000000000000000000f4812072d6b97-f49e356636ef76ac-01\"",
+    "server-timing": "traceparent;desc=\"00-0000000000000000000f2100154a0bae-b1cbc505cc2e4b54-01\"",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "vary": "Accept-Encoding",
     "via": "1.1 varnish, 1.1 varnish",
     "x-cache": "MISS, MISS",
     "x-cache-hits": "0, 0",
-    "x-served-by": "cache-sin-wsat1880040-SIN, cache-bom-vanm7210086-BOM",
-    "x-timer": "S1773330066.205187,VS0,VE2019"
+    "x-served-by": "cache-sin-wsss1830091-SIN, cache-bom-vanm7210067-BOM",
+    "x-timer": "S1773384424.190405,VS0,VE2660"
   },
   "state": {
     "accessToken": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AAIimoa-rtl4fS-Ww8qyaVqqMy85SmTVtYFXjFdA8emovXqLOH2syMZB9-jr5IkNejzMI3nGlOB7HG9auRQqlejeSk0Q_A"
+        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
       },
-      "expiresInSeconds": "30544"
+      "expiresInSeconds": "29633"
     }
   },
   "rawConnectorResponse": {
-    "value": "{\"id\":\"85W115642J019391F\",\"intent\":\"AUTHORIZE\",\"status\":\"COMPLETED\",\"payment_source\":{\"card\":{\"name\":\"Emma Brown\",\"last_digits\":\"1111\",\"expiry\":\"2030-08\",\"brand\":\"VISA\",\"type\":\"UNKNOWN\",\"bin_details\":{}}},\"purchase_units\":[{\"reference_id\":\"mti_f7a165da034e43e998e0329cae3e6f7a\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"handling\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"insurance\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"shipping_discount\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"payee\":{\"email_address\":\"sb-itwmi27136406@business.example.com\",\"merchant_id\":\"DUM69V9DDNYEJ\"},\"description\":\"Payment for invoice mti_f7a165da034e43e998e0329cae3e6f7a\",\"invoice_id\":\"mti_f7a165da034e43e998e0329cae3e6f7a\",\"soft_descriptor\":\"TEST STORE\",\"items\":[{\"name\":\"Payment for invoice mti_f7a165da034e43e998e0329cae3e6f7a\",\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"quantity\":\"1\"}],\"shipping\":{\"name\":{\"full_name\":\"Liam\"},\"address\":{\"address_line_1\":\"7507 Pine Ln\",\"admin_area_2\":\"Los Angeles\",\"admin_area_1\":\"XX\",\"postal_code\":\"11212\",\"country_code\":\"US\"}},\"payments\":{\"authorizations\":[{\"status\":\"CREATED\",\"id\":\"7GW60021K61969748\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"invoice_id\":\"mti_f7a165da034e43e998e0329cae3e6f7a\",\"seller_protection\":{\"status\":\"NOT_ELIGIBLE\"},\"processor_response\":{\"avs_code\":\"A\",\"cvv_code\":\"M\",\"response_code\":\"0000\"},\"expiration_time\":\"2026-04-10T15:41:07Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/7GW60021K61969748\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/7GW60021K61969748/capture\",\"rel\":\"capture\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/7GW60021K61969748/void\",\"rel\":\"void\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/7GW60021K61969748/reauthorize\",\"rel\":\"reauthorize\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/85W115642J019391F\",\"rel\":\"up\",\"method\":\"GET\"}],\"create_time\":\"2026-03-12T15:41:07Z\",\"update_time\":\"2026-03-12T15:41:07Z\",\"network_transaction_reference\":{\"id\":\"753145197105201\",\"network\":\"VISA\"}}]}}],\"create_time\":\"2026-03-12T15:41:07Z\",\"update_time\":\"2026-03-12T15:41:07Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/85W115642J019391F\",\"rel\":\"self\",\"method\":\"GET\"}]}"
+    "value": "{\"id\":\"4UT722985X160360R\",\"intent\":\"AUTHORIZE\",\"status\":\"COMPLETED\",\"payment_source\":{\"card\":{\"name\":\"Mia Johnson\",\"last_digits\":\"1111\",\"expiry\":\"2030-08\",\"brand\":\"VISA\",\"type\":\"UNKNOWN\",\"bin_details\":{}}},\"purchase_units\":[{\"reference_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"handling\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"insurance\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"shipping_discount\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"payee\":{\"email_address\":\"sb-itwmi27136406@business.example.com\",\"merchant_id\":\"DUM69V9DDNYEJ\"},\"description\":\"Payment for invoice mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"invoice_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"soft_descriptor\":\"TEST STORE\",\"items\":[{\"name\":\"Payment for invoice mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"quantity\":\"1\"}],\"shipping\":{\"name\":{\"full_name\":\"Liam\"},\"address\":{\"address_line_1\":\"2096 Lake Ave\",\"admin_area_2\":\"New York\",\"admin_area_1\":\"XX\",\"postal_code\":\"53612\",\"country_code\":\"US\"}},\"payments\":{\"authorizations\":[{\"status\":\"CREATED\",\"id\":\"65W18338PH3561837\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"invoice_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"seller_protection\":{\"status\":\"NOT_ELIGIBLE\"},\"processor_response\":{\"avs_code\":\"A\",\"cvv_code\":\"M\",\"response_code\":\"0000\"},\"expiration_time\":\"2026-04-11T06:47:06Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837/capture\",\"rel\":\"capture\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837/void\",\"rel\":\"void\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837/reauthorize\",\"rel\":\"reauthorize\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/4UT722985X160360R\",\"rel\":\"up\",\"method\":\"GET\"}],\"create_time\":\"2026-03-13T06:47:06Z\",\"update_time\":\"2026-03-13T06:47:06Z\",\"network_transaction_reference\":{\"id\":\"654712078956512\",\"network\":\"VISA\"}}]}}],\"create_time\":\"2026-03-13T06:47:06Z\",\"update_time\":\"2026-03-13T06:47:06Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/4UT722985X160360R\",\"rel\":\"self\",\"method\":\"GET\"}]}"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/checkout/orders\",\"method\":\"POST\",\"headers\":{\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"via\":\"HyperSwitch\",\"Authorization\":\"Bearer ***MASKED***",\"Prefer\":\"return=representation\",\"Content-Type\":\"application/json\",\"PayPal-Request-Id\":\"mti_f7a165da034e43e998e0329cae3e6f7a\"},\"body\":{\"intent\":\"AUTHORIZE\",\"purchase_units\":[{\"reference_id\":\"mti_f7a165da034e43e998e0329cae3e6f7a\",\"invoice_id\":\"mti_f7a165da034e43e998e0329cae3e6f7a\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":{\"address_line_1\":\"7507 Pine Ln\",\"postal_code\":\"11212\",\"country_code\":\"US\",\"admin_area_2\":\"Los Angeles\"},\"name\":{\"full_name\":\"Liam\"}},\"items\":[{\"name\":\"Payment for invoice mti_f7a165da034e43e998e0329cae3e6f7a\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":null}]}],\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"4725 Main St\",\"postal_code\":\"88499\",\"country_code\":\"US\",\"admin_area_2\":\"San Francisco\"},\"expiry\":\"2030-08\",\"name\":\"Emma Brown\",\"number\":\"4111111111111111\",\"security_code\":\"999\",\"attributes\":{\"vault\":null,\"verification\":null}}}}}"
+    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/checkout/orders\",\"method\":\"POST\",\"headers\":{\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer ***MASKED***",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"PayPal-Request-Id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"via\":\"HyperSwitch\",\"Prefer\":\"return=representation\"},\"body\":{\"intent\":\"AUTHORIZE\",\"purchase_units\":[{\"reference_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"invoice_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":{\"address_line_1\":\"2096 Lake Ave\",\"postal_code\":\"53612\",\"country_code\":\"US\",\"admin_area_2\":\"New York\"},\"name\":{\"full_name\":\"Liam\"}},\"items\":[{\"name\":\"Payment for invoice mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":null}]}],\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"3363 Market Ln\",\"postal_code\":\"31057\",\"country_code\":\"US\",\"admin_area_2\":\"San Francisco\"},\"expiry\":\"2030-08\",\"name\":\"Mia Johnson\",\"number\":\"4111111111111111\",\"security_code\":\"999\",\"attributes\":{\"vault\":null,\"verification\":null}}}}}"
   },
   "mandateReference": {
     "connectorMandateId": {}
   },
   "connectorFeatureData": {
-    "value": "{\"authorize_id\":\"7GW60021K61969748\",\"capture_id\":null,\"incremental_authorization_id\":\"7GW60021K61969748\",\"psync_flow\":\"AUTHORIZE\",\"next_action\":null,\"order_id\":null}"
+    "value": "{\"authorize_id\":\"65W18338PH3561837\",\"capture_id\":null,\"incremental_authorization_id\":\"65W18338PH3561837\",\"psync_flow\":\"AUTHORIZE\",\"next_action\":null,\"order_id\":null}"
   }
 }
 

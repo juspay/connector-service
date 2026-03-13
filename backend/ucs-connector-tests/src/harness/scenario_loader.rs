@@ -415,6 +415,43 @@ mod tests {
     }
 
     #[test]
+    fn explicit_context_maps_exist_for_name_mismatch_dependencies() {
+        let recurring_spec =
+            load_suite_spec("recurring_charge").expect("recurring_charge spec should load");
+        let recurring_has_mandate_mapping = recurring_spec.depends_on.iter().any(|dependency| {
+            dependency
+                .context_map()
+                .and_then(|map| {
+                    map.get(
+                        "connector_recurring_payment_id.connector_mandate_id.connector_mandate_id",
+                    )
+                })
+                .map(|source| {
+                    source == "res.mandate_reference.connector_mandate_id.connector_mandate_id"
+                })
+                .unwrap_or(false)
+        });
+        assert!(
+            recurring_has_mandate_mapping,
+            "recurring_charge should explicitly map mandate reference into connector recurring id"
+        );
+
+        let refund_sync_spec =
+            load_suite_spec("refund_sync").expect("refund_sync spec should load");
+        let refund_sync_has_refund_mapping = refund_sync_spec.depends_on.iter().any(|dependency| {
+            dependency
+                .context_map()
+                .and_then(|map| map.get("refund_id"))
+                .map(|source| source == "res.connector_refund_id")
+                .unwrap_or(false)
+        });
+        assert!(
+            refund_sync_has_refund_mapping,
+            "refund_sync should explicitly map refund_id from connector_refund_id"
+        );
+    }
+
+    #[test]
     fn can_load_supported_suites_for_known_connector() {
         let suites = load_supported_suites_for_connector("stripe")
             .expect("supported suites should load for stripe connector");

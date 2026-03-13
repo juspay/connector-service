@@ -2,13 +2,7 @@
 
 - Service: `RecurringPaymentService/Charge`
 - PM / PMT: `-` / `-`
-- Result: `FAIL`
-
-**Error**
-
-```text
-assertion failed for field 'connector_transaction_id': expected field to exist
-```
+- Result: `PASS`
 
 **Pre Requisites Executed**
 
@@ -29,78 +23,78 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_a21886fdac44442e897406378642f787",
-  "customer_name": "Ethan Smith",
+  "merchant_customer_id": "mcui_7d37c526c05f44f1bce0182758fb3907",
+  "customer_name": "Noah Taylor",
   "email": {
-    "value": "riley.4289@example.com"
+    "value": "casey.5782@sandbox.example.com"
   },
-  "phone_number": "+15496645083",
+  "phone_number": "+14236056151",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Noah"
-      },
-      "last_name": {
-        "value": "Smith"
-      },
-      "line1": {
-        "value": "1942 Lake Blvd"
-      },
-      "line2": {
-        "value": "990 Sunset Dr"
-      },
-      "line3": {
-        "value": "2076 Oak Dr"
-      },
-      "city": {
-        "value": "Los Angeles"
-      },
-      "state": {
-        "value": "CA"
-      },
-      "zip_code": {
-        "value": "84409"
-      },
-      "country_alpha2_code": "US",
-      "email": {
-        "value": "riley.3225@example.com"
-      },
-      "phone_number": {
-        "value": "8792928287"
-      },
-      "phone_country_code": "+91"
-    },
-    "billing_address": {
-      "first_name": {
-        "value": "Noah"
+        "value": "Emma"
       },
       "last_name": {
         "value": "Brown"
       },
       "line1": {
-        "value": "6397 Sunset Ave"
+        "value": "5070 Pine St"
       },
       "line2": {
-        "value": "5544 Sunset Ln"
+        "value": "2346 Pine Dr"
       },
       "line3": {
-        "value": "5711 Oak St"
+        "value": "102 Pine Dr"
       },
       "city": {
-        "value": "San Francisco"
+        "value": "Austin"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "73498"
+        "value": "25022"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "riley.4852@testmail.io"
+        "value": "sam.7954@sandbox.example.com"
       },
       "phone_number": {
-        "value": "4145624997"
+        "value": "1430011275"
+      },
+      "phone_country_code": "+91"
+    },
+    "billing_address": {
+      "first_name": {
+        "value": "Liam"
+      },
+      "last_name": {
+        "value": "Wilson"
+      },
+      "line1": {
+        "value": "2968 Sunset St"
+      },
+      "line2": {
+        "value": "2818 Oak Rd"
+      },
+      "line3": {
+        "value": "8834 Lake Dr"
+      },
+      "city": {
+        "value": "New York"
+      },
+      "state": {
+        "value": "CA"
+      },
+      "zip_code": {
+        "value": "76887"
+      },
+      "country_alpha2_code": "US",
+      "email": {
+        "value": "sam.2885@testmail.io"
+      },
+      "phone_number": {
+        "value": "2461665666"
       },
       "phone_country_code": "+91"
     }
@@ -132,13 +126,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:43:32 GMT
+date: Fri, 13 Mar 2026 06:49:31 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "cus_U8SJr1fMbLIR7j",
-  "connectorCustomerId": "cus_U8SJr1fMbLIR7j",
+  "merchantCustomerId": "cus_U8gvgEPEhABOmz",
+  "connectorCustomerId": "cus_U8gvgEPEhABOmz",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -148,13 +142,13 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "671",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-length": "679",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:43:32 GMT",
-    "idempotency-key": "d5d6e401-930b-449b-b671-d173b0a677ee",
-    "original-request": "req_90Rnia2Fchyyou",
-    "request-id": "req_90Rnia2Fchyyou",
+    "date": "Fri, 13 Mar 2026 06:49:31 GMT",
+    "idempotency-key": "23ce0332-fe11-4278-aed8-ea86cefa2126",
+    "original-request": "req_eZzrTulJQgPtRj",
+    "request-id": "req_eZzrTulJQgPtRj",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",
@@ -191,7 +185,7 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/SetupRecurring <<'JSON'
 {
-  "merchant_recurring_payment_id": "mrpi_4bbcfb9fd50f4111aa72058f849b6528",
+  "merchant_recurring_payment_id": "mrpi_951f3463cf37471296742f8a6d28f0d9",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -211,53 +205,53 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Mia Miller"
+        "value": "Mia Taylor"
       },
       "card_type": "credit"
     }
   },
   "customer": {
-    "name": "Emma Brown",
+    "name": "Noah Wilson",
     "email": {
-      "value": "alex.3431@testmail.io"
+      "value": "alex.4297@example.com"
     },
-    "id": "cust_ad8f1f5fef2a43c096db5c1fb86f0ce2",
-    "phone_number": "+19415344336",
-    "connector_customer_id": "cus_U8SJr1fMbLIR7j"
+    "id": "cust_ce0e12c4aa51410d8c3f4611d48fd010",
+    "phone_number": "+912414021753",
+    "connector_customer_id": "cus_U8gvgEPEhABOmz"
   },
   "setup_future_usage": "OFF_SESSION",
   "address": {
     "billing_address": {
       "first_name": {
-        "value": "Noah"
+        "value": "Liam"
       },
       "last_name": {
-        "value": "Brown"
+        "value": "Wilson"
       },
       "line1": {
-        "value": "6397 Sunset Ave"
+        "value": "2968 Sunset St"
       },
       "line2": {
-        "value": "5544 Sunset Ln"
+        "value": "2818 Oak Rd"
       },
       "line3": {
-        "value": "5711 Oak St"
+        "value": "8834 Lake Dr"
       },
       "city": {
-        "value": "San Francisco"
+        "value": "New York"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "73498"
+        "value": "76887"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "riley.4852@testmail.io"
+        "value": "sam.2885@testmail.io"
       },
       "phone_number": {
-        "value": "4145624997"
+        "value": "2461665666"
       },
       "phone_country_code": "+91"
     }
@@ -293,12 +287,12 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:43:33 GMT
+date: Fri, 13 Mar 2026 06:49:33 GMT
 x-request-id: setup_recurring_setup_recurring_req
 
 Response contents:
 {
-  "connectorRecurringPaymentId": "seti_1TABObD5R7gDAGffrzPGyC1d",
+  "connectorRecurringPaymentId": "seti_1TAPXMD5R7gDAGff3STHqyG8",
   "status": "CHARGED",
   "statusCode": 200,
   "responseHeaders": {
@@ -310,12 +304,12 @@ Response contents:
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
     "content-length": "1997",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:43:33 GMT",
-    "idempotency-key": "47003f1e-bb89-4f1f-b85a-5fcea7183626",
-    "original-request": "req_wdG6lzGdeP2YYL",
-    "request-id": "req_wdG6lzGdeP2YYL",
+    "date": "Fri, 13 Mar 2026 06:49:33 GMT",
+    "idempotency-key": "0634cb5a-3dba-40a1-9a06-f3dc08e49094",
+    "original-request": "req_qHKRfVzcC1AnI6",
+    "request-id": "req_qHKRfVzcC1AnI6",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",
@@ -327,11 +321,11 @@ Response contents:
   },
   "mandateReference": {
     "connectorMandateId": {
-      "connectorMandateId": "pm_1TABOaD5R7gDAGff0h09mPS8",
-      "paymentMethodId": "pm_1TABOaD5R7gDAGff0h09mPS8"
+      "connectorMandateId": "pm_1TAPXLD5R7gDAGffsDkPRIuF",
+      "paymentMethodId": "pm_1TAPXLD5R7gDAGffsDkPRIuF"
     }
   },
-  "merchantRecurringPaymentId": "seti_1TABObD5R7gDAGffrzPGyC1d",
+  "merchantRecurringPaymentId": "seti_1TAPXMD5R7gDAGff3STHqyG8",
   "connectorResponse": {
     "additionalPaymentMethodData": {
       "card": {
@@ -341,10 +335,10 @@ Response contents:
   },
   "capturedAmount": "0",
   "state": {
-    "connectorCustomerId": "cus_U8SJr1fMbLIR7j"
+    "connectorCustomerId": "cus_U8gvgEPEhABOmz"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api.stripe.com/v1/setup_intents\",\"method\":\"POST\",\"headers\":{\"via\":\"HyperSwitch\",\"Content-Type\":\"application/x-www-form-urlencoded\",\"Authorization\":\"Bearer ***MASKED***",\"stripe-version\":\"2022-11-15\"},\"body\":\"confirm=true\u0026usage=off_session\u0026customer=cus_U8SJr1fMbLIR7j\u0026payment_method_data%5Btype%5D=card\u0026payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111\u0026payment_method_data%5Bcard%5D%5Bexp_month%5D=08\u0026payment_method_data%5Bcard%5D%5Bexp_year%5D=30\u0026payment_method_data%5Bcard%5D%5Bcvc%5D=999\u0026payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic\u0026metadata%5Border_id%5D=mrpi_4bbcfb9fd50f4111aa72058f849b6528\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_attempt\"}"
+    "value": "{\"url\":\"https://api.stripe.com/v1/setup_intents\",\"method\":\"POST\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"stripe-version\":\"2022-11-15\",\"Content-Type\":\"application/x-www-form-urlencoded\",\"via\":\"HyperSwitch\"},\"body\":\"confirm=true\u0026usage=off_session\u0026customer=cus_U8gvgEPEhABOmz\u0026payment_method_data%5Btype%5D=card\u0026payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111\u0026payment_method_data%5Bcard%5D%5Bexp_month%5D=08\u0026payment_method_data%5Bcard%5D%5Bexp_year%5D=30\u0026payment_method_data%5Bcard%5D%5Bcvc%5D=999\u0026payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic\u0026metadata%5Border_id%5D=mrpi_951f3463cf37471296742f8a6d28f0d9\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_attempt\"}"
   }
 }
 
@@ -370,25 +364,25 @@ grpcurl -plaintext \
   -H "x-api-key: ***MASKED***" \
   -d @ localhost:8000 types.RecurringPaymentService/Charge <<'JSON'
 {
-  "merchant_charge_id": "mchi_fbf137f8d5e24aa59cccc81832799eab",
+  "merchant_charge_id": "mchi_1241915b7b274e1e92df1cbc0f204ce6",
   "connector_recurring_payment_id": {
     "connector_mandate_id": {
-      "connector_mandate_id": "cmi_fd1cf24384b64299906435e92df52c9b"
+      "connector_mandate_id": "pm_1TAPXLD5R7gDAGffsDkPRIuF"
     }
   },
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
   },
-  "merchant_order_id": "gen_727239",
+  "merchant_order_id": "gen_463199",
   "webhook_url": "https://example.com/payment/webhook",
   "return_url": "https://example.com/payment/return",
   "description": "Recurring charge with order context",
   "off_session": true,
   "test_mode": true,
-  "connector_customer_id": "cus_U8SJr1fMbLIR7j",
+  "connector_customer_id": "cus_U8gvgEPEhABOmz",
   "customer": {
-    "connector_customer_id": "cus_U8SJr1fMbLIR7j"
+    "connector_customer_id": "cus_U8gvgEPEhABOmz"
   }
 }
 JSON
@@ -416,22 +410,14 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:43:35 GMT
+date: Fri, 13 Mar 2026 06:49:37 GMT
 x-request-id: recurring_charge_recurring_charge_with_order_context_req
 
 Response contents:
 {
-  "error": {
-    "issuerDetails": {
-      "networkDetails": {}
-    },
-    "connectorDetails": {
-      "code": "resource_missing",
-      "message": "No such PaymentMethod: 'cmi_fd1cf24384b64299906435e92df52c9b'; It's possible this PaymentMethod exists on one of your connected accounts, in which case you should retry this request on that connected account. Learn more at https://stripe.com/docs/connect/authentication",
-      "reason": "No such PaymentMethod: 'cmi_fd1cf24384b64299906435e92df52c9b'; It's possible this PaymentMethod exists on one of your connected accounts, in which case you should retry this request on that connected account. Learn more at https://stripe.com/docs/connect/authentication"
-    }
-  },
-  "statusCode": 400,
+  "connectorTransactionId": "pi_3TAPXQD5R7gDAGff1uVPnCjz",
+  "status": "CHARGED",
+  "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
     "access-control-allow-methods": "GET, HEAD, PUT, PATCH, POST, DELETE",
@@ -440,27 +426,52 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "602",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=XbpkE0Obtc-D-_OVcHByv3HX2Cz2ZXWthan_OSmhaX_cdx20p33NXUJkyzusgJOGoDWC714Lefdz6v3w",
+    "content-length": "4835",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
     "content-type": "application/json",
-    "date": "Thu, 12 Mar 2026 15:43:35 GMT",
-    "idempotency-key": "a0d01e8d-a698-4bce-9396-844525232ae8",
-    "original-request": "req_h4i0EQPPxyPBAp",
-    "request-id": "req_h4i0EQPPxyPBAp",
+    "date": "Fri, 13 Mar 2026 06:49:37 GMT",
+    "idempotency-key": "36969f77-ec6a-4130-81fa-4730d1325479",
+    "original-request": "req_2W3nWjQCCfQQyQ",
+    "request-id": "req_2W3nWjQCCfQQyQ",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+    "stripe-should-retry": "false",
     "stripe-version": "2022-11-15",
     "vary": "Origin",
     "x-stripe-priority-routing-enabled": "true",
     "x-stripe-routing-context-priority-tier": "api-testmode",
     "x-wc": "ABGHIJ"
   },
+  "networkTransactionId": "976910110049114",
+  "merchantChargeId": "pi_3TAPXQD5R7gDAGff1uVPnCjz",
+  "mandateReference": {
+    "connectorMandateId": {
+      "connectorMandateId": "pm_1TAPXLD5R7gDAGffsDkPRIuF",
+      "paymentMethodId": "pm_1TAPXLD5R7gDAGffsDkPRIuF"
+    }
+  },
   "state": {
-    "connectorCustomerId": "cus_U8SJr1fMbLIR7j"
+    "connectorCustomerId": "cus_U8gvgEPEhABOmz"
+  },
+  "rawConnectorResponse": {
+    "value": "{\n  \"id\": \"pi_3TAPXQD5R7gDAGff1uVPnCjz\",\n  \"object\": \"payment_intent\",\n  \"amount\": 6000,\n  \"amount_capturable\": 0,\n  \"amount_details\": {\n    \"tip\": {}\n  },\n  \"amount_received\": 6000,\n  \"application\": null,\n  \"application_fee_amount\": null,\n  \"automatic_payment_methods\": null,\n  \"canceled_at\": null,\n  \"cancellation_reason\": null,\n  \"capture_method\": \"automatic\",\n  \"client_secret\": \"pi_3TAPXQD5R7gDAGff1uVPnCjz_secret_4yTxSRWdzc0ApHcofrq7ExQGc\",\n  \"confirmation_method\": \"automatic\",\n  \"created\": 1773384576,\n  \"currency\": \"usd\",\n  \"customer\": \"cus_U8gvgEPEhABOmz\",\n  \"customer_account\": null,\n  \"description\": \"Recurring charge with order context\",\n  \"excluded_payment_method_types\": null,\n  \"invoice\": null,\n  \"last_payment_error\": null,\n  \"latest_charge\": {\n    \"id\": \"ch_3TAPXQD5R7gDAGff1vGFgYsK\",\n    \"object\": \"charge\",\n    \"amount\": 6000,\n    \"amount_captured\": 6000,\n    \"amount_refunded\": 0,\n    \"amount_updates\": [],\n    \"application\": null,\n    \"application_fee\": null,\n    \"application_fee_amount\": null,\n    \"balance_transaction\": \"txn_3TAPXQD5R7gDAGff1dJqIrky\",\n    \"billing_details\": {\n      \"address\": {\n        \"city\": null,\n        \"country\": null,\n        \"line1\": null,\n        \"line2\": null,\n        \"postal_code\": null,\n        \"state\": null\n      },\n      \"email\": null,\n      \"name\": null,\n      \"phone\": null,\n      \"tax_id\": null\n    },\n    \"calculated_statement_descriptor\": \"BERNARD\",\n    \"captured\": true,\n    \"created\": 1773384576,\n    \"currency\": \"usd\",\n    \"customer\": \"cus_U8gvgEPEhABOmz\",\n    \"description\": \"Recurring charge with order context\",\n    \"destination\": null,\n    \"dispute\": null,\n    \"disputed\": false,\n    \"failure_balance_transaction\": null,\n    \"failure_code\": null,\n    \"failure_message\": null,\n    \"fraud_details\": {},\n    \"invoice\": null,\n    \"livemode\": false,\n    \"metadata\": {\n      \"order_id\": \"mchi_1241915b7b274e1e92df1cbc0f204ce6\"\n    },\n    \"on_behalf_of\": null,\n    \"order\": null,\n    \"outcome\": {\n      \"advice_code\": null,\n      \"network_advice_code\": null,\n      \"network_decline_code\": null,\n      \"network_status\": \"approved_by_network\",\n      \"reason\": null,\n      \"risk_level\": \"normal\",\n      \"risk_score\": 23,\n      \"seller_message\": \"Payment complete.\",\n      \"type\": \"authorized\"\n    },\n    \"paid\": true,\n    \"payment_intent\": \"pi_3TAPXQD5R7gDAGff1uVPnCjz\",\n    \"payment_method\": \"pm_1TAPXLD5R7gDAGffsDkPRIuF\",\n    \"payment_method_details\": {\n      \"card\": {\n        \"amount_authorized\": 6000,\n        \"authorization_code\": \"481760\",\n        \"brand\": \"visa\",\n        \"checks\": {\n          \"address_line1_check\": null,\n          \"address_postal_code_check\": null,\n          \"cvc_check\": \"pass\"\n        },\n        \"country\": \"US\",\n        \"exp_month\": 8,\n        \"exp_year\": 2030,\n        \"extended_authorization\": {\n          \"status\": \"disabled\"\n        },\n        \"fingerprint\": \"aEed1rfhfa5JNpoz\",\n        \"funding\": \"credit\",\n        \"incremental_authorization\": {\n          \"status\": \"unavailable\"\n        },\n        \"installments\": null,\n        \"last4\": \"1111\",\n        \"mandate\": null,\n        \"moto\": null,\n        \"multicapture\": {\n          \"status\": \"unavailable\"\n        },\n        \"network\": \"visa\",\n        \"network_token\": {\n          \"used\": false\n        },\n        \"network_transaction_id\": \"976910110049114\",\n        \"overcapture\": {\n          \"maximum_amount_capturable\": 6000,\n          \"status\": \"unavailable\"\n        },\n        \"regulated_status\": \"unregulated\",\n        \"three_d_secure\": null,\n        \"wallet\": null\n      },\n      \"type\": \"card\"\n    },\n    \"radar_options\": {},\n    \"receipt_email\": null,\n    \"receipt_number\": null,\n    \"receipt_url\": \"https://pay.stripe.com/receipts/payment/CAcaFwoVYWNjdF8xTTdmVGFENVI3Z0RBR2ZmKIHnzs0GMgbUkrlyRuA6LBZTDHDvTGsxDqsAZu0vbZTF-ZUYeEkSSszgna5BgUR2s2993AxG_PIDxkTw\",\n    \"refunded\": false,\n    \"review\": null,\n    \"shipping\": null,\n    \"source\": null,\n    \"source_transfer\": null,\n    \"statement_descriptor\": null,\n    \"statement_descriptor_suffix\": null,\n    \"status\": \"succeeded\",\n    \"transfer_data\": null,\n    \"transfer_group\": null\n  },\n  \"livemode\": false,\n  \"metadata\": {\n    \"order_id\": \"mchi_1241915b7b274e1e92df1cbc0f204ce6\"\n  },\n  \"next_action\": null,\n  \"on_behalf_of\": null,\n  \"payment_method\": \"pm_1TAPXLD5R7gDAGffsDkPRIuF\",\n  \"payment_method_configuration_details\": null,\n  \"payment_method_options\": {\n    \"card\": {\n      \"installments\": null,\n      \"mandate_options\": null,\n      \"network\": null,\n      \"request_three_d_secure\": \"automatic\"\n    }\n  },\n  \"payment_method_types\": [\n    \"card\"\n  ],\n  \"processing\": null,\n  \"receipt_email\": null,\n  \"review\": null,\n  \"setup_future_usage\": null,\n  \"shipping\": null,\n  \"source\": null,\n  \"statement_descriptor\": null,\n  \"statement_descriptor_suffix\": null,\n  \"status\": \"succeeded\",\n  \"transfer_data\": null,\n  \"transfer_group\": null\n}"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api.stripe.com/v1/payment_intents\",\"method\":\"POST\",\"headers\":{\"stripe-version\":\"2022-11-15\",\"Content-Type\":\"application/x-www-form-urlencoded\",\"via\":\"HyperSwitch\",\"Authorization\":\"Bearer ***MASKED***"},\"body\":\"amount=6000\u0026currency=USD\u0026metadata%5Border_id%5D=mchi_fbf137f8d5e24aa59cccc81832799eab\u0026return_url=https%3A%2F%2Fexample.com%2Fpayment%2Freturn\u0026confirm=true\u0026payment_method=cmi_fd1cf24384b64299906435e92df52c9b\u0026customer=cus_U8SJr1fMbLIR7j\u0026description=Recurring+charge+with+order+context\u0026capture_method=automatic\u0026off_session=true\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_charge\"}"
-  }
+    "value": "{\"url\":\"https://api.stripe.com/v1/payment_intents\",\"method\":\"POST\",\"headers\":{\"Authorization\":\"Bearer ***MASKED***",\"Content-Type\":\"application/x-www-form-urlencoded\",\"stripe-version\":\"2022-11-15\",\"via\":\"HyperSwitch\"},\"body\":\"amount=6000\u0026currency=USD\u0026metadata%5Border_id%5D=mchi_1241915b7b274e1e92df1cbc0f204ce6\u0026return_url=https%3A%2F%2Fexample.com%2Fpayment%2Freturn\u0026confirm=true\u0026payment_method=pm_1TAPXLD5R7gDAGffsDkPRIuF\u0026customer=cus_U8gvgEPEhABOmz\u0026description=Recurring+charge+with+order+context\u0026capture_method=automatic\u0026off_session=true\u0026payment_method_types%5B0%5D=card\u0026expand%5B0%5D=latest_charge\"}"
+  },
+  "capturedAmount": "6000",
+  "connectorResponse": {
+    "additionalPaymentMethodData": {
+      "card": {
+        "paymentChecks": "eyJhZGRyZXNzX2xpbmUxX2NoZWNrIjpudWxsLCJhZGRyZXNzX3Bvc3RhbF9jb2RlX2NoZWNrIjpudWxsLCJjdmNfY2hlY2siOiJwYXNzIn0="
+      }
+    },
+    "extendedAuthorizationResponseData": ***MASKED***
+      "extendedAuthenticationApplied": false
+    },
+    "isOvercaptureEnabled": false
+  },
+  "incrementalAuthorizationAllowed": ***MASKED***
 }
 
 Response trailers received:

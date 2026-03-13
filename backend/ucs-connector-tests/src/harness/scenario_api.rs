@@ -114,7 +114,8 @@ pub struct GrpcExecutionResult {
     pub success: bool,
 }
 
-type DependencyContext = (Vec<Value>, Vec<Value>, Vec<String>);
+type ExplicitContextEntry = (ContextMap, Value, Value);
+type DependencyContext = (Vec<Value>, Vec<Value>, Vec<String>, Vec<ExplicitContextEntry>);
 
 impl GrpcurlRequest {
     /// Renders a shell-friendly multi-line grpcurl command.
@@ -1693,7 +1694,9 @@ pub fn run_scenario_test_with_options(
         &mut results,
     )?;
 
-    let Some((dependency_reqs, dependency_res, dependency_labels)) = dependency_chain else {
+    let Some((dependency_reqs, dependency_res, dependency_labels, explicit_context_entries)) =
+        dependency_chain
+    else {
         return Ok(SuiteRunSummary {
             suite: suite.to_string(),
             connector: connector.to_string(),
@@ -1720,6 +1723,7 @@ pub fn run_scenario_test_with_options(
         options,
         &dependency_reqs,
         &dependency_res,
+        &explicit_context_entries,
     ) {
         Ok(executed) => {
             match do_assertion(
@@ -1884,7 +1888,12 @@ pub fn run_suite_test_with_options(
                 &mut failed,
                 &mut results,
             )?;
-            let Some((dependency_reqs, dependency_res, dependency_labels)) = dependency_chain
+            let Some((
+                dependency_reqs,
+                dependency_res,
+                dependency_labels,
+                explicit_context_entries,
+            )) = dependency_chain
             else {
                 return Ok(SuiteRunSummary {
                     suite: suite.to_string(),
@@ -1906,6 +1915,7 @@ pub fn run_suite_test_with_options(
                     options,
                     &dependency_reqs,
                     &dependency_res,
+                    &explicit_context_entries,
                 ) {
                     Ok(executed) => {
                         if let Some(execution_error) = executed.execution_error.clone() {
@@ -1994,7 +2004,12 @@ pub fn run_suite_test_with_options(
                     &mut failed,
                     &mut results,
                 )?;
-                let Some((dependency_reqs, dependency_res, dependency_labels)) = dependency_chain
+                let Some((
+                    dependency_reqs,
+                    dependency_res,
+                    dependency_labels,
+                    explicit_context_entries,
+                )) = dependency_chain
                 else {
                     return Ok(SuiteRunSummary {
                         suite: suite.to_string(),
@@ -2012,6 +2027,7 @@ pub fn run_suite_test_with_options(
                     options,
                     &dependency_reqs,
                     &dependency_res,
+                    &explicit_context_entries,
                 ) {
                     Ok(executed) => {
                         if let Some(execution_error) = executed.execution_error.clone() {
@@ -2109,6 +2125,7 @@ fn execute_dependency_chain(
     let mut dependency_reqs = Vec::new();
     let mut dependency_res = Vec::new();
     let mut dependency_labels = Vec::new();
+    let mut explicit_context_entries = Vec::new();
 
     for dependency in dependencies {
         let dependency_suite = dependency.suite();
@@ -2135,6 +2152,7 @@ fn execute_dependency_chain(
             options,
             &dependency_reqs,
             &dependency_res,
+            &[],
         );
 
         match dep_result {
@@ -2168,6 +2186,15 @@ fn execute_dependency_chain(
                 ) {
                     Ok(()) => {
                         *passed += 1;
+                        if let Some(context_map) = dependency.context_map() {
+                            if !context_map.is_empty() {
+                                explicit_context_entries.push((
+                                    context_map.clone(),
+                                    executed.effective_req.clone(),
+                                    executed.response_json.clone(),
+                                ));
+                            }
+                        }
                         dependency_reqs.push(executed.effective_req.clone());
                         dependency_res.push(executed.response_json.clone());
                         results.push(SuiteScenarioResult {
@@ -2229,7 +2256,12 @@ fn execute_dependency_chain(
         }
     }
 
-    Ok(Some((dependency_reqs, dependency_res, dependency_labels)))
+    Ok(Some((
+        dependency_reqs,
+        dependency_res,
+        dependency_labels,
+        explicit_context_entries,
+    )))
 }
 
 #[allow(clippy::print_stdout)]
@@ -2240,6 +2272,7 @@ fn execute_single_scenario_with_context(
     options: SuiteRunOptions<'_>,
     dependency_reqs: &[Value],
     dependency_res: &[Value],
+    explicit_context_entries: &[ExplicitContextEntry],
 ) -> Result<ExecutedScenario, ScenarioError> {
     run_test(Some(suite), Some(scenario), Some(connector))?;
 
@@ -2251,6 +2284,9 @@ fn execute_single_scenario_with_context(
 
     // Context first.
     add_context(dependency_reqs, dependency_res, &mut effective_req);
+
+    // Apply any explicit dependency path mappings from suite_spec.json.
+    apply_context_map(explicit_context_entries, &mut effective_req);
 
     // Fallback generation for unresolved non-context placeholders.
     resolve_auto_generate(&mut effective_req)?;
@@ -2756,6 +2792,33 @@ grpc-status: 0
         assert_eq!(
             current["mandate_reference_id"]["connector_mandate_id"]["connector_mandate_id"],
             json!("mdt_123")
+        );
+    }
+
+    #[test]
+    fn add_context_does_not_map_mandate_reference_into_connector_recurring_payment_id() {
+        let prev_reqs = vec![];
+        let prev_res = vec![json!({
+            "mandateReference": {
+                "connectorMandateId": {
+                    "connectorMandateId": "mdt_456"
+                }
+            }
+        })];
+        let mut current = json!({
+            "connector_recurring_payment_id": {
+                "connector_mandate_id": {
+                    "connector_mandate_id": "auto_generate"
+                }
+            }
+        });
+
+        add_context(&prev_reqs, &prev_res, &mut current);
+
+        assert_eq!(
+            current["connector_recurring_payment_id"]["connector_mandate_id"]
+                ["connector_mandate_id"],
+            json!("auto_generate")
         );
     }
 
@@ -3267,6 +3330,24 @@ grpc-status: 0
         apply_context_map(&collected, &mut req);
 
         assert_eq!(req["connector_transaction_id"]["id"], json!("pi_3ABC"));
+    }
+
+    #[test]
+    fn explicit_context_map_overrides_implicit_context_value() {
+        let mut req = json!({"state": {"access_token": {"token": {"value": ""}}}});
+
+        let implicit_dep_res = vec![json!({"access_token": "implicit_tok"})];
+        add_context(&[], &implicit_dep_res, &mut req);
+
+        let mut context_map: ContextMap = HashMap::new();
+        context_map.insert(
+            "state.access_token.token.value".to_string(),
+            "res.access_token".to_string(),
+        );
+        let explicit_dep_res = json!({"access_token": "explicit_tok"});
+        apply_context_map(&[(context_map, json!({}), explicit_dep_res)], &mut req);
+
+        assert_eq!(req["state"]["access_token"]["token"]["value"], json!("explicit_tok"));
     }
 
     #[test]

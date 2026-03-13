@@ -24,44 +24,44 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_692654de64f04e859d4fcaca1e74f770",
-  "customer_name": "Ava Brown",
+  "merchant_customer_id": "mcui_db7fc976a8e441fbb4d15c2649a5fe01",
+  "customer_name": "Ava Miller",
   "email": {
-    "value": "casey.7600@sandbox.example.com"
+    "value": "sam.4640@testmail.io"
   },
-  "phone_number": "+448122557398",
+  "phone_number": "+448289811420",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Ethan"
+        "value": "Noah"
       },
       "last_name": {
         "value": "Brown"
       },
       "line1": {
-        "value": "2318 Sunset Ave"
+        "value": "6910 Oak Rd"
       },
       "line2": {
-        "value": "2960 Lake Ln"
+        "value": "7833 Lake Ave"
       },
       "line3": {
-        "value": "961 Oak St"
+        "value": "5269 Sunset Rd"
       },
       "city": {
-        "value": "San Francisco"
+        "value": "Austin"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "44459"
+        "value": "35274"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "morgan.9736@example.com"
+        "value": "casey.1332@testmail.io"
       },
       "phone_number": {
-        "value": "5373368867"
+        "value": "9702886636"
       },
       "phone_country_code": "+91"
     },
@@ -70,32 +70,32 @@ grpcurl -plaintext \
         "value": "Liam"
       },
       "last_name": {
-        "value": "Miller"
+        "value": "Johnson"
       },
       "line1": {
-        "value": "6159 Main St"
+        "value": "5248 Lake Ave"
       },
       "line2": {
-        "value": "7029 Pine Ave"
+        "value": "6278 Market Dr"
       },
       "line3": {
-        "value": "3891 Main Dr"
+        "value": "6361 Market Ave"
       },
       "city": {
-        "value": "New York"
+        "value": "Seattle"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "80626"
+        "value": "27477"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "riley.1514@sandbox.example.com"
+        "value": "sam.5390@testmail.io"
       },
       "phone_number": {
-        "value": "5773374310"
+        "value": "4671476965"
       },
       "phone_country_code": "+91"
     }
@@ -128,13 +128,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:40:48 GMT
+date: Fri, 13 Mar 2026 06:46:45 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "934839066",
-  "connectorCustomerId": "934839066",
+  "merchantCustomerId": "525893669",
+  "connectorCustomerId": "525893669",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -144,13 +144,13 @@ Response contents:
     "cache-control": "no-cache, no-store, max-age=0",
     "content-length": "232",
     "content-type": "application/json; charset=utf-8",
-    "date": "Thu, 12 Mar 2026 15:40:47 GMT",
+    "date": "Fri, 13 Mar 2026 06:46:44 GMT",
     "expires": "-1",
     "pragma": "no-cache",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-cnection": "close",
     "x-download-options": "noopen",
-    "x-opnet-transaction-trace": "39598f69-930a-4eea-a65b-19a85a5612aa-17512-11769613"
+    "x-opnet-transaction-trace": "53649f1c-cce8-4d4d-9a6c-f2139cb719a0-17392-4054179"
   }
 }
 
@@ -177,7 +177,7 @@ grpcurl -plaintext \
   -H "x-key1: ***MASKED***" \
   -d @ localhost:8000 types.PaymentService/SetupRecurring <<'JSON'
 {
-  "merchant_recurring_payment_id": "mrpi_ae12390caf744002bee5cfff27d16b27",
+  "merchant_recurring_payment_id": "mrpi_5f51ce7e6f254061970b6950b4424e82",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -197,19 +197,19 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Ethan Brown"
+        "value": "Noah Johnson"
       },
       "card_type": "credit"
     }
   },
   "customer": {
-    "name": "Emma Wilson",
+    "name": "Ethan Wilson",
     "email": {
-      "value": "jordan.9322@sandbox.example.com"
+      "value": "sam.1660@testmail.io"
     },
-    "id": "cust_3a3da88b38ac4405bb2354e5616b374e",
-    "phone_number": "+915793135063",
-    "connector_customer_id": "934839066"
+    "id": "cust_4677dad2d9cc4a4aae5e7219ee6d5ae5",
+    "phone_number": "+16367796390",
+    "connector_customer_id": "525893669"
   },
   "setup_future_usage": "OFF_SESSION",
   "address": {
@@ -218,32 +218,32 @@ grpcurl -plaintext \
         "value": "Liam"
       },
       "last_name": {
-        "value": "Miller"
+        "value": "Johnson"
       },
       "line1": {
-        "value": "6159 Main St"
+        "value": "5248 Lake Ave"
       },
       "line2": {
-        "value": "7029 Pine Ave"
+        "value": "6278 Market Dr"
       },
       "line3": {
-        "value": "3891 Main Dr"
+        "value": "6361 Market Ave"
       },
       "city": {
-        "value": "New York"
+        "value": "Seattle"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "80626"
+        "value": "27477"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "riley.1514@sandbox.example.com"
+        "value": "sam.5390@testmail.io"
       },
       "phone_number": {
-        "value": "5773374310"
+        "value": "4671476965"
       },
       "phone_country_code": "+91"
     }
@@ -280,7 +280,7 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Thu, 12 Mar 2026 15:40:49 GMT
+date: Fri, 13 Mar 2026 06:46:45 GMT
 x-request-id: setup_recurring_setup_recurring_req
 
 Response contents:
@@ -293,27 +293,27 @@ Response contents:
     "access-control-allow-methods": "PUT,OPTIONS,POST,GET",
     "access-control-allow-origin": "*",
     "cache-control": "no-cache, no-store, max-age=0",
-    "content-length": "503",
+    "content-length": "508",
     "content-type": "application/json; charset=utf-8",
-    "date": "Thu, 12 Mar 2026 15:40:49 GMT",
+    "date": "Fri, 13 Mar 2026 06:46:45 GMT",
     "expires": "-1",
     "pragma": "no-cache",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-cnection": "close",
     "x-download-options": "noopen",
-    "x-opnet-transaction-trace": "39598f69-930a-4eea-a65b-19a85a5612aa-17512-11769758"
+    "x-opnet-transaction-trace": "53649f1c-cce8-4d4d-9a6c-f2139cb719a0-17392-4054264"
   },
   "mandateReference": {
     "connectorMandateId": {
-      "connectorMandateId": "934839066-934084493"
+      "connectorMandateId": "525893669-537998895"
     }
   },
   "capturedAmount": "0",
   "state": {
-    "connectorCustomerId": "934839066"
+    "connectorCustomerId": "525893669"
   },
   "rawConnectorRequest": {
-    "value": "{\"url\":\"https://apitest.authorize.net/xml/v1/request.api\",\"method\":\"POST\",\"headers\":{\"via\":\"HyperSwitch\",\"Content-Type\":\"application/json\"},\"body\":{\"createCustomerPaymentProfileRequest\":{\"merchantAuthentication\":{\"name\":\"9ARWr5wz49D3\",\"transactionKey\":\"3d9SHV2699mgmHre\"},\"customerProfileId\":\"934839066\",\"paymentProfile\":{\"billTo\":{\"firstName\":\"Liam\",\"lastName\":\"Miller\",\"address\":\"6159 Main St 7029 Pine Ave 3891 Main Dr\",\"city\":\"New York\",\"state\":\"CA\",\"zip\":\"80626\",\"country\":\"US\"},\"payment\":{\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"2030-08\",\"cardCode\":\"999\"}}},\"validationMode\":\"testMode\"}}}"
+    "value": "{\"url\":\"https://apitest.authorize.net/xml/v1/request.api\",\"method\":\"POST\",\"headers\":{\"via\":\"HyperSwitch\",\"Content-Type\":\"application/json\"},\"body\":{\"createCustomerPaymentProfileRequest\":{\"merchantAuthentication\":{\"name\":\"9ARWr5wz49D3\",\"transactionKey\":\"3d9SHV2699mgmHre\"},\"customerProfileId\":\"525893669\",\"paymentProfile\":{\"billTo\":{\"firstName\":\"Liam\",\"lastName\":\"Johnson\",\"address\":\"5248 Lake Ave 6278 Market Dr 6361 Market Ave\",\"city\":\"Seattle\",\"state\":\"CA\",\"zip\":\"27477\",\"country\":\"US\"},\"payment\":{\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"2030-08\",\"cardCode\":\"999\"}}},\"validationMode\":\"testMode\"}}}"
   }
 }
 
