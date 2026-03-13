@@ -1,5 +1,5 @@
 {
-  "name": "hs-playlib",
+  "name": "hyperswitch-payments",
   "version": "0.1.0",
   "description": "Hyperswitch Payments SDK — Node.js client for connector integrations via UniFFI FFI",
   "main": "dist/src/index.js",
