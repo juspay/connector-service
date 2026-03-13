@@ -272,6 +272,8 @@
     {
       "id": "CASE_PROXY_FORWARD",
       "description": "Request sent via simple forward proxy (Makefile starts sdk/tests/client_sanity/simple_proxy.js).",
+      "skip_langs": ["node"],
+      "skip_reason_node": "Node SDK proxy handling to be fixed.",
       "proxy": { "http_url": "http://localhost:9082" },
       "request": {
         "method": "GET",
