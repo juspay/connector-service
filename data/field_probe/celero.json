@@ -1,0 +1,176 @@
+{
+  "connector": "celero",
+  "flows": {
+    "authorize": {
+      "Card": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "shipping_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            },
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "webhook_url": "https://example.com/webhook",
+          "complete_authorize_url": "https://example.com/complete",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://sandbox.gotnpgateway.com/api/transaction",
+          "method": "Post",
+          "headers": {
+            "authorization": "probe_key",
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"idempotency_key\":\"probe_txn_001_idempotency\",\"type\":\"sale\",\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiration_date\":\"03/2030\",\"cvc\":\"737\"}}}"
+        }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_capture_id": "probe_capture_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount_to_capture": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://sandbox.gotnpgateway.com/api/transaction/probe_connector_txn_001/capture",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "authorization": "probe_key"
+          },
+          "body": "{\"amount\":1000}"
+        }
+      }
+    },
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://sandbox.gotnpgateway.com/api/transaction/probe_connector_txn_001",
+          "method": "Get",
+          "headers": {
+            "content-type": "application/json",
+            "authorization": "probe_key",
+            "via": "HyperSwitch"
+          },
+          "body": "{}"
+        }
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request"
+        },
+        "sample": {
+          "url": "https://sandbox.gotnpgateway.com/api/transaction/probe_connector_txn_001/refund",
+          "method": "Post",
+          "headers": {
+            "authorization": "probe_key",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"amount\":1000}"
+        }
+      }
+    },
+    "void": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_void_id": "probe_void_001",
+          "connector_transaction_id": "probe_connector_txn_001"
+        },
+        "sample": {
+          "url": "https://sandbox.gotnpgateway.com/api/transaction/probe_connector_txn_001/void",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/json",
+            "authorization": "probe_key"
+          },
+          "body": "{}"
+        }
+      }
+    }
+  }
+}
