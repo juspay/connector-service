@@ -1,7 +1,10 @@
 use external_services;
 use grpc_api_types::payments::{
-    CustomerServiceCreateRequest, CustomerServiceCreateResponse, EventServiceHandleRequest,
-    EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
+    EventServiceHandleRequest, EventServiceHandleResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenResponse,
@@ -18,26 +21,28 @@ use grpc_api_types::payments::{
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
+    ResponseError,
 };
 
-use crate::errors::{FfiError, FfiPaymentError};
 use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
-        RepeatPayment, SetupMandate, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SetupMandate, SubmitEvidence,
+        Void, VoidPC,
     },
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorWebhookSecrets, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
 };
 
@@ -393,6 +398,72 @@ res_transformer!(
     generate_response_fn: generate_payment_post_authenticate_response,
 );
 
+// accept request transformer
+req_transformer!(
+    fn_name: accept_req_transformer,
+    request_type: DisputeServiceAcceptRequest,
+    flow_marker: Accept,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: AcceptDisputeData,
+    response_data_type: DisputeResponseData,
+);
+
+// submit_evidence request transformer
+req_transformer!(
+    fn_name: submit_evidence_req_transformer,
+    request_type: DisputeServiceSubmitEvidenceRequest,
+    flow_marker: SubmitEvidence,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: SubmitEvidenceData,
+    response_data_type: DisputeResponseData,
+);
+
+// defend request transformer
+req_transformer!(
+    fn_name: defend_req_transformer,
+    request_type: DisputeServiceDefendRequest,
+    flow_marker: DefendDispute,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: DisputeDefendData,
+    response_data_type: DisputeResponseData,
+);
+
+// accept response transformer
+res_transformer!(
+    fn_name: accept_res_transformer,
+    request_type: DisputeServiceAcceptRequest,
+    response_type: DisputeServiceAcceptResponse,
+    flow_marker: Accept,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: AcceptDisputeData,
+    response_data_type: DisputeResponseData,
+    generate_response_fn: generate_accept_dispute_response,
+);
+
+// submit_evidence response transformer
+res_transformer!(
+    fn_name: submit_evidence_res_transformer,
+    request_type: DisputeServiceSubmitEvidenceRequest,
+    response_type: DisputeServiceSubmitEvidenceResponse,
+    flow_marker: SubmitEvidence,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: SubmitEvidenceData,
+    response_data_type: DisputeResponseData,
+    generate_response_fn: generate_submit_evidence_response,
+);
+
+// defend response transformer
+res_transformer!(
+    fn_name: defend_res_transformer,
+    request_type: DisputeServiceDefendRequest,
+    response_type: DisputeServiceDefendResponse,
+    flow_marker: DefendDispute,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: DisputeDefendData,
+    response_data_type: DisputeResponseData,
+    generate_response_fn: generate_defend_dispute_response,
+);
+
 /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
 ///
 /// The caller supplies the raw webhook body + headers received from the connector
@@ -407,49 +478,34 @@ pub fn handle_event_transformer(
     connector: domain_types::connector_types::ConnectorEnum,
     connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
     _metadata: &common_utils::metadata::MaskedMetadata,
-) -> Result<EventServiceHandleResponse, FfiPaymentError> {
+) -> Result<EventServiceHandleResponse, ResponseError> {
     use domain_types::utils::ForeignTryFrom as _;
-
-    let map_app_err = |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-        FfiPaymentError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
-            Some(e.to_string()),
-            None,
-            Some(500),
-        )
-    };
 
     let request_details = payload
         .request_details
-        .ok_or_else(|| {
-            FfiPaymentError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some("missing request_details in payload".to_string()),
-                None,
-                Some(400),
-            )
+        .ok_or_else(|| ResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some("Missing required field: request_details".to_string()),
+            error_code: None,
+            status_code: Some(400),
         })
         .and_then(|rd| {
-            RequestDetails::foreign_try_from(rd).map_err(|e| {
-                FfiPaymentError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(e.to_string()),
-                    None,
-                    Some(400),
-                )
+            RequestDetails::foreign_try_from(rd).map_err(|e| ResponseError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some(format!("ForeignTryFrom failed: {e}")),
+                error_code: None,
+                status_code: Some(400),
             })
         })?;
 
     let webhook_secrets = payload
         .webhook_secrets
         .map(|ws| {
-            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
-                FfiPaymentError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(e.to_string()),
-                    None,
-                    Some(400),
-                )
+            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| ResponseError {
+                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                error_message: Some(format!("ForeignTryFrom failed: {e}")),
+                error_code: None,
+                status_code: Some(400),
             })
         })
         .transpose()?;
@@ -475,5 +531,5 @@ pub fn handle_event_transformer(
         Some(connector_auth_details),
         source_verified,
     )
-    .map_err(map_app_err)
+    .map_err(<error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<ResponseError>>::report_into)
 }

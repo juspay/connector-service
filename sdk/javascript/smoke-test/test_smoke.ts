@@ -22,6 +22,8 @@ const {
   Connector,
   ConnectorConfig,
   Environment,
+  RequestError,
+  ResponseError
 } = types;
 
 
@@ -202,21 +204,43 @@ async function testConnector(
         passed: true,
       };
       result.status = "passed";
-    } catch (e: any) {
-      result.roundTripTest = {
-        passed: true,
-        error: e.message || String(e),
-      };
-      result.status = "passed_with_error";
-      result.error = e.message || String(e);
     }
-  } catch (e: any) {
+    catch (e: any) {
+      if (e instanceof RequestError) {
+        result.roundTripTest = {
+          passed: true,
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
+      } else if (e instanceof ResponseError) {
+        result.roundTripTest = {
+          passed: true,
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
+      } else {
+        result.roundTripTest = {
+          passed: true,
+          error: e.message || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.message || String(e);
+      }
+    }
+  }
+
+
+  catch (e: any) {
     result.status = "failed";
     result.error = e.message || String(e);
   }
 
   return result;
 }
+
+
 
 function parseArgs(): { credsFile: string; connectors?: string[]; all: boolean; dryRun: boolean; card: string } {
   const args = process.argv.slice(2);

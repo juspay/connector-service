@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: juspay/hyperswitch-docs
-          token: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
+          token: ${{ secrets.CONNECTOR_SERVICE_DOCS_CI }}
           path: hyperswitch-docs
 
       - name: Sync documentation
@@ -70,9 +70,9 @@ jobs:
 
           git add connector-service/
 
-          # Check if there are any staged changes (new files or modifications)
+          # Check if there are any staged changes
           if git diff --cached --quiet; then
-            echo "No changes to sync"
+            echo "No changes to commit"
             exit 0
           fi
 

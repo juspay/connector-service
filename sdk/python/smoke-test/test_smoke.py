@@ -40,12 +40,13 @@ try:
         Connector,
         Environment,
         FfiOptions,
+        RequestError,
+        ResponseError,
     )
 except ImportError as e:
     print(f"Error importing payments package: {e}")
     print("Make sure the wheel is installed: pip install dist/hyperswitch_payments-*.whl")
     sys.exit(1)
-
 
 # Test card configurations
 TEST_CARDS = {
@@ -268,8 +269,26 @@ async def test_connector_ffi(
                 "passed": True
             }
             result["status"] = "passed"
+        except RequestError as e:
+            # FFI request building failed
+            result["round_trip_test"] = {
+                "passed": False,
+                "error_type": "RequestError",
+                "error_code": e.error_code,
+                "error_message": e.error_message
+            }
+            result["status"] = "failed"
+        except ResponseError as e:
+            # FFI response parsing failed
+            result["round_trip_test"] = {
+                "passed": False,
+                "error_type": "ResponseError",
+                "error_code": e.error_code,
+                "error_message": e.error_message
+            }
+            result["status"] = "failed"
         except Exception as e:
-            # Extract detailed error message
+            # Other errors (HTTP, network, connector errors, etc.)
             error_msg = str(e) if str(e) else type(e).__name__
             
             result["round_trip_test"] = {

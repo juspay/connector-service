@@ -867,10 +867,10 @@ macros::macro_connector_implementation!(
                 res: Response,
                 event_builder: Option<&mut events::Event>,
             ) -> CustomResult<ErrorResponse, ConnectorError> {
-            let response: paypal::PaypalAccessTokenErrorResponse = res
-            .response
-            .parse_struct("Paypal AccessTokenErrorResponse")
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+                let response: paypal::PaypalAccessTokenErrorResponse = res
+                .response
+                .parse_struct("Paypal AccessTokenErrorResponse")
+                .change_context(ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
