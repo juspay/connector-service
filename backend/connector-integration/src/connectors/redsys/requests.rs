@@ -35,7 +35,6 @@ pub struct RedsysPaymentRequest {
 #[serde(rename_all = "UPPERCASE")]
 pub enum RedsysStrongCustomerAuthenticationException {
     Lwv,
-    #[serde(rename = "TRA [30.0]")]
     Tra,
     Cor,
     Mit,
