@@ -238,13 +238,8 @@ class _ConnectorClientBase:
             body=connector_req.body if connector_req.HasField("body") else None,
         )
 
-        # 3. Execute (http_config is always complete; pass ms, convert to sec inside)
-        resolved_ms = (
-            http_config.total_timeout_ms,
-            http_config.connect_timeout_ms,
-            http_config.response_timeout_ms,
-        )
-        response = await execute(connector_request, self.client, resolved_ms)
+        # 3. Execute (http_config merged; unset fields filled from proto defaults)
+        response = await execute(connector_request, self.client, http_config)
 
         # 4. Encode HTTP response for FFI
         res_proto = FfiConnectorHttpResponse(

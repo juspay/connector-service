@@ -138,12 +138,12 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
 async def execute(
     request: HttpRequest,
     client: httpx.AsyncClient,
-    resolved_timeouts_ms: Optional[tuple[int, int, int]] = None,
+    http_config: Optional[HttpConfig] = None,
 ) -> HttpResponse:
     """
     Standardized stateless execution engine using httpx AsyncClient.
-    resolved_timeouts_ms: (total_ms, connect_ms, read_ms) — matches proto; convert to sec internally.
-    When None, uses client default.
+    http_config: Optional per-request overrides. When None, uses client default.
+    When provided, any unset timeout fields are filled from proto defaults.
     """
     # Validate URL: httpx.URL() does not raise for missing scheme (e.g. "not-a-valid-url").
     try:
@@ -156,15 +156,15 @@ async def execute(
         raise NetworkError(f"Invalid URL: {request.url}", sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED)
     start_time = time.time()
 
-    timeout = (
-        httpx.Timeout(
-            resolved_timeouts_ms[0] / 1000.0,
-            connect=resolved_timeouts_ms[1] / 1000.0,
-            read=resolved_timeouts_ms[2] / 1000.0,
+    if http_config is None:
+        timeout = httpx.USE_CLIENT_DEFAULT
+    else:
+        resolved = merge_http_config(DEFAULT_HTTP_CONFIG, http_config)
+        timeout = httpx.Timeout(
+            resolved.total_timeout_ms / 1000.0,
+            connect=resolved.connect_timeout_ms / 1000.0,
+            read=resolved.response_timeout_ms / 1000.0,
         )
-        if resolved_timeouts_ms is not None
-        else httpx.USE_CLIENT_DEFAULT
-    )
 
     try:
         response = await client.request(
