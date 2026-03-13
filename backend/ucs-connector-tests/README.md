@@ -124,6 +124,8 @@ Applies to `suite_run_test` and `sdk_run_test`:
 
 - JSON report: `backend/ucs-connector-tests/report.json` (or `UCS_RUN_TEST_REPORT_PATH` / `--report`)
 - Markdown overview: `backend/ucs-connector-tests/test_report/test_overview.md`
+- Connector flow pages: `backend/ucs-connector-tests/test_report/connectors/<connector>/<suite>.md`
+- Scenario details: `backend/ucs-connector-tests/test_report/connectors/<connector>/<suite>/<scenario>.md`
 
 Reports are cleared at run start and updated as scenarios execute.
 
