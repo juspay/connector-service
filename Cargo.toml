@@ -18,7 +18,8 @@ members = [
   "backend/ucs_env",
   "backend/ucs_interface_common",
   "backend/ffi",
-  "backend/uniffi-bindgen"
+  "backend/uniffi-bindgen",
+  "backend/field-probe"
 ]
 exclude = [
   "examples/example-rs",
