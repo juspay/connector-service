@@ -115,7 +115,12 @@ pub struct GrpcExecutionResult {
 }
 
 type ExplicitContextEntry = (ContextMap, Value, Value);
-type DependencyContext = (Vec<Value>, Vec<Value>, Vec<String>, Vec<ExplicitContextEntry>);
+type DependencyContext = (
+    Vec<Value>,
+    Vec<Value>,
+    Vec<String>,
+    Vec<ExplicitContextEntry>,
+);
 
 impl GrpcurlRequest {
     /// Renders a shell-friendly multi-line grpcurl command.
@@ -3347,7 +3352,10 @@ grpc-status: 0
         let explicit_dep_res = json!({"access_token": "explicit_tok"});
         apply_context_map(&[(context_map, json!({}), explicit_dep_res)], &mut req);
 
-        assert_eq!(req["state"]["access_token"]["token"]["value"], json!("explicit_tok"));
+        assert_eq!(
+            req["state"]["access_token"]["token"]["value"],
+            json!("explicit_tok")
+        );
     }
 
     #[test]
