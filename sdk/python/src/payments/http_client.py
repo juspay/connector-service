@@ -55,11 +55,11 @@ class NetworkError(Exception):
             sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT: "RESPONSE_TIMEOUT",
             sdk_config_pb2.NetworkErrorCode.TOTAL_TIMEOUT: "TOTAL_TIMEOUT",
             sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE: "NETWORK_FAILURE",
-            sdk_config_pb2.NetworkErrorCode.INVALID_CONFIGURATION: "INVALID_CONFIGURATION",
             sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION: "CLIENT_INITIALIZATION",
             sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED: "URL_PARSING_FAILED",
             sdk_config_pb2.NetworkErrorCode.RESPONSE_DECODING_FAILED: "RESPONSE_DECODING_FAILED",
             sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION: "INVALID_PROXY_CONFIGURATION",
+            sdk_config_pb2.NetworkErrorCode.INVALID_CA_CERT: "INVALID_CA_CERT",
         }
         return names.get(self.code, "NETWORK_ERROR_CODE_UNSPECIFIED")
 

@@ -102,7 +102,7 @@ impl NetworkError {
             NetworkErrorCode::ResponseTimeout => "RESPONSE_TIMEOUT",
             NetworkErrorCode::TotalTimeout => "TOTAL_TIMEOUT",
             NetworkErrorCode::NetworkFailure => "NETWORK_FAILURE",
-            NetworkErrorCode::InvalidConfiguration => "INVALID_CONFIGURATION",
+            NetworkErrorCode::InvalidCaCert => "INVALID_CA_CERT",
             NetworkErrorCode::ClientInitialization => "CLIENT_INITIALIZATION",
             NetworkErrorCode::UrlParsingFailed => "URL_PARSING_FAILED",
             NetworkErrorCode::ResponseDecodingFailed => "RESPONSE_DECODING_FAILED",
@@ -142,20 +142,20 @@ impl HttpClient {
             let cert = match &ca.format {
                 Some(grpc_api_types::payments::ca_cert::Format::Pem(pem)) => {
                     reqwest::Certificate::from_pem(pem.as_bytes()).map_err(|e| NetworkError {
-                        code: NetworkErrorCode::InvalidConfiguration,
+                        code: NetworkErrorCode::InvalidCaCert,
                         message: format!("Invalid PEM: {}", e),
                         status_code: Some(500),
                     })
                 }
                 Some(grpc_api_types::payments::ca_cert::Format::Der(der)) => {
                     reqwest::Certificate::from_der(der).map_err(|e| NetworkError {
-                        code: NetworkErrorCode::InvalidConfiguration,
+                        code: NetworkErrorCode::InvalidCaCert,
                         message: format!("Invalid DER: {}", e),
                         status_code: Some(500),
                     })
                 }
                 None => Err(NetworkError {
-                    code: NetworkErrorCode::InvalidConfiguration,
+                    code: NetworkErrorCode::InvalidCaCert,
                     message: "Missing cert format".to_string(),
                     status_code: Some(500),
                 }),

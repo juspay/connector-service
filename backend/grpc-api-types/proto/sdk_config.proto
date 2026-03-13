@@ -185,15 +185,34 @@ message ResponseError {
 
 enum NetworkErrorCode {
   NETWORK_ERROR_CODE_UNSPECIFIED = 0;
+
+  // Connection to the remote host timed out before establishing.
   CONNECT_TIMEOUT = 1;
+
+  // Remote host accepted connection but did not respond within the read timeout.
   RESPONSE_TIMEOUT = 2;
+
+  // Entire request lifecycle exceeded total timeout.
   TOTAL_TIMEOUT = 3;
+
+  // Generic network failure (e.g. DNS resolution, connection refused, TLS handshake).
+  // See error message for details.
   NETWORK_FAILURE = 4;
-  INVALID_CONFIGURATION = 5;
+
+  // HTTP client failed to initialize (e.g. unsupported config, internal error).
   CLIENT_INITIALIZATION = 6;
+
+  // Request URL is malformed or has unsupported scheme.
   URL_PARSING_FAILED = 7;
+
+  // Response body could not be read or decoded.
   RESPONSE_DECODING_FAILED = 8;
+
+  // Proxy URL or proxy configuration is invalid.
   INVALID_PROXY_CONFIGURATION = 9;
+
+  // CA certificate (PEM/DER) is invalid or could not be loaded.
+  INVALID_CA_CERT = 10;
 }
 
 message NetworkError {
