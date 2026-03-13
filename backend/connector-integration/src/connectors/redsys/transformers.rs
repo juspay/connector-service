@@ -1175,6 +1175,11 @@ where
         let shipping_data = router_data.resource_common_data.get_optional_shipping();
 
         let (ds_merchant_excep_sca, ds_merchant_directpayment, ds_merchant_emv3ds) =
+            // Redsys does not really support no 3ds flow. The exemptions requested in the requests in which the
+            // EMV3DS data have not been reported, will be marked in the authorization. If this exemption is not
+            // accepted by the issuer, a denial will be made with Ds_Response = 0195 ("soft-decline" requires SCA).
+            // In this case, the merchant can decide to start the operation again with EMV3DS data (3DS transaction),
+            // but a new request must be sent.
             if !item.router_data.resource_common_data.is_three_ds() {
                 let exemption = determine_exemption(router_data)?;
 
