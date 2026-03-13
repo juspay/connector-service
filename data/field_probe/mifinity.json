@@ -1,0 +1,28 @@
+{
+  "connector": "mifinity",
+  "flows": {
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://demo.mifinity.com/api/gateway/payment-status/payment_validation_key_DefaultMerchantId_probe_connector_txn_001",
+          "method": "Get",
+          "headers": {
+            "key": "probe_key",
+            "via": "HyperSwitch",
+            "content-type": "application/json",
+            "api-version": "1"
+          },
+          "body": null
+        }
+      }
+    }
+  }
+}

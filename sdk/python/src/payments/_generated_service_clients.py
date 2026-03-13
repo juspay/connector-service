@@ -11,6 +11,21 @@ class CustomerClient(_ConnectorClientBase):
         """CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information."""
         return self._execute_flow("create", request, _pb2.CustomerServiceCreateResponse, options)
 
+class DisputeClient(_ConnectorClientBase):
+    """DisputeService flows"""
+
+    def accept(self, request, options=None):
+        """DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient."""
+        return self._execute_flow("accept", request, _pb2.DisputeServiceAcceptResponse, options)
+
+    def defend(self, request, options=None):
+        """DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation."""
+        return self._execute_flow("defend", request, _pb2.DisputeServiceDefendResponse, options)
+
+    def submit_evidence(self, request, options=None):
+        """DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims."""
+        return self._execute_flow("submit_evidence", request, _pb2.DisputeServiceSubmitEvidenceResponse, options)
+
 class EventClient(_ConnectorClientBase):
     """EventService flows"""
 

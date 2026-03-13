@@ -956,7 +956,7 @@ pub enum ConnectorError {
         message: String,
         connector: &'static str,
     },
-    #[error("Invalid Configuration")]
+    #[error("Invalid Configuration: {config}")]
     InvalidConnectorConfig { config: &'static str },
     #[error("Failed to convert amount to required type")]
     AmountConversionFailed,
