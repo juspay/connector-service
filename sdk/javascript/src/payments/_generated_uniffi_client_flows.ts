@@ -4,6 +4,23 @@
 import { UniffiClient as _UniffiClientBase } from "./uniffi_client";
 
 export class UniffiClient extends _UniffiClientBase {
+  /** Build connector HTTP request for accept flow. */
+  acceptReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('accept', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for accept flow. */
+  acceptRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('accept', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for authenticate flow. */
   authenticateReq(
     requestBytes: Buffer | Uint8Array,
@@ -140,6 +157,23 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('create_session_token', responseBytes, requestBytes, optionsBytes);
   }
 
+  /** Build connector HTTP request for defend flow. */
+  defendReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('defend', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for defend flow. */
+  defendRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('defend', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for get flow. */
   getReq(
     requestBytes: Buffer | Uint8Array,
@@ -240,6 +274,23 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('setup_recurring', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for submit_evidence flow. */
+  submitEvidenceReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('submit_evidence', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for submit_evidence flow. */
+  submitEvidenceRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('submit_evidence', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for tokenize flow. */

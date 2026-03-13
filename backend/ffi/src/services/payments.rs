@@ -1,8 +1,11 @@
 use crate::errors::FfiPaymentError;
 use external_services;
 use grpc_api_types::payments::{
-    CustomerServiceCreateRequest, CustomerServiceCreateResponse, EventServiceHandleRequest,
-    EventServiceHandleResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
+    EventServiceHandleRequest, EventServiceHandleResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenResponse,
@@ -25,19 +28,21 @@ use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
-        RepeatPayment, SetupMandate, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
+        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SetupMandate, SubmitEvidence,
+        Void, VoidPC,
     },
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorWebhookSecrets, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
 };
 
@@ -391,6 +396,72 @@ res_transformer!(
     request_data_type: PaymentsPostAuthenticateData<T>,
     response_data_type: PaymentsResponseData,
     generate_response_fn: generate_payment_post_authenticate_response,
+);
+
+// accept request transformer
+req_transformer!(
+    fn_name: accept_req_transformer,
+    request_type: DisputeServiceAcceptRequest,
+    flow_marker: Accept,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: AcceptDisputeData,
+    response_data_type: DisputeResponseData,
+);
+
+// submit_evidence request transformer
+req_transformer!(
+    fn_name: submit_evidence_req_transformer,
+    request_type: DisputeServiceSubmitEvidenceRequest,
+    flow_marker: SubmitEvidence,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: SubmitEvidenceData,
+    response_data_type: DisputeResponseData,
+);
+
+// defend request transformer
+req_transformer!(
+    fn_name: defend_req_transformer,
+    request_type: DisputeServiceDefendRequest,
+    flow_marker: DefendDispute,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: DisputeDefendData,
+    response_data_type: DisputeResponseData,
+);
+
+// accept response transformer
+res_transformer!(
+    fn_name: accept_res_transformer,
+    request_type: DisputeServiceAcceptRequest,
+    response_type: DisputeServiceAcceptResponse,
+    flow_marker: Accept,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: AcceptDisputeData,
+    response_data_type: DisputeResponseData,
+    generate_response_fn: generate_accept_dispute_response,
+);
+
+// submit_evidence response transformer
+res_transformer!(
+    fn_name: submit_evidence_res_transformer,
+    request_type: DisputeServiceSubmitEvidenceRequest,
+    response_type: DisputeServiceSubmitEvidenceResponse,
+    flow_marker: SubmitEvidence,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: SubmitEvidenceData,
+    response_data_type: DisputeResponseData,
+    generate_response_fn: generate_submit_evidence_response,
+);
+
+// defend response transformer
+res_transformer!(
+    fn_name: defend_res_transformer,
+    request_type: DisputeServiceDefendRequest,
+    response_type: DisputeServiceDefendResponse,
+    flow_marker: DefendDispute,
+    resource_common_data_type: DisputeFlowData,
+    request_data_type: DisputeDefendData,
+    response_data_type: DisputeResponseData,
+    generate_response_fn: generate_defend_dispute_response,
 );
 
 /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
