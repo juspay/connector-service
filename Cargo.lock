@@ -1686,7 +1686,6 @@ dependencies = [
 name = "ffi"
 version = "0.1.0"
 dependencies = [
- "base64 0.22.1",
  "bytes",
  "config",
  "connector-integration",
@@ -1704,7 +1703,6 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "thiserror 1.0.69",
- "tokio",
  "toml 0.8.23",
  "tonic 0.13.1",
  "tracing",
