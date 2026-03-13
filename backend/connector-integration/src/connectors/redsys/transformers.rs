@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::LazyLock};
 
 use crate::{
     connectors::redsys::{RedsysAmountConvertor, RedsysRouterData},
@@ -37,6 +37,9 @@ pub const SIGNATURE_VERSION: &str = "HMAC_SHA256_V1";
 pub const DS_VERSION: &str = "0.0";
 pub const XMLNS_WEB_URL: &str = "http://webservices.apl02.redsys.es";
 pub const REDSYS_SOAP_ACTION: &str = "consultaOperaciones";
+
+static LWV_THRESHOLD: LazyLock<common_utils::types::MinorUnit> =
+    LazyLock::new(|| common_utils::types::MinorUnit::new(3000)); // €30
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -366,6 +369,7 @@ where
 fn get_redsys_attempt_status(
     ds_response: responses::DsResponse,
     capture_method: Option<enums::CaptureMethod>,
+    is_three_ds: bool,
 ) -> Result<common_enums::AttemptStatus, error_stack::Report<errors::ConnectorError>> {
     // Redsys consistently provides a 4-digit response code, where numbers ranging from 0000 to 0099 indicate successful transactions
 
@@ -382,7 +386,17 @@ fn get_redsys_attempt_status(
             "0900" => Ok(common_enums::AttemptStatus::Charged),
             "0400" | "0481" | "0940" | "9915" => Ok(common_enums::AttemptStatus::Voided),
             "0950" => Ok(common_enums::AttemptStatus::VoidFailed),
-            "0112" | "0195" | "8210" | "8220" | "9998" | "9999" => {
+            "0195" => {
+                // 0195 = Soft decline (issuer requests authentication)
+                // If 3DS was requested → pending (issuer wants auth, flow continues)
+                // If no 3DS was requested → failed (issuer rejected because they want 3DS)
+                if is_three_ds {
+                    Ok(common_enums::AttemptStatus::AuthenticationPending)
+                } else {
+                    Ok(common_enums::AttemptStatus::AuthenticationFailed)
+                }
+            }
+            "0112" | "8210" | "8220" | "9998" | "9999" => {
                 Ok(common_enums::AttemptStatus::AuthenticationPending)
             }
             "0129" | "0184" | "9256" | "9257" => {
@@ -576,6 +590,7 @@ fn get_payments_response(
     authentication_data: Option<domain_types::router_request_types::AuthenticationData>,
     http_code: u16,
     use_transaction_response: bool,
+    is_three_ds: bool,
 ) -> Result<
     (
         Result<PaymentsResponseData, domain_types::router_data::ErrorResponse>,
@@ -607,7 +622,7 @@ fn get_payments_response(
     let ds_order = redsys_payments_response.ds_order.clone();
 
     if let Some(ds_response) = redsys_payments_response.ds_response {
-        let status = get_redsys_attempt_status(ds_response.clone(), capture_method)?;
+        let status = get_redsys_attempt_status(ds_response.clone(), capture_method, is_three_ds)?;
 
         let response = if domain_types::utils::is_payment_failure(status) {
             let error_message = redsys_payments_response
@@ -1005,6 +1020,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 )?;
 
                 let auth_data = item.router_data.request.authentication_data.clone();
+                let is_three_ds = item.router_data.resource_common_data.is_three_ds();
 
                 let (authenticate_response, status, ds_order) = get_payments_response(
                     response_data,
@@ -1012,6 +1028,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                     auth_data,
                     item.http_code,
                     false,
+                    is_three_ds,
                 )?;
 
                 Ok(Self {
@@ -1061,67 +1078,60 @@ fn determine_exemption<T: PaymentMethodDataTypes>(
         PaymentsResponseData,
     >,
 ) -> Result<requests::RedsysStrongCustomerAuthenticationException, Error> {
-    // 1. Check if explicit exemption was requested
-    if let Some(auth_data) = &router_data.request.authentication_data {
-        if let Some(indicator) = &auth_data.exemption_indicator {
-            return Ok(match indicator {
-                common_enums::ExemptionIndicator::LowValue => {
-                    requests::RedsysStrongCustomerAuthenticationException::Lwv
-                }
-                common_enums::ExemptionIndicator::TransactionRiskAssessment => {
-                    requests::RedsysStrongCustomerAuthenticationException::Tra
-                }
-                common_enums::ExemptionIndicator::RecurringOperation => {
-                    requests::RedsysStrongCustomerAuthenticationException::Mit
-                }
-                common_enums::ExemptionIndicator::SecureCorporatePayment => {
-                    requests::RedsysStrongCustomerAuthenticationException::Cor
-                }
-                common_enums::ExemptionIndicator::ScaDelegation => {
-                    requests::RedsysStrongCustomerAuthenticationException::Atd
-                }
-                _ => {
-                    // Default fallback for unsupported types
-                    let threshold = common_utils::types::MinorUnit::new(3000); // €30
-                    if router_data.request.amount <= threshold {
-                        requests::RedsysStrongCustomerAuthenticationException::Lwv
-                    } else {
-                        return Err(errors::ConnectorError::NotSupported {
-                            message: "Exemption type not supported by Redsys".into(),
-                            connector: "Redsys",
-                        }
-                        .into());
-                    }
-                }
-            });
-        }
+    let request = &router_data.request;
+    // 1. Explicit exemption requested
+    if let Some(indicator) = request
+        .authentication_data
+        .as_ref()
+        .and_then(|auth| auth.exemption_indicator.as_ref())
+    {
+        return Ok(map_exemption_indicator(
+            indicator,
+            request.amount <= *LWV_THRESHOLD,
+        ));
     }
-
-    // 2. Auto-detect based on transaction context
-    let is_mandate_payment = router_data.request.mandate_id.is_some();
-    let is_off_session = router_data.request.off_session.unwrap_or(false);
-    let is_setup_future =
-        router_data.request.setup_future_usage == Some(common_enums::FutureUsage::OffSession);
-
-    if is_mandate_payment || (is_off_session && !is_setup_future) {
-        // MIT: Subsequent recurring payment (merchant-initiated)
+    // 2. Auto-detect: MIT for stored credential payments
+    let is_connector_mandate = request.connector_mandate_id().is_some();
+    let is_off_session = request.off_session.unwrap_or(false);
+    let is_setup_future = request.setup_future_usage == Some(common_enums::FutureUsage::OffSession);
+    if is_connector_mandate || (is_off_session && !is_setup_future) {
         return Ok(requests::RedsysStrongCustomerAuthenticationException::Mit);
     }
-
+    // 3. First payment in recurring series
     if is_setup_future {
-        // First payment in a series - could use TRA if merchant has low fraud rates
-        // Or LWV if amount is small
         return Ok(requests::RedsysStrongCustomerAuthenticationException::Tra);
     }
-
-    // 3. Default based on amount
-    let threshold = common_utils::types::MinorUnit::new(3000); // €30 threshold
-    if router_data.request.amount <= threshold {
-        // €30 threshold for LWV
+    // 4. Default: amount-based
+    // For Redsys, both LWV and TRA are capped at €30
+    if request.amount <= *LWV_THRESHOLD {
         Ok(requests::RedsysStrongCustomerAuthenticationException::Lwv)
     } else {
-        // For larger amounts, TRA requires merchant to meet fraud thresholds
         Ok(requests::RedsysStrongCustomerAuthenticationException::Tra)
+    }
+}
+fn map_exemption_indicator(
+    indicator: &common_enums::ExemptionIndicator,
+    is_low_value: bool,
+) -> requests::RedsysStrongCustomerAuthenticationException {
+    match indicator {
+        common_enums::ExemptionIndicator::LowValue => {
+            requests::RedsysStrongCustomerAuthenticationException::Lwv
+        }
+        common_enums::ExemptionIndicator::SecureCorporatePayment => {
+            requests::RedsysStrongCustomerAuthenticationException::Cor
+        }
+        common_enums::ExemptionIndicator::ScaDelegation => {
+            requests::RedsysStrongCustomerAuthenticationException::Atd
+        }
+        common_enums::ExemptionIndicator::TransactionRiskAssessment => {
+            requests::RedsysStrongCustomerAuthenticationException::Tra
+        }
+        common_enums::ExemptionIndicator::RecurringOperation => {
+            requests::RedsysStrongCustomerAuthenticationException::Mit
+        }
+        // Unmapped: fall back to amount-based
+        _ if is_low_value => requests::RedsysStrongCustomerAuthenticationException::Lwv,
+        _ => requests::RedsysStrongCustomerAuthenticationException::Tra,
     }
 }
 
@@ -1161,49 +1171,8 @@ where
         ))?;
         let auth = RedsysAuthType::try_from(&router_data.connector_auth_type)?;
 
-        let redirect_response = router_data.request.redirect_response.as_ref().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "redirect_response",
-            },
-        )?;
-
-        let redirect_payload_value: Option<responses::RedsysThreedsChallengeResponse> =
-            redirect_response.payload.as_ref().and_then(|secret| {
-                let payload_data = secret.peek();
-                serde_json::from_value::<responses::RedsysThreedsChallengeResponse>(
-                    payload_data.clone(),
-                )
-                .ok()
-            });
-
         let billing_data = router_data.resource_common_data.get_optional_billing();
         let shipping_data = router_data.resource_common_data.get_optional_shipping();
-
-        // Get authentication data from the request
-        let auth_data = router_data.request.authentication_data.as_ref().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "authentication_data",
-            },
-        )?;
-
-        let three_d_s_server_trans_i_d = auth_data.threeds_server_transaction_id.clone().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "authentication_data.threeds_server_transaction_id",
-            },
-        )?;
-
-        let message_version = auth_data
-            .message_version
-            .as_ref()
-            .map(|v| v.to_string())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "authentication_data.message_version",
-            })?;
-
-        // Determine if this is invoke case based on threeds_completion_indicator:
-        // - Success/Failure means 3DS method was invoked (invoke case)
-        // - NotAvailable means no 3DS method URL was present (exempt case)
-        let threeds_completion_indicator = router_data.request.threeds_method_comp_ind.clone();
 
         let (ds_merchant_excep_sca, ds_merchant_directpayment, ds_merchant_emv3ds) =
             if !item.router_data.resource_common_data.is_three_ds() {
@@ -1211,6 +1180,49 @@ where
 
                 (Some(exemption), Some(true), None)
             } else {
+                // Get authentication data from the request
+                let auth_data = router_data.request.authentication_data.as_ref().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "authentication_data",
+                    },
+                )?;
+
+                let three_d_s_server_trans_i_d = auth_data
+                    .threeds_server_transaction_id
+                    .clone()
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "authentication_data.threeds_server_transaction_id",
+                    })?;
+
+                let message_version = auth_data
+                    .message_version
+                    .as_ref()
+                    .map(|v| v.to_string())
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "authentication_data.message_version",
+                    })?;
+
+                // Determine if this is invoke case based on threeds_completion_indicator:
+                // - Success/Failure means 3DS method was invoked (invoke case)
+                // - NotAvailable means no 3DS method URL was present (exempt case)
+                let threeds_completion_indicator =
+                    router_data.request.threeds_method_comp_ind.clone();
+
+                let redirect_response = router_data.request.redirect_response.as_ref().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "redirect_response",
+                    },
+                )?;
+
+                let redirect_payload_value: Option<responses::RedsysThreedsChallengeResponse> =
+                    redirect_response.payload.as_ref().and_then(|secret| {
+                        let payload_data = secret.peek();
+                        serde_json::from_value::<responses::RedsysThreedsChallengeResponse>(
+                            payload_data.clone(),
+                        )
+                        .ok()
+                    });
+
                 let emv3ds_data = match redirect_payload_value {
                     Some(payload) => requests::RedsysEmvThreeDsRequestData::new(
                         requests::RedsysThreeDsInfo::ChallengeResponse,
@@ -1320,6 +1332,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 )?;
 
                 let auth_data = item.router_data.request.authentication_data.clone();
+                let is_three_ds = item.router_data.resource_common_data.is_three_ds();
 
                 let (authenticate_response, status, ds_order) = get_payments_response(
                     response_data,
@@ -1327,6 +1340,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                     auth_data,
                     item.http_code,
                     true,
+                    is_three_ds,
                 )?;
 
                 Ok(Self {
@@ -1431,6 +1445,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
                 let attempt_status = get_redsys_attempt_status(
                     response_data.ds_response.clone(),
                     item.router_data.request.capture_method,
+                    false,
                 )?;
 
                 Ok(Self {
@@ -1543,7 +1558,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
                     )?;
 
                 let attempt_status =
-                    get_redsys_attempt_status(response_data.ds_response.clone(), None)?;
+                    get_redsys_attempt_status(response_data.ds_response.clone(), None, false)?;
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -1696,6 +1711,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                         let attempt_status = get_redsys_attempt_status(
                             ds_response.clone(),
                             item.router_data.request.capture_method,
+                            false,
                         )?;
                         let payment_response = Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
