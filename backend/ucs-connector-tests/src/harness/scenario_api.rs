@@ -1485,7 +1485,7 @@ fn normalize_payment_method_oneof(map: &mut serde_json::Map<String, Value>) {
     };
 
     let mut oneof_obj = serde_json::Map::new();
-    oneof_obj.insert(to_pascal_case(&variant), payload);
+    oneof_obj.insert(normalize_oneof_variant_key(&variant), payload);
 
     payment_method_obj.insert("payment_method".to_string(), Value::Object(oneof_obj));
 }
@@ -1537,6 +1537,50 @@ fn to_pascal_case(value: &str) -> String {
     }
 
     out
+}
+
+fn normalize_oneof_variant_key(value: &str) -> String {
+    if value
+        .chars()
+        .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_')
+    {
+        return value.to_string();
+    }
+
+    let mut out = String::with_capacity(value.len() + 8);
+    let mut previous_was_lower_or_digit = false;
+
+    for ch in value.chars() {
+        if ch == '-' || ch == ' ' {
+            if !out.ends_with('_') {
+                out.push('_');
+            }
+            previous_was_lower_or_digit = false;
+            continue;
+        }
+
+        if ch.is_ascii_uppercase() {
+            if previous_was_lower_or_digit && !out.ends_with('_') {
+                out.push('_');
+            }
+            out.push(ch.to_ascii_lowercase());
+            previous_was_lower_or_digit = false;
+            continue;
+        }
+
+        out.push(ch);
+        previous_was_lower_or_digit = ch.is_ascii_lowercase() || ch.is_ascii_digit();
+    }
+
+    while out.ends_with('_') {
+        out.pop();
+    }
+
+    if out.is_empty() {
+        value.to_string()
+    } else {
+        out
+    }
 }
 
 fn normalize_value_wrappers(value: &mut Value) {
@@ -3038,11 +3082,11 @@ grpc-status: 0
         );
 
         assert_eq!(
-            normalized["payment_method"]["payment_method"]["Card"]["card_number"],
+            normalized["payment_method"]["payment_method"]["card"]["card_number"],
             json!("4111111111111111")
         );
         assert_eq!(
-            normalized["payment_method"]["payment_method"]["Card"]["card_holder_name"],
+            normalized["payment_method"]["payment_method"]["card"]["card_holder_name"],
             json!("John Doe")
         );
         assert_eq!(normalized["customer"]["email"], json!("john@example.com"));
