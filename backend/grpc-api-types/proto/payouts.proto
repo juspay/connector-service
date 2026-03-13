@@ -181,7 +181,7 @@ message PayoutAddress {
 // ============================================================================
 
 // Request message for creating a payout
-message PayoutCreateRequest {
+message PayoutServiceCreateRequest {
   // Identification
   optional string merchant_payout_id = 1; // this is the id passed to the payout processor
   // Address Information
@@ -213,7 +213,7 @@ message PayoutCreateRequest {
 }
 
 // Response message for creating a payout
-message PayoutCreateResponse {
+message PayoutServiceCreateResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -224,7 +224,8 @@ message PayoutCreateResponse {
   optional ErrorInfo error = 4;
 }
 
-message PayoutTransferRequest {
+// Request message for transferring a payout
+message PayoutServiceTransferRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Address Information
@@ -253,8 +254,8 @@ message PayoutTransferRequest {
   optional string access_token = 13;
 }
 
-// Response message for creating a payout
-message PayoutTransferResponse {
+// Response message for transferring a payout
+message PayoutServiceTransferResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -266,7 +267,7 @@ message PayoutTransferResponse {
 }
 
 // Request message for staging a payout
-message PayoutStageRequest {
+message PayoutServiceStageRequest {
   // Identification
   optional string merchant_quote_id = 1;
   // Address Information
@@ -284,7 +285,7 @@ message PayoutStageRequest {
 }
 
 // Response message for staging a payout
-message PayoutStageResponse {
+message PayoutServiceStageResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -296,7 +297,7 @@ message PayoutStageResponse {
 }
 
 // Request message for fetching a payout
-message PayoutGetRequest {
+message PayoutServiceGetRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Connector Payout ID
@@ -306,7 +307,7 @@ message PayoutGetRequest {
 }
 
 // Response message for fetching a payout
-message PayoutGetResponse {
+message PayoutServiceGetResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -318,7 +319,7 @@ message PayoutGetResponse {
 }
 
 // Request message for voiding a payout
-message PayoutVoidRequest {
+message PayoutServiceVoidRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Address Information
@@ -332,7 +333,7 @@ message PayoutVoidRequest {
 }
 
 // Response message for voiding a payout
-message PayoutVoidResponse {
+message PayoutServiceVoidResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -343,8 +344,8 @@ message PayoutVoidResponse {
   optional ErrorInfo error = 4;
 }
 
-// Request message for creating a payout
-message PayoutCreateLinkRequest {
+// Request message for creating a payout link
+message PayoutServiceCreateLinkRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Address Information
@@ -375,8 +376,8 @@ message PayoutCreateLinkRequest {
   optional string access_token = 14;
 }
 
-// Response message for creating a payout
-message PayoutCreateLinkResponse {
+// Response message for creating a payout link
+message PayoutServiceCreateLinkResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -388,7 +389,7 @@ message PayoutCreateLinkResponse {
 }
 
 // Request message for creating recipient account
-message PayoutCreateRecipientRequest {
+message PayoutServiceCreateRecipientRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Address Information
@@ -406,7 +407,7 @@ message PayoutCreateRecipientRequest {
 }
 
 // Response message for creating recipient account
-message PayoutCreateRecipientResponse {
+message PayoutServiceCreateRecipientResponse {
   // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
@@ -418,7 +419,7 @@ message PayoutCreateRecipientResponse {
 }
 
 // Request message for enrolling disburse account
-message PayoutEnrollDisburseAccountRequest {
+message PayoutServiceEnrollDisburseAccountRequest {
   // Identification
   optional string merchant_payout_id = 1;
   // Address Information
@@ -434,8 +435,8 @@ message PayoutEnrollDisburseAccountRequest {
 }
 
 // Response message for enrolling disburse account
-message PayoutEnrollDisburseAccountResponse {
-  /// Identification
+message PayoutServiceEnrollDisburseAccountResponse {
+  // Identification
   optional string merchant_payout_id = 1;
   // Payout Status
   optional PayoutEnums.PayoutStatus payout_status = 2;

@@ -268,26 +268,26 @@ service PaymentMethodAuthenticationService {
 
 service PayoutService {
   // Creates a payout.
-  rpc Create(PayoutCreateRequest) returns (PayoutCreateResponse);
+  rpc Create(PayoutServiceCreateRequest) returns (PayoutServiceCreateResponse);
 
   // Creates a payout fund transfer.
-  rpc Transfer(PayoutTransferRequest) returns (PayoutTransferResponse);
+  rpc Transfer(PayoutServiceTransferRequest) returns (PayoutServiceTransferResponse);
 
   // Retrieve payout details.
-  rpc Get(PayoutGetRequest) returns (PayoutGetResponse);
+  rpc Get(PayoutServiceGetRequest) returns (PayoutServiceGetResponse);
 
   // Void a payout.
-  rpc Void(PayoutVoidRequest) returns (PayoutVoidResponse);
+  rpc Void(PayoutServiceVoidRequest) returns (PayoutServiceVoidResponse);
 
   // Stage the payout.
-  rpc Stage(PayoutStageRequest) returns (PayoutStageResponse);
+  rpc Stage(PayoutServiceStageRequest) returns (PayoutServiceStageResponse);
   
   // Creates a link between the recipient and the payout.
-  rpc CreateLink(PayoutCreateLinkRequest) returns (PayoutCreateLinkResponse);
+  rpc CreateLink(PayoutServiceCreateLinkRequest) returns (PayoutServiceCreateLinkResponse);
 
   // Create payout recipient.
-  rpc CreateRecipient(PayoutCreateRecipientRequest) returns (PayoutCreateRecipientResponse);
+  rpc CreateRecipient(PayoutServiceCreateRecipientRequest) returns (PayoutServiceCreateRecipientResponse);
 
   // Enroll disburse account.
-  rpc EnrollDisburseAccount(PayoutEnrollDisburseAccountRequest) returns (PayoutEnrollDisburseAccountResponse);
+  rpc EnrollDisburseAccount(PayoutServiceEnrollDisburseAccountRequest) returns (PayoutServiceEnrollDisburseAccountResponse);
 }
