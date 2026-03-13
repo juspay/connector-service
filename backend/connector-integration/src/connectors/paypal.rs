@@ -710,7 +710,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or(ConnectorError::FailedToObtainAuthType)?;
         let connector_metadata = req
             .resource_common_data
-            .connector_meta_data
+            .connector_feature_data
             .as_ref()
             .map(|secret| secret.clone().expose());
         self.build_headers(
@@ -909,7 +909,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -923,7 +923,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone().map(|m| m.expose()))?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_feature_data.clone().map(|m| m.expose()))?;
         match req.resource_common_data.payment_method {
             common_enums::PaymentMethod::Wallet | common_enums::PaymentMethod::BankRedirect => Ok(format!(
                 "{}v2/checkout/orders/{}",
@@ -993,7 +993,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -1007,7 +1007,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone().map(|m| m.expose()))?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_feature_data.clone().map(|m| m.expose()))?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
                     "Missing Authorize id".to_string(),
@@ -1042,7 +1042,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -1057,7 +1057,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let connector_metadata_value = req.request.connector_metadata.clone().map(|secret| secret.expose());
+            let connector_metadata_value = req.request.connector_feature_data.clone().map(|secret| secret.expose());
             let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(connector_metadata_value)?;
             let authorize_id = paypal_meta.authorize_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
@@ -1094,7 +1094,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -1108,7 +1108,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_metadata.clone().expose_option())?;
+            let paypal_meta: paypal::PaypalMeta = utils::to_connector_meta(req.request.connector_feature_data.clone().expose_option())?;
             let capture_id = paypal_meta.capture_id.ok_or(
                 ConnectorError::RequestEncodingFailedWithReason(
                     "Missing Capture id".to_string(),
@@ -1143,7 +1143,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -1187,7 +1187,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -1230,7 +1230,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorError::FailedToObtainAuthType)?;
-            let connector_metadata = req.resource_common_data.connector_meta_data
+            let connector_metadata = req.resource_common_data.connector_feature_data
                 .as_ref()
                 .map(|secret| secret.clone().expose());
             self.build_headers(
@@ -1364,7 +1364,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .ok_or(ConnectorError::FailedToObtainAuthType)?;
         let connector_metadata = req
             .resource_common_data
-            .connector_meta_data
+            .connector_feature_data
             .as_ref()
             .map(|secret| secret.clone().expose());
         self.build_headers(

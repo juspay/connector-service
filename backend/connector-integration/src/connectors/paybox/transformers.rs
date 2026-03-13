@@ -412,7 +412,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Try reading from multiple sources in order of preference
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .as_ref()
             .and_then(|meta| utils::to_connector_meta_from_secret(Some(meta.clone())).ok())
             .map(|meta: PayboxMeta| meta.connector_request_id)
@@ -547,7 +547,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Try reading from multiple sources in order of preference
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .as_ref()
             .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.peek().clone()).ok())
             .map(|meta| meta.connector_request_id)
@@ -691,7 +691,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Note: connector_metadata in request may contain merchant custom data
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .clone()
             .and_then(|meta| utils::to_connector_meta_from_secret::<PayboxMeta>(Some(meta)).ok())
             .map(|meta| meta.connector_request_id)
@@ -843,7 +843,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .expose_option()
             .as_ref()
             .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())

@@ -393,7 +393,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             utils::to_connector_meta_from_secret(
                 item.router_data
                     .resource_common_data
-                    .connector_meta_data
+                    .connector_feature_data
                     .clone(),
             )
             .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
@@ -1834,7 +1834,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let metadata =
-            BraintreeMeta::try_from(&item.router_data.resource_common_data.connector_meta_data)?;
+            BraintreeMeta::try_from(&item.router_data.resource_common_data.connector_feature_data)?;
         Ok(Self {
             query: constants::CLIENT_TOKEN_MUTATION.to_owned(),
             variables: VariableClientTokenInput {
@@ -1864,7 +1864,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         let payment_request_data: PaymentRequestMetadata = match item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data
+                            .connector_feature_data
                             .clone()
                         {
                             Some(connector_meta) => {
@@ -1887,7 +1887,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     )?
                             }
                             None => Err(ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None")?,
+                                .attach_printable("connector_feature_data is None")?,
                         };
 
                         let session_token_data = Some(ApplePaySessionResponse::ThirdPartySdk(
@@ -1935,7 +1935,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         let gpay_data: GpaySessionTokenData = match item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data
+                            .connector_feature_data
                             .clone()
                         {
                             Some(connector_meta) => connector_meta
@@ -1944,7 +1944,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 .change_context(ConnectorError::ParsingFailed)
                                 .attach_printable("Failed to parse gpay metadata")?,
                             None => Err(ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None")?,
+                                .attach_printable("connector_feature_data is None")?,
                         };
 
                         SessionToken::GooglePay(Box::new(
@@ -1985,7 +1985,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         let paypal_sdk_data = item
                             .router_data
                             .resource_common_data
-                            .connector_meta_data
+                            .connector_feature_data
                             .clone()
                             .parse_value::<PaypalSdkSessionTokenData>("PaypalSdkSessionTokenData")
                             .change_context(ConnectorError::NoConnectorMetaData)
@@ -2569,7 +2569,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             utils::to_connector_meta_from_secret(
                 item.router_data
                     .resource_common_data
-                    .connector_meta_data
+                    .connector_feature_data
                     .clone(),
             )
             .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?

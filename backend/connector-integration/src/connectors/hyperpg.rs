@@ -428,7 +428,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_meta = req.request.get_connector_metadata()?;
+            let connector_meta = req.request.get_connector_feature_data()?;
 
 
     let hyperpg_meta: hyperpg::HyperpgMeta = connector_meta

@@ -444,7 +444,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .parse::<u64>()
                 .change_context(ConnectorError::RequestEncodingFailed)?;
             let action = PlacetopayNextAction::Reverse;
-            let authorization = match item.router_data.request.connector_metadata.clone() {
+            let authorization = match item.router_data.request.connector_feature_data.clone() {
                 Some(metadata) => metadata.expose().as_str().map(|auth| auth.to_string()),
                 None => None,
             };

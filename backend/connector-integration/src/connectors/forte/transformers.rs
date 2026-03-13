@@ -624,7 +624,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item
                 .router_data
                 .resource_common_data
-                .connector_meta_data
+                .connector_feature_data
                 .as_ref()
                 .map(|s| s.peek().clone()),
         )?;
@@ -711,7 +711,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item
                 .router_data
                 .resource_common_data
-                .connector_meta_data
+                .connector_feature_data
                 .as_ref()
                 .map(|s| s.peek().clone()),
         )?;
@@ -793,7 +793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let trn_id = match item
             .router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .clone()
             .expose_option()
         {
@@ -805,7 +805,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             &item
                 .router_data
                 .request
-                .merchant_account_metadata
+                .connector_feature_data
                 .as_ref()
                 .map(|s| s.peek().clone()),
         )?;

@@ -1412,11 +1412,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let connector_metadata_secret = item
             .router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .clone()
             .ok_or_else(|| {
                 error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                    field_name: "connector_metadata"
+                    field_name: "connector_feature_data"
                 })
             })?;
         let payment = get_refund_credit_card_payment(&Some(connector_metadata_secret))?;

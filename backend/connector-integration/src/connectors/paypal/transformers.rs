@@ -2350,7 +2350,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
         let connector_payment_id: PaypalMeta = to_connector_meta(
             item.router_data
                 .request
-                .connector_metadata
+                .connector_feature_data
                 .clone()
                 .map(|m| m.expose()),
         )?;

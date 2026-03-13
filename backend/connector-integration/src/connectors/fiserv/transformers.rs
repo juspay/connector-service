@@ -600,7 +600,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let metadata = router_data
             .resource_common_data
-            .connector_meta_data
+            .connector_feature_data
             .clone()
             .ok_or(ConnectorError::RequestEncodingFailed)?;
         let session: FiservSessionObject = metadata
@@ -715,7 +715,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Get session information
         let metadata = router_data
             .resource_common_data
-            .connector_meta_data
+            .connector_feature_data
             .clone()
             .ok_or(ConnectorError::RequestEncodingFailed)?;
         let session: FiservSessionObject = metadata

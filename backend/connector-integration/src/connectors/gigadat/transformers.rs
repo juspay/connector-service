@@ -236,9 +236,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Get metadata for site - try connector_meta_data first, then fallback to request metadata
+        // Get metadata for site from connector_feature_data, then fallback to request metadata
         let metadata = GigadatConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
+            &item.router_data.resource_common_data.connector_feature_data,
         )
         .or_else(|_| {
             // Try to get site from request metadata
@@ -253,7 +253,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
                 .ok_or_else(|| {
                     Report::from(ConnectorError::InvalidConnectorConfig {
-                        config: "missing 'site' in connector_meta_data or metadata",
+                        config: "missing 'site' in connector_feature_data or metadata",
                     })
                 })
         })?;

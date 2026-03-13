@@ -296,7 +296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
 
                 let metadata = TruelayerMetadata::try_from(
-                    &item.router_data.resource_common_data.connector_meta_data,
+                    &item.router_data.resource_common_data.connector_feature_data,
                 )?;
 
                 let payment_method = PaymentMethod {

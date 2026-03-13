@@ -802,7 +802,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 ),
                 url: None,
             }),
-            metadata: router_data.request.connector_metadata.clone(),
+            metadata: router_data.request.connector_feature_data.clone(),
             description: router_data.request.reason.clone(),
         })
     }

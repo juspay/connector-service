@@ -400,7 +400,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_metadata.clone().map(|secret| secret.expose()))?;
+            utils::to_connector_meta(req.request.connector_feature_data.clone().map(|secret| secret.expose()))?;
         let order_id = nexinets::get_order_id(&meta)?;
         let transaction_id = match meta.psync_flow {
             transformers::NexinetsTransactionType::Debit
@@ -477,7 +477,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let meta: nexinets::NexinetsPaymentsMetadata =
-            utils::to_connector_meta(req.request.connector_metadata.clone().expose_option())?;
+            utils::to_connector_meta(req.request.connector_feature_data.clone().expose_option())?;
         let order_id = nexinets::get_order_id(&meta)?;
 
             Ok(format!(

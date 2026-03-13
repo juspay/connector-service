@@ -521,7 +521,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            validate_psync(&req.request.connector_metadata)?;
+            validate_psync(&req.request.connector_feature_data)?;
             self.build_headers(req)
         }
 
