@@ -1,6 +1,12 @@
 {
   "connector": "billwerk",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -77,9 +83,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfa2V5Og==",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -234,8 +240,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfa2V5Og==",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -321,9 +327,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -403,9 +409,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfa2V5Og==",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -485,9 +491,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -650,8 +656,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfa2V5Og==",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -740,9 +746,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -818,9 +824,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -896,9 +902,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -976,12 +982,16 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "supported",
@@ -1057,9 +1067,9 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
         }
@@ -1137,8 +1147,8 @@
           "url": "https://api.reepay.com/v1/charge",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"handle\":\"probe_txn_001\",\"amount\":1000,\"source\":\"probe_pm_token\",\"currency\":\"USD\",\"customer\":{\"handle\":null,\"email\":\"test@example.com\",\"address\":\"123 Main St\",\"address2\":null,\"city\":\"Seattle\",\"country\":\"US\",\"first_name\":\"John\",\"last_name\":\"Doe\"},\"metadata\":null,\"settle\":true}"
@@ -1160,8 +1170,8 @@
           "url": "https://api.reepay.com/v1/charge/probe_connector_txn_001/settle",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000}"
@@ -1186,12 +1196,24 @@
           "url": "https://api.reepay.com/v1/charge/probe_order_ref_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -1211,9 +1233,9 @@
           "url": "https://api.reepay.com/v1/refund",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfa2V5Og==",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"invoice\":\"probe_connector_txn_001\",\"amount\":1000,\"text\":\"customer_request\"}"
         }
@@ -1262,8 +1284,8 @@
           "url": "https://card.reepay.com/v1/token",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"number\":\"4111111111111111\",\"month\":\"03\",\"year\":\"30\",\"cvv\":\"737\",\"pkey\":\"probe_pub_key\",\"recurring\":null,\"intent\":null,\"strongAuthenticationRule\":null}"
@@ -1281,9 +1303,9 @@
           "url": "https://api.reepay.com/v1/charge/probe_connector_txn_001/cancel",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": null
         }

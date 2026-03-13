@@ -1,6 +1,12 @@
 {
   "connector": "paypal",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -82,12 +88,12 @@
           "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
           "method": "Post",
           "headers": {
-            "paypal-request-id": "probe_txn_001",
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
             "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
-            "authorization": "Bearer probe_access_token",
-            "prefer": "return=representation"
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
           },
           "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":{\"address_line_1\":\"123 Main St\",\"postal_code\":\"98101\",\"country_code\":\"US\",\"admin_area_2\":\"Seattle\"},\"name\":{\"full_name\":\"John\"}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"123 Main St\",\"postal_code\":\"98101\",\"country_code\":\"US\",\"admin_area_2\":\"Seattle\"},\"expiry\":\"2030-03\",\"name\":\"John Doe\",\"number\":\"4111111111111111\",\"security_code\":\"737\",\"attributes\":{\"vault\":null,\"verification\":null}}}}"
         }
@@ -166,10 +172,10 @@
           "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
             "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
             "paypal-request-id": "probe_txn_001",
-            "content-type": "application/json",
-            "authorization": "Bearer probe_access_token",
             "prefer": "return=representation",
             "via": "HyperSwitch"
           },
@@ -252,15 +258,19 @@
           "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
           "method": "Post",
           "headers": {
-            "prefer": "return=representation",
-            "paypal-request-id": "probe_txn_001",
-            "content-type": "application/json",
             "authorization": "Bearer probe_access_token",
-            "via": "HyperSwitch",
-            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom"
+            "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_txn_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
           },
           "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"probe_txn_001\",\"invoice_id\":\"probe_txn_001\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":{\"address_line_1\":\"123 Main St\",\"postal_code\":\"98101\",\"country_code\":\"US\",\"admin_area_2\":\"Seattle\"},\"name\":{\"full_name\":\"John\"}},\"items\":[{\"name\":\"Payment for invoice probe_txn_001\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"paypal\":{\"experience_context\":{\"return_url\":\"https://example.com/complete\",\"cancel_url\":\"https://example.com/complete\",\"user_action\":\"PAY_NOW\",\"shipping_preference\":\"SET_PROVIDED_ADDRESS\"},\"attributes\":null}}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -285,12 +295,12 @@
           "url": "https://api-m.sandbox.paypal.com/v2/payments/authorizations/probe_auth_001/capture",
           "method": "Post",
           "headers": {
-            "paypal-request-id": "probe_capture_001",
+            "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
-            "via": "HyperSwitch",
             "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_capture_001",
             "prefer": "return=representation",
-            "authorization": "Bearer probe_access_token"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"final_capture\":true}"
         }
@@ -304,9 +314,9 @@
           "url": "https://api-m.sandbox.paypal.com/v1/oauth2/token",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0",
             "content-type": "application/x-www-form-urlencoded",
-            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0"
+            "via": "HyperSwitch"
           },
           "body": "grant_type=client_credentials&client_id=probe_id&client_secret=probe_secret"
         }
@@ -333,15 +343,27 @@
           "url": "https://api-m.sandbox.paypal.com/v2/payments/captures/probe_cap_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_access_token",
-            "paypal-request-id": "probe_connector_txn_001",
             "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_connector_txn_001",
             "prefer": "return=representation",
-            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom"
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -376,12 +398,12 @@
           "url": "https://api-m.sandbox.paypal.com/v2/checkout/orders",
           "method": "Post",
           "headers": {
-            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
             "paypal-request-id": "",
             "prefer": "return=representation",
-            "authorization": "Bearer probe_access_token"
+            "via": "HyperSwitch"
           },
           "body": "{\"intent\":\"CAPTURE\",\"purchase_units\":[{\"reference_id\":\"\",\"invoice_id\":\"\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":null,\"name\":{\"full_name\":null}},\"items\":[{\"name\":\"Payment for invoice \",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"},\"tax\":null}]}],\"payment_source\":{\"paypal\":{\"vault_id\":\"probe_mandate_123\"}}}"
         }
@@ -411,12 +433,12 @@
           "url": "https://api-m.sandbox.paypal.com/v2/payments/captures/probe_cap_001/refund",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
             "paypal-request-id": "probe_refund_001",
             "prefer": "return=representation",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_access_token",
-            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":{\"currency_code\":\"USD\",\"value\":\"10.00\"}}"
         }
@@ -496,11 +518,11 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
-            "via": "HyperSwitch",
             "content-type": "application/json",
-            "prefer": "return=representation",
             "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
-            "paypal-request-id": "probe_mandate_001"
+            "paypal-request-id": "probe_mandate_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
           },
           "body": "{\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"123 Main St\",\"postal_code\":\"98101\",\"country_code\":\"US\",\"admin_area_2\":\"Seattle\"},\"expiry\":\"2030-03\",\"name\":\"John Doe\",\"number\":\"4111111111111111\"}}}"
         }
@@ -524,12 +546,12 @@
           "url": "https://api-m.sandbox.paypal.com/v2/payments/authorizations/probe_auth_001/void",
           "method": "Post",
           "headers": {
-            "paypal-request-id": "probe_void_001",
-            "prefer": "return=representation",
             "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom"
+            "paypal-partner-attribution-id": "HyperSwitchlegacy_Ecom",
+            "paypal-request-id": "probe_void_001",
+            "prefer": "return=representation",
+            "via": "HyperSwitch"
           },
           "body": null
         }

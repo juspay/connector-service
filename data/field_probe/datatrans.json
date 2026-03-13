@@ -1,6 +1,12 @@
 {
   "connector": "datatrans",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,12 +81,16 @@
           "url": "https://api.sandbox.datatrans.com/v1/transactions/authorize",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfcGFzcw=="
+            "via": "HyperSwitch"
           },
           "body": "{\"currency\":\"USD\",\"refno\":\"probe_txn_001\",\"amount\":1000,\"card\":{\"expiryMonth\":\"03\",\"expiryYear\":\"30\",\"number\":\"4111111111111111\",\"cvv\":\"737\",\"type\":\"PLAIN\"},\"autoSettle\":true,\"option\":null}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -98,8 +108,8 @@
           "url": "https://api.sandbox.datatrans.com/v1/transactions/probe_connector_txn_001/settle",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfcGFzcw==",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"refno\":\"probe_capture_001\"}"
@@ -120,11 +130,23 @@
           "url": "https://api.sandbox.datatrans.com/v1/transactions/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfcGFzcw=="
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -144,9 +166,9 @@
           "url": "https://api.sandbox.datatrans.com/v1/transactions/probe_connector_txn_001/credit",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfcGFzcw==",
-            "content-type": "application/json"
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"refno\":\"probe_refund_001\"}"
         }
@@ -163,9 +185,9 @@
           "url": "https://api.sandbox.datatrans.com/v1/transactions/probe_connector_txn_001/cancel",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfcGFzcw==",
-            "content-type": "application/json"
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{}"
         }

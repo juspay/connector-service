@@ -1,6 +1,12 @@
 {
   "connector": "trustpayments",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,12 +81,16 @@
           "url": "https://webservices.securetrading.net/json/",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"accounttypedescription\":\"ECOM\",\"baseamount\":\"1000\",\"billingfirstname\":\"John\",\"billinglastname\":\"Doe\",\"credentialsonfile\":\"1\",\"currencyiso3a\":\"USD\",\"orderreference\":\"probe_txn_001\",\"requesttypedescriptions\":[\"AUTH\"],\"sitereference\":\"probe_site_ref\",\"settlestatus\":\"0\",\"pan\":\"4111111111111111\",\"expirydate\":\"03/30\",\"securitycode\":\"737\"}]}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -98,9 +108,9 @@
           "url": "https://webservices.securetrading.net/json/",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"requesttypedescriptions\":[\"TRANSACTIONUPDATE\"],\"filter\":{\"sitereference\":[{\"value\":\"probe_site_ref\"}],\"transactionreference\":[{\"value\":\"probe_connector_txn_001\"}]},\"updates\":{\"settlestatus\":\"0\"}}]}"
         }
@@ -120,12 +130,24 @@
           "url": "https://webservices.securetrading.net/json/",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"requesttypedescriptions\":[\"TRANSACTIONQUERY\"],\"filter\":{\"sitereference\":[{\"value\":\"probe_site_ref\"}],\"transactionreference\":[{\"value\":\"probe_connector_txn_001\"}]}}]}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -164,9 +186,9 @@
           "url": "https://webservices.securetrading.net/json/",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"requesttypedescriptions\":[\"TRANSACTIONUPDATE\"],\"filter\":{\"sitereference\":[{\"value\":\"probe_site_ref\"}],\"transactionreference\":[{\"value\":\"probe_connector_txn_001\"}]},\"updates\":{\"settlestatus\":\"3\"}}]}"
         }

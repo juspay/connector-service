@@ -1,6 +1,12 @@
 {
   "connector": "forte",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -75,8 +81,8 @@
           "headers": {
             "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfa2V5",
             "content-type": "application/json",
-            "x-forte-auth-organization-id": "org_probe_org_id",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-forte-auth-organization-id": "org_probe_org_id"
           },
           "body": "{\"action\":\"sale\",\"authorization_amount\":10.0,\"billing_address\":{\"first_name\":\"John\",\"last_name\":\"Doe\"},\"echeck\":{\"sec_code\":\"WEB\",\"account_type\":\"Checking\",\"routing_number\":\"110000000\",\"account_number\":\"000123456789\",\"account_holder\":\"John Doe\"}}"
         }
@@ -155,12 +161,16 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfa2V5",
-            "x-forte-auth-organization-id": "org_probe_org_id",
             "content-type": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-forte-auth-organization-id": "org_probe_org_id"
           },
           "body": "{\"action\":\"sale\",\"authorization_amount\":10.0,\"billing_address\":{\"first_name\":\"John\",\"last_name\":\"Doe\"},\"card_type\":\"visa\",\"name_on_card\":\"John Doe\",\"account_number\":\"4111111111111111\",\"expire_month\":\"03\",\"expire_year\":\"2030\",\"card_verification_value\":\"737\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -169,7 +179,7 @@
         "required_fields": [
           "amount"
         ],
-        "error": "Stuck on field: amount — Integration error: Missing required field: amount"
+        "error": "Stuck on field: amount — Missing required field: amount"
       }
     },
     "get": {
@@ -195,10 +205,22 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "error",
-        "error": "Integration error: Connector meta data not found"
+        "error": "Connector meta data not found"
       }
     },
     "void": {
@@ -212,9 +234,9 @@
           "url": "https://sandbox.forte.net/api/v3/organizations/org_probe_org_id/locations/loc_probe_loc_id/transactions/probe_connector_txn_001",
           "method": "Put",
           "headers": {
+            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfa2V5",
             "content-type": "application/json",
             "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfa2V5",
             "x-forte-auth-organization-id": "org_probe_org_id"
           },
           "body": "{\"action\":\"void\",\"authorization_code\":\"probe_auth_001\"}"

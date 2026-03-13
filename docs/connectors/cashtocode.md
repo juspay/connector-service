@@ -2,6 +2,7 @@
 
 <!--
 This file is auto-generated. Do not edit by hand.
+Source: data/field_probe/cashtocode.json
 Regenerate: python3 scripts/generate-connector-docs.py cashtocode
 -->
 
@@ -9,212 +10,63 @@ Regenerate: python3 scripts/generate-connector-docs.py cashtocode
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
-| [MerchantAuthenticationService.CreateAccessToken](#merchantauthenticationservicecreateaccesstoken) | Authentication | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
-| [CustomerService.Create](#customerservicecreate) | Customers | `CustomerServiceCreateRequest` |
-| [PaymentService.CreateOrder](#paymentservicecreateorder) | Payments | `PaymentServiceCreateOrderRequest` |
-| [MerchantAuthenticationService.CreateSessionToken](#merchantauthenticationservicecreatesessiontoken) | Authentication | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [PaymentService.Reverse](#paymentservicereverse) | Payments | `PaymentServiceReverseRequest` |
-| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
+| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
+| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 
 ## Flow Details
 
 ### Payments
 
-#### PaymentService.Capture
+#### PaymentService.Authorize
 
-Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCaptureRequest` |
-| **Response** | `PaymentServiceCaptureResponse` |
-
-**Minimum Request**
-
-```json
-{
-  "merchant_capture_id": "probe_capture_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount_to_capture": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
-
-#### PaymentService.CreateOrder
-
-Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
 
 | | Message |
 |---|---------|
-| **Request** | `PaymentServiceCreateOrderRequest` |
-| **Response** | `PaymentServiceCreateOrderResponse` |
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
 
-**Minimum Request**
+**Supported payment method types:**
 
-```json
-{
-  "merchant_order_id": "probe_order_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+| Payment Method | Supported |
+|----------------|:---------:|
+| Samsung Pay | — |
 
-#### PaymentService.Get
-
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
-
-**Minimum Request**
-
-```json
-{
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
-
-#### PaymentService.Refund
-
-Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
-
-**Minimum Request**
-
-```json
-{
-  "merchant_refund_id": "probe_refund_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "payment_amount": 1000,
-  "refund_amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "reason": "customer_request"
-}
-```
-
-#### PaymentService.Reverse
-
-Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceReverseRequest` |
-| **Response** | `PaymentServiceReverseResponse` |
-
-**Minimum Request**
-
-```json
-{
-  "merchant_reverse_id": "probe_reverse_001",
-  "connector_transaction_id": "probe_connector_txn_001"
-}
-```
-
-#### PaymentService.Void
-
-Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceVoidRequest` |
-| **Response** | `PaymentServiceVoidResponse` |
-
-**Minimum Request**
-
-```json
-{
-  "merchant_void_id": "probe_void_001",
-  "connector_transaction_id": "probe_connector_txn_001"
-}
-```
-
-### Customers
-
-#### CustomerService.Create
-
-Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information.
-
-| | Message |
-|---|---------|
-| **Request** | `CustomerServiceCreateRequest` |
-| **Response** | `CustomerServiceCreateResponse` |
-
-**Minimum Request**
-
-```json
-{
-  "customer_name": "John Doe",
-  "email": "test@example.com",
-  "phone_number": "4155552671",
-  "address": {
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  }
-}
-```
+<!-- TODO: Add sample payload for `authorize` in `scripts/connector-annotations/cashtocode.yaml` -->
 
 ### Authentication
 
-#### MerchantAuthenticationService.CreateAccessToken
+#### PaymentMethodAuthenticationService.Authenticate
 
-Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
-
-| | Message |
-|---|---------|
-| **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
-| **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
-
-**Minimum Request**
-
-```json
-{}
-```
-
-#### MerchantAuthenticationService.CreateSessionToken
-
-Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.
+Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
 
 | | Message |
 |---|---------|
-| **Request** | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
-| **Response** | `MerchantAuthenticationServiceCreateSessionTokenResponse` |
+| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-**Minimum Request**
+<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/cashtocode.yaml` -->
 
-```json
-{
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+#### PaymentMethodAuthenticationService.PostAuthenticate
+
+Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
+
+<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/cashtocode.yaml` -->
+
+#### PaymentMethodAuthenticationService.PreAuthenticate
+
+Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+
+<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/cashtocode.yaml` -->

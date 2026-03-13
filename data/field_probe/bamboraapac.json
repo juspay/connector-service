@@ -1,6 +1,12 @@
 {
   "connector": "bamboraapac",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -80,6 +86,10 @@
           },
           "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:dts=\"http://www.ippayments.com.au/interface/api/dts\">\n<soapenv:Body>\n<dts:SubmitSinglePayment>\n<dts:trnXML><![CDATA[<Transaction><CustRef>probe_txn_001</CustRef><Amount>1000</Amount><TrnType>1</TrnType><AccountNumber>probe_acct_num</AccountNumber><CreditCard Registered=\"False\"><CardNumber>4111111111111111</CardNumber><ExpM>03</ExpM><ExpY>2030</ExpY><CVN>737</CVN><CardHolderName>John Doe</CardHolderName></CreditCard><Security><UserName>probe_user</UserName><Password>probe_pass</Password></Security></Transaction>]]></dts:trnXML>\n</dts:SubmitSinglePayment>\n</soapenv:Body>\n</soapenv:Envelope>"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -118,11 +128,23 @@
           "url": "https://demo.ippayments.com.au/interface/api/dts.asmx",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "text/xml"
+            "content-type": "text/xml",
+            "via": "HyperSwitch"
           },
-          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:dts=\"http://www.ippayments.com.au/interface/api/dts\">\n<soapenv:Header/>\n<soapenv:Body>\n<dts:QueryTransaction>\n<dts:queryXML><![CDATA[<QueryTransaction><Criteria><AccountNumber>probe_acct_num</AccountNumber><TrnStartTimestamp>2024-06-23 00:00:00</TrnStartTimestamp><TrnEndTimestamp>2099-12-31 23:59:59</TrnEndTimestamp><Receipt>probe_connector_txn_001</Receipt></Criteria><Security><UserName>probe_user</UserName><Password>probe_pass</Password></Security></QueryTransaction>]]></dts:queryXML>\n</dts:QueryTransaction>\n</soapenv:Body>\n</soapenv:Envelope>"
+          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:dts=\"http://www.ippayments.com.au/interface/api/dts\">\n<soapenv:Header/>\n<soapenv:Body>\n<dts:QueryTransaction>\n<dts:queryXML><![CDATA[<QueryTransaction><Criteria><AccountNumber>probe_acct_num</AccountNumber><TrnStartTimestamp>2020-01-01T00:00:00+00:00</TrnStartTimestamp><TrnEndTimestamp>2020-01-01T00:00:00+00:00</TrnEndTimestamp><Receipt>probe_connector_txn_001</Receipt></Criteria><Security><UserName>probe_user</UserName><Password>probe_pass</Password></Security></QueryTransaction>]]></dts:queryXML>\n</dts:QueryTransaction>\n</soapenv:Body>\n</soapenv:Envelope>"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -150,8 +172,8 @@
           "url": "https://demo.ippayments.com.au/interface/api/dts.asmx",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "text/xml"
+            "content-type": "text/xml",
+            "via": "HyperSwitch"
           },
           "body": "\n            <soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"\n            xmlns:dts=\"http://www.ippayments.com.au/interface/api/dts\">\n                <soapenv:Body>\n                    <dts:SubmitSinglePayment>\n                        <dts:trnXML>\n                            <![CDATA[\n        <Transaction>\n            <CustRef></CustRef>\n            <Amount>1000</Amount>\n            <TrnType>1</TrnType>\n            <AccountNumber>probe_acct_num</AccountNumber>\n            <CreditCard>\n                <TokeniseAlgorithmID>2</TokeniseAlgorithmID>\n                <CardNumber>probe_mandate_123</CardNumber>\n            </CreditCard>\n            <Security>\n                    <UserName>probe_user</UserName>\n                    <Password>probe_pass</Password>\n            </Security>\n        </Transaction>\n                            ]]>\n                        </dts:trnXML>\n                    </dts:SubmitSinglePayment>\n                </soapenv:Body>\n            </soapenv:Envelope>\n        "
         }
@@ -174,8 +196,8 @@
           "url": "https://demo.ippayments.com.au/interface/api/dts.asmx",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "text/xml"
+            "content-type": "text/xml",
+            "via": "HyperSwitch"
           },
           "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:dts=\"http://www.ippayments.com.au/interface/api/dts\">\n<soapenv:Header/>\n<soapenv:Body>\n<dts:SubmitSingleRefund>\n<dts:trnXML><![CDATA[<Refund><CustRef>probe_refund_001</CustRef><Receipt>probe_connector_txn_001</Receipt><Amount>1000</Amount><Security><UserName>probe_user</UserName><Password>probe_pass</Password></Security></Refund>]]></dts:trnXML>\n</dts:SubmitSingleRefund>\n</soapenv:Body>\n</soapenv:Envelope>"
         }
@@ -247,8 +269,8 @@
           "url": "https://demo.ippayments.com.au/interface/api/sipp.asmx",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "text/xml"
+            "content-type": "text/xml",
+            "via": "HyperSwitch"
           },
           "body": "\n            <soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"\n            xmlns:sipp=\"http://www.ippayments.com.au/interface/api/sipp\">\n                <soapenv:Header/>\n                <soapenv:Body>\n                    <sipp:RegisterSingleCustomer>\n                        <sipp:registerSingleCustomerXML>\n                            <![CDATA[\n                <Register>\n                    <Customer>\n                        <CustNumber>cust_probe_123</CustNumber>\n                        <CreditCard>\n                            <CardNumber>4111111111111111</CardNumber>\n                            <ExpM>03</ExpM>\n                            <ExpY>2030</ExpY>\n                            <CardHolderName>John Doe</CardHolderName>\n                        </CreditCard>\n                    </Customer>\n                    <Security>\n                        <UserName>probe_user</UserName>\n                        <Password>probe_pass</Password>\n                    </Security>\n                </Register>\n            ]]>\n                        </sipp:registerSingleCustomerXML>\n                    </sipp:RegisterSingleCustomer>\n                </soapenv:Body>\n            </soapenv:Envelope>\n        "
         }

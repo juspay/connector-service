@@ -1,6 +1,12 @@
 {
   "connector": "wellsfargo",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,17 +81,21 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/",
           "method": "Post",
           "headers": {
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"2okHXi6gxjsvu8wnDRZ1WEYxWwMS7fd8AErOuNhGlnQ=\"",
-            "via": "HyperSwitch",
-            "v-c-merchant-id": "probe_merchant",
-            "host": "apitest.cybersource.com",
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
-            "digest": "SHA-256=fqTqk9B35tE4M8OYke80Qn0oB1T/YsaII4tdFksY40Y=",
-            "date": "2026-03-13 0:10:34.030064 +00:00:00"
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":null,\"commerceIndicator\":\"internet\",\"capture\":true,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":\"001\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"locality\":\"Seattle\",\"administrativeArea\":\"WA\",\"postalCode\":\"98101\",\"country\":\"US\",\"email\":\"test@example.com\",\"phoneNumber\":\"+14155552671\"}},\"clientReferenceInformation\":{\"code\":\"probe_txn_001\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -103,14 +113,14 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/captures",
           "method": "Post",
           "headers": {
-            "content-type": "application/json;charset=utf-8",
             "accept": "application/hal+json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036051 +00:00:00",
-            "digest": "SHA-256=eaXs1anWth/S4PUGfo5bPj4B+HGHQrpxdg1deELl/RI=",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"yXMVwfBcc/ESLZIPFEAedorsJZUsW1rZERAzIKE6hcU=\"",
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
-            "via": "HyperSwitch",
-            "host": "apitest.cybersource.com"
+            "via": "HyperSwitch"
           },
           "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":null,\"commerceIndicator\":\"internet\",\"capture\":null,\"captureOptions\":{\"captureSequenceNumber\":1,\"totalCaptureCount\":1},\"paymentSolution\":null},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":null},\"clientReferenceInformation\":{\"code\":\"probe_capture_001\"},\"merchantDefinedInformation\":null}"
         }
@@ -130,16 +140,28 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json;charset=utf-8",
-            "via": "HyperSwitch",
-            "v-c-merchant-id": "probe_merchant",
-            "host": "apitest.cybersource.com",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"Aci8Xs1QAgWjeisChpNII+yPA+p6OHViuAf+faS9Eqs=\"",
             "accept": "application/hal+json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036625 +00:00:00"
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -159,14 +181,14 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/refunds",
           "method": "Post",
           "headers": {
-            "digest": "SHA-256=7BHdZNNrtfkeSE7pxmXUWdKP3ayikeOY2qn4mlBmToY=",
-            "v-c-merchant-id": "probe_merchant",
-            "via": "HyperSwitch",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"/+RX8i9Iwmf/aCUMIH2qU8tDS/Iv+moVrlWBqT6x618=\"",
-            "host": "apitest.cybersource.com",
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036262 +00:00:00"
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"}},\"clientReferenceInformation\":{\"code\":\"probe_refund_001\"}}"
         }
@@ -238,14 +260,14 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments",
           "method": "Post",
           "headers": {
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"VJabIXdLTWr1rMh9HLXtcSYXoG7c7k1p6wXwHmpRUP0=\"",
-            "digest": "SHA-256=OxpIeHwDOJW59BRYZJMPvdvutkBxLwU1MIFqXLzqyZk=",
-            "content-type": "application/json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036788 +00:00:00",
-            "via": "HyperSwitch",
             "accept": "application/hal+json;charset=utf-8",
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
-            "host": "apitest.cybersource.com"
+            "via": "HyperSwitch"
           },
           "body": "{\"processingInformation\":{\"actionList\":[\"TOKEN_CREATE\"],\"actionTokenTypes\":[\"paymentInstrument\",\"customer\"],\"authorizationOptions\":{\"initiator\":{\"type\":\"customer\",\"credentialStoredOnFile\":true,\"storedCredentialUsed\":null},\"merchantInitiatedTransaction\":null},\"commerceIndicator\":\"internet\",\"capture\":false,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":\"001\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"0\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"locality\":\"Seattle\",\"administrativeArea\":\"WA\",\"postalCode\":\"98101\",\"country\":\"US\",\"email\":\"test@example.com\",\"phoneNumber\":\"+14155552671\"}},\"clientReferenceInformation\":{\"code\":\"probe_mandate_001\"}}"
         }
@@ -269,14 +291,14 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/reversals",
           "method": "Post",
           "headers": {
-            "date": "2026-03-13 0:10:34.03649 +00:00:00",
+            "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"NzBGHzQ8M/5HBIWxTUgUQyXgAerw7ggRYX0kDBNq8tE=\"",
-            "digest": "SHA-256=nSCdeq2Pt2omW+TfIaK0ccF3TrWcvuQk+jRd7GqTtpQ=",
-            "v-c-merchant-id": "probe_merchant",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "host": "apitest.cybersource.com",
-            "via": "HyperSwitch",
-            "accept": "application/hal+json;charset=utf-8"
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"clientReferenceInformation\":{\"code\":\"probe_void_001\"},\"reversalInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"reason\":\"Cancellation requested\"}}"
         }

@@ -1,6 +1,12 @@
 {
   "connector": "powertranz",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,13 +81,17 @@
           "url": "https://staging.ptranz.com/api/sale",
           "method": "Post",
           "headers": {
-            "powertranz-powertranzpassword": "probe_pass",
-            "powertranz-powertranzid": "probe_id",
             "content-type": "application/json",
+            "powertranz-powertranzid": "probe_id",
+            "powertranz-powertranzpassword": "probe_pass",
             "via": "HyperSwitch"
           },
-          "body": "{\"TransactionIdentifier\":\"1becb7f1-f9c9-41f8-9e62-23e478305108\",\"TotalAmount\":10.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"4111111111111111\",\"CardCvv\":\"737\",\"CardExpiration\":\"3003\"},\"OrderIdentifier\":\"probe_txn_001\",\"ExtendedData\":null}"
+          "body": "{\"TransactionIdentifier\":\"00000000-0000-0000-0000-000000000000\",\"TotalAmount\":10.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"4111111111111111\",\"CardCvv\":\"737\",\"CardExpiration\":\"3003\"},\"OrderIdentifier\":\"probe_txn_001\",\"ExtendedData\":null}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -99,10 +109,10 @@
           "url": "https://staging.ptranz.com/api/capture",
           "method": "Post",
           "headers": {
-            "powertranz-powertranzpassword": "probe_pass",
+            "content-type": "application/json",
             "powertranz-powertranzid": "probe_id",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "powertranz-powertranzpassword": "probe_pass",
+            "via": "HyperSwitch"
           },
           "body": "{\"TransactionIdentifier\":\"probe_connector_txn_001\",\"TotalAmount\":10.0,\"Refund\":null}"
         }
@@ -123,12 +133,24 @@
           "method": "Get",
           "headers": {
             "content-type": "application/json",
+            "powertranz-powertranzid": "probe_id",
             "powertranz-powertranzpassword": "probe_pass",
-            "via": "HyperSwitch",
-            "powertranz-powertranzid": "probe_id"
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -148,10 +170,10 @@
           "url": "https://staging.ptranz.com/api/refund",
           "method": "Post",
           "headers": {
+            "content-type": "application/json",
             "powertranz-powertranzid": "probe_id",
-            "via": "HyperSwitch",
             "powertranz-powertranzpassword": "probe_pass",
-            "content-type": "application/json"
+            "via": "HyperSwitch"
           },
           "body": "{\"TransactionIdentifier\":\"probe_connector_txn_001\",\"TotalAmount\":10.0,\"Refund\":true}"
         }
@@ -169,9 +191,9 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "via": "HyperSwitch",
             "powertranz-powertranzid": "probe_id",
-            "powertranz-powertranzpassword": "probe_pass"
+            "powertranz-powertranzpassword": "probe_pass",
+            "via": "HyperSwitch"
           },
           "body": "{\"TransactionIdentifier\":\"probe_connector_txn_001\",\"TotalAmount\":null,\"Refund\":null}"
         }

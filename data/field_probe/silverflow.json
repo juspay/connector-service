@@ -1,6 +1,12 @@
 {
   "connector": "silverflow",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,12 +81,16 @@
           "url": "https://api-sbx.silverflow.co/v1/charges",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantAcceptorResolver\":{\"merchantAcceptorKey\":\"probe_merchant\"},\"card\":{\"number\":\"4111111111111111\",\"expiryYear\":2030,\"expiryMonth\":3,\"cvc\":\"737\",\"holderName\":null},\"type\":{\"intent\":\"purchase\",\"cardEntry\":\"e-commerce\",\"order\":\"checkout\"},\"amount\":{\"value\":1000,\"currency\":\"USD\"},\"clearingMode\":\"auto\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -98,9 +108,9 @@
           "url": "https://api-sbx.silverflow.co/v1/charges/probe_connector_txn_001/clear",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"closeCharge\":true,\"reference\":\"probe_connector_txn_001\"}"
         }
@@ -121,11 +131,23 @@
           "method": "Get",
           "headers": {
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -145,8 +167,8 @@
           "url": "https://api-sbx.silverflow.co/v1/charges/probe_connector_txn_001/refund",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"refundAmount\":1000,\"reference\":\"probe_refund_001\"}"
@@ -165,8 +187,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"replacementAmount\":0,\"reference\":\"probe_connector_txn_001\"}"
         }

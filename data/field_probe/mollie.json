@@ -1,6 +1,12 @@
 {
   "connector": "mollie",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -79,12 +85,16 @@
           "url": "https://api.mollie.com/v2/payments",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":\"10.00\"},\"description\":\"Probe payment\",\"redirectUrl\":\"https://example.com/return\",\"webhookUrl\":\"\",\"metadata\":{\"orderId\":\"probe_txn_001\"},\"method\":\"creditcard\",\"cardToken\":null,\"billingAddress\":{\"streetAndNumber\":\"123 Main St\",\"postalCode\":\"98101\",\"city\":\"Seattle\",\"region\":null,\"country\":\"US\"},\"shippingAddress\":null,\"sequenceType\":\"oneoff\",\"captureMode\":\"automatic\",\"locale\":null,\"cancelUrl\":null,\"customerId\":null}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -93,7 +103,7 @@
         "required_fields": [
           "description"
         ],
-        "error": "Stuck on field: description — Integration error: Missing required field: description"
+        "error": "Stuck on field: description — Missing required field: description"
       }
     },
     "get": {
@@ -110,12 +120,24 @@
           "url": "https://api.mollie.com/v2/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -135,9 +157,9 @@
           "url": "https://api.mollie.com/v2/payments/probe_connector_txn_001/refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":\"10.00\"},\"description\":\"customer_request\",\"metadata\":{\"orderId\":\"probe_refund_001\"}}"
         }
@@ -146,7 +168,7 @@
     "tokenize": {
       "default": {
         "status": "error",
-        "error": "Integration error: Invalid Configuration: profile_token"
+        "error": "Invalid Configuration: profile_token"
       }
     },
     "void": {
@@ -160,9 +182,9 @@
           "url": "https://api.mollie.com/v2/payments/probe_connector_txn_001",
           "method": "Delete",
           "headers": {
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": null
         }

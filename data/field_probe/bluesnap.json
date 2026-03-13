@@ -1,6 +1,12 @@
 {
   "connector": "bluesnap",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -74,8 +80,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"ecpTransaction\":{\"routingNumber\":\"110000000\",\"accountNumber\":\"000123456789\",\"accountType\":\"CONSUMER_CHECKING\"},\"amount\":\"10.00\",\"currency\":\"USD\",\"authorizedByShopper\":true,\"payerInfo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"zip\":\"98101\"},\"merchantTransactionId\":\"probe_txn_001\",\"transactionFraudInfo\":{\"fraudSessionId\":\"probe_txn_001\"}}"
         }
@@ -157,8 +163,8 @@
           "url": "https://sandbox.bluesnap.com/services/2/transactions",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"cardTransactionType\":\"AUTH_CAPTURE\",\"wallet\":{\"applePay\":{\"encodedPaymentToken\":\"{\\\"application_primary_account_number\\\":\\\"4111111111111111\\\",\\\"application_expiration_month\\\":\\\"03\\\",\\\"application_expiration_year\\\":\\\"2030\\\",\\\"payment_data\\\":{\\\"online_payment_cryptogram\\\":\\\"AAAAAA==\\\",\\\"eci_indicator\\\":\\\"05\\\"}}\"},\"walletType\":\"APPLE_PAY\"},\"cardHolderInfo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"email\":\"test@example.com\"},\"transactionFraudInfo\":{\"fraudSessionId\":\"probe_txn_001\"},\"merchantTransactionId\":\"probe_txn_001\"}"
@@ -237,9 +243,9 @@
           "url": "https://sandbox.bluesnap.com/services/2/transactions",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"cardTransactionType\":\"AUTH_CAPTURE\",\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"securityCode\":\"737\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\"},\"cardHolderInfo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"email\":\"test@example.com\"},\"transactionFraudInfo\":{\"fraudSessionId\":\"probe_txn_001\"},\"merchantTransactionId\":\"probe_txn_001\"}"
         }
@@ -324,12 +330,16 @@
           "url": "https://sandbox.bluesnap.com/services/2/transactions",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"cardTransactionType\":\"AUTH_CAPTURE\",\"wallet\":{\"googlePay\":{\"encodedPaymentToken\":\"{\\\"cardExpMonth\\\":\\\"03\\\",\\\"cardExpYear\\\":\\\"2030\\\",\\\"applicationPrimaryAccountNumber\\\":\\\"4111111111111111\\\",\\\"cryptogram\\\":\\\"AAAAAA==\\\",\\\"eciIndicator\\\":\\\"05\\\"}\"},\"walletType\":\"GOOGLE_PAY\"},\"cardHolderInfo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"email\":\"test@example.com\"},\"transactionFraudInfo\":{\"fraudSessionId\":\"probe_txn_001\"},\"merchantTransactionId\":\"probe_txn_001\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -348,8 +358,8 @@
           "method": "Put",
           "headers": {
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"cardTransactionType\":\"CAPTURE\",\"transactionId\":\"probe_connector_txn_001\",\"amount\":\"10.00\"}"
         }
@@ -369,12 +379,24 @@
           "url": "https://sandbox.bluesnap.com/services/2/transactions/probe_connector_txn_001",
           "method": "Get",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -394,8 +416,8 @@
           "url": "https://sandbox.bluesnap.com/services/2/transactions/refund/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"reason\":\"customer_request\"}"
@@ -413,9 +435,9 @@
           "url": "https://sandbox.bluesnap.com/services/2/transactions",
           "method": "Put",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"cardTransactionType\":\"AUTH_REVERSAL\",\"transactionId\":\"probe_connector_txn_001\"}"
         }

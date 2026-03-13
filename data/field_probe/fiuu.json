@@ -1,6 +1,12 @@
 {
   "connector": "fiuu",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "ApplePay": {
         "status": "supported",
@@ -249,6 +255,10 @@
           },
           "body": ""
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -292,13 +302,25 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "recurring_charge": {
       "default": {
         "status": "error",
         "required_fields": [
           "payment_method_data.billing.address.first_name"
         ],
-        "error": "Stuck on field: payment_method_data.billing.address.first_name — Integration error: Missing required field: payment_method_data.billing.address.first_name"
+        "error": "Stuck on field: payment_method_data.billing.address.first_name — Missing required field: payment_method_data.billing.address.first_name"
       }
     },
     "refund": {

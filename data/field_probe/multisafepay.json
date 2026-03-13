@@ -1,6 +1,12 @@
 {
   "connector": "multisafepay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -169,8 +175,8 @@
           "url": "https://testapi.multisafepay.com/v1/json/orders?api_key=probe_key",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"type\":\"direct\",\"order_id\":\"probe_txn_001\",\"gateway\":\"GOOGLEPAY\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_txn_001\",\"email\":\"test@example.com\"},\"delivery\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"address1\":\"123 Main St\",\"zip_code\":\"98101\",\"city\":\"Seattle\",\"country\":\"US\"},\"days_active\":30,\"seconds_active\":259200}"
         }
@@ -246,8 +252,8 @@
           "url": "https://testapi.multisafepay.com/v1/json/orders?api_key=probe_key",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"type\":\"direct\",\"order_id\":\"probe_txn_001\",\"gateway\":\"IDEAL\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_txn_001\",\"email\":\"test@example.com\"},\"delivery\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"address1\":\"123 Main St\",\"zip_code\":\"98101\",\"city\":\"Seattle\",\"country\":\"US\"},\"days_active\":30,\"seconds_active\":259200}"
         }
@@ -325,11 +331,15 @@
           "url": "https://testapi.multisafepay.com/v1/json/orders?api_key=probe_key",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"type\":\"redirect\",\"order_id\":\"probe_txn_001\",\"gateway\":\"PAYPAL\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_txn_001\",\"email\":\"test@example.com\"},\"delivery\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"address1\":\"123 Main St\",\"zip_code\":\"98101\",\"city\":\"Seattle\",\"country\":\"US\"},\"days_active\":30,\"seconds_active\":259200}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "get": {
@@ -353,6 +363,18 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "supported",
@@ -370,8 +392,8 @@
           "url": "https://testapi.multisafepay.com/v1/json/orders/probe_connector_txn_001/refunds?api_key=probe_key",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"currency\":\"USD\",\"amount\":1000}"
         }

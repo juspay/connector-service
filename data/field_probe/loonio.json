@@ -1,6 +1,18 @@
 {
   "connector": "loonio",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -15,13 +27,25 @@
           "url": "https://integration.loonio.ca/api/v1/transactions/probe_connector_txn_001/details",
           "method": "Get",
           "headers": {
-            "merchanttoken": "probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "merchantid": "probe_merchant"
+            "merchantid": "probe_merchant",
+            "merchanttoken": "probe_key",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

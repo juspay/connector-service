@@ -1,6 +1,12 @@
 {
   "connector": "shift4",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,8 +81,8 @@
           "url": "https://api.shift4.com/charges",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"captured\":true,\"card\":{\"number\":\"4111111111111111\",\"expMonth\":\"03\",\"expYear\":\"2030\",\"cardholderName\":\"John Doe\"}}"
@@ -149,12 +155,16 @@
           "url": "https://api.shift4.com/charges",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"captured\":true,\"paymentMethod\":{\"type\":\"ideal\",\"billing\":{\"name\":\"John Doe\",\"email\":\"test@example.com\",\"address\":{\"line1\":\"123 Main St\",\"line2\":null,\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}}},\"flow\":{\"returnUrl\":\"https://example.com/return\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -193,11 +203,23 @@
           "url": "https://api.shift4.com/charges/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "authorization": "Basic cHJvYmVfa2V5Og==",
+            "via": "HyperSwitch"
           },
           "body": "{}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -217,8 +239,8 @@
           "url": "https://api.shift4.com/refunds",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"chargeId\":\"probe_connector_txn_001\",\"amount\":1000}"

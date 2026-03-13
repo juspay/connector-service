@@ -1,6 +1,12 @@
 {
   "connector": "trustpay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Blik": {
         "status": "supported",
@@ -78,9 +84,9 @@
           "url": "https://aapi.trustpay.eu/api/Payments/Payment",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_access_token"
+            "via": "HyperSwitch"
           },
           "body": "{\"paymentMethod\":\"Blik\",\"merchantIdentification\":{\"ProjectId\":\"probe_id\"},\"paymentInformation\":{\"Amount\":{\"Amount\":\"10.00\",\"Currency\":\"USD\"},\"References\":{\"MerchantReference\":\"probe_txn_001\"},\"Debtor\":{\"Name\":\"John Doe\",\"Email\":\"test@example.com\"}},\"callbackUrls\":{\"success\":\"https://example.com/return?status=SuccessOk\",\"cancel\":\"https://example.com/return\",\"error\":\"https://example.com/return\"}}"
         }
@@ -165,9 +171,9 @@
           "url": "https://test-tpgw.trustpay.eu/api/v1/purchase",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
+            "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "x-api-key": "probe_key"
           },
           "body": "amount=10.00&currency=USD&pan=4111111111111111&cvv=737&exp=03%2F30&cardholder=John+Doe&reference=probe_txn_001&redirectUrl=https%3A%2F%2Fexample.com%2Freturn&billing%5Bcity%5D=Seattle&billing%5Bcountry%5D=US&billing%5Bstreet1%5D=123+Main+St&billing%5Bpostcode%5D=98101&customer%5Bemail%5D=test%40example.com&customer%5BipAddress%5D=1.2.3.4&browser%5BacceptHeader%5D=application%2Fjson&browser%5Blanguage%5D=en-US&browser%5BscreenHeight%5D=900&browser%5BscreenWidth%5D=1440&browser%5Btimezone%5D=-480&browser%5BuserAgent%5D=Mozilla%2F5.0+%28probe-bot%29&browser%5BjavaEnabled%5D=false&browser%5BjavaScriptEnabled%5D=true&browser%5BscreenColorDepth%5D=24&browser%5BchallengeWindow%5D=1&browser%5BpaymentType%5D=Plain"
         }
@@ -246,12 +252,16 @@
           "url": "https://aapi.trustpay.eu/api/Payments/Payment",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"paymentMethod\":\"IDeal\",\"merchantIdentification\":{\"ProjectId\":\"probe_id\"},\"paymentInformation\":{\"Amount\":{\"Amount\":\"10.00\",\"Currency\":\"USD\"},\"References\":{\"MerchantReference\":\"probe_txn_001\"}},\"callbackUrls\":{\"success\":\"https://example.com/return?status=SuccessOk\",\"cancel\":\"https://example.com/return\",\"error\":\"https://example.com/return\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "create_access_token": {
@@ -262,9 +272,9 @@
           "url": "https://aapi.trustpay.eu/api/oauth2/token",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0",
             "content-type": "application/x-www-form-urlencoded",
-            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0"
+            "via": "HyperSwitch"
           },
           "body": "grant_type=client_credentials"
         }
@@ -292,8 +302,8 @@
           "method": "Post",
           "headers": {
             "content-type": "application/x-www-form-urlencoded",
-            "x-api-key": "probe_key",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
           },
           "body": "amount=10.00&currency=USD&reference=probe_order_001"
         }
@@ -328,6 +338,18 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "supported",
@@ -352,9 +374,9 @@
           "url": "https://test-tpgw.trustpay.eu/api/v1/Refund",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
+            "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "x-api-key": "probe_key"
           },
           "body": "instanceId=probe_connector_txn_001&amount=10.00&currency=USD&reference=probe_refund_001"
         }

@@ -27,6 +27,8 @@ import json
 from pathlib import Path
 from typing import Optional
 
+import sdk_snippets
+
 # ─── Probe Data ───────────────────────────────────────────────────────────────
 
 # Flows that have PM-specific probe results (vs flows that only have a 'default' key)
@@ -34,6 +36,9 @@ _PM_AWARE_FLOWS = frozenset(["authorize"])
 
 # Global flow metadata loaded from probe.json (populated by load_probe_data)
 _FLOW_METADATA: list[dict] = []
+
+# Global message schemas from manifest (populated by load_probe_data)
+_MESSAGE_SCHEMAS: dict = {}
 
 # Global probe data indexed by connector name (populated by load_probe_data)
 _PROBE_DATA: dict[str, dict] = {}
@@ -119,7 +124,7 @@ def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
 
     Returns {connector_name: connector_data} dict.
     """
-    global _FLOW_METADATA, _PROBE_DATA
+    global _FLOW_METADATA, _MESSAGE_SCHEMAS, _PROBE_DATA
 
     if probe_path is None:
         return {}
@@ -135,6 +140,7 @@ def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
         with open(manifest_path, encoding="utf-8") as f:
             manifest = json.load(f)
         _FLOW_METADATA = manifest.get("flow_metadata", [])
+        _MESSAGE_SCHEMAS = manifest.get("message_schemas", {})
         connector_names = manifest.get("connectors", [])
 
         _PROBE_DATA = {}
@@ -203,7 +209,7 @@ def _probe_samples_for_flow(probe_connector: dict, flow_key: str) -> list[tuple[
         entry = pms["default"]
         if entry.get("status") == "supported" and "proto_request" in entry:
             # Include even if proto_request is empty (no required fields)
-            return [("Minimum Request", entry["proto_request"])]
+            return [("Example Request", entry["proto_request"])]
         return []
 
     # Authorize flow — one sample per supported PM type
@@ -233,6 +239,7 @@ except ImportError:
 REPO_ROOT = Path(__file__).parent.parent
 DOCS_DIR = REPO_ROOT / "docs/connectors"
 ANNOTATIONS_DIR = Path(__file__).parent / "connector-annotations"
+PROTO_DIR = REPO_ROOT / "backend/grpc-api-types/proto"
 
 # Category order for grouping flows in documentation
 CATEGORY_ORDER = ["Payments", "Refunds", "Mandates", "Customers", "Disputes", "Authentication", "Session", "Other"]
@@ -517,8 +524,14 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
                 for title, proto_req in probe_samples:
                     a(f"**{title}**")
                     a("")
-                    a(_json_block(proto_req))
-                    a("")
+                    for line in sdk_snippets.render_sdk_table(
+                        connector_name, f,
+                        meta.get("service_name", ""),
+                        meta.get("grpc_request", ""),
+                        proto_req,
+                        _MESSAGE_SCHEMAS,
+                    ):
+                        a(line)
             elif yaml_samples:
                 # Fall back to YAML annotation samples
                 for sample in yaml_samples:

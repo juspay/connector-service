@@ -1,6 +1,12 @@
 {
   "connector": "authorizedotnet",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -76,24 +82,24 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_txn_001\",\"transactionRequest\":{\"transactionType\":\"authCaptureTransaction\",\"amount\":10.0,\"currencyCode\":\"USD\",\"payment\":{\"bankAccount\":{\"accountType\":\"checking\",\"routingNumber\":\"110000000\",\"accountNumber\":\"000123456789\",\"nameOnAccount\":\"John Doe\"}},\"order\":{\"invoiceNumber\":\"1eVUl9ATAeIipTbfbqIX\",\"description\":\"probe_txn_001\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}}}}"
+          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_txn_001\",\"transactionRequest\":{\"transactionType\":\"authCaptureTransaction\",\"amount\":10.0,\"currencyCode\":\"USD\",\"payment\":{\"bankAccount\":{\"accountType\":\"checking\",\"routingNumber\":\"110000000\",\"accountNumber\":\"000123456789\",\"nameOnAccount\":\"John Doe\"}},\"order\":{\"invoiceNumber\":\"ProbeInvoiceRef1\",\"description\":\"probe_txn_001\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}}}}"
         }
       },
       "Affirm": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Afterpay": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "ApplePay": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Blik": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Card": {
         "status": "supported",
@@ -171,28 +177,32 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_txn_001\",\"transactionRequest\":{\"transactionType\":\"authCaptureTransaction\",\"amount\":10.0,\"currencyCode\":\"USD\",\"payment\":{\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"2030-03\",\"cardCode\":\"737\"}},\"order\":{\"invoiceNumber\":\"N7FLuujWaJ5QQL5gAdkU\",\"description\":\"probe_txn_001\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}}}}"
+          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_txn_001\",\"transactionRequest\":{\"transactionType\":\"authCaptureTransaction\",\"amount\":10.0,\"currencyCode\":\"USD\",\"payment\":{\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"2030-03\",\"cardCode\":\"737\"}},\"order\":{\"invoiceNumber\":\"ProbeInvoiceRef1\",\"description\":\"probe_txn_001\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}}}}"
         }
       },
       "GooglePay": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Ideal": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Klarna": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "PaypalRedirect": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "UpiCollect": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       }
     },
     "capture": {
@@ -210,8 +220,8 @@
           "url": "https://apitest.authorize.net/xml/v1/request.api",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"transactionRequest\":{\"transactionType\":\"priorAuthCaptureTransaction\",\"amount\":10.0,\"refTransId\":\"probe_connector_txn_001\"}}}"
         }
@@ -243,8 +253,8 @@
           "url": "https://apitest.authorize.net/xml/v1/request.api",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"createCustomerProfileRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"profile\":{\"email\":\"test@example.com\"}}}"
         }
@@ -264,11 +274,23 @@
           "url": "https://apitest.authorize.net/xml/v1/request.api",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"getTransactionDetailsRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"transId\":\"probe_connector_txn_001\"}}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -277,7 +299,7 @@
         "required_fields": [
           "valid mandate_id format"
         ],
-        "error": "Stuck on field: valid mandate_id format — Integration error: Missing required field: valid mandate_id format (should contain '-')"
+        "error": "Stuck on field: valid mandate_id format — Missing required field: valid mandate_id format (should contain '-')"
       }
     },
     "refund": {
@@ -310,7 +332,7 @@
         "required_fields": [
           "connector_customer_id is missing"
         ],
-        "error": "Stuck on field: connector_customer_id is missing — Integration error: Missing required field: connector_customer_id is missing"
+        "error": "Stuck on field: connector_customer_id is missing — Missing required field: connector_customer_id is missing"
       }
     },
     "void": {
@@ -324,8 +346,8 @@
           "url": "https://apitest.authorize.net/xml/v1/request.api",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_void_001\",\"transactionRequest\":{\"transactionType\":\"voidTransaction\",\"refTransId\":\"probe_connector_txn_001\"}}}"
         }

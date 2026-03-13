@@ -1,24 +1,10 @@
 {
   "connector": "adyen",
   "flows": {
-    "accept_dispute": {
+    "authenticate": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_dispute_id": "probe_dispute_001",
-          "connector_transaction_id": "probe_txn_001",
-          "dispute_id": "probe_dispute_id_001"
-        },
-        "sample": {
-          "url": "https://ca-test.adyen.com/ca/services/DisputeService/v30/acceptDispute",
-          "method": "Post",
-          "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json",
-            "x-api-key": "probe_key"
-          },
-          "body": "{\"disputePspReference\":\"probe_dispute_id_001\",\"merchantAccountCode\":\"probe_merchant\"}"
-        }
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "authorize": {
@@ -93,9 +79,9 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"ach\",\"bankAccountNumber\":\"000123456789\",\"bankLocationId\":\"110000000\",\"ownerName\":\"John Doe\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"4155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"countryCode\":\"US\"}"
         }
@@ -241,8 +227,8 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "content-type": "application/json",
+            "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"afterpaytouch\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"+14155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"countryCode\":\"US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
@@ -325,9 +311,9 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "x-api-key": "probe_key",
-            "content-type": "application/json"
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"brand\":\"Visa\"},\"mpiData\":{\"directoryResponse\":\"Y\",\"authenticationResponse\":\"Y\",\"cavv\":\"AAAAAA==\",\"eci\":\"05\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"4155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"countryCode\":\"US\"}"
         }
@@ -479,9 +465,9 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"blik\",\"blikCode\":\"777124\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"4155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
@@ -559,9 +545,9 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "x-api-key": "probe_key",
-            "content-type": "application/json"
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvc\":\"737\",\"holderName\":\"John Doe\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"4155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"countryCode\":\"US\"}"
         }
@@ -646,9 +632,9 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"scheme\",\"number\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"brand\":\"googlepay\"},\"mpiData\":{\"directoryResponse\":\"Y\",\"authenticationResponse\":\"Y\",\"cavv\":\"AAAAAA==\",\"eci\":\"05\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperName\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"4155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"countryCode\":\"US\"}"
         }
@@ -720,9 +706,9 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"ideal\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"browserInfo\":{\"userAgent\":\"Mozilla/5.0 (probe-bot)\",\"acceptHeader\":\"application/json\",\"language\":\"en-US\",\"colorDepth\":24,\"screenHeight\":900,\"screenWidth\":1440,\"timeZoneOffset\":-480,\"javaEnabled\":false},\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"4155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
@@ -799,11 +785,15 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "x-api-key": "probe_key",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"klarna\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"probe_cust_connector_001\",\"shopperName\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"+14155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"countryCode\":\"US\",\"lineItems\":[{\"amountExcludingTax\":1000,\"amountIncludingTax\":1000,\"id\":\"Items #1\",\"quantity\":1}]}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "supported",
@@ -875,8 +865,8 @@
           "url": "https://checkout-test.adyen.com/v68/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "content-type": "application/json",
+            "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"sepadirectdebit\",\"sepa.ownerName\":\"John Doe\",\"sepa.ibanNumber\":\"DE89370400440532013000\"},\"reference\":\"probe_txn_001\",\"returnUrl\":\"https://example.com/return\",\"shopperInteraction\":\"Ecommerce\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperIP\":\"1.2.3.4\",\"shopperEmail\":\"test@example.com\",\"telephoneNumber\":\"4155552671\",\"billingAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"deliveryAddress\":{\"city\":\"Seattle\",\"country\":\"US\",\"houseNumberOrName\":\"123 Main St\",\"postalCode\":\"98101\",\"stateOrProvince\":\"WA\"},\"countryCode\":\"US\"}"
@@ -898,15 +888,35 @@
           "url": "https://checkout-test.adyen.com/v68/payments/probe_connector_txn_001/captures",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "content-type": "application/json",
+            "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
           "body": "{\"merchantAccount\":\"probe_merchant\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"reference\":\"probe_capture_001\"}"
         }
       }
     },
-    "defend_dispute": {
+    "dispute_accept": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_dispute_id": "probe_dispute_001",
+          "connector_transaction_id": "probe_txn_001",
+          "dispute_id": "probe_dispute_id_001"
+        },
+        "sample": {
+          "url": "https://ca-test.adyen.com/ca/services/DisputeService/v30/acceptDispute",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": "{\"disputePspReference\":\"probe_dispute_id_001\",\"merchantAccountCode\":\"probe_merchant\"}"
+        }
+      }
+    },
+    "dispute_defend": {
       "default": {
         "status": "supported",
         "proto_request": {
@@ -919,18 +929,80 @@
           "url": "https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "content-type": "application/json",
+            "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
           "body": "{\"disputePspReference\":\"probe_dispute_id_001\",\"merchantAccountCode\":\"probe_merchant\",\"defenseReasonCode\":\"probe_reason\"}"
         }
       }
     },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_dispute_id": "probe_dispute_001",
+          "connector_transaction_id": "probe_txn_001",
+          "dispute_id": "probe_dispute_id_001",
+          "evidence_documents": [
+            {
+              "evidence_type": "SERVICE_DOCUMENTATION",
+              "file_content": [
+                112,
+                114,
+                111,
+                98,
+                101,
+                32,
+                101,
+                118,
+                105,
+                100,
+                101,
+                110,
+                99,
+                101,
+                32,
+                99,
+                111,
+                110,
+                116,
+                101,
+                110,
+                116
+              ],
+              "file_mime_type": "application/pdf"
+            }
+          ]
+        },
+        "sample": {
+          "url": "https://ca-test.adyen.com/ca/services/DisputeService/v30/supplyDefenseDocument",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": "{\"defenseDocuments\":[{\"content\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"contentType\":\"application/pdf\",\"defenseDocumentTypeCode\":\"DefenseMaterial\"}],\"merchantAccountCode\":\"probe_merchant\",\"disputePspReference\":\"probe_dispute_id_001\"}"
+        }
+      }
+    },
     "get": {
       "default": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -959,8 +1031,8 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "x-api-key": "probe_key",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantAccount\":\"probe_merchant\",\"paymentMethod\":{\"type\":\"paypal\",\"storedPaymentMethodId\":\"probe_mandate_123\",\"holderName\":null},\"reference\":\"\",\"returnUrl\":\"https://example.com/recurring-return\",\"shopperInteraction\":\"ContAuth\",\"recurringProcessingModel\":\"UnscheduledCardOnFile\",\"additionalData\":{\"executeThreeD\":\"false\"},\"shopperReference\":\"probe_cust_connector_001\"}"
         }
@@ -983,8 +1055,8 @@
           "url": "https://checkout-test.adyen.com/v68/payments/probe_connector_txn_001/refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "content-type": "application/json",
+            "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
           "body": "{\"merchantAccount\":\"probe_merchant\",\"amount\":{\"currency\":\"USD\",\"value\":1000},\"merchantRefundReason\":\"customer_request\",\"reference\":\"probe_refund_001\"}"
@@ -1065,56 +1137,6 @@
         }
       }
     },
-    "submit_evidence": {
-      "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_dispute_id": "probe_dispute_001",
-          "connector_transaction_id": "probe_txn_001",
-          "dispute_id": "probe_dispute_id_001",
-          "evidence_documents": [
-            {
-              "evidence_type": "SERVICE_DOCUMENTATION",
-              "file_content": [
-                112,
-                114,
-                111,
-                98,
-                101,
-                32,
-                101,
-                118,
-                105,
-                100,
-                101,
-                110,
-                99,
-                101,
-                32,
-                99,
-                111,
-                110,
-                116,
-                101,
-                110,
-                116
-              ],
-              "file_mime_type": "application/pdf"
-            }
-          ]
-        },
-        "sample": {
-          "url": "https://ca-test.adyen.com/ca/services/DisputeService/v30/supplyDefenseDocument",
-          "method": "Post",
-          "headers": {
-            "via": "HyperSwitch",
-            "x-api-key": "probe_key",
-            "content-type": "application/json"
-          },
-          "body": "{\"defenseDocuments\":[{\"content\":\"cHJvYmUgZXZpZGVuY2UgY29udGVudA==\",\"contentType\":\"application/pdf\",\"defenseDocumentTypeCode\":\"DefenseMaterial\"}],\"merchantAccountCode\":\"probe_merchant\",\"disputePspReference\":\"probe_dispute_id_001\"}"
-        }
-      }
-    },
     "void": {
       "default": {
         "status": "supported",
@@ -1126,9 +1148,9 @@
           "url": "https://checkout-test.adyen.com/v68/payments/probe_connector_txn_001/cancels",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
           },
           "body": "{\"merchantAccount\":\"probe_merchant\",\"reference\":\"probe_void_001\"}"
         }

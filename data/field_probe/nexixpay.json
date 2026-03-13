@@ -1,6 +1,12 @@
 {
   "connector": "nexixpay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -87,13 +93,17 @@
           "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/orders/3steps/payment",
           "method": "Post",
           "headers": {
-            "x-api-key": "probe_key",
+            "content-type": "application/json",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
             "via": "HyperSwitch",
-            "correlation-id": "525f94b8-bd6a-4299-8fed-a7353acad4e1",
-            "content-type": "application/json"
+            "x-api-key": "probe_key"
           },
           "body": "{\"operationId\":\"probe_connector_txn_id\",\"order\":{\"orderId\":\"probe_txn_001\",\"amount\":\"1000\",\"currency\":\"USD\",\"customerInfo\":{\"cardHolderName\":\"John Doe\",\"billingAddress\":{\"name\":\"John Doe\",\"street\":\"123 Main St\",\"city\":\"Seattle\",\"postCode\":\"98101\",\"country\":\"USA\"},\"shippingAddress\":null}},\"card\":{\"pan\":\"4111111111111111\",\"expiryDate\":\"0330\",\"cvv\":\"737\"},\"captureType\":\"IMPLICIT\",\"threeDSAuthData\":{\"authenticationValue\":\"AAAAAA==\"},\"recurrence\":{\"action\":\"NO_RECURRING\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -112,8 +122,8 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "idempotency-key": "394039f9-6358-44ed-b53c-e0fcb944087b",
-            "correlation-id": "b7fe2f96-69a9-4d93-bc53-dc99ffde9a63",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "idempotency-key": "HS_probe00000000000000000",
             "via": "HyperSwitch",
             "x-api-key": "probe_key"
           },
@@ -135,12 +145,24 @@
           "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/operations/probe_connector_txn_001",
           "method": "Get",
           "headers": {
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
             "via": "HyperSwitch",
-            "x-api-key": "probe_key",
-            "correlation-id": "154ec943-a659-4cb0-aa62-e4bbfbe347ca"
+            "x-api-key": "probe_key"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -161,10 +183,10 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "idempotency-key": "HS_probe00000000000000000",
             "via": "HyperSwitch",
-            "idempotency-key": "798dd3eb-9a35-48ee-b027-c8a02949fd18",
-            "x-api-key": "probe_key",
-            "correlation-id": "567ac08d-ec25-4272-91ab-ddd69c997fb2"
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":\"1000\",\"currency\":\"USD\",\"description\":\"customer_request\"}"
         }
@@ -188,11 +210,11 @@
           "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/operations/probe_connector_txn_001/refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "x-api-key": "probe_key",
-            "idempotency-key": "d0779424-2a0d-47b7-adf1-571276854207",
             "content-type": "application/json",
-            "correlation-id": "e8db97f8-93d8-412b-85a1-a965cbed3994"
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "idempotency-key": "HS_probe00000000000000000",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
           },
           "body": "{\"amount\":\"1000\",\"currency\":\"USD\"}"
         }

@@ -1,6 +1,12 @@
 {
   "connector": "paysafe",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -77,9 +83,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_ach_acct\"}"
         }
@@ -156,8 +162,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_acct_no3ds\"}"
         }
@@ -234,8 +240,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_acct_no3ds\"}"
         }
@@ -321,9 +327,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_acct_no3ds\"}"
         }
@@ -403,9 +409,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_ach_acct\"}"
         }
@@ -485,9 +491,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_ach_acct\"}"
         }
@@ -566,8 +572,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_acct_no3ds\"}"
         }
@@ -740,9 +746,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_acct_no3ds\"}"
         }
@@ -896,9 +902,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_acct_no3ds\"}"
         }
@@ -977,11 +983,15 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_acct_no3ds\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "supported",
@@ -1057,9 +1067,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_txn_001\",\"amount\":1000,\"settleWithAuth\":true,\"paymentHandleToken\":\"probe_session_token\",\"currencyCode\":\"USD\",\"customerIp\":\"1.2.3.4\",\"accountId\":\"probe_ach_acct\"}"
         }
@@ -1160,9 +1170,9 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments/probe_connector_txn_001/settlements",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_capture_001\",\"amount\":1000}"
         }
@@ -1182,12 +1192,24 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -1196,7 +1218,7 @@
         "required_fields": [
           "mandate_metadata"
         ],
-        "error": "Stuck on field: mandate_metadata — Integration error: Missing required field: mandate_metadata"
+        "error": "Stuck on field: mandate_metadata — Missing required field: mandate_metadata"
       }
     },
     "refund": {
@@ -1230,7 +1252,7 @@
         "required_fields": [
           "return_url"
         ],
-        "error": "Stuck on field: return_url — Integration error: Missing required field: return_url"
+        "error": "Stuck on field: return_url — Missing required field: return_url"
       }
     },
     "void": {
@@ -1251,8 +1273,8 @@
           "url": "https://api.test.paysafe.com/paymenthub/v1/payments/probe_connector_txn_001/voidauths",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"merchantRefNum\":\"probe_void_001\",\"amount\":1000}"

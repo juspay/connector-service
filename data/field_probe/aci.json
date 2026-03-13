@@ -1,6 +1,12 @@
 {
   "connector": "aci",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Affirm": {
         "status": "supported",
@@ -69,8 +75,8 @@
           "url": "https://eu-test.oppwa.com/v1/payments",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
             "authorization": "Bearer probe_key",
+            "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&amount=10.00&currency=USD&paymentType=DB&shopperResultUrl=https%3A%2F%2Fexample.com%2Freturn"
@@ -144,8 +150,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&amount=10.00&currency=USD&paymentType=DB&shopperResultUrl=https%3A%2F%2Fexample.com%2Freturn"
         }
@@ -224,8 +230,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&amount=10.00&currency=USD&paymentType=DB&card.number=4111111111111111&card.holder=John+Doe&card.expiryMonth=03&card.expiryYear=2030&card.cvv=737&shopperResultUrl=https%3A%2F%2Fexample.com%2Freturn"
         }
@@ -302,9 +308,9 @@
           "url": "https://eu-test.oppwa.com/v1/payments",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&amount=10.00&currency=USD&paymentType=DB&paymentBrand=IDEAL&bankAccount.country=US&bankAccount.bankName=ing&shopperResultUrl=https%3A%2F%2Fexample.com%2Freturn"
         }
@@ -377,11 +383,15 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&amount=10.00&currency=USD&paymentType=DB&shopperResultUrl=https%3A%2F%2Fexample.com%2Freturn"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -429,6 +439,18 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "recurring_charge": {
       "default": {
         "status": "supported",
@@ -454,9 +476,9 @@
           "url": "https://eu-test.oppwa.com/v1/registrations/probe_mandate_123/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&amount=10.00&currency=USD&paymentType=DB&standingInstruction.mode=REPEATED&standingInstruction.type=UNSCHEDULED&standingInstruction.source=MIT&recurringType=REPEATED"
         }
@@ -479,8 +501,8 @@
           "url": "https://eu-test.oppwa.com/v1/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
             "authorization": "Bearer probe_key",
+            "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
           "body": "amount=10.00&currency=USD&paymentType=RF&entityId=probe_id"
@@ -553,9 +575,9 @@
           "url": "https://eu-test.oppwa.com/v1/registrations",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&card.number=4111111111111111&card.holder=John+Doe&card.expiryMonth=03&card.expiryYear=2030&card.cvv=737"
         }
@@ -572,8 +594,8 @@
           "url": "https://eu-test.oppwa.com/v1/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
             "authorization": "Bearer probe_key",
+            "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
           "body": "entityId=probe_id&paymentType=RV"

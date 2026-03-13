@@ -1,6 +1,12 @@
 {
   "connector": "revolv3",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,12 +81,16 @@
           "url": "https://api-sandbox.revolv3.com/api/payments/sale",
           "method": "Post",
           "headers": {
-            "x-revolv3-token": "probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-revolv3-token": "probe_key"
           },
           "body": "{\"paymentMethod\":{\"billingAddress\":{\"addressLine1\":\"123 Main St\",\"addressLine2\":null,\"city\":\"Seattle\",\"state\":\"WA\",\"postalCode\":\"98101\",\"phoneNumber\":\"4155552671\",\"email\":\"test@example.com\",\"country\":\"US\"},\"billingFirstName\":\"John\",\"billingLastName\":\"Doe\",\"billingFullName\":\"John Doe\",\"creditCard\":{\"paymentAccountNumber\":\"4111111111111111\",\"expirationDate\":\"0330\",\"securityCode\":\"737\"}},\"invoice\":{\"merchantInvoiceRefId\":null,\"amount\":{\"value\":10.0,\"currency\":\"USD\"},\"orderProcessingChannel\":null},\"networkProcessing\":null,\"dynamicDescriptor\":null}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -98,12 +108,24 @@
           "url": "https://api-sandbox.revolv3.com/api/Payments/capture/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "x-revolv3-token": "probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-revolv3-token": "probe_key"
           },
           "body": "{\"invoice\":{\"merchantInvoiceRefId\":null,\"amount\":{\"value\":10.0,\"currency\":\"USD\"},\"orderProcessingChannel\":null}}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -124,8 +146,8 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "x-revolv3-token": "probe_key",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-revolv3-token": "probe_key"
           },
           "body": "{\"amount\":10.0}"
         }
@@ -197,9 +219,9 @@
           "url": "https://api-sandbox.revolv3.com/api/payments/authorization",
           "method": "Post",
           "headers": {
-            "x-revolv3-token": "probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-revolv3-token": "probe_key"
           },
           "body": "{\"paymentMethod\":{\"billingAddress\":{\"addressLine1\":\"123 Main St\",\"addressLine2\":null,\"city\":\"Seattle\",\"state\":\"WA\",\"postalCode\":\"98101\",\"phoneNumber\":\"4155552671\",\"email\":\"test@example.com\",\"country\":\"US\"},\"billingFirstName\":\"John\",\"billingLastName\":\"Doe\",\"billingFullName\":\"John Doe\",\"creditCard\":{\"paymentAccountNumber\":\"4111111111111111\",\"expirationDate\":\"0330\",\"securityCode\":\"737\"}},\"networkProcessing\":{\"processingType\":\"InitialRecurring\",\"originalNetworkTransactionId\":null},\"amount\":{\"value\":0.0,\"currency\":\"USD\"},\"orderProcessingChannel\":null,\"dynamicDescriptor\":null}"
         }
@@ -216,9 +238,9 @@
           "url": "https://api-sandbox.revolv3.com/api/PaymentMethod/reverse-auth",
           "method": "Post",
           "headers": {
-            "x-revolv3-token": "probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-revolv3-token": "probe_key"
           },
           "body": "{\"paymentMethodAuthorizationId\":\"probe_connector_txn_001\",\"reason\":null,\"amount\":null}"
         }

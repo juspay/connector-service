@@ -1,6 +1,12 @@
 {
   "connector": "stax",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -77,9 +83,9 @@
           "url": "https://apiprod.fattlabs.com/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"total\":10.0,\"payment_method_id\":\"probe_pm_token\",\"is_refundable\":true,\"pre_auth\":false,\"meta\":{\"tax\":0},\"idempotency_id\":\"probe_txn_001\"}"
         }
@@ -242,8 +248,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"total\":10.0,\"payment_method_id\":\"probe_pm_token\",\"is_refundable\":true,\"pre_auth\":false,\"meta\":{\"tax\":0},\"idempotency_id\":\"probe_txn_001\"}"
         }
@@ -325,12 +331,16 @@
           "url": "https://apiprod.fattlabs.com/charge",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Bearer probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"total\":10.0,\"payment_method_id\":\"probe_pm_token\",\"is_refundable\":true,\"pre_auth\":false,\"meta\":{\"tax\":0},\"idempotency_id\":\"probe_txn_001\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "supported",
@@ -406,9 +416,9 @@
           "url": "https://apiprod.fattlabs.com/charge",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"total\":10.0,\"payment_method_id\":\"probe_pm_token\",\"is_refundable\":true,\"pre_auth\":false,\"meta\":{\"tax\":0},\"idempotency_id\":\"probe_txn_001\"}"
         }
@@ -463,9 +473,9 @@
           "url": "https://apiprod.fattlabs.com/customer",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"email\":\"test@example.com\",\"firstname\":\"John Doe\"}"
         }
@@ -485,11 +495,23 @@
           "url": "https://apiprod.fattlabs.com/transaction/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_key"
+            "authorization": "Bearer probe_key",
+            "via": "HyperSwitch"
           },
           "body": "{}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -560,9 +582,9 @@
           "url": "https://apiprod.fattlabs.com/payment-method/",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"method\":\"card\",\"person_name\":\"John Doe\",\"card_number\":\"4111111111111111\",\"card_exp\":\"0330\",\"card_cvv\":\"737\",\"customer_id\":\"cust_probe_123\"}"
         }
@@ -580,8 +602,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{}"
         }

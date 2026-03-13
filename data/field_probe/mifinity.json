@@ -1,6 +1,18 @@
 {
   "connector": "mifinity",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -15,13 +27,25 @@
           "url": "https://demo.mifinity.com/api/gateway/payment-status/payment_validation_key_DefaultMerchantId_probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "key": "probe_key",
-            "via": "HyperSwitch",
+            "api-version": "1",
             "content-type": "application/json",
-            "api-version": "1"
+            "key": "probe_key",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

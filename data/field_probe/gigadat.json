@@ -1,6 +1,18 @@
 {
   "connector": "gigadat",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -15,12 +27,24 @@
           "url": "https://interac.express-connect.com/api/transactions/probe_connector_txn_001",
           "method": "Get",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfYWNjZXNzX3Rva2VuOnByb2JlX2tleQ==",
             "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -40,9 +64,9 @@
           "url": "https://interac.express-connect.com/refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfYWNjZXNzX3Rva2VuOnByb2JlX2tleQ==",
-            "content-type": "application/json"
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":10.0,\"transaction_id\":\"probe_connector_txn_001\",\"campaign_id\":\"probe_id\"}"
         }

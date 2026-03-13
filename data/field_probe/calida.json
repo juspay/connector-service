@@ -1,6 +1,18 @@
 {
   "connector": "calida",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -15,12 +27,24 @@
           "url": "https://dev.eorder.reloadhero.com/api/v1/order/probe_connector_txn_001/status",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "token probe_key",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

@@ -1,6 +1,12 @@
 {
   "connector": "paybox",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -78,8 +84,12 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=360634023&MONTANT=1000&DEVISE=USD&REFERENCE=probe_txn_001&DATEQ=13032026001034&PORTEUR=4111111111111111&DATEVAL=0330&CVV=737&ACTIVITE=024"
+          "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=737&ACTIVITE=024"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -88,7 +98,7 @@
         "required_fields": [
           "connector_request_id"
         ],
-        "error": "Stuck on field: connector_request_id — Integration error: Missing required field: connector_request_id (NUMTRANS)"
+        "error": "Stuck on field: connector_request_id — Missing required field: connector_request_id (NUMTRANS)"
       }
     },
     "get": {
@@ -97,7 +107,19 @@
         "required_fields": [
           "connector_request_id"
         ],
-        "error": "Stuck on field: connector_request_id — Integration error: Missing required field: connector_request_id (NUMTRANS)"
+        "error": "Stuck on field: connector_request_id — Missing required field: connector_request_id (NUMTRANS)"
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -120,7 +142,7 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00014&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=360634028&MONTANT=1000&DEVISE=USD&REFERENCE=probe_refund_001&DATEQ=13032026001034&NUMTRANS=probe_connector_txn_001&NUMAPPEL=probe_connector_txn_001&ACTIVITE=024"
+          "body": "VERSION=00104&TYPE=00014&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_refund_001&DATEQ=00000000000000&NUMTRANS=probe_connector_txn_001&NUMAPPEL=probe_connector_txn_001&ACTIVITE=024"
         }
       }
     },
@@ -142,10 +164,10 @@
           "url": "https://preprod-ppps.paybox.com/PPPS.php",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
-          "body": "VERSION=00104&TYPE=00005&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=360634028&MONTANT=1000&DEVISE=USD&REFERENCE=probe_void_001&DATEQ=13032026001034&NUMTRANS=probe_connector_txn_001&NUMAPPEL=probe_connector_txn_001"
+          "body": "VERSION=00104&TYPE=00005&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_void_001&DATEQ=00000000000000&NUMTRANS=probe_connector_txn_001&NUMAPPEL=probe_connector_txn_001"
         }
       }
     }

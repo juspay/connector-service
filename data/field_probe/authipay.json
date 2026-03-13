@@ -1,6 +1,12 @@
 {
   "connector": "authipay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,15 +81,19 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "message-signature": "qJQCaH0NtaUFtsI+C1hLuRi5zsf8J+EoZN4WjFrp/T8=",
-            "client-request-id": "d659997a-6691-43ba-a5c7-4b253d090f27",
+            "api-key": "probe_key",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "timestamp": "1773360634012",
-            "api-key": "probe_key"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"PaymentCardSaleTransaction\",\"merchantTransactionId\":\"probe_txn_001\",\"transactionAmount\":{\"total\":10.0,\"currency\":\"USD\"},\"order\":{\"orderId\":\"probe_txn_001\"},\"paymentMethod\":{\"paymentCard\":{\"number\":\"4111111111111111\",\"expiryDate\":{\"month\":\"03\",\"year\":\"30\"},\"securityCode\":\"737\"}}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -101,12 +111,12 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "client-request-id": "87594fed-358e-431d-8de5-f168de829e59",
-            "message-signature": "ANKOp1zT+hKjKsr7gtYydGkGqLLFt0DplHcUKyp6r5k=",
-            "content-type": "application/json",
             "api-key": "probe_key",
-            "via": "HyperSwitch",
-            "timestamp": "1773360634016"
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "content-type": "application/json",
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"PostAuthTransaction\",\"transactionAmount\":{\"total\":10.0,\"currency\":\"USD\"}}"
         }
@@ -126,15 +136,27 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "client-request-id": "915dde22-8bed-46b3-8550-14847cbb8385",
-            "message-signature": "oHF+QVBfThf6i3cBQKBbp26acggnl5u77COtQ9ETQiI=",
             "api-key": "probe_key",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "timestamp": "1773360634016"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -154,12 +176,12 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "api-key": "probe_key",
-            "timestamp": "1773360634016",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "message-signature": "DkyKVftBFt6sV5laLgVSqoZD2cE4wAlKJvH4Qz6lgc0=",
-            "client-request-id": "ab1e108c-47f8-4b80-a275-134de3b1d731"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"ReturnTransaction\",\"transactionAmount\":{\"total\":10.0,\"currency\":\"USD\"},\"comments\":\"customer_request\"}"
         }
@@ -176,12 +198,12 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "message-signature": "KxXh/mUEGqxHQryCgQ0qECb+uapGKUA8thtiJL3A4zI=",
             "api-key": "probe_key",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "client-request-id": "8e603d70-80b9-4798-8860-c14481617581",
-            "timestamp": "1773360634016"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"VoidPreAuthTransactions\"}"
         }

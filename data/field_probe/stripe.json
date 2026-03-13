@@ -1,6 +1,12 @@
 {
   "connector": "stripe",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -73,10 +79,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "stripe-version": "2022-11-15",
+            "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_key"
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=us_bank_account&payment_method_data%5Bus_bank_account%5D%5Baccount_holder_type%5D=individual&payment_method_data%5Bus_bank_account%5D%5Baccount_number%5D=000123456789&payment_method_data%5Bus_bank_account%5D%5Brouting_number%5D=110000000&capture_method=automatic&payment_method_types%5B0%5D=us_bank_account&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -148,10 +154,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "stripe-version": "2022-11-15"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=affirm&capture_method=automatic&payment_method_types%5B0%5D=affirm&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -223,9 +229,9 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "stripe-version": "2022-11-15",
-            "content-type": "application/x-www-form-urlencoded",
             "authorization": "Bearer probe_key",
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=afterpay_clearpay&capture_method=automatic&payment_method_types%5B0%5D=afterpay_clearpay&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
@@ -313,9 +319,9 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
+            "content-type": "application/x-www-form-urlencoded",
             "stripe-version": "2022-11-15",
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bcard%5D%5Btoken%5D=probe_pm_token&payment_method_data%5Btype%5D=card&capture_method=automatic&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -391,10 +397,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15"
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=bacs_debit&payment_method_data%5Bbacs_debit%5D%5Baccount_number%5D=55779911&payment_method_data%5Bbacs_debit%5D%5Bsort_code%5D=200000&capture_method=automatic&payment_method_types%5B0%5D=bacs_debit&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -470,10 +476,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "stripe-version": "2022-11-15"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=au_becs_debit&payment_method_data%5Bau_becs_debit%5D%5Baccount_number%5D=000123456&payment_method_data%5Bau_becs_debit%5D%5Bbsb_number%5D=000000&capture_method=automatic&payment_method_types%5B0%5D=au_becs_debit&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -547,10 +553,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded",
             "authorization": "Bearer probe_key",
-            "stripe-version": "2022-11-15"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=blik&payment_method_options%5Bblik%5D%5Bcode%5D=777124&capture_method=automatic&payment_method_types%5B0%5D=blik&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -628,9 +634,9 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "stripe-version": "2022-11-15",
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
             "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111&payment_method_data%5Bcard%5D%5Bexp_month%5D=03&payment_method_data%5Bcard%5D%5Bexp_year%5D=2030&payment_method_data%5Bcard%5D%5Bcvc%5D=737&payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic&capture_method=automatic&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
@@ -719,10 +725,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "stripe-version": "2022-11-15",
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Btoken%5D=tok_probe_gpay&capture_method=automatic&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -794,10 +800,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "stripe-version": "2022-11-15",
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=ideal&capture_method=automatic&payment_method_types%5B0%5D=ideal&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -871,11 +877,15 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
-            "stripe-version": "2022-11-15"
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=klarna&capture_method=automatic&payment_method_types%5B0%5D=klarna&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "supported",
@@ -947,10 +957,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "stripe-version": "2022-11-15"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=probe_txn_001&return_url=https%3A%2F%2Fexample.com%2Freturn&confirm=true&shipping%5Baddress%5D%5Bcity%5D=Seattle&shipping%5Baddress%5D%5Bcountry%5D=US&shipping%5Baddress%5D%5Bline1%5D=123+Main+St&shipping%5Baddress%5D%5Bpostal_code%5D=98101&shipping%5Baddress%5D%5Bstate%5D=WA&shipping%5Bname%5D=John+Doe&shipping%5Bphone%5D=%2B14155552671&payment_method_data%5Bbilling_details%5D%5Bemail%5D=test%40example.com&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcountry%5D=US&payment_method_data%5Bbilling_details%5D%5Bname%5D=John+Doe&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bcity%5D=Seattle&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bline1%5D=123+Main+St&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bpostal_code%5D=98101&payment_method_data%5Bbilling_details%5D%5Baddress%5D%5Bstate%5D=WA&payment_method_data%5Bbilling_details%5D%5Bphone%5D=4155552671&payment_method_data%5Btype%5D=sepa_debit&payment_method_data%5Bsepa_debit%5D%5Biban%5D=DE89370400440532013000&capture_method=automatic&payment_method_types%5B0%5D=sepa_debit&expand%5B0%5D=latest_charge&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -1006,10 +1016,10 @@
           "url": "https://api.stripe.com/v1/customers",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
             "stripe-version": "2022-11-15",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "email=test%40example.com&name=John+Doe"
         }
@@ -1029,13 +1039,25 @@
           "url": "https://api.stripe.com/v1/payment_intents/probe_connector_txn_001?expand[0]=latest_charge",
           "method": "Get",
           "headers": {
+            "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
             "stripe-version": "2022-11-15",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -1063,10 +1085,10 @@
           "url": "https://api.stripe.com/v1/payment_intents",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "stripe-version": "2022-11-15",
+            "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "authorization": "Bearer probe_key"
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&metadata%5Border_id%5D=&return_url=https%3A%2F%2Fexample.com%2Frecurring-return&confirm=true&payment_method=probe_mandate_123&customer=probe_cust_connector_001&capture_method=automatic&off_session=true&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_charge"
         }
@@ -1091,8 +1113,8 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
-            "stripe-version": "2022-11-15"
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&payment_intent=probe_connector_txn_001&metadata%5Border_id%5D=probe_refund_001&metadata%5Bis_refund_id_as_reference%5D=true"
         }
@@ -1164,10 +1186,10 @@
           "url": "https://api.stripe.com/v1/setup_intents",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
             "content-type": "application/x-www-form-urlencoded",
-            "stripe-version": "2022-11-15"
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "confirm=true&usage=off_session&return_url=https%3A%2F%2Fexample.com%2Fmandate-return&payment_method_data%5Btype%5D=card&payment_method_data%5Bcard%5D%5Bnumber%5D=4111111111111111&payment_method_data%5Bcard%5D%5Bexp_month%5D=03&payment_method_data%5Bcard%5D%5Bexp_year%5D=2030&payment_method_data%5Bcard%5D%5Bcvc%5D=737&payment_method_options%5Bcard%5D%5Brequest_three_d_secure%5D=automatic&metadata%5Border_id%5D=probe_mandate_001&payment_method_types%5B0%5D=card&expand%5B0%5D=latest_attempt&payment_method_data%5Bip%5D=1.2.3.4&payment_method_data%5Buser_agent%5D=Mozilla%2F5.0+%28probe-bot%29"
         }
@@ -1216,10 +1238,10 @@
           "url": "https://api.stripe.com/v1/tokens",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "stripe-version": "2022-11-15"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": "type=card&card%5Bnumber%5D=4111111111111111&card%5Bexp_month%5D=03&card%5Bexp_year%5D=2030&card%5Bcvc%5D=737&billing_details%5Bname%5D=John+Doe&billing_details%5Bemail%5D=test%40example.com&billing_details%5Bphone%5D=4155552671&billing_details%5Baddress%5D%5Bline1%5D=123+Main+St&billing_details%5Baddress%5D%5Bstate%5D=WA&billing_details%5Baddress%5D%5Bcity%5D=Seattle"
         }
@@ -1236,10 +1258,10 @@
           "url": "https://api.stripe.com/v1/payment_intents/probe_connector_txn_001/cancel",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "stripe-version": "2022-11-15",
             "authorization": "Bearer probe_key",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "stripe-version": "2022-11-15",
+            "via": "HyperSwitch"
           },
           "body": ""
         }

@@ -81,7 +81,7 @@ proto-clean:
 ## Run field-probe to generate connector flow data
 field-probe:
 	@echo "▶ Running field-probe to generate connector flow data…"
-	cargo run -p field-probe
+	-cargo run -p field-probe
 
 ## Generate connector docs from source code (all connectors)
 docs: field-probe

@@ -1,6 +1,12 @@
 {
   "connector": "tsys",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,11 +81,15 @@
           "url": "https://stagegw.transnox.com/servlets/transnox_api_server",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"Sale\":{\"deviceID\":\"probe_id\",\"transactionKey\":\"probe_key\",\"cardDataSource\":\"INTERNET\",\"transactionAmount\":\"1000\",\"currencyCode\":\"USD\",\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"03/30\",\"cvv2\":\"737\",\"orderNumber\":\"probe_txn_001\",\"terminalCapability\":\"NO_TERMINAL_MANUAL\",\"terminalOperatingEnvironment\":\"NO_TERMINAL\",\"cardholderAuthenticationMethod\":\"NOT_AUTHENTICATED\",\"developerID\":\"probe_dev_id\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -97,8 +107,8 @@
           "url": "https://stagegw.transnox.com/servlets/transnox_api_server",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"Capture\":{\"deviceID\":\"probe_id\",\"transactionKey\":\"probe_key\",\"transactionAmount\":\"1000\",\"transactionID\":\"probe_connector_txn_001\",\"developerID\":\"probe_dev_id\"}}"
         }
@@ -118,11 +128,23 @@
           "url": "https://stagegw.transnox.com/servlets/transnox_api_server",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"SearchTransaction\":{\"deviceID\":\"probe_id\",\"transactionKey\":\"probe_key\",\"transactionID\":\"probe_connector_txn_001\",\"developerID\":\"probe_dev_id\"}}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -142,8 +164,8 @@
           "url": "https://stagegw.transnox.com/servlets/transnox_api_server",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"Return\":{\"deviceID\":\"probe_id\",\"transactionKey\":\"probe_key\",\"transactionAmount\":\"1000\",\"transactionID\":\"probe_connector_txn_001\"}}"
         }
@@ -160,8 +182,8 @@
           "url": "https://stagegw.transnox.com/servlets/transnox_api_server",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"Void\":{\"deviceID\":\"probe_id\",\"transactionKey\":\"probe_key\",\"transactionID\":\"probe_connector_txn_001\",\"developerID\":\"probe_dev_id\"}}"
         }
