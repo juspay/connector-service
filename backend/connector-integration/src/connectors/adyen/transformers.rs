@@ -1378,7 +1378,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             expiry_month: token_data.get_network_token_expiry_month(),
             expiry_year: token_data.get_expiry_year_4_digit(),
             holder_name: card_holder_name,
-            brand: None,           // Only required for NTI mandate payments
+            brand: None,                     // Only required for NTI mandate payments
             network_payment_reference: None, // Only for mandate payments
         };
         Ok(Self::NetworkToken(Box::new(adyen_network_token)))
@@ -3035,11 +3035,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ));
 
         // Cryptogram is REQUIRED for network token payments
-        let cryptogram = token_data.get_cryptogram().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "network_token_data.token_cryptogram",
-            },
-        )?;
+        let cryptogram =
+            token_data
+                .get_cryptogram()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "network_token_data.token_cryptogram",
+                })?;
 
         let mpi_data = Some(AdyenMpiData {
             directory_response: common_enums::TransactionStatus::Success,
@@ -3096,7 +3097,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             channel: None,
             shopper_statement: get_shopper_statement(&item.router_data),
             shopper_ip: item.router_data.request.get_ip_address_as_optional(),
-            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
             store,
             splits: None,
             device_fingerprint,
