@@ -122,6 +122,7 @@ pub enum ConnectorEnum {
     Zift,
     Revolv3,
     Truelayer,
+    Peachpayments,
     Finix,
 }
 
@@ -204,6 +205,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Zift => Ok(Self::Zift),
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
+            grpc_api_types::payments::Connector::Peachpayments => Ok(Self::Peachpayments),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3690,6 +3692,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for Conn
             AuthType::Loonio(_) => Ok(Self::Loonio),
             AuthType::Gigadat(_) => Ok(Self::Gigadat),
             AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
+            AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
                 ApplicationErrorResponse::BadRequest(ApiError {

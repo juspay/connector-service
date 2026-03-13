@@ -285,6 +285,10 @@ pub enum ConnectorSpecificAuth {
         seller_payme_id: Secret<String>,
         payme_client_key: Option<Secret<String>>,
     },
+    Peachpayments {
+        api_key: Secret<String>,
+        tenant_id: Secret<String>,
+    },
     Braintree {
         public_key: Secret<String>,
         private_key: Secret<String>,
@@ -817,6 +821,10 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
             AuthType::Authorizedotnet(authorizedotnet) => Ok(Self::Authorizedotnet {
                 name: authorizedotnet.name.ok_or_else(err)?,
                 transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
+            }),
+            AuthType::Peachpayments(peachpayments) => Ok(Self::Peachpayments {
+                api_key: peachpayments.api_key.ok_or_else(err)?,
+                tenant_id: peachpayments.tenant_id.ok_or_else(err)?,
             }),
             AuthType::Paypal(paypal) => Ok(Self::Paypal {
                 client_id: paypal.client_id.ok_or_else(err)?,
@@ -1610,6 +1618,13 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             ConnectorEnum::Revolv3 => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolv3 {
                     api_key: api_key.clone(),
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Peachpayments => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Peachpayments {
+                    api_key: api_key.clone(),
+                    tenant_id: key1.clone(),
                 }),
                 _ => Err(err().into()),
             },
