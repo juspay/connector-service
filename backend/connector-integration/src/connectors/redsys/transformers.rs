@@ -610,10 +610,14 @@ fn get_payments_response(
         let status = get_redsys_attempt_status(ds_response.clone(), capture_method)?;
 
         let response = if domain_types::utils::is_payment_failure(status) {
+            let error_message = redsys_payments_response
+                .ds_response_description
+                .clone()
+                .unwrap_or_else(|| ds_response.0.clone());
             Err(domain_types::router_data::ErrorResponse {
                 code: ds_response.0.clone(),
-                message: ds_response.0.clone(),
-                reason: Some(ds_response.0.clone()),
+                message: error_message.clone(),
+                reason: Some(error_message),
                 status_code: http_code,
                 attempt_status: None,
                 connector_transaction_id: Some(redsys_payments_response.ds_order.clone()),
@@ -854,7 +858,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: err.error_code.clone(),
                     message: err.error_code_description.clone(),
-                    reason: Some(err.error_code.clone()),
+                    reason: Some(err.error_code_description.clone()),
                     status_code: item.http_code,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -1033,7 +1037,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: err.error_code.clone(),
                     message: err.error_code_description.clone(),
-                    reason: Some(err.error_code.clone()),
+                    reason: Some(err.error_code_description.clone()),
                     status_code: item.http_code,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -1348,7 +1352,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<responses::RedsysResp
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: err.error_code.clone(),
                     message: err.error_code_description.clone(),
-                    reason: Some(err.error_code.clone()),
+                    reason: Some(err.error_code_description.clone()),
                     status_code: item.http_code,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -1457,7 +1461,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: err.error_code.clone(),
                     message: err.error_code_description.clone(),
-                    reason: Some(err.error_code.clone()),
+                    reason: Some(err.error_code_description.clone()),
                     status_code: item.http_code,
                     attempt_status: None,
                     connector_transaction_id: None,
@@ -1859,7 +1863,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysResponse, Self>>
                 Err(domain_types::router_data::ErrorResponse {
                     code: err.error_code.clone(),
                     message: err.error_code_description.clone(),
-                    reason: Some(err.error_code.clone()),
+                    reason: Some(err.error_code_description.clone()),
                     status_code: item.http_code,
                     attempt_status: None,
                     connector_transaction_id: None,
