@@ -5,6 +5,8 @@ package payments
 
 import types.Payment.*
 
+import uniffi.connector_service_ffi.acceptReqTransformer
+import uniffi.connector_service_ffi.acceptResTransformer
 import uniffi.connector_service_ffi.authenticateReqTransformer
 import uniffi.connector_service_ffi.authenticateResTransformer
 import uniffi.connector_service_ffi.authorizeReqTransformer
@@ -21,6 +23,8 @@ import uniffi.connector_service_ffi.createOrderReqTransformer
 import uniffi.connector_service_ffi.createOrderResTransformer
 import uniffi.connector_service_ffi.createSessionTokenReqTransformer
 import uniffi.connector_service_ffi.createSessionTokenResTransformer
+import uniffi.connector_service_ffi.defendReqTransformer
+import uniffi.connector_service_ffi.defendResTransformer
 import uniffi.connector_service_ffi.getReqTransformer
 import uniffi.connector_service_ffi.getResTransformer
 import uniffi.connector_service_ffi.postAuthenticateReqTransformer
@@ -33,6 +37,8 @@ import uniffi.connector_service_ffi.reverseReqTransformer
 import uniffi.connector_service_ffi.reverseResTransformer
 import uniffi.connector_service_ffi.setupRecurringReqTransformer
 import uniffi.connector_service_ffi.setupRecurringResTransformer
+import uniffi.connector_service_ffi.submitEvidenceReqTransformer
+import uniffi.connector_service_ffi.submitEvidenceResTransformer
 import uniffi.connector_service_ffi.tokenizeReqTransformer
 import uniffi.connector_service_ffi.tokenizeResTransformer
 import uniffi.connector_service_ffi.voidReqTransformer
@@ -41,6 +47,7 @@ import uniffi.connector_service_ffi.handleEventTransformer
 
 object FlowRegistry {
     val reqTransformers: Map<String, (ByteArray, ByteArray) -> ByteArray> = mapOf(
+        "accept" to ::acceptReqTransformer,
         "authenticate" to ::authenticateReqTransformer,
         "authorize" to ::authorizeReqTransformer,
         "capture" to ::captureReqTransformer,
@@ -49,17 +56,20 @@ object FlowRegistry {
         "create_access_token" to ::createAccessTokenReqTransformer,
         "create_order" to ::createOrderReqTransformer,
         "create_session_token" to ::createSessionTokenReqTransformer,
+        "defend" to ::defendReqTransformer,
         "get" to ::getReqTransformer,
         "post_authenticate" to ::postAuthenticateReqTransformer,
         "pre_authenticate" to ::preAuthenticateReqTransformer,
         "refund" to ::refundReqTransformer,
         "reverse" to ::reverseReqTransformer,
         "setup_recurring" to ::setupRecurringReqTransformer,
+        "submit_evidence" to ::submitEvidenceReqTransformer,
         "tokenize" to ::tokenizeReqTransformer,
         "void" to ::voidReqTransformer,
     )
 
     val resTransformers: Map<String, (ByteArray, ByteArray, ByteArray) -> ByteArray> = mapOf(
+        "accept" to ::acceptResTransformer,
         "authenticate" to ::authenticateResTransformer,
         "authorize" to ::authorizeResTransformer,
         "capture" to ::captureResTransformer,
@@ -68,12 +78,14 @@ object FlowRegistry {
         "create_access_token" to ::createAccessTokenResTransformer,
         "create_order" to ::createOrderResTransformer,
         "create_session_token" to ::createSessionTokenResTransformer,
+        "defend" to ::defendResTransformer,
         "get" to ::getResTransformer,
         "post_authenticate" to ::postAuthenticateResTransformer,
         "pre_authenticate" to ::preAuthenticateResTransformer,
         "refund" to ::refundResTransformer,
         "reverse" to ::reverseResTransformer,
         "setup_recurring" to ::setupRecurringResTransformer,
+        "submit_evidence" to ::submitEvidenceResTransformer,
         "tokenize" to ::tokenizeResTransformer,
         "void" to ::voidResTransformer,
     )
@@ -95,6 +107,25 @@ class CustomerClient(
     // create: CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information.
     fun create(request: CustomerServiceCreateRequest, options: RequestConfig? = null): CustomerServiceCreateResponse =
         executeFlow("create", request.toByteArray(), CustomerServiceCreateResponse.parser(), options)
+
+}
+
+class DisputeClient(
+    config: ConnectorConfig,
+    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
+    libPath: String? = null
+) : ConnectorClient(config, defaults, libPath) {
+    // accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
+    fun accept(request: DisputeServiceAcceptRequest, options: RequestConfig? = null): DisputeServiceAcceptResponse =
+        executeFlow("accept", request.toByteArray(), DisputeServiceAcceptResponse.parser(), options)
+
+    // defend: DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation.
+    fun defend(request: DisputeServiceDefendRequest, options: RequestConfig? = null): DisputeServiceDefendResponse =
+        executeFlow("defend", request.toByteArray(), DisputeServiceDefendResponse.parser(), options)
+
+    // submit_evidence: DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims.
+    fun submit_evidence(request: DisputeServiceSubmitEvidenceRequest, options: RequestConfig? = null): DisputeServiceSubmitEvidenceResponse =
+        executeFlow("submit_evidence", request.toByteArray(), DisputeServiceSubmitEvidenceResponse.parser(), options)
 
 }
 

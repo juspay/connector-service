@@ -1,6 +1,14 @@
 # AUTO-GENERATED — do not edit by hand.
 # Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
 SERVICE_FLOWS = {
+    "DisputeClient": {
+        # accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
+        "accept": "DisputeServiceAcceptResponse",
+        # defend: DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation.
+        "defend": "DisputeServiceDefendResponse",
+        # submit_evidence: DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims.
+        "submit_evidence": "DisputeServiceSubmitEvidenceResponse",
+    },
     "PaymentMethodAuthenticationClient": {
         # authenticate: PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
         "authenticate": "PaymentMethodAuthenticationServiceAuthenticateResponse",
