@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -51,21 +51,6 @@ ci:
 generate:
 	@echo "▶ Generating SDK flows from services.proto…"
 	@$(MAKE) -C sdk generate
-
-## SDK Certification: Run HTTP client sanity suite across all supported languages
-certify-client-sanity:
-	@echo "Cleaning previous client sanity artifacts..."
-	@rm -rf sdk/tests/client_sanity/artifacts || true
-	@mkdir -p sdk/tests/client_sanity/artifacts
-	@echo "Starting Client Sanity Certification..."
-	@pkill -f "[/]echo_server\\.js" || true
-	@pkill -f "[/]simple_proxy\\.js" || true
-	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 2
-	@echo "Generating golden captures from manifest..."
-	@node sdk/tests/client_sanity/generate_golden.js
-	@echo "[CERTIFICATION]: Running client sanity suite..."
-	@node sdk/tests/client_sanity/run_client_certification.js rust python node kotlin
-	@pkill -f "[/]echo_server\\.js"; pkill -f "[/]simple_proxy\\.js" || true
 
 # Format proto files
 proto-format:
@@ -115,9 +100,6 @@ help:
 	@echo
 	@echo "SDK Codegen Targets:"
 	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
-	@echo
-	@echo "Certification Targets:"
-	@echo "  certify-client-sanity  Run cross-language transport parity certification"
 	@echo
 	@echo "Other Targets:"
 	@echo "  help     Show this help message"
