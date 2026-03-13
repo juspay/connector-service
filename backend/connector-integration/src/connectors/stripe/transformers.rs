@@ -11,16 +11,16 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, IncrementalAuthorization, PaymentMethodToken,
-        RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateConnectorCustomer, CreateOrder, IncrementalAuthorization,
+        PaymentMethodToken, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::AcceptanceType,
@@ -195,7 +195,8 @@ pub struct PaymentIntentRequest<
     pub statement_descriptor: Option<String>,
     #[serde(flatten)]
     pub meta_data: HashMap<String, String>,
-    pub return_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub return_url: Option<String>,
     pub confirm: bool,
     pub payment_method: Option<Secret<String>>,
     pub customer: Option<Secret<String>>,
@@ -222,6 +223,9 @@ pub struct PaymentIntentRequest<
     #[serde(flatten)]
     pub charges: Option<IntentCharges>,
 }
+
+pub type StripeCreateOrderRequest<T> = PaymentIntentRequest<T>;
+pub type StripeCreateOrderResponse = PaymentIntentResponse;
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct IntentCharges {
@@ -2113,11 +2117,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .as_ref()
                 .and_then(|descriptor| descriptor.statement_descriptor.clone()),
             meta_data,
-            return_url: item
-                .request
-                .router_return_url
-                .clone()
-                .unwrap_or_else(|| "https://juspay.in/".to_string()),
+            return_url: Some(
+                item.request
+                    .router_return_url
+                    .clone()
+                    .unwrap_or_else(|| "https://juspay.in/".to_string()),
+            ),
             confirm: true, // Stripe requires confirm to be true if return URL is present
             description: item.resource_common_data.description.clone(),
             shipping: shipping_address,
@@ -2239,7 +2244,7 @@ pub struct PaymentIntentResponse {
     pub statement_descriptor_suffix: Option<String>,
     pub metadata: StripeMetadata,
     pub next_action: Option<StripeNextActionResponse>,
-    pub payment_method_options: Option<StripePaymentMethodOptions>,
+    pub payment_method_options: Option<Value>,
     pub last_payment_error: Option<ErrorDetails>,
     pub latest_attempt: Option<LatestAttempt>, //need a merchant to test this
     pub latest_charge: Option<StripeChargeEnum>,
@@ -2577,7 +2582,7 @@ pub struct SetupMandateResponse {
     pub statement_descriptor_suffix: Option<String>,
     pub metadata: StripeMetadata,
     pub next_action: Option<StripeNextActionResponse>,
-    pub payment_method_options: Option<StripePaymentMethodOptions>,
+    pub payment_method_options: Option<Value>,
     pub latest_attempt: Option<LatestAttempt>,
     pub last_setup_error: Option<ErrorDetails>,
 }
@@ -2762,6 +2767,94 @@ where
                 ..item.router_data.resource_common_data
             },
             response,
+            ..item.router_data
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for PaymentIntentRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        value: StripeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = value.router_data;
+        let order_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+        let payment_method_types = item
+            .request
+            .payment_method_type
+            .map(StripePaymentMethodType::try_from)
+            .transpose()?
+            .or(Some(StripePaymentMethodType::Card));
+
+        Ok(Self {
+            amount: StripeAmountConvertor::convert(item.request.amount, item.request.currency)?,
+            currency: item.request.currency.to_string(),
+            statement_descriptor_suffix: None,
+            statement_descriptor: None,
+            meta_data: get_transaction_metadata(item.request.metadata.clone(), order_id),
+            return_url: None,
+            confirm: false,
+            payment_method: None,
+            customer: None,
+            setup_mandate_details: None,
+            description: None,
+            shipping: None,
+            billing: StripeBillingAddress::default(),
+            payment_data: None,
+            capture_method: StripeCaptureMethod::from(Some(common_enums::CaptureMethod::Manual)),
+            payment_method_options: None,
+            setup_future_usage: None,
+            off_session: None,
+            payment_method_types,
+            expand: None,
+            browser_info: None,
+            charges: None,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<PaymentIntentResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<PaymentIntentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(PaymentCreateOrderResponse {
+                order_id: item.response.id,
+                session_token: None,
+            }),
             ..item.router_data
         })
     }
@@ -5082,11 +5175,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             statement_descriptor_suffix: None,
             statement_descriptor: None,
             meta_data,
-            return_url: item
-                .request
-                .router_return_url
-                .clone()
-                .unwrap_or_else(|| "https://juspay.in/".to_string()),
+            return_url: Some(
+                item.request
+                    .router_return_url
+                    .clone()
+                    .unwrap_or_else(|| "https://juspay.in/".to_string()),
+            ),
             confirm: true, // Stripe requires confirm to be true if return URL is present
             description: item.resource_common_data.description.clone(),
             shipping: shipping_address,

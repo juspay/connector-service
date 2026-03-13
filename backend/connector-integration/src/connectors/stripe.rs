@@ -48,9 +48,9 @@ use serde::Serialize;
 use transformers::{
     self as stripe, CancelRequest, CaptureRequest, CreateConnectorCustomerRequest,
     CreateConnectorCustomerResponse, PaymentIncrementalAuthRequest, PaymentIntentRequest,
-    PaymentIntentRequest as RepeatPaymentRequest,
-    PaymentIntentResponse as PaymentIncrementalAuthResponse, PaymentSyncResponse,
-    PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
+    PaymentIntentRequest as RepeatPaymentRequest, PaymentIntentResponse as PaymentIncrementalAuthResponse,
+    StripeCreateOrderRequest, StripeCreateOrderResponse,
+    PaymentSyncResponse, PaymentsAuthorizeResponse, PaymentsAuthorizeResponse as RepeatPaymentResponse,
     PaymentsCaptureResponse, PaymentsVoidResponse, RefundResponse,
     RefundResponse as RefundSyncResponse, SetupMandateRequest, SetupMandateResponse,
     StripeRefundRequest, StripeTokenResponse, TokenRequest,
@@ -277,6 +277,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ),
         (
+            flow: CreateOrder,
+            request_body: StripeCreateOrderRequest<T>,
+            response_body: StripeCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
             flow: CreateConnectorCustomer,
             request_body: CreateConnectorCustomerRequest,
             response_body: CreateConnectorCustomerResponse,
@@ -464,6 +470,62 @@ macros::macro_connector_implementation!(
                 "{}{}",
                 self.connector_base_url_payments(req),
                 "v1/payment_intents"
+            ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Stripe,
+    curl_request: FormUrlEncoded(StripeCreateOrderRequest),
+    curl_response: StripeCreateOrderResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                "v1/payment_intents"
+            ))
+        }
+
+        fn build_request_v2(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Option<common_utils::request::Request>, ConnectorError> {
+            let url = format!(
+                "{}{}",
+                self.connector_base_url_payments(req),
+                "v1/payment_intents"
+            );
+
+            Ok(Some(
+                common_utils::request::RequestBuilder::new()
+                    .method(common_utils::request::Method::Post)
+                    .url(url.as_str())
+                    .attach_default_headers()
+                    .headers(self.get_headers(req)?)
+                    .set_optional_body(self.get_request_body(req)?)
+                    .add_certificate(self.get_certificate(req)?)
+                    .add_certificate_key(self.get_certificate_key(req)?)
+                    .build(),
             ))
         }
     }
@@ -985,15 +1047,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Stripe<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Stripe<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

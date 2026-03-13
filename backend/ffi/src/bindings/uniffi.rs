@@ -143,7 +143,7 @@ mod uniffi_bindings_inner {
         handler: impl Fn(
             crate::types::FfiRequestData<Req>,
             Option<Environment>,
-        ) -> Result<Option<Request>, crate::errors::FfiPaymentError>,
+        ) -> Result<Option<Request>, grpc_api_types::payments::RequestError>,
     ) -> Result<Vec<u8>, UniffiError>
     where
         Req: Message + Default,
@@ -179,7 +179,7 @@ mod uniffi_bindings_inner {
             crate::types::FfiRequestData<Req>,
             Response,
             Option<Environment>,
-        ) -> Result<Res, crate::errors::FfiPaymentError>,
+        ) -> Result<Res, grpc_api_types::payments::ResponseError>,
     ) -> Result<Vec<u8>, UniffiError>
     where
         Req: Message + Default,
