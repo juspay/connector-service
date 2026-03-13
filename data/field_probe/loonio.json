@@ -1,0 +1,28 @@
+{
+  "connector": "loonio",
+  "flows": {
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://integration.loonio.ca/api/v1/transactions/probe_connector_txn_001/details",
+          "method": "Get",
+          "headers": {
+            "merchanttoken": "probe_key",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "merchantid": "probe_merchant"
+          },
+          "body": null
+        }
+      }
+    }
+  }
+}

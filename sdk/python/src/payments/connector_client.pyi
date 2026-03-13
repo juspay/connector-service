@@ -7,6 +7,12 @@ from payments.generated.sdk_config_pb2 import ConnectorConfig, RequestConfig
 from payments.generated.payment_pb2 import (
     CustomerServiceCreateRequest,
     CustomerServiceCreateResponse,
+    DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse,
+    DisputeServiceDefendRequest,
+    DisputeServiceDefendResponse,
+    DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse,
     EventServiceHandleRequest,
     EventServiceHandleResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -47,6 +53,20 @@ class _ConnectorClientBase:
 class CustomerClient(_ConnectorClientBase):
     def create(self, request: CustomerServiceCreateRequest, options: RequestConfig | None = ...) -> CustomerServiceCreateResponse:
         """CustomerService.Create — Create customer record in the payment processor system. Stores customer details for future payment operations without re-sending personal information."""
+        ...
+
+
+class DisputeClient(_ConnectorClientBase):
+    def accept(self, request: DisputeServiceAcceptRequest, options: RequestConfig | None = ...) -> DisputeServiceAcceptResponse:
+        """DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient."""
+        ...
+
+    def defend(self, request: DisputeServiceDefendRequest, options: RequestConfig | None = ...) -> DisputeServiceDefendResponse:
+        """DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation."""
+        ...
+
+    def submit_evidence(self, request: DisputeServiceSubmitEvidenceRequest, options: RequestConfig | None = ...) -> DisputeServiceSubmitEvidenceResponse:
+        """DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims."""
         ...
 
 

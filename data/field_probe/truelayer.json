@@ -1,0 +1,55 @@
+{
+  "connector": "truelayer",
+  "flows": {
+    "create_access_token": {
+      "default": {
+        "status": "supported",
+        "proto_request": {},
+        "sample": {
+          "url": "https://auth.truelayer-sandbox.com/connect/token",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/x-www-form-urlencoded"
+          },
+          "body": "grant_type=client_credentials&client_id=probe_id&client_secret=probe_secret&scope=payments"
+        }
+      }
+    },
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api.truelayer-sandbox.com/v3/payments/probe_connector_txn_001",
+          "method": "Get",
+          "headers": {
+            "content-type": "application/json; charset=UTF-8",
+            "authorization": "Bearer probe_access_token",
+            "via": "HyperSwitch"
+          },
+          "body": null
+        }
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to decode message"
+      }
+    }
+  }
+}

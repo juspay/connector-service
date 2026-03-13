@@ -1,0 +1,237 @@
+{
+  "connector": "braintree",
+  "flows": {
+    "authorize": {
+      "Card": {
+        "status": "supported",
+        "required_fields": [
+          "payment_method_token"
+        ],
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "shipping_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            },
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "webhook_url": "https://example.com/webhook",
+          "complete_authorize_url": "https://example.com/complete",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          },
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://payments.sandbox.braintree-api.com/graphql",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "braintree-version": "2019-01-01"
+          },
+          "body": "{\"query\":\"mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id legacyId createdAt amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"paymentMethodId\":\"probe_pm_token\",\"transaction\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"channel\":\"HyperSwitchBT_Ecom\",\"customerDetails\":{\"email\":\"test@example.com\"},\"orderId\":\"probe_txn_001\"}}}}"
+        }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_capture_id": "probe_capture_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount_to_capture": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://payments.sandbox.braintree-api.com/graphql",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/json",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "braintree-version": "2019-01-01"
+          },
+          "body": "{\"query\":\"mutation captureTransaction($input: CaptureTransactionInput!) { captureTransaction(input: $input) { clientMutationId transaction { id legacyId amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\",\"transaction\":{\"amount\":\"10.00\"}}}}"
+        }
+      }
+    },
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://payments.sandbox.braintree-api.com/graphql",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "braintree-version": "2019-01-01",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"query\":\"query($input: TransactionSearchInput!) { search { transactions(input: $input) { edges { node { id status } } } } }\",\"variables\":{\"input\":{\"id\":{\"is\":\"probe_connector_txn_001\"}}}}"
+        }
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request"
+        },
+        "sample": {
+          "url": "https://payments.sandbox.braintree-api.com/graphql",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "via": "HyperSwitch",
+            "content-type": "application/json",
+            "braintree-version": "2019-01-01"
+          },
+          "body": "{\"query\":\"mutation refundTransaction($input:  RefundTransactionInput!) { refundTransaction(input: $input) {clientMutationId refund { id legacyId amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\",\"refund\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"orderId\":\"probe_refund_001\"}}}}"
+        }
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://payments.sandbox.braintree-api.com/graphql",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "braintree-version": "2019-01-01"
+          },
+          "body": "{\"query\":\"mutation  tokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { clientMutationId paymentMethod { id } } }\",\"variables\":{\"input\":{\"creditCard\":{\"number\":\"4111111111111111\",\"expirationYear\":\"2030\",\"expirationMonth\":\"03\",\"cvv\":\"737\",\"cardholderName\":\"John Doe\"}}}}"
+        }
+      }
+    },
+    "void": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_void_id": "probe_void_001",
+          "connector_transaction_id": "probe_connector_txn_001"
+        },
+        "sample": {
+          "url": "https://payments.sandbox.braintree-api.com/graphql",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "braintree-version": "2019-01-01",
+            "content-type": "application/json",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+          },
+          "body": "{\"query\":\"mutation voidTransaction($input:  ReverseTransactionInput!) { reverseTransaction(input: $input) { clientMutationId reversal { ...  on Transaction { id legacyId amount { value currencyCode } status } } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\"}}}"
+        }
+      }
+    }
+  }
+}

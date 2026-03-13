@@ -1,0 +1,228 @@
+{
+  "connector": "revolv3",
+  "flows": {
+    "authorize": {
+      "Card": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "shipping_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            },
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "webhook_url": "https://example.com/webhook",
+          "complete_authorize_url": "https://example.com/complete",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://api-sandbox.revolv3.com/api/payments/sale",
+          "method": "Post",
+          "headers": {
+            "x-revolv3-token": "probe_key",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"paymentMethod\":{\"billingAddress\":{\"addressLine1\":\"123 Main St\",\"addressLine2\":null,\"city\":\"Seattle\",\"state\":\"WA\",\"postalCode\":\"98101\",\"phoneNumber\":\"4155552671\",\"email\":\"test@example.com\",\"country\":\"US\"},\"billingFirstName\":\"John\",\"billingLastName\":\"Doe\",\"billingFullName\":\"John Doe\",\"creditCard\":{\"paymentAccountNumber\":\"4111111111111111\",\"expirationDate\":\"0330\",\"securityCode\":\"737\"}},\"invoice\":{\"merchantInvoiceRefId\":null,\"amount\":{\"value\":10.0,\"currency\":\"USD\"},\"orderProcessingChannel\":null},\"networkProcessing\":null,\"dynamicDescriptor\":null}"
+        }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_capture_id": "probe_capture_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount_to_capture": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://api-sandbox.revolv3.com/api/Payments/capture/probe_connector_txn_001",
+          "method": "Post",
+          "headers": {
+            "x-revolv3-token": "probe_key",
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"invoice\":{\"merchantInvoiceRefId\":null,\"amount\":{\"value\":10.0,\"currency\":\"USD\"},\"orderProcessingChannel\":null}}"
+        }
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request"
+        },
+        "sample": {
+          "url": "https://api-sandbox.revolv3.com/api/Invoices/probe_connector_txn_001/refund",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "x-revolv3-token": "probe_key",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"amount\":10.0}"
+        }
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "enrolled_for_3ds": false,
+          "return_url": "https://example.com/mandate-return",
+          "setup_future_usage": "OFF_SESSION",
+          "request_incremental_authorization": false,
+          "customer_acceptance": {
+            "acceptance_type": "OFFLINE",
+            "accepted_at": 0
+          },
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://api-sandbox.revolv3.com/api/payments/authorization",
+          "method": "Post",
+          "headers": {
+            "x-revolv3-token": "probe_key",
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"paymentMethod\":{\"billingAddress\":{\"addressLine1\":\"123 Main St\",\"addressLine2\":null,\"city\":\"Seattle\",\"state\":\"WA\",\"postalCode\":\"98101\",\"phoneNumber\":\"4155552671\",\"email\":\"test@example.com\",\"country\":\"US\"},\"billingFirstName\":\"John\",\"billingLastName\":\"Doe\",\"billingFullName\":\"John Doe\",\"creditCard\":{\"paymentAccountNumber\":\"4111111111111111\",\"expirationDate\":\"0330\",\"securityCode\":\"737\"}},\"networkProcessing\":{\"processingType\":\"InitialRecurring\",\"originalNetworkTransactionId\":null},\"amount\":{\"value\":0.0,\"currency\":\"USD\"},\"orderProcessingChannel\":null,\"dynamicDescriptor\":null}"
+        }
+      }
+    },
+    "void": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_void_id": "probe_void_001",
+          "connector_transaction_id": "probe_connector_txn_001"
+        },
+        "sample": {
+          "url": "https://api-sandbox.revolv3.com/api/PaymentMethod/reverse-auth",
+          "method": "Post",
+          "headers": {
+            "x-revolv3-token": "probe_key",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"paymentMethodAuthorizationId\":\"probe_connector_txn_001\",\"reason\":null,\"amount\":null}"
+        }
+      }
+    }
+  }
+}

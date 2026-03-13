@@ -19,6 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.03.13.0
+
+### Features
+
+- **connector:** [Truelayer] Implement webhooks for payments and refunds ([#602](https://github.com/juspay/connector-service/pull/602)) ([`ffe6888`](https://github.com/juspay/connector-service/commit/ffe6888f6a8d339fb931188980221aa20a9e6784))
+
+### Miscellaneous Tasks
+
+- **error:** Add request and response error proto for ffi implementation ([#610](https://github.com/juspay/connector-service/pull/610)) ([`ac90f77`](https://github.com/juspay/connector-service/commit/ac90f773fbd450caa74a1ed2f3da145282a4fa7a))
+- **remove:** Remove unused code ([#628](https://github.com/juspay/connector-service/pull/628)) ([`ee6e1b9`](https://github.com/juspay/connector-service/commit/ee6e1b9fadaef928dde3f9718a540f39283e562d))
+
+**Full Changelog:** [`2026.03.12.0...2026.03.13.0`](https://github.com/juspay/connector-service/compare/2026.03.12.0...2026.03.13.0)
+
+- - -
+
 ## 2026.03.12.0
 
 ### Features
