@@ -182,8 +182,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let computed_signature_b64 = BASE64_ENGINE.encode(&computed_signature);
         let check_point = computed_signature_b64 == *signature_header; 
-        print!("Computed signature: {}, Signature from header: {}, Verification result: {}, computed_signature {:?}",
-            computed_signature_b64, signature_header, check_point, computed_signature);
         Ok(check_point)
     }
 

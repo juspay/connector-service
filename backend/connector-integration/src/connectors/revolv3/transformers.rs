@@ -1379,6 +1379,7 @@ pub struct Revolv3WebhookInvoiceData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Revolv3WebhookInvoiceAttempt {
     pub invoice_attempt_date: String,
     pub response_code: Option<String>,
