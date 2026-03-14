@@ -27,7 +27,6 @@ hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "20
 [dev-dependencies]
 cucumber = "0.21"
 futures = "0.3"
-regex = "1"
 
 [[test]]
 name = "cucumber"
