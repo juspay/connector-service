@@ -126,26 +126,6 @@ function buildAuthorizeRequest(string $cardType = 'visa'): PaymentServiceAuthori
     $paymentMethod = new \Types\PaymentMethod();
     $paymentMethod->setCard($cardMsg);
 
-    // Build billing address (required by most connectors)
-    $addrLine1   = new \Types\SecretString(); $addrLine1->setValue('123 Test Street');
-    $addrCity    = new \Types\SecretString(); $addrCity->setValue('San Francisco');
-    $addrState   = new \Types\SecretString(); $addrState->setValue('CA');
-    $addrZip     = new \Types\SecretString(); $addrZip->setValue('94105');
-    $addrFirst   = new \Types\SecretString(); $addrFirst->setValue('Test');
-    $addrLast    = new \Types\SecretString(); $addrLast->setValue('User');
-
-    $address = new \Types\Address();
-    $address->setFirstName($addrFirst);
-    $address->setLastName($addrLast);
-    $address->setLine1($addrLine1);
-    $address->setCity($addrCity);
-    $address->setState($addrState);
-    $address->setZipCode($addrZip);
-    $address->setCountryAlpha2Code(\Types\CountryAlpha2::US);
-
-    $paymentAddress = new \Types\PaymentAddress();
-    $paymentAddress->setBillingAddress($address);
-
     $money = new \Types\Money();
     $money->setMinorAmount(1000);
     $money->setCurrency(Currency::USD);
@@ -159,7 +139,7 @@ function buildAuthorizeRequest(string $cardType = 'visa'): PaymentServiceAuthori
     $req->setAmount($money);
     $req->setCaptureMethod(CaptureMethod::AUTOMATIC);
     $req->setPaymentMethod($paymentMethod);
-    $req->setAddress($paymentAddress);
+    $req->setAddress(new \Types\PaymentAddress());  // empty address, matching JS: address: {}
     $req->setCustomer($customer);
     $req->setAuthType(AuthenticationType::NO_THREE_DS);
     $req->setReturnUrl('https://example.com/return');
