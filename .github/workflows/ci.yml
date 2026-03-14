@@ -60,8 +60,8 @@ jobs:
       - name: Run Composite Request Schema Checks
         run: cargo test -p composite-service --test composite_request_schema_check
 
-      - name: Run UCS Connector Tests
-        run: cargo test -p ucs-connector-tests
+      - name: Run UCS Connector Schema Compatibility Check
+        run: cargo test -p ucs-connector-tests --lib harness::scenario_api::tests::all_supported_scenarios_match_proto_schema_for_all_connectors -- --exact
 
   test:
     name: Run Tests
