@@ -1,6 +1,6 @@
 # Adyen Connector Annotations
 # Contains only connector-specific notes, required fields, credentials, and test data.
-# Sample payloads come from common-payloads.yaml (shared across all connectors).
+# Sample payloads come exclusively from probe data (data/field_probe/adyen.json).
 # Run: python3 scripts/generate-connector-docs.py adyen
 
 display_name: Adyen

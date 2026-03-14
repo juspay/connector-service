@@ -1130,7 +1130,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "revolut-api-version": "2025-10-16",
+            "revolut-api-version": "2024-09-01",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000}"

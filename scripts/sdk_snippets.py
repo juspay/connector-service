@@ -11,8 +11,12 @@ the .proto files in flow_metadata.rs.
 
 Public API
 ----------
-  render_sdk_table(connector_name, flow_key, service_name, grpc_request,
-                   proto_request, message_schemas) -> list[str]
+  render_config_section(connector_name, service_names, is_direct) -> list[str]
+    Renders a 4-tab SDK config table (once per connector doc).
+
+  render_payload_block(flow_key, service_name, grpc_request,
+                       proto_request, message_schemas) -> list[str]
+    Renders a single annotated Python dict payload block (per flow/PM).
 """
 
 import json
@@ -30,9 +34,6 @@ _SERVICE_TO_CLIENT: dict[str, str] = {
     "RecurringPaymentService":            "RecurringPaymentClient",
     "RefundService":                      "RefundClient",
 }
-
-# Flows whose FFI path skips the HTTP round-trip
-_DIRECT_FLOWS: frozenset[str] = frozenset(["handle_event"])
 
 
 # ── Message schema proxy ────────────────────────────────────────────────────────
@@ -209,31 +210,12 @@ def _conn_display(connector_name: str) -> str:
     return connector_name.replace("_", " ").title().replace(" ", "")
 
 
-# ── Per-SDK snippet builders ───────────────────────────────────────────────────
+# ── Per-SDK config-only snippet builders ──────────────────────────────────────
 
-def _snippet_python(
-    connector_name: str,
-    flow_key: str,
-    service_name: str,
-    grpc_request: str,
-    proto_request: dict,
-    is_direct: bool,
-    db: _SchemaDB,
-) -> str:
-    client_cls = _client_class(service_name)
-    conn_enum  = _conn_enum(connector_name)
-
-    payload = _build_annotated(proto_request, grpc_request, db, style="python", indent=1)
-
-    call      = f"    response = {'await ' if not is_direct else ''}client.{flow_key}(request)"
-    async_def = "def" if is_direct else "async def"
-    runner    = "main()" if is_direct else "asyncio.run(main())"
-    imports   = "" if is_direct else "import asyncio\n"
-
+def _config_python(connector_name: str) -> str:
+    conn_enum = _conn_enum(connector_name)
     return f"""\
-{imports}from google.protobuf.json_format import ParseDict
-from payments import {client_cls}
-from payments.generated import sdk_config_pb2, payment_pb2
+from payments.generated import sdk_config_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
     connector=sdk_config_pb2.Connector.{conn_enum},
@@ -241,66 +223,27 @@ config = sdk_config_pb2.ConnectorConfig(
     auth=sdk_config_pb2.ConnectorAuthType(
         header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
     ),
-)
-
-request = ParseDict(
-{payload},
-    payment_pb2.{grpc_request}(),
-)
-
-{async_def} main():
-    client = {client_cls}(config)
-{call}
-    print(response)
-
-{runner}"""
+)"""
 
 
-def _snippet_javascript(
-    connector_name: str,
-    flow_key: str,
-    proto_request: dict,
-    grpc_request: str,
-    db: _SchemaDB,
-) -> str:
-    camel_method = _to_camel(flow_key)
+def _config_javascript(connector_name: str) -> str:
     conn_display = _conn_display(connector_name)
-    payload      = _build_annotated(proto_request, grpc_request, db, style="js")
-
     return f"""\
 const {{ ConnectorClient }} = require('connector-service-node-ffi');
 
+// Reuse this client for all flows
 const client = new ConnectorClient({{
     connector: '{conn_display}',
     environment: 'sandbox',
     connector_auth_type: {{
         header_key: {{ api_key: 'YOUR_API_KEY' }},
     }},
-}});
-
-const request = {payload};
-
-const response = await client.{camel_method}(request);
-console.log(response);"""
+}});"""
 
 
-def _snippet_kotlin(
-    connector_name: str,
-    flow_key: str,
-    service_name: str,
-    grpc_request: str,
-    proto_request: dict,
-    db: _SchemaDB,
-) -> str:
-    client_cls   = _client_class(service_name)
+def _config_kotlin(connector_name: str) -> str:
     conn_display = _conn_display(connector_name)
-    payload      = _build_annotated(proto_request, grpc_request, db, style="kotlin", indent=1)
-
     return f"""\
-import payments.{client_cls}
-import types.Payment.{grpc_request}
-import com.google.protobuf.util.JsonFormat
-
 val config = ConnectorConfig.newBuilder()
     .setConnector("{conn_display}")
     .setEnvironment(Environment.SANDBOX)
@@ -308,70 +251,20 @@ val config = ConnectorConfig.newBuilder()
         ConnectorAuthType.newBuilder()
             .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
     )
-    .build()
-
-// JSON with field descriptions (remove comment lines before parsing)
-val json = \"\"\"
-{payload}
-\"\"\".trimIndent()
-
-val builder = {grpc_request}.newBuilder()
-JsonFormat.parser().ignoringUnknownFields().merge(json, builder)
-val request = builder.build()
-
-val client = {client_cls}(config)
-val response = client.{flow_key}(request)
-println(response)"""
+    .build()"""
 
 
-def _snippet_rust(
-    connector_name: str,
-    flow_key: str,
-    grpc_request: str,
-    proto_request: dict,
-    is_direct: bool,
-    db: _SchemaDB,
-) -> str:
+def _config_rust(connector_name: str) -> str:
     conn_display = _conn_display(connector_name)
-
-    # Build field hints from top-level fields, annotated with proto comments
-    top_fields = list(proto_request.keys()) if isinstance(proto_request, dict) else []
-    hint_lines = []
-    for field in top_fields[:10]:
-        comment = db.get_comment(grpc_request, field)
-        cmt_part = f"  // {comment}" if comment else ""
-        hint_lines.append(f"        // {field}: todo!(),{cmt_part}")
-    if len(top_fields) > 10:
-        hint_lines.append("        // ...")
-    field_hints = "\n".join(hint_lines)
-
-    tokio_attr = "#[tokio::main]\n" if not is_direct else ""
-    async_kw   = "async " if not is_direct else ""
-    await_kw   = ".await" if not is_direct else ""
-
     return f"""\
 use connector_service_sdk::{{ConnectorClient, ConnectorConfig}};
-use grpc_api_types::payments::{grpc_request};
 
-{tokio_attr}pub {async_kw}fn main() -> Result<(), Box<dyn std::error::Error>> {{
-    let config = ConnectorConfig {{
-        connector: "{conn_display}".to_string(),
-        environment: Environment::Sandbox,
-        auth: ConnectorAuth::HeaderKey {{ api_key: "YOUR_API_KEY".into() }},
-        ..Default::default()
-    }};
-
-    // Field names and descriptions from the proto definition above
-    let request = {grpc_request} {{
-{field_hints}
-        ..Default::default()
-    }};
-
-    let client = ConnectorClient::new(config, None)?;
-    let response = client.{flow_key}(request, &Default::default(), None){await_kw}?;
-    println!("{{response:?}}");
-    Ok(())
-}}"""
+let config = ConnectorConfig {{
+    connector: "{conn_display}".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey {{ api_key: "YOUR_API_KEY".into() }},
+    ..Default::default()
+}};"""
 
 
 # ── HTML table cell builder ────────────────────────────────────────────────────
@@ -397,43 +290,20 @@ def _td(label: str, fence_lang: str, code: str) -> str:
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
-def render_sdk_table(
-    connector_name: str,
-    flow_key: str,
-    service_name: str,
-    grpc_request: str,
-    proto_request: dict,
-    message_schemas: dict,
-) -> list[str]:
+def render_config_section(connector_name: str) -> list[str]:
     """
-    Return markdown lines to replace the raw JSON sample block.
+    Return markdown lines for the SDK Configuration section (emitted once per
+    connector doc, after credentials).
 
     Produces an HTML <table> with four columns (Python, JavaScript, Kotlin, Rust),
-    each containing a collapsible <details> block with a ready-to-run code snippet.
-    Proto field comments are embedded inline in the request payload of each snippet.
-
-    Args:
-        connector_name:   e.g. "stripe"
-        flow_key:         e.g. "authorize", "capture", "handle_event"
-        service_name:     e.g. "PaymentService"
-        grpc_request:     e.g. "PaymentServiceAuthorizeRequest"
-        proto_request:    probe-verified request payload dict
-        message_schemas:  manifest["message_schemas"] dict from field-probe binary
-
-    Returns:
-        List of markdown/HTML lines (caller should append them as-is).
+    each containing a collapsible <details> block with the connector-specific
+    config/client initialisation — no request payload.
     """
-    if not proto_request or not grpc_request:
-        return []
-
-    db        = _SchemaDB(message_schemas)
-    is_direct = flow_key in _DIRECT_FLOWS
-
     cells = [
-        _td("Python",     "python",     _snippet_python(connector_name, flow_key, service_name, grpc_request, proto_request, is_direct, db)),
-        _td("JavaScript", "javascript", _snippet_javascript(connector_name, flow_key, proto_request, grpc_request, db)),
-        _td("Kotlin",     "kotlin",     _snippet_kotlin(connector_name, flow_key, service_name, grpc_request, proto_request, db)),
-        _td("Rust",       "rust",       _snippet_rust(connector_name, flow_key, grpc_request, proto_request, is_direct, db)),
+        _td("Python",     "python",     _config_python(connector_name)),
+        _td("JavaScript", "javascript", _config_javascript(connector_name)),
+        _td("Kotlin",     "kotlin",     _config_kotlin(connector_name)),
+        _td("Rust",       "rust",       _config_rust(connector_name)),
     ]
 
     header_row = "<tr>" + "".join(
@@ -444,6 +314,10 @@ def render_sdk_table(
     body_cells = "\n".join(cells)
 
     return [
+        "## SDK Configuration",
+        "",
+        "Use this config for all flows in this connector. "
+        "Replace `YOUR_API_KEY` with your actual credentials.",
         "",
         "<table>",
         header_row,
@@ -451,5 +325,48 @@ def render_sdk_table(
         body_cells,
         "</tr>",
         "</table>",
+        "",
+    ]
+
+
+def render_payload_block(
+    flow_key: str,
+    service_name: str,
+    grpc_request: str,
+    proto_request: dict,
+    message_schemas: dict,
+) -> list[str]:
+    """
+    Return markdown lines for a single annotated request payload block.
+
+    Renders the proto request as a Python dict literal with inline ``# comments``
+    sourced from the proto field descriptions. One block per flow/PM sample;
+    the config section at the top of the connector doc provides the SDK setup.
+
+    Args:
+        flow_key:         e.g. "authorize", "capture"
+        service_name:     e.g. "PaymentService"
+        grpc_request:     e.g. "PaymentServiceAuthorizeRequest"
+        proto_request:    probe-verified request payload dict
+        message_schemas:  manifest["message_schemas"] dict from field-probe binary
+
+    Returns:
+        List of markdown lines (caller should append them as-is).
+    """
+    if not proto_request or not grpc_request:
+        return []
+
+    db          = _SchemaDB(message_schemas)
+    client_cls  = _client_class(service_name)
+    camel_method = _to_camel(flow_key)
+    payload     = _build_annotated(proto_request, grpc_request, db, style="python", indent=0)
+
+    return [
+        "",
+        f"> **Client call:** `{client_cls}.{camel_method}(request)`",
+        "",
+        "```python",
+        payload,
+        "```",
         "",
     ]

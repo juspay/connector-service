@@ -257,60 +257,19 @@ def _load_yaml(path: Path) -> dict:
         return {}
 
 
-def _load_common_payloads() -> dict:
-    """Load the shared common-payloads.yaml used by all connectors."""
-    for name in ("common-payloads.yaml", "common-payloads.yml"):
-        data = _load_yaml(ANNOTATIONS_DIR / name)
-        if data:
-            return data
-    return {}
-
-
 def load_annotations(connector_name: str) -> dict:
     """
-    Merge common payloads with connector-specific annotations.
+    Load connector-specific annotations (display_name, overview, credentials,
+    test_credentials, and per-flow notes/required_fields).
 
-    Priority (highest wins):
-      connector-specific flows.FlowName.samples  (override common if present)
-      common-payloads.yaml flows.FlowName.samples (default for all connectors)
-
-    Connector-specific files should only contain:
-      display_name, overview, credentials, test_credentials,
-      and per-flow: notes, required_fields  (NOT samples)
+    Sample payloads are sourced exclusively from probe data (data/field_probe/),
+    not from annotation files.
     """
-    common = _load_common_payloads()
-    connector = {}
     for ext in ("yaml", "yml"):
         data = _load_yaml(ANNOTATIONS_DIR / f"{connector_name}.{ext}")
         if data:
-            connector = data
-            break
-
-    # Deep-merge: connector overrides common at the flow level
-    merged = dict(connector)
-    merged_flows: dict = {}
-
-    common_flows = common.get("flows", {})
-    connector_flows = connector.get("flows", {})
-
-    # Start with all flow names from both sources
-    all_flow_names = set(common_flows) | set(connector_flows)
-    for flow_name in all_flow_names:
-        c_flow = dict(common_flows.get(flow_name, {}))
-        k_flow = dict(connector_flows.get(flow_name, {}))
-
-        # Connector can override samples; otherwise fall through to common
-        merged_flow = dict(c_flow)
-        merged_flow.update(k_flow)
-
-        # If connector has no samples, use common samples
-        if "samples" not in k_flow and "samples" in c_flow:
-            merged_flow["samples"] = c_flow["samples"]
-
-        merged_flows[flow_name] = merged_flow
-
-    merged["flows"] = merged_flows
-    return merged
+            return data
+    return {}
 
 
 # ─── Display Name ─────────────────────────────────────────────────────────────
@@ -415,6 +374,10 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
             a(f"| `{c['name']}` | {c['description']} |")
         a("")
 
+    # ── SDK Configuration (once per connector) ──────────────────────────────
+    for line in sdk_snippets.render_config_section(connector_name):
+        a(line)
+
     # ── Flow summary table ───────────────────────────────────────────────────
     a("## Implemented Flows")
     a("")
@@ -481,8 +444,6 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
             # Payment method type support (from field-probe)
             pm_support = _probe_pm_support(probe_connector, f)
             if pm_support:
-                supported = [_PROBE_PM_DISPLAY[pm] for pm, ok in pm_support.items() if ok]
-                unsupported = [_PROBE_PM_DISPLAY[pm] for pm, ok in pm_support.items() if not ok]
                 a("**Supported payment method types:**")
                 a("")
                 a("| Payment Method | Supported |")
@@ -523,9 +484,8 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
                 # accepts and that produced a successful transformer call.
                 for title, proto_req in probe_samples:
                     a(f"**{title}**")
-                    a("")
-                    for line in sdk_snippets.render_sdk_table(
-                        connector_name, f,
+                    for line in sdk_snippets.render_payload_block(
+                        f,
                         meta.get("service_name", ""),
                         meta.get("grpc_request", ""),
                         proto_req,

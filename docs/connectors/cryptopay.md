@@ -6,6 +6,91 @@ Source: data/field_probe/cryptopay.json
 Regenerate: python3 scripts/generate-connector-docs.py cryptopay
 -->
 
+## SDK Configuration
+
+Use this config for all flows in this connector. Replace `YOUR_API_KEY` with your actual credentials.
+
+<table>
+<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
+<tr>
+<td valign="top">
+
+<details><summary>Python</summary>
+
+```python
+from payments.generated import sdk_config_pb2
+
+config = sdk_config_pb2.ConnectorConfig(
+    connector=sdk_config_pb2.Connector.CRYPTOPAY,
+    environment=sdk_config_pb2.Environment.SANDBOX,
+    auth=sdk_config_pb2.ConnectorAuthType(
+        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
+    ),
+)
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>JavaScript</summary>
+
+```javascript
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+// Reuse this client for all flows
+const client = new ConnectorClient({
+    connector: 'Cryptopay',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Kotlin</summary>
+
+```kotlin
+val config = ConnectorConfig.newBuilder()
+    .setConnector("Cryptopay")
+    .setEnvironment(Environment.SANDBOX)
+    .setAuth(
+        ConnectorAuthType.newBuilder()
+            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
+    )
+    .build()
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Rust</summary>
+
+```rust
+use connector_service_sdk::{ConnectorClient, ConnectorConfig};
+
+let config = ConnectorConfig {
+    connector: "Cryptopay".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
+    ..Default::default()
+};
+```
+
+</details>
+
+</td>
+</tr>
+</table>
+
 ## Implemented Flows
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
@@ -48,160 +133,17 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 
 **Example Request**
 
-
-<table>
-<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
-<tr>
-<td valign="top">
-
-<details><summary>Python</summary>
+> **Client call:** `PaymentClient.get(request)`
 
 ```python
-import asyncio
-from google.protobuf.json_format import ParseDict
-from payments import PaymentClient
-from payments.generated import sdk_config_pb2, payment_pb2
-
-config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.CRYPTOPAY,
-    environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
-)
-
-request = ParseDict(
 {
-        "connector_transaction_id": "probe_connector_txn_001",
-        "amount": {  # Amount Information
-            "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    },
-    payment_pb2.PaymentServiceGetRequest(),
-)
-
-async def main():
-    client = PaymentClient(config)
-    response = await client.get(request)
-    print(response)
-
-asyncio.run(main())
-```
-
-</details>
-
-</td>
-<td valign="top">
-
-<details><summary>JavaScript</summary>
-
-```javascript
-const { ConnectorClient } = require('connector-service-node-ffi');
-
-const client = new ConnectorClient({
-    connector: 'Cryptopay',
-    environment: 'sandbox',
-    connector_auth_type: {
-        header_key: { api_key: 'YOUR_API_KEY' },
-    },
-});
-
-const request = {
     "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+    "amount": {  # Amount Information
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
     }
-};
-
-const response = await client.get(request);
-console.log(response);
-```
-
-</details>
-
-</td>
-<td valign="top">
-
-<details><summary>Kotlin</summary>
-
-```kotlin
-import payments.PaymentClient
-import types.Payment.PaymentServiceGetRequest
-import com.google.protobuf.util.JsonFormat
-
-val config = ConnectorConfig.newBuilder()
-    .setConnector("Cryptopay")
-    .setEnvironment(Environment.SANDBOX)
-    .setAuth(
-        ConnectorAuthType.newBuilder()
-            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
-    )
-    .build()
-
-// JSON with field descriptions (remove comment lines before parsing)
-val json = """
-{
-        "connector_transaction_id": "probe_connector_txn_001",
-        // Amount Information
-        "amount": {
-            // Amount in minor units (e.g., 1000 = $10.00)
-            "minor_amount": 1000,
-            // ISO 4217 currency code (e.g., "USD", "EUR")
-            "currency": "USD"
-        }
-    }
-""".trimIndent()
-
-val builder = PaymentServiceGetRequest.newBuilder()
-JsonFormat.parser().ignoringUnknownFields().merge(json, builder)
-val request = builder.build()
-
-val client = PaymentClient(config)
-val response = client.get(request)
-println(response)
-```
-
-</details>
-
-</td>
-<td valign="top">
-
-<details><summary>Rust</summary>
-
-```rust
-use connector_service_sdk::{ConnectorClient, ConnectorConfig};
-use grpc_api_types::payments::PaymentServiceGetRequest;
-
-#[tokio::main]
-pub async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = ConnectorConfig {
-        connector: "Cryptopay".to_string(),
-        environment: Environment::Sandbox,
-        auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
-        ..Default::default()
-    };
-
-    // Field names and descriptions from the proto definition above
-    let request = PaymentServiceGetRequest {
-        // connector_transaction_id: todo!(),
-        // amount: todo!(),  // Amount Information
-        ..Default::default()
-    };
-
-    let client = ConnectorClient::new(config, None)?;
-    let response = client.get(request, &Default::default(), None).await?;
-    println!("{response:?}");
-    Ok(())
 }
 ```
-
-</details>
-
-</td>
-</tr>
-</table>
 
 ### Authentication
 
