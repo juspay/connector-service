@@ -112,7 +112,7 @@
         "headers": { "Content-Type": "application/json" },
         "body": "{\"action\": \"sync\"}"
       },
-      "expected_error": "RESPONSE_TIMEOUT",
+      "expected_error": "RESPONSE_TIMEOUT_EXCEEDED",
       "client_response_timeout_ms": 1000,
       "server_delay_ms": 2000,
       "expected_response": { "status_code": 200, "body": { "status": "ok" } }

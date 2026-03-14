@@ -173,13 +173,13 @@ object HttpClient {
 
             when {
                 msg.contains("timeout") && latency >= totalTimeout -> {
-                    throw NetworkError("Total Request Timeout: ${request.url} exceeded ${totalTimeout}ms", NetworkErrorCode.TOTAL_TIMEOUT, 504)
+                    throw NetworkError("Total Request Timeout: ${request.url} exceeded ${totalTimeout}ms", NetworkErrorCode.TOTAL_TIMEOUT_EXCEEDED, 504)
                 }
                 msg.contains("connect") -> {
-                    throw NetworkError("Connection Timeout: Failed to connect to ${request.url}", NetworkErrorCode.CONNECT_TIMEOUT, 504)
+                    throw NetworkError("Connection Timeout: Failed to connect to ${request.url}", NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED, 504)
                 }
                 msg.contains("read") || msg.contains("write") || e is SocketTimeoutException -> {
-                    throw NetworkError("Response Timeout: Gateway ${request.url} accepted connection but failed to respond", NetworkErrorCode.RESPONSE_TIMEOUT, 504)
+                    throw NetworkError("Response Timeout: Gateway ${request.url} accepted connection but failed to respond", NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED, 504)
                 }
                 else -> {
                     throw NetworkError("Network Error: ${e.message}", NetworkErrorCode.NETWORK_FAILURE, 500)

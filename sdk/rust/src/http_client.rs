@@ -98,9 +98,9 @@ impl NetworkError {
     /// Returns the error code as string (e.g. "CONNECT_TIMEOUT") for parity with other SDKs.
     pub fn error_code(&self) -> &'static str {
         match self.code {
-            NetworkErrorCode::ConnectTimeout => "CONNECT_TIMEOUT",
-            NetworkErrorCode::ResponseTimeout => "RESPONSE_TIMEOUT",
-            NetworkErrorCode::TotalTimeout => "TOTAL_TIMEOUT",
+            NetworkErrorCode::ConnectTimeoutExceeded => "CONNECT_TIMEOUT_EXCEEDED",
+            NetworkErrorCode::ResponseTimeoutExceeded => "RESPONSE_TIMEOUT_EXCEEDED",
+            NetworkErrorCode::TotalTimeoutExceeded => "TOTAL_TIMEOUT_EXCEEDED",
             NetworkErrorCode::NetworkFailure => "NETWORK_FAILURE",
             NetworkErrorCode::InvalidCaCert => "INVALID_CA_CERT",
             NetworkErrorCode::ClientInitializationFailure => "CLIENT_INITIALIZATION_FAILURE",
@@ -249,12 +249,12 @@ impl HttpClient {
             let (code, message) = if e.is_timeout() {
                 if e.is_connect() {
                     (
-                        NetworkErrorCode::ConnectTimeout,
+                        NetworkErrorCode::ConnectTimeoutExceeded,
                         format!("Connection Timeout: {}", request.url),
                     )
                 } else {
                     (
-                        NetworkErrorCode::TotalTimeout,
+                        NetworkErrorCode::TotalTimeoutExceeded,
                         format!("Total Request Timeout: {}", request.url),
                     )
                 }

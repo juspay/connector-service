@@ -151,7 +151,7 @@ export async function execute(
     if (error.name === 'AbortError') {
       throw new NetworkError(
         `Total Request Timeout: ${method} ${url} exceeded ${totalTimeout}ms`,
-        types.NetworkErrorCode.TOTAL_TIMEOUT,
+        types.NetworkErrorCode.TOTAL_TIMEOUT_EXCEEDED,
         504
       );
     }
@@ -161,14 +161,14 @@ export async function execute(
       if (cause.code === 'UND_ERR_CONNECT_TIMEOUT') {
         throw new NetworkError(
           `Connection Timeout: Failed to connect to ${url}`,
-          types.NetworkErrorCode.CONNECT_TIMEOUT,
+          types.NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED,
           504
         );
       }
       if (cause.code === 'UND_ERR_BODY_TIMEOUT' || cause.code === 'UND_ERR_HEADERS_TIMEOUT') {
         throw new NetworkError(
           `Response Timeout: Gateway ${url} accepted connection but failed to respond`,
-          types.NetworkErrorCode.RESPONSE_TIMEOUT,
+          types.NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED,
           504
         );
       }

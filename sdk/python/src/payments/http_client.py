@@ -51,9 +51,9 @@ class NetworkError(Exception):
     def error_code(self) -> str:
         """String error code for parity with RequestError/ResponseError (e.g. 'CONNECT_TIMEOUT')."""
         names = {
-            sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT: "CONNECT_TIMEOUT",
-            sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT: "RESPONSE_TIMEOUT",
-            sdk_config_pb2.NetworkErrorCode.TOTAL_TIMEOUT: "TOTAL_TIMEOUT",
+            sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED: "CONNECT_TIMEOUT_EXCEEDED",
+            sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED: "RESPONSE_TIMEOUT_EXCEEDED",
+            sdk_config_pb2.NetworkErrorCode.TOTAL_TIMEOUT_EXCEEDED: "TOTAL_TIMEOUT_EXCEEDED",
             sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE: "NETWORK_FAILURE",
             sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE: "CLIENT_INITIALIZATION_FAILURE",
             sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED: "URL_PARSING_FAILED",
@@ -192,8 +192,8 @@ async def execute(
         )
 
     except httpx.ConnectTimeout:
-        raise NetworkError(f"Connection Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT, 504)
+        raise NetworkError(f"Connection Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.CONNECT_TIMEOUT_EXCEEDED, 504)
     except (httpx.ReadTimeout, httpx.WriteTimeout):
-        raise NetworkError(f"Response Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT, 504)
+        raise NetworkError(f"Response Timeout: {request.url}", sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT_EXCEEDED, 504)
     except Exception as e:
         raise NetworkError(f"Network Error: {str(e)}", sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE, 500)

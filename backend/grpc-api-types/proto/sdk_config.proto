@@ -187,13 +187,13 @@ enum NetworkErrorCode {
   NETWORK_ERROR_CODE_UNSPECIFIED = 0;
 
   // Connection to the remote host timed out before establishing.
-  CONNECT_TIMEOUT = 1;
+  CONNECT_TIMEOUT_EXCEEDED = 1;
 
   // Remote host accepted connection but did not respond within the read timeout.
-  RESPONSE_TIMEOUT = 2;
+  RESPONSE_TIMEOUT_EXCEEDED = 2;
 
   // Entire request lifecycle exceeded total timeout.
-  TOTAL_TIMEOUT = 3;
+  TOTAL_TIMEOUT_EXCEEDED = 3;
 
   // Generic network failure (e.g. DNS resolution, connection refused, TLS handshake).
   // See error message for details.

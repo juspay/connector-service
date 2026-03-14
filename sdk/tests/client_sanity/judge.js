@@ -86,7 +86,7 @@ function verifyScenario(lang, scenarioId, goldenPath, actualPath, capturePath, e
   const captureExists = fs.existsSync(capturePath);
 
   // Error scenarios: certify the SDK error code only. No request reaches server, so no capture.
-  // Supports NetworkError codes (CONNECT_TIMEOUT, URL_PARSING_FAILED, etc.) and other SDK error types.
+  // Supports NetworkError codes (CONNECT_TIMEOUT_EXCEEDED, URL_PARSING_FAILED, etc.) and other SDK error types.
   if (expectedError) {
     if (!actualExists) {
       return { status: 'MISSING', message: 'Actual error capture missing' };
