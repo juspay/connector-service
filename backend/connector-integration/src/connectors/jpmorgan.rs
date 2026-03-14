@@ -523,7 +523,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = jpmorgan::JpmorganAuthType::try_from(&req.connector_auth_type)?;
+            let auth = jpmorgan::JpmorganAuthType::try_from(&req.connector_config)?;
             let creds = format!("{}:{}", auth.client_id.peek(), auth.client_secret.peek());
             let encoded_creds = BASE64_ENGINE.encode(creds);
             let auth_string = format!("Basic {}", encoded_creds);

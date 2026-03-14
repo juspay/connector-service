@@ -12,7 +12,7 @@ use domain_types::{
         BankRedirectData, CustomerInfoDetails, PaymentMethodData, PaymentMethodDataTypes,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
         InteracCustomerInfo,
     },
     router_data_v2::RouterDataV2,
@@ -31,14 +31,15 @@ pub struct LoonioAuthType {
     pub merchant_token: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for LoonioAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for LoonioAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Loonio {
+            ConnectorSpecificConfig::Loonio {
                 merchant_id,
                 merchant_token,
+                ..
             } => Ok(Self {
                 merchant_id: merchant_id.to_owned(),
                 merchant_token: merchant_token.to_owned(),

@@ -109,13 +109,13 @@ approved: {true|false}
 **Format:**
 ```bash
 grpcurl -H "x-connector: {connector}" \
-  -H "x-connector-auth: {\"{Connector}\":{\"api_key\":\"$API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"{Connector}\":{\"api_key\":\"$API_KEY\"}}}" \
 ```
 
 **Stripe Example:**
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
 ```
 
 ### C4.2: Test Data

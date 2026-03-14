@@ -37,7 +37,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{
@@ -295,7 +295,7 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -353,7 +353,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = adyen::AdyenAuthType::try_from(auth_type)
             .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
@@ -420,7 +420,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.connector_feature_data,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
@@ -460,7 +460,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.connector_feature_data,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/details"))
         }
@@ -497,7 +497,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.connector_feature_data,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/captures"))
         }
@@ -551,7 +551,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.connector_feature_data,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/{id}/cancels"))
         }
@@ -581,7 +581,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
@@ -689,7 +689,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
     {
         let notif: AdyenNotificationRequestItemWH =
@@ -704,7 +704,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
@@ -752,7 +752,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
@@ -787,7 +787,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
@@ -857,7 +857,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_refunds(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.connector_feature_data,
             )?;
             Ok(format!(
                 "{endpoint}{ADYEN_API_VERSION}/payments/{connector_payment_id}/refunds",
@@ -892,7 +892,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.connector_feature_data,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
@@ -922,7 +922,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
@@ -953,7 +953,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_meta_data fields
+            // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
@@ -987,7 +987,7 @@ macros::macro_connector_implementation!(
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
-                &req.resource_common_data.connector_meta_data,
+                &req.resource_common_data.connector_feature_data,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments"))
         }
@@ -1113,7 +1113,7 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         data: &PaymentsSyncData,
         _is_three_ds: bool,
         _status: AttemptStatus,
-        _connector_meta_data: Option<SecretSerdeValue>,
+        _connector_feature_data: Option<SecretSerdeValue>,
     ) -> CustomResult<(), errors::ConnectorError> {
         if data.encoded_data.is_some() {
             return Ok(());

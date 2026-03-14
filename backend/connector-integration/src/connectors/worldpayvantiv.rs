@@ -31,7 +31,7 @@ use domain_types::{
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -194,7 +194,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<ConnectorError>> {
         Ok(false) // WorldpayVantiv doesn't support webhooks
     }
@@ -203,7 +203,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorError>> {
         Err(error_stack::report!(ConnectorError::WebhooksNotImplemented))
     }
@@ -212,7 +212,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>> {
         Err(error_stack::report!(ConnectorError::WebhooksNotImplemented))
     }
@@ -221,7 +221,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
         Err(error_stack::report!(ConnectorError::WebhooksNotImplemented))
     }
@@ -425,7 +425,7 @@ macros::create_all_prerequisites!(
 
         pub fn get_auth_header(
             &self,
-            auth_type: &ConnectorSpecificAuth,
+            auth_type: &ConnectorSpecificConfig,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let auth = WorldpayvantivAuthType::try_from(auth_type)?;
             let auth_key = format!("{}:{}", auth.user.peek(), auth.password.peek());
@@ -485,7 +485,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            self.get_auth_header(&req.connector_auth_type)
+            self.get_auth_header(&req.connector_config)
         }
 
         fn get_url(
@@ -813,7 +813,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.get_auth_header(&req.connector_auth_type)
+        self.get_auth_header(&req.connector_config)
     }
 
     fn get_content_type(&self) -> &'static str {

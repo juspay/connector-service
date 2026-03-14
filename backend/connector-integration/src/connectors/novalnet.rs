@@ -34,7 +34,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -265,7 +265,7 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 self.get_content_type().to_string().into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -311,7 +311,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = novalnet::NovalnetAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
@@ -670,7 +670,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let algorithm = crypto::Sha256;
 
@@ -730,7 +730,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
         let notif = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
@@ -765,7 +765,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let notif = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)?;
@@ -784,7 +784,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let notif: novalnet::NovalnetWebhookNotificationResponseRefunds = request
             .body
@@ -805,7 +805,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let notif: transformers::NovalnetWebhookNotificationResponse =
             get_webhook_object_from_body(&request.body)

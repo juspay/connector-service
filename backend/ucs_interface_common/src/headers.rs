@@ -39,7 +39,7 @@ const HEADERS: &[&str] = &[
     consts::X_KEY2,
     consts::X_AUTH_KEY_MAP,
     consts::X_SHADOW_MODE,
-    consts::X_CONNECTOR_AUTH,
+    consts::X_CONNECTOR_CONFIG,
     consts::X_RESOURCE_ID,
 ];
 

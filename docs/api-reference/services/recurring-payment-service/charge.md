@@ -97,7 +97,7 @@ The `Charge` RPC processes a recurring payment using a previously established ma
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_charge_id": "charge_sub_001",
     "mandate_reference_id": {
