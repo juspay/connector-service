@@ -130,7 +130,7 @@ function buildAuthorizeRequest(string $cardType = 'visa'): PaymentServiceAuthori
     $money->setMinorAmount(1000);
     $money->setCurrency(Currency::USD);
 
-    $customer = new \Types\CustomerDetails();
+    $customer = new \Types\Customer();
     $customer->setEmail($secretEmail);
     $customer->setName('Test User');
 
