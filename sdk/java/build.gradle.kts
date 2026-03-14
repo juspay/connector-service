@@ -19,6 +19,11 @@ dependencies {
     api("net.java.dev.jna:jna:5.14.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.json:json:20240303")
+
+    // Cucumber BDD test dependencies
+    testImplementation("io.cucumber:cucumber-java:7.22.0")
+    testImplementation("io.cucumber:cucumber-junit:7.22.0")
+    testImplementation("junit:junit:4.13.2")
 }
 
 // Create a separate source set for the sanity runner
@@ -27,6 +32,12 @@ sourceSets {
         kotlin.srcDir("tests")
         compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
         runtimeClasspath += sourceSets["main"].output + sourceSets["main"].runtimeClasspath
+    }
+    // Cucumber BDD test source set
+    create("cucumberTest") {
+        kotlin.srcDir("tests/cucumber")
+        compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath + configurations["testCompileClasspath"]
+        runtimeClasspath += sourceSets["main"].output + sourceSets["main"].runtimeClasspath + configurations["testRuntimeClasspath"]
     }
 }
 
@@ -44,6 +55,30 @@ tasks.register<JavaExec>("runClientSanity") {
     systemProperty("jna.library.path",
         file("src/main/resources/native").absolutePath)
     dependsOn("compileSanityKotlin")
+}
+
+// Compile cucumber test sources
+tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileCucumberTestKotlin") {
+    dependsOn("compileKotlin")
+}
+
+tasks.register<JavaExec>("runCucumber") {
+    group = "verification"
+    description = "Run Cucumber BDD tests for client sanity"
+    mainClass.set("io.cucumber.core.cli.Main")
+    classpath = sourceSets["cucumberTest"].runtimeClasspath
+    systemProperty("jna.library.path",
+        file("src/main/resources/native").absolutePath)
+    systemProperty("artifacts.dir",
+        file("../tests/client_sanity/artifacts").absolutePath)
+    args = listOf(
+        "--glue", "cucumber",
+        "--tags", "not @skip_kotlin",
+        "--plugin", "pretty",
+        "--plugin", "json:../tests/client_sanity/artifacts/cucumber_kotlin.json",
+        "../tests/client_sanity/features"
+    )
+    dependsOn("compileCucumberTestKotlin")
 }
 
 publishing {

@@ -23,3 +23,12 @@ reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
 tokio = { version = "1", features = ["full"] }
 serde_json = { workspace = true }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+
+[dev-dependencies]
+cucumber = "0.21"
+futures = "0.3"
+regex = "1"
+
+[[test]]
+name = "cucumber"
+harness = false
