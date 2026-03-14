@@ -17,6 +17,9 @@ use crate::harness::{
     scenario_types::ScenarioError,
 };
 
+type RequestTransformer = fn(Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>;
+type ResponseTransformer = fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>;
+
 /// Returns whether a suite is currently wired for SDK/FFI execution.
 pub fn supports_sdk_suite(suite: &str) -> bool {
     matches!(
@@ -180,8 +183,8 @@ fn execute_sdk_flow<Req, Res>(
     connector: &str,
     grpc_req: &Value,
     options_bytes: &[u8],
-    req_transformer: fn(Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>,
-    res_transformer: fn(Vec<u8>, Vec<u8>, Vec<u8>) -> Result<Vec<u8>, UniffiError>,
+    req_transformer: RequestTransformer,
+    res_transformer: ResponseTransformer,
 ) -> Result<String, ScenarioError>
 where
     Req: Message + Default + DeserializeOwned,
