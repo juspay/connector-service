@@ -108,16 +108,16 @@ function buildAuthorizeRequest(string $cardType = 'visa'): PaymentServiceAuthori
 {
     $card = TEST_CARDS[$cardType] ?? TEST_CARDS['visa'];
 
-    // Build SecretString wrappers
-    $secretNumber   = new \Types\SecretString(); $secretNumber->setValue($card['number']);
+    // Build card number wrapper (CardNumberType) and SecretString wrappers
+    $cardNumber     = new \Types\CardNumberType(); $cardNumber->setValue($card['number']);
     $secretExpMonth = new \Types\SecretString(); $secretExpMonth->setValue($card['expMonth']);
     $secretExpYear  = new \Types\SecretString(); $secretExpYear->setValue($card['expYear']);
     $secretCvc      = new \Types\SecretString(); $secretCvc->setValue($card['cvc']);
     $secretHolder   = new \Types\SecretString(); $secretHolder->setValue($card['holder']);
     $secretEmail    = new \Types\SecretString(); $secretEmail->setValue('test@example.com');
 
-    $cardMsg = new \Types\CardPaymentMethodData();
-    $cardMsg->setCardNumber($secretNumber);
+    $cardMsg = new \Types\CardDetails();
+    $cardMsg->setCardNumber($cardNumber);
     $cardMsg->setCardExpMonth($secretExpMonth);
     $cardMsg->setCardExpYear($secretExpYear);
     $cardMsg->setCardCvc($secretCvc);
