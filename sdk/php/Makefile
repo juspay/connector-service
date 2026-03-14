@@ -28,7 +28,7 @@ install-deps:
 	@command -v composer >/dev/null 2>&1 || \
 		(echo "Error: composer not found. Install via nix or https://getcomposer.org" && exit 1)
 	@php -r "if (!extension_loaded('ffi')) { echo \"Warning: PHP FFI extension not enabled. Add ffi.enable=1 to php.ini or run php with -d ffi.enable=1\n\"; }" 2>/dev/null || true
-	@cd $(SDK_ROOT) && composer install --no-interaction --no-progress
+	@cd $(SDK_ROOT) && composer install --no-interaction --no-progress --ignore-platform-req=ext-ffi
 	@echo "All required tools present."
 
 # ---------------------------------------------------------------------------
@@ -117,7 +117,7 @@ test-package: build-ffi-lib generate-all install-deps
 	@cp -r $(SDK_ROOT)/src /tmp/test-hyperswitch-php/
 	@# Copy composer.json for autoloader generation
 	@cp $(SDK_ROOT)/composer.json /tmp/test-hyperswitch-php/
-	@cd /tmp/test-hyperswitch-php && composer dump-autoload --no-interaction --quiet
+	@cd /tmp/test-hyperswitch-php && composer dump-autoload --no-interaction --quiet --ignore-platform-req=ext-ffi
 	@# Copy credentials file if it exists
 	@if [ -f $(REPO_ROOT)/creds.json ]; then \
 		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-php/; \
