@@ -8,7 +8,7 @@ edition = "2021"
 error-stack = "0.4.1"
 serde = { workspace = true }
 thiserror = { workspace = true }
-time = "0.3.41"
+time = "0.3.44"
 regex = "1.11.1"
 bytes = { workspace = true }
 prost = { workspace = true }
