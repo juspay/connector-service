@@ -13,7 +13,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -27,11 +27,14 @@ pub struct AirwallexAuthType {
     pub client_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for AirwallexAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for AirwallexAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Airwallex { api_key, client_id } = auth_type {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Airwallex {
+            api_key, client_id, ..
+        } = auth_type
+        {
             Ok(Self {
                 api_key: api_key.clone(),
                 client_id: client_id.clone(),

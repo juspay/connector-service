@@ -2,7 +2,7 @@ use common_enums::WebhookTransformationStatus;
 use domain_types::{
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     types::CardConversionHelper,
     utils::ForeignTryFrom,
 };
@@ -39,7 +39,7 @@ pub fn process_webhook_event<
     connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorSpecificAuth>,
+    connector_config: Option<ConnectorSpecificConfig>,
     source_verified: bool,
 ) -> error_stack::Result<EventServiceHandleResponse, ApplicationErrorResponse> {
     let event_type = connector_data
@@ -47,7 +47,7 @@ pub fn process_webhook_event<
         .get_event_type(
             request_details.clone(),
             webhook_secrets.clone(),
-            connector_auth_details.clone(),
+            connector_config.clone(),
         )
         .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "WEBHOOK_EVENT_TYPE_ERROR".to_string(),
@@ -70,21 +70,21 @@ pub fn process_webhook_event<
             connector_data,
             request_details,
             webhook_secrets,
-            connector_auth_details,
+            connector_config,
         )?
     } else if event_type.is_refund_event() {
         get_refunds_webhook_content(
             connector_data,
             request_details,
             webhook_secrets,
-            connector_auth_details,
+            connector_config,
         )?
     } else if event_type.is_dispute_event() {
         get_disputes_webhook_content(
             connector_data,
             request_details,
             webhook_secrets,
-            connector_auth_details,
+            connector_config,
         )?
     } else {
         // Default: treat as payment event (mandate, payout, recovery, misc).
@@ -92,7 +92,7 @@ pub fn process_webhook_event<
             connector_data,
             request_details,
             webhook_secrets,
-            connector_auth_details,
+            connector_config,
         )?
     };
 
@@ -118,15 +118,11 @@ pub fn get_payments_webhook_content<
     connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorSpecificAuth>,
+    connector_config: Option<ConnectorSpecificConfig>,
 ) -> error_stack::Result<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_payment_webhook(
-            request_details.clone(),
-            webhook_secrets,
-            connector_auth_details,
-        )
+        .process_payment_webhook(request_details.clone(), webhook_secrets, connector_config)
         .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "WEBHOOK_PROCESSING_ERROR".to_string(),
             error_identifier: 500,
@@ -199,11 +195,11 @@ pub fn get_refunds_webhook_content<
     connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorSpecificAuth>,
+    connector_config: Option<ConnectorSpecificConfig>,
 ) -> error_stack::Result<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_refund_webhook(request_details, webhook_secrets, connector_config)
         .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "WEBHOOK_PROCESSING_ERROR".to_string(),
             error_identifier: 500,
@@ -241,11 +237,11 @@ pub fn get_disputes_webhook_content<
     connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorSpecificAuth>,
+    connector_config: Option<ConnectorSpecificConfig>,
 ) -> error_stack::Result<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_dispute_webhook(request_details, webhook_secrets, connector_config)
         .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "WEBHOOK_PROCESSING_ERROR".to_string(),
             error_identifier: 500,

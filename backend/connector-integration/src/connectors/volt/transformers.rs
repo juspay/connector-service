@@ -9,7 +9,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -313,9 +313,9 @@ pub struct VoltAuthUpdateRequest {
     password: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for VoltAuthUpdateRequest {
+impl TryFrom<&ConnectorSpecificConfig> for VoltAuthUpdateRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         let auth = VoltAuthType::try_from(auth_type)?;
         Ok(Self {
             grant_type: PASSWORD.to_string(),
@@ -352,7 +352,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&item.router_data.connector_auth_type)
+        Self::try_from(&item.router_data.connector_config)
     }
 }
 
@@ -388,15 +388,16 @@ pub struct VoltAuthType {
     pub(super) client_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for VoltAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for VoltAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Volt {
+            ConnectorSpecificConfig::Volt {
                 username,
                 password,
                 client_id,
                 client_secret,
+                ..
             } => Ok(Self {
                 username: username.to_owned(),
                 password: password.to_owned(),

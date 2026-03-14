@@ -102,7 +102,7 @@ The `SetupRecurring` RPC establishes a payment mandate (recurring payment instru
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_recurring_payment_id": "recurring_001",
     "amount": {

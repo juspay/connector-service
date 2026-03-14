@@ -19,7 +19,8 @@ members = [
   "backend/ucs_interface_common",
   "backend/ffi",
   "backend/uniffi-bindgen",
-  "backend/field-probe"
+  "backend/field-probe",
+  "backend/ucs-connector-tests"
 ]
 exclude = [
   "examples/example-rs",
