@@ -67,6 +67,38 @@ class MerchantAuthenticationClient extends ConnectorClientBase
 
 }
 
+class PaymentMethodAuthenticationClient extends ConnectorClientBase
+{
+    /** PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention. */
+    public function authenticate($request, ?RequestConfig $options = null): \Types\PaymentMethodAuthenticationServiceAuthenticateResponse
+    {
+        return $this->executeFlow('authenticate', $request, \Types\PaymentMethodAuthenticationServiceAuthenticateResponse::class, $options);
+    }
+
+    /** PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed. */
+    public function postAuthenticate($request, ?RequestConfig $options = null): \Types\PaymentMethodAuthenticationServicePostAuthenticateResponse
+    {
+        return $this->executeFlow('post_authenticate', $request, \Types\PaymentMethodAuthenticationServicePostAuthenticateResponse::class, $options);
+    }
+
+    /** PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification. */
+    public function preAuthenticate($request, ?RequestConfig $options = null): \Types\PaymentMethodAuthenticationServicePreAuthenticateResponse
+    {
+        return $this->executeFlow('pre_authenticate', $request, \Types\PaymentMethodAuthenticationServicePreAuthenticateResponse::class, $options);
+    }
+
+}
+
+class PaymentMethodClient extends ConnectorClientBase
+{
+    /** PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing. */
+    public function tokenize($request, ?RequestConfig $options = null): \Types\PaymentMethodServiceTokenizeResponse
+    {
+        return $this->executeFlow('tokenize', $request, \Types\PaymentMethodServiceTokenizeResponse::class, $options);
+    }
+
+}
+
 class PaymentClient extends ConnectorClientBase
 {
     /** PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing. */
@@ -105,7 +137,7 @@ class PaymentClient extends ConnectorClientBase
         return $this->executeFlow('reverse', $request, \Types\PaymentServiceReverseResponse::class, $options);
     }
 
-    /** PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases. */
+    /** PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases. */
     public function setupRecurring($request, ?RequestConfig $options = null): \Types\PaymentServiceSetupRecurringResponse
     {
         return $this->executeFlow('setup_recurring', $request, \Types\PaymentServiceSetupRecurringResponse::class, $options);
@@ -115,38 +147,6 @@ class PaymentClient extends ConnectorClientBase
     public function void($request, ?RequestConfig $options = null): \Types\PaymentServiceVoidResponse
     {
         return $this->executeFlow('void', $request, \Types\PaymentServiceVoidResponse::class, $options);
-    }
-
-}
-
-class PaymentMethodAuthenticationClient extends ConnectorClientBase
-{
-    /** PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention. */
-    public function authenticate($request, ?RequestConfig $options = null): \Types\PaymentMethodAuthenticationServiceAuthenticateResponse
-    {
-        return $this->executeFlow('authenticate', $request, \Types\PaymentMethodAuthenticationServiceAuthenticateResponse::class, $options);
-    }
-
-    /** PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed. */
-    public function postAuthenticate($request, ?RequestConfig $options = null): \Types\PaymentMethodAuthenticationServicePostAuthenticateResponse
-    {
-        return $this->executeFlow('post_authenticate', $request, \Types\PaymentMethodAuthenticationServicePostAuthenticateResponse::class, $options);
-    }
-
-    /** PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification. */
-    public function preAuthenticate($request, ?RequestConfig $options = null): \Types\PaymentMethodAuthenticationServicePreAuthenticateResponse
-    {
-        return $this->executeFlow('pre_authenticate', $request, \Types\PaymentMethodAuthenticationServicePreAuthenticateResponse::class, $options);
-    }
-
-}
-
-class PaymentMethodClient extends ConnectorClientBase
-{
-    /** PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing. */
-    public function tokenize($request, ?RequestConfig $options = null): \Types\PaymentMethodServiceTokenizeResponse
-    {
-        return $this->executeFlow('tokenize', $request, \Types\PaymentMethodServiceTokenizeResponse::class, $options);
     }
 
 }
