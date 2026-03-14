@@ -31,16 +31,16 @@
           extensions = [ "rust-src" "clippy" "rustfmt" "rust-analyzer" ];
         };
 
-        # PHP 8.3 with FFI extension enabled and configured.
-        # ffi.enable=1 is required for the PHP SDK to load the shared library.
+        # PHP 8.3 with FFI enabled via php.ini.
+        # FFI and JSON are compiled into PHP core (since 7.4 and 8.0) — they
+        # are NOT separate nixpkgs extensions.  We only list extensions that
+        # ship as separate shared objects in nixpkgs.
         phpWithFfi = pkgs.php83.buildEnv {
           extensions = exts: with exts; [
-            ffi      # Foreign Function Interface — required for the PHP SDK
-            curl     # HTTP client support
-            openssl  # TLS/SSL support
-            mbstring # Multi-byte string functions
-            json     # JSON encode/decode
-            tokenizer
+            curl       # HTTP client support (used by Guzzle)
+            openssl    # TLS/SSL support
+            mbstring   # Multi-byte string functions
+            tokenizer  # Needed by Composer autoloader
           ];
           extraConfig = ''
             ffi.enable = 1
