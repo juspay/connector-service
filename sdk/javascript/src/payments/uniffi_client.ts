@@ -201,6 +201,14 @@ export class UniffiClient {
         checkCallStatus(this._ffi, status);
         const bytes = liftBytes(result);
         try {
+          const connectorReq = types.FfiConnectorHttpRequest.decode(bytes);
+          if (connectorReq?.url || connectorReq?.method || connectorReq?.body) {
+            return bytes;
+          }
+        } catch (_ignored) {
+          // not an HTTP request payload
+        }
+        try {
           const reqErr = types.RequestError.decode(bytes);
           if (reqErr.errorMessage) {
             throw reqErr;

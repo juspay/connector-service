@@ -15,7 +15,7 @@ use url::Url;
 
 use domain_types::{
     payment_method_data::PaymentMethodData,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
@@ -125,12 +125,13 @@ pub struct CryptopayAuthType {
     pub(super) api_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for CryptopayAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Cryptopay {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Cryptopay {
             api_key,
             api_secret,
+            ..
         } = auth_type
         {
             Ok(Self {

@@ -64,7 +64,7 @@ The `Accept` RPC concedes a chargeback dispute and accepts the loss. Use this wh
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_dispute_id": "dispute_001",
     "connector_transaction_id": "pi_3Oxxx...",

@@ -56,10 +56,9 @@ PAYPAL_CREDS = {
 def create_config() -> ConnectorConfig:
     """Create ConnectorConfig with PayPal credentials."""
     config = ConnectorConfig()
-    config.connector = Connector.PAYPAL
-    config.environment = Environment.SANDBOX
-    config.auth.paypal.client_id.value = PAYPAL_CREDS["client_id"]
-    config.auth.paypal.client_secret.value = PAYPAL_CREDS["client_secret"]
+    config.options.environment = Environment.SANDBOX
+    config.connector_config.paypal.client_id.value = PAYPAL_CREDS["client_id"]
+    config.connector_config.paypal.client_secret.value = PAYPAL_CREDS["client_secret"]
     return config
 
 

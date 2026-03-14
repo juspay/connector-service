@@ -13,7 +13,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -27,14 +27,15 @@ pub struct MollieAuthType {
     pub profile_token: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for MollieAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for MollieAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Mollie {
+            ConnectorSpecificConfig::Mollie {
                 api_key,
                 profile_token,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 profile_token: profile_token.to_owned(),
@@ -670,7 +671,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         }?;
 
         // Get profile token from auth
-        let auth = MollieAuthType::try_from(&item.connector_auth_type)?;
+        let auth = MollieAuthType::try_from(&item.connector_config)?;
         let profile_token =
             auth.profile_token
                 .ok_or(errors::ConnectorError::InvalidConnectorConfig {
