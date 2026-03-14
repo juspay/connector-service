@@ -7,7 +7,7 @@ use crate::http_client::{
 use connector_service_ffi::handlers::payments::{authorize_req_handler, authorize_res_handler};
 use connector_service_ffi::types::{FfiMetadataPayload, FfiRequestData};
 use connector_service_ffi::utils::ffi_headers_to_masked_metadata;
-use domain_types::router_data::ConnectorSpecificAuth;
+use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 use grpc_api_types::payments::{
@@ -34,7 +34,7 @@ impl ConnectorClient {
     /// Initialize a new ConnectorClient.
     ///
     /// # Arguments
-    /// * `config` - The ConnectorConfig (connector, auth, environment).
+    /// * `config` - The ConnectorConfig (connector_config with typed auth, options with environment).
     /// * `options` - Optional RequestConfig for default http/vault settings.
     pub fn new(
         config: ConnectorConfig,
@@ -57,13 +57,17 @@ impl ConnectorClient {
         })
     }
 
-    /// Builds FfiOptions from config. Environment comes from ConnectorConfig (immutable).
+    /// Builds FfiOptions from config. Environment comes from SdkOptions (immutable).
     fn resolve_ffi_options(&self, _options: &Option<RequestConfig>) -> FfiOptions {
-        let environment = self.config.environment;
+        let environment = self
+            .config
+            .options
+            .as_ref()
+            .map(|o| o.environment)
+            .unwrap_or(0);
         FfiOptions {
             environment,
-            connector: self.config.connector,
-            auth: self.config.auth.clone(),
+            connector_config: self.config.connector_config.clone(),
         }
     }
 
@@ -156,22 +160,31 @@ pub fn build_ffi_request<T>(
     metadata: &HashMap<String, String>,
     options: &FfiOptions,
 ) -> Result<FfiRequestData<T>, Box<dyn Error>> {
+    let proto_config = options
+        .connector_config
+        .as_ref()
+        .ok_or("Missing connector_config in FfiOptions")?;
+
+    let config_variant = proto_config
+        .config
+        .as_ref()
+        .ok_or("Missing config variant in ConnectorSpecificConfig")?;
+
     let connector =
-        domain_types::connector_types::ConnectorEnum::foreign_try_from(options.connector())
+        domain_types::connector_types::ConnectorEnum::foreign_try_from(config_variant.clone())
             .map_err(|e| format!("Connector mapping failed: {e}"))?;
 
-    let auth_proto = options.auth.as_ref().ok_or("Missing auth in FfiOptions")?;
-    let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(auth_proto.clone())
-        .map_err(|e| format!("Auth mapping failed: {e}"))?;
+    let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
+        .map_err(|e| format!("Connector config mapping failed: {e}"))?;
 
     let masked_metadata = ffi_headers_to_masked_metadata(metadata)
-        .map_err(|e| format!("Metadata mapping failed: {e}"))?;
+        .map_err(|e| format!("Metadata mapping failed: {:?}", e))?;
 
     Ok(FfiRequestData {
         payload,
         extracted_metadata: FfiMetadataPayload {
             connector,
-            connector_auth_type,
+            connector_config,
         },
         masked_metadata: Some(masked_metadata),
     })

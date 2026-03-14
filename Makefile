@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate field-probe docs docs-check test-ucs
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -52,6 +52,11 @@ generate:
 	@echo "▶ Generating SDK flows from services.proto…"
 	@$(MAKE) -C sdk generate
 
+## Run interactive UCS connector test runner
+test-ucs:
+	@echo "▶ Starting interactive UCS connector tests…"
+	cargo run -p ucs-connector-tests --bin test_ucs
+
 # Format proto files
 proto-format:
 	@echo "Formatting proto files..."
@@ -78,6 +83,21 @@ proto-clean:
 	@echo "Cleaning generated files..."
 	rm -rf gen
 
+## Run field-probe to generate connector flow data
+field-probe:
+	@echo "▶ Running field-probe to generate connector flow data…"
+	cargo run -p field-probe
+
+## Generate connector docs from source code (all connectors)
+docs: field-probe
+	@echo "▶ Generating connector docs…"
+	python3 scripts/generate-connector-docs.py --all --probe data/field_probe
+
+## Report annotation coverage for connector docs
+docs-check:
+	@echo "▶ Checking connector annotation coverage…"
+	python3 scripts/generate-connector-docs.py --check
+
 ## Show this help
 help:
 	@echo "Usage: make [TARGET]"
@@ -101,5 +121,10 @@ help:
 	@echo "SDK Codegen Targets:"
 	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo
+	@echo "Docs Targets:"
+	@echo "  docs         Regenerate all connector docs from source"
+	@echo "  docs-check   Report which connectors are missing annotation files"
+	@echo
 	@echo "Other Targets:"
+	@echo "  test-ucs Run interactive UCS connector tests"
 	@echo "  help     Show this help message"

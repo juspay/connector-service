@@ -31,7 +31,7 @@ use domain_types::{
         WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
         ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,
@@ -97,11 +97,11 @@ pub struct StripeAuthType {
     pub(super) api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for StripeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for StripeAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(item: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match item {
-            ConnectorSpecificAuth::Stripe { api_key } => Ok(Self {
+            ConnectorSpecificConfig::Stripe { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),

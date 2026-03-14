@@ -275,7 +275,11 @@ macro_rules! implement_connector_operation {
                 extensions: _  // unused in macro
             } = request;
 
-            let (connector, request_id, connector_auth_details) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_auth_type);
+            let (connector, request_id, connector_config) = (
+                metadata_payload.connector,
+                metadata_payload.request_id,
+                metadata_payload.connector_config,
+            );
 
 
             // Get connector data
@@ -294,8 +298,14 @@ macro_rules! implement_connector_operation {
             let specific_request_data = $request_data_constructor(payload.clone())
                 .into_grpc_status()?;
 
+            let connectors = $crate::utils::connectors_with_connector_config_overrides(
+                &connector_config,
+                &config,
+            )
+            .into_grpc_status()?;
+
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone(), &masked_metadata))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), connectors, &masked_metadata))
                 .into_grpc_status()?;
 
             // Create router data
@@ -307,7 +317,7 @@ macro_rules! implement_connector_operation {
             > {
                 flow: std::marker::PhantomData,
                 resource_common_data: common_flow_data,
-                connector_auth_type: connector_auth_details,
+                connector_config,
                 request: specific_request_data,
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };

@@ -63,7 +63,7 @@ The `CreateAccessToken` RPC generates a short-lived authentication token for con
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_access_token_id": "token_001",
     "connector": "STRIPE",

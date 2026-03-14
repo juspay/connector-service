@@ -20,7 +20,7 @@ mod tests {
                 ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             },
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, WalletData},
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -73,7 +73,7 @@ mod tests {
                         None,
                     ),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
-                    connector_meta_data: Some(pii::SecretSerdeValue::new(
+                    connector_feature_data: Some(pii::SecretSerdeValue::new(
                         serde_json::json!({ "shop_name": "test_shop" }),
                     )),
                     amount_captured: None,
@@ -105,8 +105,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Calida {
+                connector_config: ConnectorSpecificConfig::Calida {
                     api_key: Secret::new(api_key),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     authentication_data: None,
@@ -156,7 +157,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
@@ -232,7 +233,7 @@ mod tests {
                         None, None, None, None,
                     ),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_authorized: None,
@@ -262,8 +263,9 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Calida {
+                connector_config: ConnectorSpecificConfig::Calida {
                     api_key: Secret::new(api_key),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
@@ -305,7 +307,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,

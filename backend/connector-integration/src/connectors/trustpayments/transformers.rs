@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -87,15 +87,16 @@ impl TrustpaymentsAuthType {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for TrustpaymentsAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for TrustpaymentsAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Trustpayments {
+            ConnectorSpecificConfig::Trustpayments {
                 username,
                 password,
                 site_reference,
+                ..
             } => Ok(Self {
                 username: username.to_owned(),
                 password: password.to_owned(),
@@ -224,7 +225,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
 
         // Extract auth credentials for alias and sitereference
-        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract payment method data
         let payment_method = match &router_data.request.payment_method_data {
@@ -458,7 +459,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
 
         // Extract auth credentials for alias and sitereference
-        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract transaction reference from connector_transaction_id
         let transaction_reference = router_data
@@ -673,7 +674,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
 
         // Extract auth credentials for alias and sitereference
-        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract transaction reference from connector_transaction_id
         let transaction_reference = router_data
@@ -830,7 +831,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
 
         // Extract auth credentials for alias and sitereference
-        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract transaction reference from connector_transaction_id
         let transaction_reference = router_data.request.connector_transaction_id.clone();
@@ -995,7 +996,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
 
         // Extract auth credentials for alias and sitereference
-        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract parent transaction reference from connector_transaction_id
         let parent_transaction_reference = router_data.request.connector_transaction_id.clone();
@@ -1082,7 +1083,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = &item.router_data;
 
         // Extract auth credentials for alias and sitereference
-        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = TrustpaymentsAuthType::try_from(&router_data.connector_config)?;
 
         // Extract refund transaction reference from connector_refund_id
         let refund_transaction_reference = router_data.request.connector_refund_id.clone();

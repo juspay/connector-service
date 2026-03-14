@@ -70,7 +70,7 @@ The `Authenticate` RPC executes the 3D Secure authentication step. For frictionl
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_order_id": "order_001",
     "amount": {

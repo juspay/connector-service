@@ -16,7 +16,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{Connectors, HasConnectors},
@@ -468,7 +468,7 @@ macros::create_all_prerequisites!(
             let date = OffsetDateTime::now_utc();
             let barclaycard_req = self.get_request_body(req)?;
             let http_method = self.get_http_method();
-            let auth = barclaycard::BarclaycardAuthType::try_from(&req.connector_auth_type)?;
+            let auth = barclaycard::BarclaycardAuthType::try_from(&req.connector_config)?;
             let merchant_account = auth.merchant_account.clone();
             let base_url = self.base_url(req.resource_common_data.connectors());
             let barclaycard_host =
@@ -758,7 +758,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        _auth_type: &ConnectorSpecificAuth,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         // Auth is handled via signature in build_headers
         Ok(vec![])
