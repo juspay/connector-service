@@ -78,6 +78,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
             ConnectorEnum::Finix => Box::new(connectors::Finix::new()),
             ConnectorEnum::Revolv3 => Box::new(connectors::Revolv3::new()),
+            ConnectorEnum::Mpgs => Box::new(connectors::Mpgs::new()),
             ConnectorEnum::Mollie => Box::new(connectors::Mollie::new()),
             ConnectorEnum::Gigadat => Box::new(connectors::Gigadat::new()),
             ConnectorEnum::Paybox => Box::new(connectors::Paybox::new()),

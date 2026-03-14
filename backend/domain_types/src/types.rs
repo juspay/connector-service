@@ -361,6 +361,7 @@ pub struct Connectors {
     pub hyperpg: ConnectorParams,
     pub zift: ConnectorParams,
     pub revolv3: ConnectorParams,
+    pub mpgs: ConnectorParams,
     pub truelayer: ConnectorParams,
     pub finix: ConnectorParams,
 }

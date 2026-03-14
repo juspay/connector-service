@@ -218,6 +218,9 @@ pub use self::zift::Zift;
 pub mod revolv3;
 pub use self::revolv3::Revolv3;
 
+pub mod mpgs;
+pub use self::mpgs::Mpgs;
+
 pub mod truelayer;
 pub use self::truelayer::Truelayer;
 
