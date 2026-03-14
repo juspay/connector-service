@@ -190,6 +190,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Python codegen dependencies
+        run: pip install jinja2 grpcio-tools mypy-protobuf
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
