@@ -108,7 +108,7 @@ fn generate_value_for_path(path: &str, runner: &mut TestRunner) -> Result<String
 }
 
 /// Returns semantic ID prefixes so generated identifiers are easier to debug.
-fn id_prefix_for_path(path: &str) -> &'static str {
+pub fn id_prefix_for_path(path: &str) -> &'static str {
     let Some((left, _)) = path.rsplit_once('.') else {
         return "id";
     };
@@ -128,7 +128,7 @@ fn id_prefix_for_path(path: &str) -> &'static str {
     }
 }
 
-fn id_prefix_for_leaf_path(path: &str) -> Option<&'static str> {
+pub fn id_prefix_for_leaf_path(path: &str) -> Option<&'static str> {
     let field = path.rsplit('.').next().unwrap_or(path);
     let prefix = match field {
         "merchant_transaction_id" => "mti",
@@ -248,14 +248,14 @@ fn generic_string_strategy() -> BoxedStrategy<String> {
         .boxed()
 }
 
-fn is_auto_generate_sentinel(value: &Value) -> bool {
+pub fn is_auto_generate_sentinel(value: &Value) -> bool {
     let Some(text) = value.as_str() else {
         return false;
     };
     text.to_ascii_lowercase().contains("auto_generate")
 }
 
-fn is_context_deferred_path(path: &str) -> bool {
+pub fn is_context_deferred_path(path: &str) -> bool {
     matches!(
         path,
         "customer.connector_customer_id"
@@ -359,147 +359,4 @@ fn set_json_path_value(root: &mut Value, path: &str, value: Value) -> bool {
     }
 
     false
-}
-
-#[cfg(test)]
-#[allow(clippy::indexing_slicing)]
-mod tests {
-    use serde_json::json;
-
-    use super::{
-        id_prefix_for_leaf_path, id_prefix_for_path, is_auto_generate_sentinel,
-        is_context_deferred_path, resolve_auto_generate,
-    };
-
-    #[test]
-    fn sentinel_detection_supports_auto_generate_variants() {
-        assert!(is_auto_generate_sentinel(&json!("auto_generate")));
-        assert!(is_auto_generate_sentinel(&json!("cust_auto_generate")));
-        assert!(!is_auto_generate_sentinel(&json!("fixed_value")));
-    }
-
-    #[test]
-    fn id_prefix_mapping_uses_expected_prefixes() {
-        assert_eq!(id_prefix_for_path("merchant_transaction_id.id"), "mti");
-        assert_eq!(id_prefix_for_path("merchant_refund_id.id"), "mri");
-        assert_eq!(id_prefix_for_path("merchant_customer_id.id"), "mcui");
-        assert_eq!(id_prefix_for_path("unknown.id"), "id");
-        assert_eq!(
-            id_prefix_for_leaf_path("merchant_transaction_id"),
-            Some("mti")
-        );
-        assert_eq!(id_prefix_for_leaf_path("merchant_capture_id"), Some("mci"));
-        assert_eq!(id_prefix_for_leaf_path("unknown"), None);
-    }
-
-    #[test]
-    fn resolves_auto_generate_placeholders_in_request_payload() {
-        let mut req = json!({
-            "merchant_transaction_id": "auto_generate",
-            "customer": {
-                "name": "auto_generate",
-                "email": {"value": "auto_generate"},
-                "phone_number": "auto_generate"
-            },
-            "address": {
-                "shipping_address": {
-                    "first_name": {"value": "auto_generate"},
-                    "last_name": {"value": "auto_generate"},
-                    "line1": {"value": "auto_generate"},
-                    "city": {"value": "auto_generate"},
-                    "zip_code": {"value": "auto_generate"},
-                    "phone_number": {"value": "auto_generate"}
-                }
-            },
-            "payment_method": {
-                "card": {
-                    "card_holder_name": {"value": "auto_generate"},
-                    "card_number": {"value": "4111111111111111"}
-                }
-            }
-        });
-
-        resolve_auto_generate(&mut req).expect("auto generation should succeed");
-
-        let generated_id = req["merchant_transaction_id"]
-            .as_str()
-            .expect("id should be string");
-        assert!(generated_id.starts_with("mti_"));
-
-        assert_ne!(req["customer"]["name"], json!("auto_generate"));
-        assert_ne!(req["customer"]["email"]["value"], json!("auto_generate"));
-        assert_ne!(req["customer"]["phone_number"], json!("auto_generate"));
-        assert_ne!(
-            req["address"]["shipping_address"]["first_name"]["value"],
-            json!("auto_generate")
-        );
-        assert_ne!(
-            req["address"]["shipping_address"]["phone_number"]["value"],
-            json!("auto_generate")
-        );
-        assert_ne!(
-            req["payment_method"]["card"]["card_holder_name"]["value"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["payment_method"]["card"]["card_number"]["value"],
-            json!("4111111111111111")
-        );
-    }
-
-    #[test]
-    fn keeps_context_deferred_fields_unresolved() {
-        let mut req = json!({
-            "customer": { "connector_customer_id": "auto_generate" },
-            "state": {
-                "connector_customer_id": "auto_generate",
-                "access_token": {
-                    "token": { "value": "auto_generate" },
-                    "token_type": "auto_generate",
-                    "expires_in_seconds": "auto_generate"
-                }
-            },
-            "connector_feature_data": { "value": "auto_generate" },
-            "connector_transaction_id": "auto_generate",
-            "refund_id": "auto_generate",
-            "merchant_transaction_id": "auto_generate"
-        });
-
-        resolve_auto_generate(&mut req).expect("auto generation should succeed");
-
-        assert_eq!(
-            req["customer"]["connector_customer_id"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["state"]["connector_customer_id"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["state"]["access_token"]["token"]["value"],
-            json!("auto_generate")
-        );
-        assert_eq!(
-            req["connector_feature_data"]["value"],
-            json!("auto_generate")
-        );
-        assert_eq!(req["connector_transaction_id"], json!("auto_generate"));
-        assert_eq!(req["refund_id"], json!("auto_generate"));
-
-        // Non-deferred path should still be generated.
-        let merchant_txn_id = req["merchant_transaction_id"]
-            .as_str()
-            .expect("merchant transaction id should be generated");
-        assert!(merchant_txn_id.starts_with("mti_"));
-    }
-
-    #[test]
-    fn context_deferred_path_matching() {
-        assert!(is_context_deferred_path("customer.connector_customer_id"));
-        assert!(is_context_deferred_path("state.access_token.token.value"));
-        assert!(is_context_deferred_path("connector_feature_data.value"));
-        assert!(is_context_deferred_path("connector_transaction_id"));
-        assert!(is_context_deferred_path("connector_transaction_id.id"));
-        assert!(!is_context_deferred_path("merchant_transaction_id.id"));
-    }
 }

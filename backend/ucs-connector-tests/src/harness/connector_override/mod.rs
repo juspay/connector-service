@@ -5,8 +5,8 @@ use serde_json::Value;
 use crate::harness::scenario_types::{FieldAssert, ScenarioError};
 
 mod default;
-mod json_merge;
-mod loader;
+pub mod json_merge;
+pub mod loader;
 
 /// Connector-specific behavior extension points.
 ///
@@ -123,7 +123,7 @@ pub fn context_deferred_paths_for_connector(connector: &str) -> Vec<String> {
 /// Merges assertion patches:
 /// - `null` removes a rule
 /// - object value replaces/adds a rule
-fn apply_assertion_patch(
+pub fn apply_assertion_patch(
     assertions: &mut BTreeMap<String, FieldAssert>,
     assertion_patch: &BTreeMap<String, Value>,
 ) -> Result<(), ScenarioError> {
@@ -146,51 +146,4 @@ fn apply_assertion_patch(
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-#[allow(clippy::indexing_slicing)]
-mod tests {
-    use serde_json::{json, Value};
-
-    use super::apply_assertion_patch;
-    use crate::harness::scenario_types::FieldAssert;
-
-    #[test]
-    fn assertion_patch_adds_replaces_and_removes_rules() {
-        let mut assertions = std::collections::BTreeMap::new();
-        assertions.insert(
-            "status".to_string(),
-            FieldAssert::OneOf {
-                one_of: vec![Value::String("AUTHORIZED".to_string())],
-            },
-        );
-        assertions.insert(
-            "error".to_string(),
-            FieldAssert::MustNotExist {
-                must_not_exist: true,
-            },
-        );
-
-        let patch = std::collections::BTreeMap::from([
-            ("status".to_string(), json!({"one_of": ["CHARGED"]})),
-            ("error".to_string(), Value::Null),
-            (
-                "connector_transaction_id".to_string(),
-                json!({"must_exist": true}),
-            ),
-        ]);
-
-        apply_assertion_patch(&mut assertions, &patch).expect("assertion patch should succeed");
-
-        assert!(matches!(
-            assertions.get("status"),
-            Some(FieldAssert::OneOf { one_of }) if one_of == &vec![Value::String("CHARGED".to_string())]
-        ));
-        assert!(!assertions.contains_key("error"));
-        assert!(matches!(
-            assertions.get("connector_transaction_id"),
-            Some(FieldAssert::MustExist { must_exist: true })
-        ));
-    }
 }

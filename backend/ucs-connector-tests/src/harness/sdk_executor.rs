@@ -316,7 +316,7 @@ fn execute_connector_http_request(
 }
 
 /// Parses scenario JSON payload into a strongly typed protobuf request.
-fn parse_sdk_payload<T: DeserializeOwned>(
+pub fn parse_sdk_payload<T: DeserializeOwned>(
     suite: &str,
     scenario: &str,
     connector: &str,
@@ -346,7 +346,7 @@ fn environment_discriminant(environment: Environment) -> i32 {
 }
 
 /// Converts harness credential shape into connector-specific protobuf config oneof.
-fn build_proto_connector_config(
+pub fn build_proto_connector_config(
     connector: &str,
     connector_auth: &ConnectorAuth,
 ) -> Result<ConnectorSpecificConfig, ScenarioError> {
@@ -484,116 +484,5 @@ fn convert_sdk_error_label(error: ScenarioError) -> ScenarioError {
     match error {
         ScenarioError::GrpcurlExecution { message } => ScenarioError::SdkExecution { message },
         other => other,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{
-        build_proto_connector_config, parse_sdk_payload, supports_sdk_connector, supports_sdk_suite,
-    };
-    use crate::harness::credentials::ConnectorAuth;
-    use crate::harness::scenario_api::get_the_grpc_req_for_connector;
-    use grpc_api_types::payments::connector_specific_config;
-    use grpc_api_types::payments::identifier;
-    use grpc_api_types::payments::{self, payment_method};
-
-    #[test]
-    fn sdk_support_matrix_matches_current_scope() {
-        assert!(supports_sdk_connector("stripe"));
-        assert!(supports_sdk_connector("paypal"));
-        assert!(supports_sdk_connector("authorizedotnet"));
-        assert!(!supports_sdk_connector("adyen"));
-
-        assert!(supports_sdk_suite("authorize"));
-        assert!(supports_sdk_suite("create_access_token"));
-        assert!(!supports_sdk_suite("refund_sync"));
-    }
-
-    #[test]
-    fn stripe_auth_maps_to_proto_shape() {
-        let auth = ConnectorAuth::HeaderKey {
-            api_key: "sk_test_123".to_string(),
-        };
-        let proto = build_proto_connector_config("stripe", &auth).expect("stripe auth should map");
-        assert!(matches!(
-            proto.config,
-            Some(connector_specific_config::Config::Stripe(_))
-        ));
-    }
-
-    #[test]
-    fn paypal_auth_accepts_body_and_signature_shapes() {
-        let body = ConnectorAuth::BodyKey {
-            api_key: "client_secret".to_string(),
-            key1: "client_id".to_string(),
-        };
-        let body_proto =
-            build_proto_connector_config("paypal", &body).expect("paypal body auth should map");
-        assert!(matches!(
-            body_proto.config,
-            Some(connector_specific_config::Config::Paypal(_))
-        ));
-
-        let sig = ConnectorAuth::SignatureKey {
-            api_key: "client_secret".to_string(),
-            key1: "client_id".to_string(),
-            api_secret: "payer_id".to_string(),
-        };
-        let sig_proto =
-            build_proto_connector_config("paypal", &sig).expect("paypal signature auth should map");
-        assert!(matches!(
-            sig_proto.config,
-            Some(connector_specific_config::Config::Paypal(_))
-        ));
-    }
-
-    #[test]
-    fn authorize_scenario_maps_to_card_payment_method() {
-        let req = get_the_grpc_req_for_connector(
-            "authorize",
-            "no3ds_auto_capture_credit_card",
-            "authorizedotnet",
-        )
-        .expect("authorize scenario should load");
-
-        let parsed: payments::PaymentServiceAuthorizeRequest = parse_sdk_payload(
-            "authorize",
-            "no3ds_auto_capture_credit_card",
-            "authorizedotnet",
-            &req,
-        )
-        .expect("sdk payload parse should succeed");
-
-        let payment_method = parsed
-            .payment_method
-            .expect("payment_method should be present after parsing");
-        assert!(
-            matches!(
-                payment_method.payment_method,
-                Some(payment_method::PaymentMethod::Card(_))
-            ),
-            "unexpected payment_method variant: {:?}",
-            payment_method.payment_method
-        );
-    }
-
-    #[test]
-    fn serde_shapes_for_oneof_wrappers_are_nested() {
-        let payment_method = payments::PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(
-                payments::CardDetails::default(),
-            )),
-        };
-        let payment_method_json =
-            serde_json::to_value(payment_method).expect("payment method should serialize");
-        assert!(payment_method_json.get("payment_method").is_some());
-
-        let identifier = payments::Identifier {
-            id_type: Some(identifier::IdType::Id("id_123".to_string())),
-        };
-        let identifier_json =
-            serde_json::to_value(identifier).expect("identifier should serialize");
-        assert!(identifier_json.get("id_type").is_some());
     }
 }

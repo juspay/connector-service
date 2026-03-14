@@ -78,7 +78,7 @@ pub fn report_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("report.json")
 }
 
-fn md_path(json_path: &Path) -> PathBuf {
+pub fn md_path(json_path: &Path) -> PathBuf {
     json_path
         .with_file_name("test_report")
         .join("test_overview.md")
@@ -270,7 +270,7 @@ fn suite_service_name(suite: &str) -> &'static str {
     }
 }
 
-fn suite_sort_key(suite: &str) -> usize {
+pub fn suite_sort_key(suite: &str) -> usize {
     SUITE_ORDER
         .iter()
         .position(|&s| s == suite)
@@ -297,9 +297,9 @@ struct MatrixEntry {
     grpc_response: Option<String>,
 }
 
-const MASKED_VALUE: &str = "***MASKED***";
+pub const MASKED_VALUE: &str = "***MASKED***";
 
-fn sanitize_report_entry_in_place(entry: &mut ReportEntry) {
+pub fn sanitize_report_entry_in_place(entry: &mut ReportEntry) {
     if let Some(error) = entry.error.as_mut() {
         *error = mask_sensitive_text(error);
     }
@@ -408,7 +408,7 @@ fn mask_sensitive_header_line(line: &str) -> String {
     masked
 }
 
-fn mask_bearer_tokens(line: &str) -> String {
+pub fn mask_bearer_tokens(line: &str) -> String {
     let mut masked = line.to_string();
     let mut search_start = 0usize;
 
@@ -557,7 +557,7 @@ fn dependency_chain_summary(report: &ScenarioRunReport, main: &MatrixEntry) -> S
     chain.join(" -> ")
 }
 
-fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), String> {
+pub fn generate_md(json_path: &Path, report: &ScenarioRunReport) -> Result<(), String> {
     let report_dir = report_dir_path(json_path);
     fs::create_dir_all(&report_dir).map_err(|e| {
         format!(
@@ -1068,280 +1068,4 @@ fn percent(numerator: usize, denominator: usize) -> f64 {
     let safe_den = u32::try_from(denominator).unwrap_or(u32::MAX);
 
     (f64::from(safe_num) / f64::from(safe_den)) * 100.0
-}
-
-#[cfg(test)]
-mod tests {
-    use std::fs;
-
-    use super::*;
-
-    #[test]
-    fn extract_pm_and_pmt_from_card_request() {
-        let req = serde_json::json!({
-            "payment_method": {
-                "card": {
-                    "card_type": "credit",
-                    "card_number": {"value": "4111111111111111"}
-                }
-            }
-        });
-        let (pm, pmt) = extract_pm_and_pmt(Some(&req));
-        assert_eq!(pm.as_deref(), Some("card"));
-        assert_eq!(pmt.as_deref(), Some("credit"));
-    }
-
-    #[test]
-    fn extract_pm_and_pmt_missing() {
-        let req = serde_json::json!({"amount": 1000});
-        let (pm, pmt) = extract_pm_and_pmt(Some(&req));
-        assert!(pm.is_none());
-        assert!(pmt.is_none());
-    }
-
-    #[test]
-    fn suite_ordering_is_consistent() {
-        assert!(suite_sort_key("create_access_token") < suite_sort_key("authorize"));
-        assert!(suite_sort_key("authorize") < suite_sort_key("capture"));
-        assert!(suite_sort_key("capture") < suite_sort_key("refund"));
-        assert!(suite_sort_key("refund") < suite_sort_key("get"));
-        assert!(suite_sort_key("get") < suite_sort_key("refund_sync"));
-        assert!(suite_sort_key("refund_sync") < suite_sort_key("setup_recurring"));
-        assert!(suite_sort_key("setup_recurring") < suite_sort_key("recurring_charge"));
-    }
-
-    #[test]
-    fn generated_markdown_uses_plain_status_without_badges() {
-        let temp_root = std::env::temp_dir().join(format!("ucs-report-{}", now_epoch_ms()));
-        fs::create_dir_all(&temp_root).expect("temp dir should be creatable");
-        let json_path = temp_root.join("report.json");
-
-        let report = ScenarioRunReport {
-            runs: vec![
-                ReportEntry {
-                    run_at_epoch_ms: now_epoch_ms(),
-                    suite: "authorize".to_string(),
-                    scenario: "no3ds_auto_capture_credit_card".to_string(),
-                    connector: "stripe".to_string(),
-                    pm: Some("card".to_string()),
-                    pmt: Some("credit".to_string()),
-                    endpoint: "localhost:8000".to_string(),
-                    is_dependency: false,
-                    assertion_result: "PASS".to_string(),
-                    response_status: None,
-                    error: None,
-                    dependency: vec![],
-                    req_body: Some(serde_json::json!({"field": "value"})),
-                    res_body: Some(serde_json::json!({"status": "CHARGED"})),
-                    grpc_request: None,
-                    grpc_response: None,
-                },
-                ReportEntry {
-                    run_at_epoch_ms: now_epoch_ms(),
-                    suite: "create_customer".to_string(),
-                    scenario: "create_customer".to_string(),
-                    connector: "paypal".to_string(),
-                    pm: None,
-                    pmt: None,
-                    endpoint: "localhost:8000".to_string(),
-                    is_dependency: true,
-                    assertion_result: "PASS".to_string(),
-                    response_status: None,
-                    error: None,
-                    dependency: vec![],
-                    req_body: Some(serde_json::json!({"dep_req": "value"})),
-                    res_body: Some(serde_json::json!({"dep_res": "ok"})),
-                    grpc_request: None,
-                    grpc_response: None,
-                },
-                ReportEntry {
-                    run_at_epoch_ms: now_epoch_ms(),
-                    suite: "authorize".to_string(),
-                    scenario: "no3ds_auto_capture_credit_card".to_string(),
-                    connector: "paypal".to_string(),
-                    pm: Some("card".to_string()),
-                    pmt: Some("credit".to_string()),
-                    endpoint: "localhost:8000".to_string(),
-                    is_dependency: false,
-                    assertion_result: "FAIL".to_string(),
-                    response_status: None,
-                    error: Some("forced failure".to_string()),
-                    dependency: vec!["create_customer(create_customer)".to_string()],
-                    req_body: Some(serde_json::json!({"field": "value"})),
-                    res_body: Some(serde_json::json!({"error": "forced failure"})),
-                    grpc_request: None,
-                    grpc_response: None,
-                },
-            ],
-        };
-
-        generate_md(&json_path, &report).expect("markdown generation should succeed");
-
-        let overview_path = md_path(&json_path);
-        let content =
-            fs::read_to_string(&overview_path).expect("generated markdown should be readable");
-
-        assert!(!content.contains("img.shields.io"));
-        assert!(!content.contains("![Result]"));
-        assert!(!content.contains("![Pass Rate]"));
-        assert!(!content.contains("![Passed]"));
-        assert!(!content.contains("![Failed]"));
-
-        assert!(content.contains("## Connector Flow Matrix"));
-        assert!(!content.contains("## Scenario Performance Matrix"));
-        assert!(!content.contains("## Test Matrix"));
-        assert!(!content.contains("## Summary"));
-        assert!(!content.contains("## Scenario Details"));
-        assert!(content.contains("[100.0%](./connectors/stripe/authorize.md)"));
-        assert!(content.contains("[0.0%](./connectors/paypal/authorize.md)"));
-
-        let stripe_suite_detail = temp_root
-            .join("test_report")
-            .join("connectors")
-            .join("stripe")
-            .join("authorize.md");
-        let stripe_suite_detail_content = fs::read_to_string(&stripe_suite_detail)
-            .expect("suite detail markdown should be readable");
-        assert!(stripe_suite_detail_content.contains("# Connector `stripe` / Suite `authorize`"));
-        assert!(stripe_suite_detail_content.contains(
-            "[`no3ds_auto_capture_credit_card`](./authorize/no3ds-auto-capture-credit-card.md)"
-        ));
-
-        let stripe_detail = temp_root
-            .join("test_report")
-            .join("connectors")
-            .join("stripe")
-            .join("authorize")
-            .join("no3ds-auto-capture-credit-card.md");
-        let stripe_detail_content =
-            fs::read_to_string(&stripe_detail).expect("detail markdown should be readable");
-        assert!(stripe_detail_content.contains(
-            "# Connector `stripe` / Suite `authorize` / Scenario `no3ds_auto_capture_credit_card`"
-        ));
-        assert!(stripe_detail_content.contains("<summary>Show Request (masked)</summary>"));
-        assert!(stripe_detail_content.contains("<summary>Show Response (masked)</summary>"));
-        assert!(!stripe_detail_content.contains("Show gRPC Request (masked)"));
-        assert!(!stripe_detail_content.contains("Show gRPC Response (masked)"));
-        assert!(stripe_detail_content.contains("\"field\": \"value\""));
-        assert!(stripe_detail_content.contains("\"status\": \"CHARGED\""));
-        assert!(stripe_detail_content.contains(
-            "[Back to Connector Suite](../authorize.md) | [Back to Overview](../../../test_overview.md)"
-        ));
-
-        let paypal_detail = temp_root
-            .join("test_report")
-            .join("connectors")
-            .join("paypal")
-            .join("authorize")
-            .join("no3ds-auto-capture-credit-card.md");
-        let paypal_detail_content =
-            fs::read_to_string(&paypal_detail).expect("paypal detail markdown should be readable");
-        assert!(
-            paypal_detail_content.contains("<summary>Show Dependency Request (masked)</summary>")
-        );
-        assert!(
-            paypal_detail_content.contains("<summary>Show Dependency Response (masked)</summary>")
-        );
-        assert!(paypal_detail_content.contains("\"dep_req\": \"value\""));
-        assert!(paypal_detail_content.contains("\"dep_res\": \"ok\""));
-
-        let paypal_suite_detail = temp_root
-            .join("test_report")
-            .join("connectors")
-            .join("paypal")
-            .join("authorize.md");
-        let paypal_suite_detail_content = fs::read_to_string(&paypal_suite_detail)
-            .expect("paypal suite detail should be readable");
-        assert!(paypal_suite_detail_content.contains("## Failed Scenarios"));
-
-        let _ = fs::remove_dir_all(temp_root);
-    }
-
-    #[test]
-    fn sanitization_masks_sensitive_grpc_trace_and_json_fields() {
-        let mut entry = ReportEntry {
-            run_at_epoch_ms: now_epoch_ms(),
-            suite: "authorize".to_string(),
-            scenario: "no3ds_auto_capture_credit_card".to_string(),
-            connector: "stripe".to_string(),
-            pm: Some("card".to_string()),
-            pmt: Some("credit".to_string()),
-            endpoint: "localhost:50051".to_string(),
-            is_dependency: false,
-            assertion_result: "PASS".to_string(),
-            response_status: None,
-            error: Some("Authorization: Bearer token123".to_string()),
-            dependency: vec![],
-            req_body: Some(serde_json::json!({
-                "api_key": "sk_test_123",
-                "payment_method": {
-                    "card": {
-                        "card_number": {"value": "4111111111111111"},
-                        "card_cvc": "123"
-                    }
-                }
-            })),
-            res_body: Some(serde_json::json!({
-                "access_token": "access_token_value"
-            })),
-            grpc_request: Some(
-                "grpcurl -plaintext \\\n+  -H \"x-api-key: sk_test_123\" \\\n+  -H \"authorization: Bearer token123\" \\\n+  -d @ localhost:50051 types.PaymentService/Authorize <<'JSON'"
-                    .to_string(),
-            ),
-            grpc_response: Some(
-                "Response headers received:\nauthorization: Bearer token123\nx-api-key: sk_test_123"
-                    .to_string(),
-            ),
-        };
-
-        sanitize_report_entry_in_place(&mut entry);
-
-        let grpc_request = entry.grpc_request.expect("grpc request should exist");
-        let grpc_response = entry.grpc_response.expect("grpc response should exist");
-        let error = entry.error.expect("error should exist");
-
-        assert!(!grpc_request.contains("sk_test_123"));
-        assert!(!grpc_request.contains("token123"));
-        assert!(!grpc_response.contains("sk_test_123"));
-        assert!(!grpc_response.contains("token123"));
-        assert!(!error.contains("token123"));
-        assert!(grpc_request.contains(MASKED_VALUE));
-        assert!(grpc_response.contains(MASKED_VALUE));
-        assert!(error.contains(MASKED_VALUE));
-
-        let req_body = entry.req_body.expect("request body should exist");
-        let res_body = entry.res_body.expect("response body should exist");
-
-        assert_eq!(
-            req_body.get("api_key").and_then(Value::as_str),
-            Some(MASKED_VALUE)
-        );
-        assert_eq!(
-            req_body
-                .pointer("/payment_method/card/card_number")
-                .and_then(Value::as_str),
-            Some(MASKED_VALUE)
-        );
-        assert_eq!(
-            req_body
-                .pointer("/payment_method/card/card_cvc")
-                .and_then(Value::as_str),
-            Some(MASKED_VALUE)
-        );
-        assert_eq!(
-            res_body.get("access_token").and_then(Value::as_str),
-            Some(MASKED_VALUE)
-        );
-    }
-
-    #[test]
-    fn bearer_masking_is_idempotent_and_masks_multiple_tokens() {
-        let line = "authorization: Bearer abc123 Bearer ***MASKED*** Bearer def456";
-        let masked_once = mask_bearer_tokens(line);
-        let masked_twice = mask_bearer_tokens(&masked_once);
-
-        assert_eq!(masked_once, masked_twice);
-        assert!(!masked_once.contains("abc123"));
-        assert!(!masked_once.contains("def456"));
-    }
 }

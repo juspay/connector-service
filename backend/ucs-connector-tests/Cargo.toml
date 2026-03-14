@@ -26,6 +26,12 @@ uuid = { version = "1.18.1", features = ["v4"] }
 
 [dev-dependencies]
 serde_ignored = "0.1"
+cucumber = "0.21"
+futures = "0.3"
+
+[[test]]
+name = "cucumber_tests"
+harness = false
 
 [lints]
 workspace = true
