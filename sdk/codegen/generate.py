@@ -516,14 +516,17 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
         lines.append(f"import uniffi.connector_service_ffi.{camel}Transformer")
     lines.append("")
 
-    # FlowRegistry object
+    # FlowRegistry object — FFI req/res transformers take (requestBytes, optionsBytes) or
+    # (responseBytes, requestBytes, optionsBytes); metadata is carried inside options/context.
     lines += [
         "object FlowRegistry {",
         "    val reqTransformers: Map<String, (ByteArray, ByteArray) -> ByteArray> = mapOf(",
     ]
     for f in flows:
         camel = to_camel(f["name"])
-        lines.append(f'        "{f["name"]}" to ::{camel}ReqTransformer,')
+        lines.append(
+            f'        "{f["name"]}" to {{ requestBytes, optionsBytes -> {camel}ReqTransformer(requestBytes, optionsBytes) }},'
+        )
     lines += [
         "    )",
         "",
@@ -531,7 +534,9 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
     ]
     for f in flows:
         camel = to_camel(f["name"])
-        lines.append(f'        "{f["name"]}" to ::{camel}ResTransformer,')
+        lines.append(
+            f'        "{f["name"]}" to {{ responseBytes, requestBytes, optionsBytes -> {camel}ResTransformer(responseBytes, requestBytes, optionsBytes) }},'
+        )
     lines += ["    )", ""]
     if single_flows:
         lines += [
@@ -540,7 +545,9 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
         ]
         for f in single_flows:
             camel = to_camel(f["name"])
-            lines.append(f'        "{f["name"]}" to ::{camel}Transformer,')
+            lines.append(
+                f'        "{f["name"]}" to {{ requestBytes, optionsBytes -> {camel}Transformer(requestBytes, optionsBytes) }},'
+            )
         lines += ["    )", ""]
     lines += ["}", ""]
 

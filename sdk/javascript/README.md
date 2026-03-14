@@ -36,7 +36,7 @@ optionally exercises the full HTTP round-trip if `STRIPE_API_KEY` is set.
 ```bash
 # Build tarball containing all available platform binaries (for CI / release)
 make dist
-# → artifacts/sdk-javascript/hyperswitch-payments-0.1.0.tgz
+# → artifacts/sdk-javascript/hs-playlib-0.3.0.tgz
 ```
 
 ## How it works
