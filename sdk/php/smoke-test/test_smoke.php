@@ -179,11 +179,11 @@ function buildConnectorConfig(string $connectorName, array $authConfig): Connect
 
     // Build the connector-specific auth message
     // The message class name follows the pattern set by proto generation
-    $authMsgClass = '\\Types\\' . ucfirst($connectorName) . 'AuthType';
+    $authMsgClass = '\\Types\\' . ucfirst($connectorName) . 'Auth';
     if (!class_exists($authMsgClass)) {
         throw new \InvalidArgumentException(
             "No auth message class found for connector '{$connectorName}'. "
-            . "Expected class: {$authMsgClass}"
+            . "Expected class: {$authMsgClass} (generated from proto message {ConnectorName}Auth)"
         );
     }
     $authMsg = new $authMsgClass();
