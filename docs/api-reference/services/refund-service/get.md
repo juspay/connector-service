@@ -75,7 +75,7 @@ The `Get` RPC retrieves the current status of a refund from the payment processo
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_refund_id": "refund_001",
     "connector_transaction_id": "pi_3Oxxx...",

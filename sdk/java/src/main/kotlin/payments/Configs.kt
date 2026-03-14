@@ -16,6 +16,7 @@ import types.SdkConfig
 
 typealias Environment = SdkConfig.Environment
 typealias ConnectorConfig = SdkConfig.ConnectorConfig
+typealias SdkOptions = SdkConfig.SdkOptions
 typealias RequestConfig = SdkConfig.RequestConfig
 typealias HttpConfig = SdkConfig.HttpConfig
 typealias CaCert = SdkConfig.CaCert

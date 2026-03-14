@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -29,14 +29,15 @@ pub struct PaymeAuthType {
     pub payme_client_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PaymeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PaymeAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Payme {
+            ConnectorSpecificConfig::Payme {
                 seller_payme_id,
                 payme_client_key,
+                ..
             } => Ok(Self {
                 seller_payme_id: seller_payme_id.to_owned(),
                 payme_client_key: payme_client_key.to_owned(),
@@ -414,7 +415,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Get authentication
-        let auth = PaymeAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PaymeAuthType::try_from(&item.connector_config)?;
 
         // Extract connector transaction ID (payme_sale_id)
         let sale_payme_id = item
@@ -543,7 +544,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Get authentication
-        let auth = PaymeAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PaymeAuthType::try_from(&item.connector_config)?;
 
         // Extract connector transaction ID (payme_sale_id) from ResponseId
         let payme_sale_id = item
@@ -690,7 +691,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Get authentication
-        let auth = PaymeAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PaymeAuthType::try_from(&item.connector_config)?;
 
         // Extract the original payment transaction ID (payme_sale_id)
         let payme_sale_id = item.request.connector_transaction_id.clone();
@@ -818,7 +819,7 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
         item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Get authentication
-        let auth = PaymeAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PaymeAuthType::try_from(&item.connector_config)?;
 
         // Extract payme_transaction_id (this is the connector_refund_id from refund response)
         let payme_transaction_id = item.request.connector_refund_id.clone();
@@ -912,7 +913,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
         item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Get authentication
-        let auth = PaymeAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PaymeAuthType::try_from(&item.connector_config)?;
 
         // Extract connector transaction ID (payme_sale_id) to void
         let payme_sale_id = item.request.connector_transaction_id.clone();
@@ -1076,7 +1077,7 @@ impl
             PaymentCreateOrderResponse,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PaymeAuthType::try_from(&item.connector_auth_type)?;
+        let auth = PaymeAuthType::try_from(&item.connector_config)?;
 
         // For CreateOrder, we default to "authorize" (manual capture)
         // The actual capture behavior is determined later in the payment flow

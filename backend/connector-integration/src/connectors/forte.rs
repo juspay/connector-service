@@ -29,7 +29,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -396,7 +396,7 @@ macros::create_all_prerequisites!(
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
             let content_type = ConnectorCommon::common_get_content_type(self);
-            let mut common_headers = self.get_auth_header(&req.connector_auth_type)?;
+            let mut common_headers = self.get_auth_header(&req.connector_config)?;
             common_headers.push((
                 headers::CONTENT_TYPE.to_string(),
                 content_type.to_string().into(),
@@ -443,7 +443,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_auth_type)?;
+            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
             Ok(format!(
                 "{}/organizations/{}/locations/{}/transactions",
                 self.base_url(&req.resource_common_data.connectors),
@@ -476,7 +476,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_auth_type)?;
+            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
             let txn_id = req.request.connector_transaction_id.get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             Ok(format!(
@@ -514,7 +514,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_auth_type)?;
+            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
             Ok(format!("{}/organizations/{}/locations/{}/transactions", self.connector_base_url_refunds(req), auth.organization_id.peek(), auth.location_id.peek()))
         }
     }
@@ -542,7 +542,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_auth_type)?;
+            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
             Ok(format!(
                 "{}/organizations/{}/locations/{}/transactions/{}",
                 self.connector_base_url_refunds(req),
@@ -578,7 +578,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_auth_type)?;
+            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
             Ok(format!("{}/organizations/{}/locations/{}/transactions", self.connector_base_url_payments(req), auth.organization_id.peek(),auth.location_id.peek()))
         }
     }
@@ -607,7 +607,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_auth_type)?;
+            let auth: forte::ForteAuthType = forte::ForteAuthType::try_from(&req.connector_config)?;
             Ok(format!("{}/organizations/{}/locations/{}/transactions/{}", self.connector_base_url_payments(req), auth.organization_id.peek(),auth.location_id.peek(),req.request.connector_transaction_id))
         }
     }
@@ -632,7 +632,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = forte::ForteAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

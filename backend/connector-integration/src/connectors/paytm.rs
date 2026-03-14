@@ -28,7 +28,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -373,7 +373,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        _auth_type: &ConnectorSpecificAuth,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         Ok(vec![(
             constants::CONTENT_TYPE_HEADER.to_string(),
@@ -408,7 +408,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let headers = self.get_auth_header(&req.connector_auth_type)?;
+            let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
 
@@ -417,7 +417,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
+            let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
             let order_id = &req.resource_common_data.connector_request_reference_id;
 
@@ -477,7 +477,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
 
-            let headers = self.get_auth_header(&req.connector_auth_type)?;
+            let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
 
@@ -486,7 +486,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
+            let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
             let order_id = &req.resource_common_data.connector_request_reference_id;
 
@@ -523,7 +523,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let headers = self.get_auth_header(&req.connector_auth_type)?;
+            let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
 

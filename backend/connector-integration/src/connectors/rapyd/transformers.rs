@@ -7,7 +7,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -121,13 +121,14 @@ pub struct RapydAuthType {
     pub(super) secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for RapydAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for RapydAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Rapyd {
+            ConnectorSpecificConfig::Rapyd {
                 access_key,
                 secret_key,
+                ..
             } => Ok(Self {
                 access_key: access_key.to_owned(),
                 secret_key: secret_key.to_owned(),

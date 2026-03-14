@@ -38,40 +38,46 @@ macro_rules! req_transformer {
             payload: $request_type,
             config: &std::sync::Arc<ucs_env::configs::Config>,
             connector: domain_types::connector_types::ConnectorEnum,
-            connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
+            connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
         ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::RequestError> {
 
-                let connector_data: connector_integration::types::ConnectorData<T> =
-            connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            let connector_data: connector_integration::types::ConnectorData<T> =
+                connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
-        let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-            '_,
-            $flow_marker,
-            $resource_common_data_type,
-            $request_data_type,
-            $response_data_type,
-        > = connector_data.connector.get_connector_integration_v2();
+            let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
+                '_,
+                $flow_marker,
+                $resource_common_data_type,
+                $request_data_type,
+                $response_data_type,
+            > = connector_data.connector.get_connector_integration_v2();
 
-        let flow_data: $resource_common_data_type =
-            domain_types::utils::ForeignTryFrom::foreign_try_from((
-                payload.clone(),
-                config.connectors.clone(),
-                metadata,
-            ))
+            let connectors = ucs_interface_common::config::connectors_with_connector_config_overrides(
+                &connector_config,
+                config,
+            )
             .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::RequestError>>::report_into(e))?;
 
-        let payment_request_data: $request_data_type =
-            domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-            .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::RequestError>>::report_into(e))?;
+            let flow_data: $resource_common_data_type =
+                domain_types::utils::ForeignTryFrom::foreign_try_from((
+                    payload.clone(),
+                    connectors,
+                    metadata,
+                ))
+                .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::RequestError>>::report_into(e))?;
 
-        let router_data = domain_types::router_data_v2::RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: flow_data,
-            connector_auth_type: connector_auth_details,
-            request: payment_request_data,
-            response: Err(domain_types::router_data::ErrorResponse::default()),
-        };
+            let payment_request_data: $request_data_type =
+                domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
+                .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::RequestError>>::report_into(e))?;
+
+            let router_data = domain_types::router_data_v2::RouterDataV2 {
+                flow: std::marker::PhantomData,
+                resource_common_data: flow_data,
+                connector_config,
+                request: payment_request_data,
+                response: Err(domain_types::router_data::ErrorResponse::default()),
+            };
 
             let connector_request = connector_integration
                 .build_request_v2(&router_data)
@@ -121,40 +127,46 @@ macro_rules! res_transformer {
             payload: $request_type,
             config: &std::sync::Arc<ucs_env::configs::Config>,
             connector: domain_types::connector_types::ConnectorEnum,
-            connector_auth_details: domain_types::router_data::ConnectorSpecificAuth,
+            connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
         ) -> Result<$response_type, grpc_api_types::payments::ResponseError> {
-                     let connector_data: connector_integration::types::ConnectorData<T> =
-            connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            let connector_data: connector_integration::types::ConnectorData<T> =
+                connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
-        let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-            '_,
-            $flow_marker,
-            $resource_common_data_type,
-            $request_data_type,
-            $response_data_type,
-        > = connector_data.connector.get_connector_integration_v2();
+            let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
+                '_,
+                $flow_marker,
+                $resource_common_data_type,
+                $request_data_type,
+                $response_data_type,
+            > = connector_data.connector.get_connector_integration_v2();
 
-        let flow_data: $resource_common_data_type =
-            domain_types::utils::ForeignTryFrom::foreign_try_from((
-                payload.clone(),
-                config.connectors.clone(),
-                metadata,
-            ))
+            let connectors = ucs_interface_common::config::connectors_with_connector_config_overrides(
+                &connector_config,
+                config,
+            )
             .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::ResponseError>>::report_into(e))?;
 
-        let payment_request_data: $request_data_type =
-            domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
-            .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::ResponseError>>::report_into(e))?;
+            let flow_data: $resource_common_data_type =
+                domain_types::utils::ForeignTryFrom::foreign_try_from((
+                    payload.clone(),
+                    connectors,
+                    metadata,
+                ))
+                .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::ResponseError>>::report_into(e))?;
 
-        let router_data = domain_types::router_data_v2::RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: flow_data,
-            connector_auth_type: connector_auth_details,
-            request: payment_request_data,
-            response: Err(domain_types::router_data::ErrorResponse::default()),
-        };
+            let payment_request_data: $request_data_type =
+                domain_types::utils::ForeignTryFrom::foreign_try_from(payload.clone())
+                .map_err(|e| <error_stack::Report<domain_types::errors::ApplicationErrorResponse> as domain_types::errors::ReportInto<grpc_api_types::payments::ResponseError>>::report_into(e))?;
+
+            let router_data = domain_types::router_data_v2::RouterDataV2 {
+                flow: std::marker::PhantomData,
+                resource_common_data: flow_data,
+                connector_config,
+                request: payment_request_data,
+                response: Err(domain_types::router_data::ErrorResponse::default()),
+            };
 
             // transform connector response type to common response type
             // Classify response based on status code: 2xx/3xx = success, 4xx/5xx = error
