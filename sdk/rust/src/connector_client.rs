@@ -144,8 +144,10 @@ impl ConnectorClient {
         // 4. Convert HTTP response to domain Response type
         let mut header_map = http::HeaderMap::new();
         for (key, value) in &http_response.headers {
-            if let Ok(name) = http::header::HeaderName::from_bytes(key.as_bytes()) {
-                if let Ok(val) = http::header::HeaderValue::from_bytes(value.as_bytes()) {
+            let key_bytes: &[u8] = key.as_bytes();
+            let val_bytes: &[u8] = value.as_bytes();
+            if let Ok(name) = http::header::HeaderName::from_bytes(key_bytes) {
+                if let Ok(val) = http::header::HeaderValue::from_bytes(val_bytes) {
                     header_map.insert(name, val);
                 }
             }

@@ -55,7 +55,7 @@ class NetworkError(Exception):
             sdk_config_pb2.NetworkErrorCode.RESPONSE_TIMEOUT: "RESPONSE_TIMEOUT",
             sdk_config_pb2.NetworkErrorCode.TOTAL_TIMEOUT: "TOTAL_TIMEOUT",
             sdk_config_pb2.NetworkErrorCode.NETWORK_FAILURE: "NETWORK_FAILURE",
-            sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION: "CLIENT_INITIALIZATION",
+            sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE: "CLIENT_INITIALIZATION_FAILURE",
             sdk_config_pb2.NetworkErrorCode.URL_PARSING_FAILED: "URL_PARSING_FAILED",
             sdk_config_pb2.NetworkErrorCode.RESPONSE_DECODING_FAILED: "RESPONSE_DECODING_FAILED",
             sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION: "INVALID_PROXY_CONFIGURATION",
@@ -131,7 +131,7 @@ def create_client(http_config: Optional[HttpConfig] = None) -> httpx.AsyncClient
     except NetworkError:
         raise  # already classified, pass through
     except Exception as e:
-        code = sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION if "proxy" in str(e).lower() else sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION
+        code = sdk_config_pb2.NetworkErrorCode.INVALID_PROXY_CONFIGURATION if "proxy" in str(e).lower() else sdk_config_pb2.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE
         raise NetworkError(f"Internal HTTP setup failed: {e}", code, 500)
 
 

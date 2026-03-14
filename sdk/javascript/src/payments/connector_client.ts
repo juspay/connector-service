@@ -48,8 +48,8 @@ export class ConnectorClient {
     if (!hasConnectorVariant) {
       throw new NetworkError(
         "connectorConfig with a connector variant is required in ConnectorConfig",
-        types.NetworkErrorCode.CLIENT_INITIALIZATION,
-        400,
+        types.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE,
+        400
       );
     }
 

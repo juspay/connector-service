@@ -103,7 +103,7 @@ impl NetworkError {
             NetworkErrorCode::TotalTimeout => "TOTAL_TIMEOUT",
             NetworkErrorCode::NetworkFailure => "NETWORK_FAILURE",
             NetworkErrorCode::InvalidCaCert => "INVALID_CA_CERT",
-            NetworkErrorCode::ClientInitialization => "CLIENT_INITIALIZATION",
+            NetworkErrorCode::ClientInitializationFailure => "CLIENT_INITIALIZATION_FAILURE",
             NetworkErrorCode::UrlParsingFailed => "URL_PARSING_FAILED",
             NetworkErrorCode::ResponseDecodingFailed => "RESPONSE_DECODING_FAILED",
             NetworkErrorCode::InvalidProxyConfiguration => "INVALID_PROXY_CONFIGURATION",
@@ -192,7 +192,7 @@ impl HttpClient {
             let code = if msg.to_lowercase().contains("proxy") {
                 NetworkErrorCode::InvalidProxyConfiguration
             } else {
-                NetworkErrorCode::ClientInitialization
+                NetworkErrorCode::ClientInitializationFailure
             };
             NetworkError {
                 code,

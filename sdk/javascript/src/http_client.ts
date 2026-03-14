@@ -92,7 +92,7 @@ export function createDispatcher(config: types.IHttpConfig): Dispatcher {
       ? new ProxyAgent({ uri: proxyUrl, ...dispatcherOptions })
       : new Agent(dispatcherOptions);
   } catch (error: any) {
-    const code = proxyUrl ? types.NetworkErrorCode.INVALID_PROXY_CONFIGURATION : types.NetworkErrorCode.CLIENT_INITIALIZATION;
+    const code = proxyUrl ? types.NetworkErrorCode.INVALID_PROXY_CONFIGURATION : types.NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE;
     throw new NetworkError(`Internal HTTP setup failed: ${error.message}`, code, 500);
   }
 }

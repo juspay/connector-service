@@ -69,7 +69,7 @@ object HttpClient {
         } catch (e: NetworkError) {
             throw e  // already classified, pass through
         } catch (e: Exception) {
-            val code = if (e.message?.lowercase()?.contains("proxy") == true) NetworkErrorCode.INVALID_PROXY_CONFIGURATION else NetworkErrorCode.CLIENT_INITIALIZATION
+            val code = if (e.message?.lowercase()?.contains("proxy") == true) NetworkErrorCode.INVALID_PROXY_CONFIGURATION else NetworkErrorCode.CLIENT_INITIALIZATION_FAILURE
             throw NetworkError("Internal HTTP setup failed: ${e.message}", code, 500)
         }
     }

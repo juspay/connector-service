@@ -200,7 +200,7 @@ enum NetworkErrorCode {
   NETWORK_FAILURE = 4;
 
   // HTTP client failed to initialize (e.g. unsupported config, internal error).
-  CLIENT_INITIALIZATION = 6;
+  CLIENT_INITIALIZATION_FAILURE = 6;
 
   // Request URL is malformed or has unsupported scheme.
   URL_PARSING_FAILED = 7;
