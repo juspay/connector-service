@@ -19,7 +19,11 @@
             "Payments\\": "src/Payments/",
             "Types\\": "src/Payments/Generated/Types/",
             "GPBMetadata\\": "src/Payments/Generated/GPBMetadata/"
-        }
+        },
+        "files": [
+            "src/Payments/_GeneratedServiceClients.php",
+            "src/Payments/_GeneratedFlows.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
