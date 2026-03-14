@@ -1,4 +1,29 @@
 {
   "connector": "cashtocode",
-  "flows": {}
+  "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    }
+  }
 }

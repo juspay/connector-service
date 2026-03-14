@@ -1,6 +1,12 @@
 {
   "connector": "razorpay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -79,13 +85,17 @@
           "url": "https://api.razorpay.com/v1/payments/create/json",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
             "accept": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"contact\":\"4155552671\",\"email\":\"test@example.com\",\"order_id\":\"probe_order_001\",\"method\":\"card\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"737\"},\"authentication\":{\"authentication_channel\":\"browser\"},\"browser\":{\"java_enabled\":false,\"javascript_enabled\":true,\"timezone_offset\":-480,\"color_depth\":24,\"screen_width\":1440,\"screen_height\":900,\"language\":\"en-US\"},\"ip\":\"1.2.3.4\",\"referer\":\"https://example.com\",\"user_agent\":\"Mozilla/5.0 (probe-bot)\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "UpiCollect": {
         "status": "supported",
@@ -160,8 +170,8 @@
           "url": "https://api.razorpay.com/v1/payments/create/upi",
           "method": "Post",
           "headers": {
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "accept": "application/json",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
@@ -184,9 +194,9 @@
           "url": "https://api.razorpay.com/v1/payments/probe_connector_txn_001/capture",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\"}"
         }
@@ -206,10 +216,10 @@
           "url": "https://api.razorpay.com/v1/orders",
           "method": "Post",
           "headers": {
-            "content-type": "application/x-www-form-urlencoded",
-            "via": "HyperSwitch",
             "accept": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "amount=1000&currency=USD&receipt=probe_order_001&payment_capture=1"
         }
@@ -229,12 +239,24 @@
           "url": "https://api.razorpay.com/v1/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -254,9 +276,9 @@
           "url": "https://api.razorpay.com/v1/payments/probe_connector_txn_001/refund",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000}"
         }

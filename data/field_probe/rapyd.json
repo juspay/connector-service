@@ -1,6 +1,12 @@
 {
   "connector": "rapyd",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "ApplePay": {
         "status": "supported",
@@ -82,11 +88,11 @@
           "url": "https://sandboxapi.rapyd.net/v1/payments",
           "method": "Post",
           "headers": {
-            "timestamp": "1773360634",
-            "signature": "ZTY1MGJkOTZhZTU4MmI2ZTI5MjFkZjY5Y2EzYzQ3ZGEyOTliZGM1Y2RmZGM3MjRkNjVlZGIxYTkxMTU3NWU5OQ==",
             "access_key": "probe_key",
             "content-type": "application/json",
-            "salt": "9UTeM3MFlOh2",
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":{\"type\":\"apple_pay\",\"details\":\"eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9\"}},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
@@ -166,10 +172,10 @@
           "method": "Post",
           "headers": {
             "access_key": "probe_key",
-            "timestamp": "1773360634",
-            "salt": "dOu3aZjVrST3",
             "content-type": "application/json",
-            "signature": "NDQwYmM2MDI0YjcyNDFmYmZlYjA2NWFjYTlhYWZlNDJhNGFkZmY1ZWIxNDg1NjFiYjNiNjc0ZTJmNTY0MjczYg==",
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"in_amex_card\",\"fields\":{\"number\":\"4111111111111111\",\"expiration_month\":\"03\",\"expiration_year\":\"2030\",\"name\":\"John Doe\",\"cvv\":\"737\"},\"address\":null,\"digital_wallet\":null},\"payment_method_options\":{\"3d_required\":false},\"merchant_reference_id\":\"probe_txn_001\",\"capture\":true,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
@@ -259,11 +265,11 @@
           "method": "Post",
           "headers": {
             "access_key": "probe_key",
-            "via": "HyperSwitch",
-            "signature": "YzBkZTFhMjJiZjkwMDdhZmFjZWEwOTcyNzI5ZDE4NDg4YjViNmRiMWE3ODNmYTY0MmU5OTQ1NjE4NzM5OTQ3Mg==",
-            "timestamp": "1773360634",
-            "salt": "t2jYQbBvPpun",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":{\"type\":\"google_pay\",\"details\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"}},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
         }
@@ -338,14 +344,18 @@
           "method": "Post",
           "headers": {
             "access_key": "probe_key",
-            "timestamp": "1773360634",
-            "signature": "NGI2OTdhMzMwNzhhYzgzY2U4MDdmYjE3MWE2NTYyOWM4ZTQ3NDgzZWJiZDMxZjZlOTYwOTdiMWE5NmVmZjEyOA==",
-            "via": "HyperSwitch",
-            "salt": "F3IBv2lCS1s8",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":null},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -363,12 +373,12 @@
           "url": "https://sandboxapi.rapyd.net/v1/payments/probe_connector_txn_001/capture",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
-            "signature": "YmE0YTc2NTc1NDExNTc1ZGFhNmU5YjdkNDcxMGVjM2ZmZGRhMzJiZjQ3ZmNlNTc5YjQ4MDgxYTZhMWYzOTg0Yg==",
             "access_key": "probe_key",
-            "timestamp": "1773360634",
-            "via": "HyperSwitch",
-            "salt": "2ZCevWk2BxDP"
+            "content-type": "application/json",
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":\"10.00\",\"receipt_email\":null,\"statement_descriptor\":null}"
         }
@@ -388,15 +398,27 @@
           "url": "https://sandboxapi.rapyd.net/v1/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "signature": "N2YwZjY4OWE0MGY0ZTI4ODBlYzczYzk5NTA3M2RmZWYyMjJkZDI5MzI3NTczZDMxMWE4OTc0YTc4ZjgwZWMyOQ==",
-            "salt": "oXOXTyXngpyw",
-            "timestamp": "1773360634",
+            "access_key": "probe_key",
             "content-type": "application/json",
-            "access_key": "probe_key"
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -416,12 +438,12 @@
           "url": "https://sandboxapi.rapyd.net/v1/refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "signature": "Yjk4NGUwODA0MDMwODc4MjI4YzI4YzNmNzA0ZGM3NWUzMDdhMDYxNzg0YWRjMjM5NzI0MTg4ZDVjMzMwM2Y4Zg==",
-            "timestamp": "1773360634",
             "access_key": "probe_key",
             "content-type": "application/json",
-            "salt": "locRi5RQoxbX"
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"payment\":\"probe_connector_txn_001\",\"amount\":\"10.00\",\"currency\":\"USD\"}"
         }
@@ -438,11 +460,11 @@
           "url": "https://sandboxapi.rapyd.net/v1/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "signature": "YjM5ZTZmOTYyYjk5NmQ5ODlmZTMxYWNkMDI2NThjNWRmNTExZTA4Mjk2MDNhZTAwM2UzNWJhNjk3OTBhZDQ5Mg==",
-            "salt": "QN5W7l6Vw7ru",
-            "content-type": "application/json",
-            "timestamp": "1773360634",
             "access_key": "probe_key",
+            "content-type": "application/json",
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
           "body": null

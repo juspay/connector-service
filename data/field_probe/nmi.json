@@ -1,6 +1,12 @@
 {
   "connector": "nmi",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -73,8 +79,8 @@
           "url": "https://sandbox.nmi.com/api/transact.php",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "security_key=probe_key&type=sale&amount=10.0&currency=USD&orderid=probe_txn_001&payment=check&checkname=John+Doe&checkaba=110000000&checkaccount=000123456789"
         }
@@ -157,6 +163,10 @@
           },
           "body": "security_key=probe_key&type=sale&amount=10.0&currency=USD&orderid=probe_txn_001&ccnumber=4111111111111111&ccexp=0330&cvv=737"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -202,6 +212,18 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "supported",
@@ -219,8 +241,8 @@
           "url": "https://sandbox.nmi.com/api/transact.php",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "security_key=probe_key&type=refund&transactionid=probe_connector_txn_001&orderid=probe_refund_001&amount=10.0"
         }
@@ -237,8 +259,8 @@
           "url": "https://sandbox.nmi.com/api/transact.php",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "security_key=probe_key&type=void&transactionid=probe_connector_txn_001&void_reason=user_cancel"
         }

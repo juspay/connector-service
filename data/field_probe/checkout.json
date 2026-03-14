@@ -1,6 +1,12 @@
 {
   "connector": "checkout",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -74,8 +80,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_secret",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"source\":{\"type\":\"ach\",\"account_type\":\"savings\",\"country\":\"US\",\"account_number\":\"000123456789\",\"bank_code\":\"110000000\",\"account_holder\":{\"type\":\"individual\",\"first_name\":\"John\",\"last_name\":\"Doe\"}},\"amount\":1000,\"currency\":\"USD\",\"processing_channel_id\":\"probe_id\",\"3ds\":{\"enabled\":false,\"force_3ds\":false,\"eci\":null,\"cryptogram\":null,\"xid\":null,\"version\":null,\"challenge_indicator\":\"no_preference\"},\"success_url\":\"https://example.com/return?status=success\",\"failure_url\":\"https://example.com/return?status=failure\",\"capture\":true,\"reference\":\"probe_txn_001\",\"metadata\":{},\"payment_type\":\"Regular\",\"merchant_initiated\":false,\"payment_ip\":\"1.2.3.4\"}"
         }
@@ -157,8 +163,8 @@
           "url": "https://api.sandbox.checkout.com/payments",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Bearer probe_secret",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"source\":{\"token\":\"4111111111111111\",\"type\":\"network_token\",\"token_type\":\"applepay\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"eci\":\"05\",\"cryptogram\":\"AAAAAA==\",\"billing_address\":{\"address_line1\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}},\"amount\":1000,\"currency\":\"USD\",\"processing_channel_id\":\"probe_id\",\"3ds\":{\"enabled\":false,\"force_3ds\":false,\"eci\":null,\"cryptogram\":null,\"xid\":null,\"version\":null,\"challenge_indicator\":\"no_preference\"},\"success_url\":\"https://example.com/return?status=success\",\"failure_url\":\"https://example.com/return?status=failure\",\"capture\":true,\"reference\":\"probe_txn_001\",\"metadata\":{},\"payment_type\":\"Regular\",\"merchant_initiated\":false,\"payment_ip\":\"1.2.3.4\"}"
@@ -237,9 +243,9 @@
           "url": "https://api.sandbox.checkout.com/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_secret",
             "content-type": "application/json",
-            "authorization": "Bearer probe_secret"
+            "via": "HyperSwitch"
           },
           "body": "{\"source\":{\"type\":\"card\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"737\",\"billing_address\":{\"address_line1\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"},\"account_holder\":{\"first_name\":\"John\",\"last_name\":\"Doe\"}},\"amount\":1000,\"currency\":\"USD\",\"processing_channel_id\":\"probe_id\",\"3ds\":{\"enabled\":false,\"force_3ds\":false,\"eci\":null,\"cryptogram\":null,\"xid\":null,\"version\":null,\"challenge_indicator\":\"no_preference\"},\"success_url\":\"https://example.com/return?status=success\",\"failure_url\":\"https://example.com/return?status=failure\",\"capture\":true,\"reference\":\"probe_txn_001\",\"metadata\":{},\"payment_type\":\"Regular\",\"merchant_initiated\":false,\"payment_ip\":\"1.2.3.4\"}"
         }
@@ -324,12 +330,16 @@
           "url": "https://api.sandbox.checkout.com/payments",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_secret",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_secret"
+            "via": "HyperSwitch"
           },
           "body": "{\"source\":{\"type\":\"network_token\",\"token\":\"4111111111111111\",\"token_type\":\"googlepay\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"eci\":\"06\",\"cryptogram\":\"AAAAAA==\",\"billing_address\":{\"address_line1\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}},\"amount\":1000,\"currency\":\"USD\",\"processing_channel_id\":\"probe_id\",\"3ds\":{\"enabled\":false,\"force_3ds\":false,\"eci\":null,\"cryptogram\":null,\"xid\":null,\"version\":null,\"challenge_indicator\":\"no_preference\"},\"success_url\":\"https://example.com/return?status=success\",\"failure_url\":\"https://example.com/return?status=failure\",\"capture\":true,\"reference\":\"probe_txn_001\",\"metadata\":{},\"payment_type\":\"Regular\",\"merchant_initiated\":false,\"payment_ip\":\"1.2.3.4\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -348,8 +358,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_secret",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"capture_type\":\"Final\",\"processing_channel_id\":\"probe_id\",\"reference\":null}"
         }
@@ -369,12 +379,24 @@
           "url": "https://api.sandbox.checkout.com/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
+            "authorization": "Bearer probe_secret",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_secret"
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -403,8 +425,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_secret",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"source\":{\"type\":\"id\",\"id\":\"probe_mandate_123\",\"billing_address\":{}},\"amount\":1000,\"currency\":\"USD\",\"processing_channel_id\":\"probe_id\",\"3ds\":{\"enabled\":false,\"force_3ds\":false,\"eci\":null,\"cryptogram\":null,\"xid\":null,\"version\":null,\"challenge_indicator\":\"no_preference\"},\"success_url\":\"https://example.com/recurring-return?status=success\",\"failure_url\":\"https://example.com/recurring-return?status=failure\",\"capture\":true,\"reference\":\"\",\"payment_type\":\"Unscheduled\",\"merchant_initiated\":true}"
         }
@@ -427,9 +449,9 @@
           "url": "https://api.sandbox.checkout.com/payments/probe_connector_txn_001/refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_secret",
             "content-type": "application/json",
-            "authorization": "Bearer probe_secret"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"reference\":\"probe_refund_001\"}"
         }
@@ -520,9 +542,9 @@
           "url": "https://api.sandbox.checkout.com/payments/probe_connector_txn_001/voids",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_secret",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_secret"
+            "via": "HyperSwitch"
           },
           "body": "{\"reference\":\"probe_connector_txn_001\"}"
         }

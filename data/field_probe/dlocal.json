@@ -1,6 +1,12 @@
 {
   "connector": "dlocal",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,16 +81,20 @@
           "url": "https://sandbox.dlocal.com/secure_payments",
           "method": "Post",
           "headers": {
-            "x-version": "2.1",
-            "x-login": "probe_user",
+            "authorization": "V2-HMAC-SHA256, Signature: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
             "content-type": "application/json",
-            "x-trans-key": "probe_key",
-            "authorization": "V2-HMAC-SHA256, Signature: d438affd0739b94ac71c1d45764658d0c5ad03ab53c84489e43a5a8a3b8181f0",
             "via": "HyperSwitch",
-            "x-date": "2026-03-13T00:10:34.005Z"
+            "x-date": "2020-01-01T00:00:00+00:00",
+            "x-login": "probe_user",
+            "x-trans-key": "probe_key",
+            "x-version": "2.1"
           },
           "body": "{\"amount\":10.0,\"currency\":\"USD\",\"country\":\"US\",\"payment_method_id\":\"CARD\",\"payment_method_flow\":\"DIRECT\",\"payer\":{\"name\":\"John Doe\",\"email\":\"test@example.com\",\"document\":\"12345678\"},\"card\":{\"holder_name\":\"John Doe\",\"number\":\"4111111111111111\",\"cvv\":\"737\",\"expiration_month\":\"03\",\"expiration_year\":\"2030\",\"capture\":\"true\"},\"order_id\":\"probe_txn_001\",\"three_dsecure\":null,\"callback_url\":\"https://example.com/return\",\"description\":null}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -102,13 +112,13 @@
           "url": "https://sandbox.dlocal.com/payments",
           "method": "Post",
           "headers": {
-            "x-version": "2.1",
+            "authorization": "V2-HMAC-SHA256, Signature: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
             "content-type": "application/json",
-            "authorization": "V2-HMAC-SHA256, Signature: ef327620c172e91d7b226b3a5153e127487b4904e3d3ca77bbabb186c5a415a7",
             "via": "HyperSwitch",
-            "x-date": "2026-03-13T00:10:34.007Z",
+            "x-date": "2020-01-01T00:00:00+00:00",
+            "x-login": "probe_user",
             "x-trans-key": "probe_key",
-            "x-login": "probe_user"
+            "x-version": "2.1"
           },
           "body": "{\"authorization_id\":\"probe_connector_txn_001\",\"amount\":10.0,\"currency\":\"USD\",\"order_id\":\"probe_capture_001\"}"
         }
@@ -128,16 +138,28 @@
           "url": "https://sandbox.dlocal.com/payments/probe_connector_txn_001/status",
           "method": "Get",
           "headers": {
-            "x-login": "probe_user",
-            "x-version": "2.1",
-            "x-trans-key": "probe_key",
+            "authorization": "V2-HMAC-SHA256, Signature: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "authorization": "V2-HMAC-SHA256, Signature: 792f53b262ac553189a75cf694f7ef3043528e88db454ff6f4acd6413cc96ea1",
-            "x-date": "2026-03-13T00:10:34.007Z",
-            "content-type": "application/json"
+            "x-date": "2020-01-01T00:00:00+00:00",
+            "x-login": "probe_user",
+            "x-trans-key": "probe_key",
+            "x-version": "2.1"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -157,13 +179,13 @@
           "url": "https://sandbox.dlocal.com/refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "V2-HMAC-SHA256, Signature: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
             "content-type": "application/json",
-            "x-trans-key": "probe_key",
-            "authorization": "V2-HMAC-SHA256, Signature: d030cc729bd4502b986181ac0747bae53900f38cd1cd2184b62464e770e912b8",
-            "x-version": "2.1",
+            "via": "HyperSwitch",
+            "x-date": "2020-01-01T00:00:00+00:00",
             "x-login": "probe_user",
-            "x-date": "2026-03-13T00:10:34.007Z"
+            "x-trans-key": "probe_key",
+            "x-version": "2.1"
           },
           "body": "{\"amount\":10.0,\"payment_id\":\"probe_connector_txn_001\",\"currency\":\"USD\",\"id\":\"probe_refund_001\"}"
         }
@@ -180,13 +202,13 @@
           "url": "https://sandbox.dlocal.com/payments/probe_connector_txn_001/cancel",
           "method": "Post",
           "headers": {
-            "x-date": "2026-03-13T00:10:34.007Z",
-            "authorization": "V2-HMAC-SHA256, Signature: 792f53b262ac553189a75cf694f7ef3043528e88db454ff6f4acd6413cc96ea1",
-            "via": "HyperSwitch",
+            "authorization": "V2-HMAC-SHA256, Signature: a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
             "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-date": "2020-01-01T00:00:00+00:00",
             "x-login": "probe_user",
-            "x-version": "2.1",
-            "x-trans-key": "probe_key"
+            "x-trans-key": "probe_key",
+            "x-version": "2.1"
           },
           "body": null
         }

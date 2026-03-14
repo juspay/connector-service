@@ -1,6 +1,12 @@
 {
   "connector": "revolut",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -73,10 +79,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
             "revolut-api-version": "2024-09-01",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -149,9 +155,9 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
+            "content-type": "application/json",
             "revolut-api-version": "2024-09-01",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -223,10 +229,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "revolut-api-version": "2024-09-01"
+            "revolut-api-version": "2024-09-01",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -309,8 +315,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
-            "revolut-api-version": "2024-09-01",
             "content-type": "application/json",
+            "revolut-api-version": "2024-09-01",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
@@ -387,9 +393,9 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "revolut-api-version": "2024-09-01",
-            "content-type": "application/json",
             "authorization": "Bearer probe_key",
+            "content-type": "application/json",
+            "revolut-api-version": "2024-09-01",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
@@ -466,10 +472,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "revolut-api-version": "2024-09-01",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_key"
+            "revolut-api-version": "2024-09-01",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -543,10 +549,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
-            "via": "HyperSwitch",
             "authorization": "Bearer probe_key",
-            "revolut-api-version": "2024-09-01"
+            "content-type": "application/json",
+            "revolut-api-version": "2024-09-01",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -625,8 +631,8 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_key",
-            "revolut-api-version": "2024-09-01",
             "content-type": "application/json",
+            "revolut-api-version": "2024-09-01",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
@@ -712,10 +718,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
             "revolut-api-version": "2024-09-01",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -787,10 +793,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
             "revolut-api-version": "2024-09-01",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -862,10 +868,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
             "revolut-api-version": "2024-09-01",
-            "authorization": "Bearer probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -939,13 +945,17 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "revolut-api-version": "2024-09-01",
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "authorization": "Bearer probe_key"
+            "revolut-api-version": "2024-09-01",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "supported",
@@ -1017,10 +1027,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "revolut-api-version": "2024-09-01",
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "authorization": "Bearer probe_key"
+            "revolut-api-version": "2024-09-01",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -1094,10 +1104,10 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Bearer probe_key",
-            "via": "HyperSwitch",
-            "revolut-api-version": "2024-09-01"
+            "content-type": "application/json",
+            "revolut-api-version": "2024-09-01",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"customer\":{\"email\":\"test@example.com\"},\"shipping\":{\"address\":{\"street_line_1\":\"123 Main St\",\"region\":\"WA\",\"city\":\"Seattle\",\"country_code\":\"US\",\"postcode\":\"98101\"},\"contact\":{\"full_name\":\"John Doe\",\"phone\":\"+14155552671\",\"email\":\"test@example.com\"}},\"capture_mode\":\"automatic\",\"merchant_order_data\":{\"url\":\"https://example.com/return\",\"reference\":\"probe_txn_001\"},\"redirect_url\":\"https://example.com/return\"}"
         }
@@ -1120,8 +1130,8 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "revolut-api-version": "2024-09-01"
+            "revolut-api-version": "2024-09-01",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000}"
         }
@@ -1150,6 +1160,18 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "supported",
@@ -1167,9 +1189,9 @@
           "url": "https://sandbox-merchant.revolut.com//api/orders/probe_connector_txn_001/refund",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_key",
             "content-type": "application/json",
             "revolut-api-version": "2024-09-01",
-            "authorization": "Bearer probe_key",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"merchant_order_data\":{\"url\":null,\"reference\":\"probe_refund_001\"},\"metadata\":{},\"description\":\"customer_request\"}"

@@ -1,6 +1,12 @@
 {
   "connector": "xendit",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,12 +81,16 @@
           "url": "https://api.xendit.co//payment_requests",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5Og==",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":10.0,\"currency\":\"USD\",\"capture_method\":\"AUTOMATIC\",\"payment_method\":{\"type\":\"CARD\",\"card\":{\"channel_properties\":{\"success_return_url\":\"https://example.com/return\",\"failure_return_url\":\"https://example.com/return\",\"skip_three_d_secure\":true},\"card_information\":{\"card_number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvv\":\"737\",\"cardholder_name\":\"John Doe\",\"cardholder_email\":\"test@example.com\",\"cardholder_phone_number\":\"+14155552671\"}},\"reusability\":\"ONE_TIME_USE\",\"reference_id\":\"probe_txn_001\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -120,12 +130,24 @@
           "url": "https://api.xendit.co//payment_requests/probe_connector_txn_001",
           "method": "Get",
           "headers": {
+            "authorization": "Basic cHJvYmVfa2V5Og==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5Og=="
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -145,9 +167,9 @@
           "url": "https://api.xendit.co//refunds",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfa2V5Og==",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":10.0,\"payment_request_id\":\"probe_connector_txn_001\",\"reason\":\"REQUESTED_BY_CUSTOMER\"}"
         }

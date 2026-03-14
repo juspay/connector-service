@@ -1,104 +1,114 @@
 {
   "connector": "paytm",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Affirm": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Afterpay": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "ApplePay": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Bacs": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Becs": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Blik": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Card": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "GooglePay": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Ideal": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "Klarna": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "PaypalRedirect": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       },
       "UpiCollect": {
         "status": "error",
         "required_fields": [
           "session_token"
         ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "error": "Stuck on field: session_token — Missing required field: session_token"
       }
     },
     "create_session_token": {
@@ -117,7 +127,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"1773360634\",\"signature\":\"5UPyVrXuAWozcp9nIDIft14bkoGGIGloAlF1h7TtidQFtO+3UwH+dlqVf7b2sv75JZFa7y9EwhivithY3Ex8NuerCLOnvJ3BjwCWoGQyPG4=\"},\"body\":{\"requestType\":\"Payment\",\"mid\":\"probe_merchant\",\"orderId\":\"\",\"websiteName\":\"probe_website\",\"txnAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"},\"userInfo\":{\"custId\":\"cus_default\",\"mobile\":null,\"email\":null,\"firstName\":null,\"lastName\":null},\"enablePaymentMode\":[{\"mode\":\"UPI\",\"channels\":[\"UPIPUSH\",\"UPI\"]}],\"callbackUrl\":\"https://default-callback.com\",\"shippingInfo\":[{\"trackingNo\":\"\",\"chargeAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"}}]}}"
+          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"0000000000\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"body\":{\"requestType\":\"Payment\",\"mid\":\"probe_merchant\",\"orderId\":\"\",\"websiteName\":\"probe_website\",\"txnAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"},\"userInfo\":{\"custId\":\"cus_default\",\"mobile\":null,\"email\":null,\"firstName\":null,\"lastName\":null},\"enablePaymentMode\":[{\"mode\":\"UPI\",\"channels\":[\"UPIPUSH\",\"UPI\"]}],\"callbackUrl\":\"https://default-callback.com\",\"shippingInfo\":[{\"trackingNo\":\"\",\"chargeAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"}}]}}"
         }
       }
     },
@@ -135,11 +145,23 @@
           "url": "https://securestage.paytmpayments.com//v3/order/status",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
-          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"1773360634\",\"signature\":\"aXbeKzJAOW1Myu/NvQGMuOS9HquhxkR8JTgPrP6kQoeyGxc7M5pUgVe6sVqCloIJ2lKpgLQmCZCYdkOxX91ttIwsxRyp2/gh37h77LgULwI=\"},\"body\":{\"mid\":\"probe_merchant\",\"orderId\":\"probe_connector_txn_001\"}}"
+          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"0000000000\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"body\":{\"mid\":\"probe_merchant\",\"orderId\":\"probe_connector_txn_001\"}}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

@@ -1,7 +1,17 @@
 {
   "connector": "phonepe",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      },
       "UpiCollect": {
         "status": "supported",
         "proto_request": {
@@ -72,15 +82,15 @@
           "method": "Post",
           "headers": {
             "accept": "application/json",
-            "x-merchant-ip": "1.2.3.4",
-            "x-verify": "910789d2cedab8f1c79cf381e4adcdd13a4be9c926badbcfb3823dea0a614b03###1",
-            "x-source-channel": "WEB",
-            "via": "HyperSwitch",
-            "x-source": "API",
+            "content-type": "application/json",
             "user-agent": "Mozilla/5.0 (probe-bot)",
-            "content-type": "application/json"
+            "via": "HyperSwitch",
+            "x-merchant-ip": "1.2.3.4",
+            "x-source": "API",
+            "x-source-channel": "WEB",
+            "x-verify": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3###1"
           },
-          "body": "{\"request\":\"eyJtZXJjaGFudElkIjoicHJvYmVfbWVyY2hhbnQiLCJtZXJjaGFudFRyYW5zYWN0aW9uSWQiOiJwcm9iZV90eG5fMDAxIiwiYW1vdW50IjoxMDAwLCJjYWxsYmFja1VybCI6Imh0dHBzOi8vZXhhbXBsZS5jb20vd2ViaG9vayIsIm1vYmlsZU51bWJlciI6IjQxNTU1NTI2NzEiLCJwYXltZW50SW5zdHJ1bWVudCI6eyJ0eXBlIjoiVVBJX0NPTExFQ1QiLCJ2cGEiOiJ0ZXN0QHVwaSJ9fQ==\"}"
+          "body": "{\"request\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"}"
         }
       }
     },
@@ -102,13 +112,25 @@
           "url": "https://api-preprod.phonepe.com/apis/hermes/pg/v1/status/probe_merchant/probe_order_ref_001",
           "method": "Get",
           "headers": {
-            "x-verify": "93450731b2b73cbefa4f523a6215dfce170811670b34bc177abccada391b7250###1",
-            "via": "HyperSwitch",
             "content-type": "application/json",
-            "x-merchant-id": "probe_merchant"
+            "via": "HyperSwitch",
+            "x-merchant-id": "probe_merchant",
+            "x-verify": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3###1"
           },
           "body": "{}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

@@ -1,34 +1,40 @@
 {
   "connector": "elavon",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Affirm": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Afterpay": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "ApplePay": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Bacs": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Becs": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Blik": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Card": {
         "status": "supported",
@@ -103,35 +109,39 @@
           "url": "https://api.demo.convergepay.com/VirtualMerchantDemo/processxml.do",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "xmldata=%3Ctxn%3E%3Cssl_transaction_type%3Eccsale%3C%2Fssl_transaction_type%3E%3Cssl_account_id%3Eprobe_merchant%3C%2Fssl_account_id%3E%3Cssl_user_id%3Eprobe_user%3C%2Fssl_user_id%3E%3Cssl_pin%3Eprobe_pin%3C%2Fssl_pin%3E%3Cssl_amount%3E10.00%3C%2Fssl_amount%3E%3Cssl_card_number%3E4111111111111111%3C%2Fssl_card_number%3E%3Cssl_exp_date%3E0330%3C%2Fssl_exp_date%3E%3Cssl_cvv2cvc2%3E737%3C%2Fssl_cvv2cvc2%3E%3Cssl_cvv2cvc2_indicator%3E1%3C%2Fssl_cvv2cvc2_indicator%3E%3Cssl_email%3Etest%40example.com%3C%2Fssl_email%3E%3Cssl_transaction_currency%3EUSD%3C%2Fssl_transaction_currency%3E%3Cssl_avs_address%3E123+Main+St%3C%2Fssl_avs_address%3E%3Cssl_avs_zip%3E98101%3C%2Fssl_avs_zip%3E%3Cssl_invoice_number%3EIRRELEVANT_PAYMENT_ID%3C%2Fssl_invoice_number%3E%3C%2Ftxn%3E"
         }
       },
       "GooglePay": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Ideal": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "Klarna": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "PaypalRedirect": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       },
       "UpiCollect": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       }
     },
     "capture": {
@@ -175,6 +185,18 @@
           },
           "body": "xmldata=%3Ctxn%3E%3Cssl_transaction_type%3Etxnquery%3C%2Fssl_transaction_type%3E%3Cssl_account_id%3Eprobe_merchant%3C%2Fssl_account_id%3E%3Cssl_user_id%3Eprobe_user%3C%2Fssl_user_id%3E%3Cssl_pin%3Eprobe_pin%3C%2Fssl_pin%3E%3Cssl_txn_id%3Eprobe_connector_txn_001%3C%2Fssl_txn_id%3E%3C%2Ftxn%3E"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {

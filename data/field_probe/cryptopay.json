@@ -1,6 +1,18 @@
 {
   "connector": "cryptopay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -15,13 +27,25 @@
           "url": "https://business-sandbox.cryptopay.me/api/invoices/custom_id/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "date": "2026-03-13T00:10:34+00:00",
+            "authorization": "HMAC probe_key:cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "HMAC probe_key:1LpsF2DHf1jdbnFgPx+GE3AWBKg="
+            "date": "2020-01-01T00:00:00+00:00",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

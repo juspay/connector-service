@@ -1,7 +1,17 @@
 {
   "connector": "cashfree",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      },
       "UpiCollect": {
         "status": "supported",
         "required_fields": [
@@ -75,11 +85,11 @@
           "url": "https://sandbox.cashfree.com/pg/orders/sessions",
           "method": "Post",
           "headers": {
-            "x-client-secret": "probe_key",
             "content-type": "application/json",
-            "x-api-version": "2022-09-01",
             "via": "HyperSwitch",
-            "x-client-id": "probe_id"
+            "x-api-version": "2022-09-01",
+            "x-client-id": "probe_id",
+            "x-client-secret": "probe_key"
           },
           "body": "{\"payment_session_id\":\"probe_session_id\",\"payment_method\":{\"upi\":{\"channel\":\"collect\",\"upi_id\":\"test@upi\"}},\"payment_surcharge\":null}"
         }
@@ -91,7 +101,19 @@
         "required_fields": [
           "billing_address"
         ],
-        "error": "Stuck on field: billing_address — Integration error: Missing required field: billing_address"
+        "error": "Stuck on field: billing_address — Missing required field: billing_address"
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

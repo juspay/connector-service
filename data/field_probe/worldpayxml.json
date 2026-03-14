@@ -1,6 +1,12 @@
 {
   "connector": "worldpayxml",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,12 +81,16 @@
           "url": "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "text/xml",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n<paymentService version=\"1.4\" merchantCode=\"probe_merchant_code\"><submit><order orderCode=\"probe_txn_001\" captureDelay=\"0\"><description>Payment</description><amount value=\"1000\" currencyCode=\"USD\" exponent=\"2\"/><paymentDetails action=\"SALE\"><CARD-SSL><cardNumber>4111111111111111</cardNumber><expiryDate><date month=\"03\" year=\"2030\"/></expiryDate><cardHolderName>John Doe</cardHolderName><cvc>737</cvc></CARD-SSL></paymentDetails><shopper><shopperEmailAddress>test@example.com</shopperEmailAddress><browser><acceptHeader>application/json</acceptHeader><userAgentHeader>Mozilla/5.0 (probe-bot)</userAgentHeader><httpAcceptLanguage>en-US,en;q=0.9</httpAcceptLanguage><timeZone>-480</timeZone><browserLanguage>en-US</browserLanguage><browserJavaEnabled>false</browserJavaEnabled><browserJavaScriptEnabled>true</browserJavaScriptEnabled><browserColourDepth>24</browserColourDepth><browserScreenHeight>900</browserScreenHeight><browserScreenWidth>1440</browserScreenWidth></browser></shopper><billingAddress><address><firstName>John</firstName><lastName>Doe</lastName><address1>123 Main St</address1><postalCode>98101</postalCode><city>Seattle</city><state>WA</state><countryCode>US</countryCode></address></billingAddress></order></submit></paymentService>"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -98,8 +108,8 @@
           "url": "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp",
           "method": "Post",
           "headers": {
-            "content-type": "text/xml",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "text/xml",
             "via": "HyperSwitch"
           },
           "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n<paymentService version=\"1.4\" merchantCode=\"probe_merchant_code\"><modify><orderModification orderCode=\"probe_connector_txn_001\"><capture><amount value=\"1000\" currencyCode=\"USD\" exponent=\"2\"/></capture></orderModification></modify></paymentService>"
@@ -120,12 +130,24 @@
           "url": "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp",
           "method": "Post",
           "headers": {
-            "content-type": "text/xml",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "text/xml",
             "via": "HyperSwitch"
           },
           "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n<paymentService version=\"1.4\" merchantCode=\"probe_merchant_code\"><inquiry><orderInquiry orderCode=\"probe_connector_txn_001\"/></inquiry></paymentService>"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -145,9 +167,9 @@
           "url": "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "text/xml",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n<paymentService version=\"1.4\" merchantCode=\"probe_merchant_code\"><modify><orderModification orderCode=\"probe_connector_txn_001\"><refund><amount value=\"1000\" currencyCode=\"USD\" exponent=\"2\"/></refund></orderModification></modify></paymentService>"
         }
@@ -164,9 +186,9 @@
           "url": "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "text/xml",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "via": "HyperSwitch"
           },
           "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n<paymentService version=\"1.4\" merchantCode=\"probe_merchant_code\"><modify><orderModification orderCode=\"probe_connector_txn_001\"><cancel/></orderModification></modify></paymentService>"
         }

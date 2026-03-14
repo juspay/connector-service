@@ -1,6 +1,12 @@
 {
   "connector": "hipay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -76,11 +82,15 @@
           "method": "Post",
           "headers": {
             "accept": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "via": "HyperSwitch"
           },
           "body": ""
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -120,13 +130,25 @@
           "url": "https://stage-api-gateway.hipay.com/v3/transaction/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "accept": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -146,8 +168,8 @@
           "url": "https://stage-secure-gateway.hipay-tpp.com/rest/v1/maintenance/transaction/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "accept": "application/json",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "via": "HyperSwitch"
           },
           "body": ""
@@ -197,8 +219,8 @@
           "url": "https://stage-secure2-vault.hipay-tpp.com/rest/v2/token/create",
           "method": "Post",
           "headers": {
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "accept": "application/json",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "via": "HyperSwitch"
           },
           "body": ""
@@ -216,9 +238,9 @@
           "url": "https://stage-secure-gateway.hipay-tpp.com/rest/v1/maintenance/transaction/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "accept": "application/json"
+            "via": "HyperSwitch"
           },
           "body": ""
         }

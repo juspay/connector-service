@@ -1,7 +1,17 @@
 {
   "connector": "payu",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      },
       "UpiCollect": {
         "status": "supported",
         "proto_request": {
@@ -71,11 +81,11 @@
           "url": "https://test.payu.in//_payment",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "accept": "application/json",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
-          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&lastname=Doe&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=UPI&vpa=test%40upi&txn_s2s_flow=2&s2s_client_ip=1.2.3.4&s2s_device_info=web&api_version=2.0&hash=3a83eae726770b2e3fd9b46f863e5a98e774f1fe17076345f581ba6ced4582779ac63312e113b7bb57afbaddd78bfa92d1a72c743130f02da24c07e49375b5e0&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId&upi_app_name=test%40upi"
+          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&lastname=Doe&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=UPI&vpa=test%40upi&txn_s2s_flow=2&s2s_client_ip=1.2.3.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId&upi_app_name=test%40upi"
         }
       }
     },
@@ -97,8 +107,20 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "key=probe_key&command=verify_payment&var1=probe_connector_txn_001&hash=7efeea8ca348ca9870aab47cd0e415af7469ef66ab71221bff4e54ad06fab76fa6abd33536d728a10fc5f4ed51cac9252ad5d4b337df03163a404a251b02a790"
+          "body": "key=probe_key&command=verify_payment&var1=probe_connector_txn_001&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     }
   }

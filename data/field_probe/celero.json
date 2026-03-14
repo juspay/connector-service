@@ -1,6 +1,12 @@
 {
   "connector": "celero",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -76,11 +82,15 @@
           "method": "Post",
           "headers": {
             "authorization": "probe_key",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"idempotency_key\":\"probe_txn_001_idempotency\",\"type\":\"sale\",\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiration_date\":\"03/2030\",\"cvc\":\"737\"}}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -98,9 +108,9 @@
           "url": "https://sandbox.gotnpgateway.com/api/transaction/probe_connector_txn_001/capture",
           "method": "Post",
           "headers": {
+            "authorization": "probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000}"
         }
@@ -120,12 +130,24 @@
           "url": "https://sandbox.gotnpgateway.com/api/transaction/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
             "authorization": "probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -164,9 +186,9 @@
           "url": "https://sandbox.gotnpgateway.com/api/transaction/probe_connector_txn_001/void",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "probe_key",
             "content-type": "application/json",
-            "authorization": "probe_key"
+            "via": "HyperSwitch"
           },
           "body": "{}"
         }

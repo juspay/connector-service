@@ -1,6 +1,12 @@
 {
   "connector": "hyperpg",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,13 +81,17 @@
           "url": "https://sandbox.hyperpg.in/txns",
           "method": "Post",
           "headers": {
-            "x-merchantid": "probe_merchant",
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfdXNlcjo=",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfdXNlcjo="
+            "via": "HyperSwitch",
+            "x-merchantid": "probe_merchant"
           },
           "body": "{\"merchant_id\":\"probe_merchant\",\"payment_method_type\":\"CARD\",\"card_number\":\"4111111111111111\",\"card_security_code\":\"737\",\"card_exp_month\":\"03\",\"card_exp_year\":\"2030\",\"name_on_card\":\"John Doe\",\"format\":\"json\",\"redirect_after_payment\":true,\"order\":{\"order_id\":\"probe_txn_001\",\"amount\":10.0,\"currency\":\"USD\",\"return_url\":\"https://example.com/return\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "get": {
@@ -111,6 +121,18 @@
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "supported",
@@ -128,10 +150,10 @@
           "url": "https://sandbox.hyperpg.in/orders/probe_order_001/refunds",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
-            "x-merchantid": "probe_merchant",
             "authorization": "Basic cHJvYmVfdXNlcjo=",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-merchantid": "probe_merchant"
           },
           "body": "{\"unique_request_id\":\"probe_connector_txn_001\",\"amount\":10.0}"
         }

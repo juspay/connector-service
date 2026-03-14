@@ -1,6 +1,12 @@
 {
   "connector": "jpmorgan",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -80,10 +86,10 @@
           "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
-            "request-id": "probe_txn_001",
             "authorization": "Bearer probe_access_token",
-            "merchant-id": "DefaultMerchantId",
             "content-type": "application/json",
+            "merchant-id": "DefaultMerchantId",
+            "request-id": "probe_txn_001",
             "via": "HyperSwitch"
           },
           "body": "{\"captureMethod\":\"NOW\",\"amount\":1000,\"currency\":\"USD\",\"merchant\":{\"merchantSoftware\":{\"companyName\":\"ProbeCompany\",\"productName\":\"ProbeProduct\"},\"softMerchant\":{\"merchantPurchaseDescription\":\"Probe Purchase\"}},\"paymentMethodType\":{\"ach\":{\"accountNumber\":\"000123456789\",\"financialInstitutionRoutingNumber\":\"110000000\",\"accountType\":\"CHECKING\"}},\"accountHolder\":{\"firstName\":\"John\",\"lastName\":\"Doe\"},\"statementDescriptor\":\"PROBE\"}"
@@ -169,14 +175,18 @@
           "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
             "merchant-id": "DefaultMerchantId",
             "request-id": "probe_txn_001",
-            "via": "HyperSwitch",
-            "content-type": "application/json",
-            "authorization": "Bearer probe_access_token"
+            "via": "HyperSwitch"
           },
           "body": "{\"captureMethod\":\"NOW\",\"amount\":1000,\"currency\":\"USD\",\"merchant\":{\"merchantSoftware\":{\"companyName\":\"ProbeCompany\",\"productName\":\"ProbeProduct\"},\"softMerchant\":{\"merchantPurchaseDescription\":\"Probe Purchase\"}},\"paymentMethodType\":{\"card\":{\"accountNumber\":\"4111111111111111\",\"expiry\":{\"month\":3,\"year\":2030}}},\"accountHolder\":{\"firstName\":\"NA\",\"lastName\":\"NA\"},\"statementDescriptor\":\"Statement Descriptor\"}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -201,11 +211,11 @@
           "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001/captures",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "request-id": "probe_capture_001",
             "merchant-id": "DefaultMerchantId",
-            "authorization": "Bearer probe_access_token"
+            "request-id": "probe_capture_001",
+            "via": "HyperSwitch"
           },
           "body": "{\"captureMethod\":\"NOW\",\"amount\":1000,\"currency\":\"USD\"}"
         }
@@ -219,9 +229,9 @@
           "url": "https://id.payments.jpmorgan.com/am/oauth2/alpha/access_token",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0",
             "content-type": "application/x-www-form-urlencoded",
-            "authorization": "Basic cHJvYmVfaWQ6cHJvYmVfc2VjcmV0"
+            "via": "HyperSwitch"
           },
           "body": "grant_type=client_credentials&scope=jpm%3Apayments%3Asandbox"
         }
@@ -248,14 +258,26 @@
           "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "request-id": "probe_connector_txn_001",
             "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
             "merchant-id": "DefaultMerchantId",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "request-id": "probe_connector_txn_001",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -282,11 +304,11 @@
           "url": "https://api-mock.payments.jpmorgan.com/api/v2/refunds",
           "method": "Post",
           "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
             "merchant-id": "DefaultMerchantId",
             "request-id": "probe_refund_001",
-            "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Bearer probe_access_token"
+            "via": "HyperSwitch"
           },
           "body": "{\"merchant\":{\"merchantSoftware\":{\"companyName\":\"ProbeCompany\",\"productName\":\"ProbeProduct\"}},\"amount\":1000,\"currency\":\"USD\"}"
         }
@@ -310,11 +332,11 @@
           "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments/probe_connector_txn_001",
           "method": "Patch",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
             "merchant-id": "DefaultMerchantId",
             "request-id": "probe_void_001",
-            "authorization": "Bearer probe_access_token",
-            "content-type": "application/json"
+            "via": "HyperSwitch"
           },
           "body": "{\"isVoid\":true}"
         }

@@ -6,15 +6,103 @@ Source: data/field_probe/airwallex.json
 Regenerate: python3 scripts/generate-connector-docs.py airwallex
 -->
 
+## SDK Configuration
+
+Use this config for all flows in this connector. Replace `YOUR_API_KEY` with your actual credentials.
+
+<table>
+<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
+<tr>
+<td valign="top">
+
+<details><summary>Python</summary>
+
+```python
+from payments.generated import sdk_config_pb2
+
+config = sdk_config_pb2.ConnectorConfig(
+    connector=sdk_config_pb2.Connector.AIRWALLEX,
+    environment=sdk_config_pb2.Environment.SANDBOX,
+    auth=sdk_config_pb2.ConnectorAuthType(
+        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
+    ),
+)
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>JavaScript</summary>
+
+```javascript
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+// Reuse this client for all flows
+const client = new ConnectorClient({
+    connector: 'Airwallex',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Kotlin</summary>
+
+```kotlin
+val config = ConnectorConfig.newBuilder()
+    .setConnector("Airwallex")
+    .setEnvironment(Environment.SANDBOX)
+    .setAuth(
+        ConnectorAuthType.newBuilder()
+            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
+    )
+    .build()
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Rust</summary>
+
+```rust
+use connector_service_sdk::{ConnectorClient, ConnectorConfig};
+
+let config = ConnectorConfig {
+    connector: "Airwallex".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
+    ..Default::default()
+};
+```
+
+</details>
+
+</td>
+</tr>
+</table>
+
 ## Implemented Flows
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
+| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [MerchantAuthenticationService.CreateAccessToken](#merchantauthenticationservicecreateaccesstoken) | Authentication | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | [PaymentService.CreateOrder](#paymentservicecreateorder) | Payments | `PaymentServiceCreateOrderRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
+| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
@@ -38,234 +126,242 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | iDEAL | ✓ |
 | BLIK | ✓ |
+| Samsung Pay | — |
 
 **Card (Raw PAN)**
 
-```json
+> **Client call:** `PaymentClient.authorize(request)`
+
+```python
 {
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "card": {
-      "card_number": "4111111111111111",
-      "card_exp_month": "03",
-      "card_exp_year": "2030",
-      "card_cvc": "737",
-      "card_holder_name": "John Doe"
-    }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+    "merchant_transaction_id": "probe_txn_001",  # Identification
+    "amount": {  # The amount for the payment
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
     },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+    "payment_method": {  # Payment method to be used
+        "card": {  # Generic card payment
+            "card_number": "4111111111111111",  # Card Identification
+            "card_exp_month": "03",
+            "card_exp_year": "2030",
+            "card_cvc": "737",
+            "card_holder_name": "John Doe"  # Cardholder Information
+        }
+    },
+    "capture_method": "AUTOMATIC",  # Method for capturing the payment
+    "customer": {  # Customer Information
+        "name": "John Doe",  # Customer's full name
+        "email": "test@example.com",  # Customer's email address
+        "id": "cust_probe_123",  # Internal customer ID
+        "phone_number": "4155552671",  # Customer's phone number
+        "phone_country_code": "+1"  # Customer's phone country code
+    },
+    "address": {  # Address Information
+        "shipping_address": {
+            "first_name": "John",  # Personal Information
+            "last_name": "Doe",
+            "line1": "123 Main St",  # Address Details
+            "city": "Seattle",
+            "state": "WA",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+            "email": "test@example.com",  # Contact Information
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+        },
+        "billing_address": {
+            "first_name": "John",  # Personal Information
+            "last_name": "Doe",
+            "line1": "123 Main St",  # Address Details
+            "city": "Seattle",
+            "state": "WA",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+            "email": "test@example.com",  # Contact Information
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+        }
+    },
+    "auth_type": "NO_THREE_DS",  # Authentication Details
+    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
+    "webhook_url": "https://example.com/webhook",
+    "complete_authorize_url": "https://example.com/complete",
+    "merchant_order_id": "probe_order_001",
+    "browser_info": {
+        "color_depth": 24,  # Display Information
+        "screen_height": 900,
+        "screen_width": 1440,
+        "java_enabled": false,  # Browser Settings
+        "java_script_enabled": true,
+        "language": "en-US",
+        "time_zone_offset_minutes": -480,
+        "accept_header": "application/json",  # Browser Headers
+        "user_agent": "Mozilla/5.0 (probe-bot)",
+        "accept_language": "en-US,en;q=0.9",
+        "ip_address": "1.2.3.4"  # Device Information
+    },
+    "state": {  # State Information
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "merchant_order_id": "probe_order_001",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  },
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
-    }
-  }
 }
 ```
 
 **iDEAL**
 
-```json
+> **Client call:** `PaymentClient.authorize(request)`
+
+```python
 {
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "ideal": {}
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+    "merchant_transaction_id": "probe_txn_001",  # Identification
+    "amount": {  # The amount for the payment
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
     },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+    "payment_method": {  # Payment method to be used
+        "ideal": {
+        }
+    },
+    "capture_method": "AUTOMATIC",  # Method for capturing the payment
+    "customer": {  # Customer Information
+        "name": "John Doe",  # Customer's full name
+        "email": "test@example.com",  # Customer's email address
+        "id": "cust_probe_123",  # Internal customer ID
+        "phone_number": "4155552671",  # Customer's phone number
+        "phone_country_code": "+1"  # Customer's phone country code
+    },
+    "address": {  # Address Information
+        "shipping_address": {
+            "first_name": "John",  # Personal Information
+            "last_name": "Doe",
+            "line1": "123 Main St",  # Address Details
+            "city": "Seattle",
+            "state": "WA",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+            "email": "test@example.com",  # Contact Information
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+        },
+        "billing_address": {
+            "first_name": "John",  # Personal Information
+            "last_name": "Doe",
+            "line1": "123 Main St",  # Address Details
+            "city": "Seattle",
+            "state": "WA",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+            "email": "test@example.com",  # Contact Information
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+        }
+    },
+    "auth_type": "NO_THREE_DS",  # Authentication Details
+    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
+    "webhook_url": "https://example.com/webhook",
+    "complete_authorize_url": "https://example.com/complete",
+    "merchant_order_id": "probe_order_001",
+    "browser_info": {
+        "color_depth": 24,  # Display Information
+        "screen_height": 900,
+        "screen_width": 1440,
+        "java_enabled": false,  # Browser Settings
+        "java_script_enabled": true,
+        "language": "en-US",
+        "time_zone_offset_minutes": -480,
+        "accept_header": "application/json",  # Browser Headers
+        "user_agent": "Mozilla/5.0 (probe-bot)",
+        "accept_language": "en-US,en;q=0.9",
+        "ip_address": "1.2.3.4"  # Device Information
+    },
+    "state": {  # State Information
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "merchant_order_id": "probe_order_001",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  },
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
-    }
-  }
 }
 ```
 
 **BLIK**
 
-```json
+> **Client call:** `PaymentClient.authorize(request)`
+
+```python
 {
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "blik": {
-      "blik_code": "777124"
-    }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+    "merchant_transaction_id": "probe_txn_001",  # Identification
+    "amount": {  # The amount for the payment
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
     },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+    "payment_method": {  # Payment method to be used
+        "blik": {
+            "blik_code": "777124"
+        }
+    },
+    "capture_method": "AUTOMATIC",  # Method for capturing the payment
+    "customer": {  # Customer Information
+        "name": "John Doe",  # Customer's full name
+        "email": "test@example.com",  # Customer's email address
+        "id": "cust_probe_123",  # Internal customer ID
+        "phone_number": "4155552671",  # Customer's phone number
+        "phone_country_code": "+1"  # Customer's phone country code
+    },
+    "address": {  # Address Information
+        "shipping_address": {
+            "first_name": "John",  # Personal Information
+            "last_name": "Doe",
+            "line1": "123 Main St",  # Address Details
+            "city": "Seattle",
+            "state": "WA",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+            "email": "test@example.com",  # Contact Information
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+        },
+        "billing_address": {
+            "first_name": "John",  # Personal Information
+            "last_name": "Doe",
+            "line1": "123 Main St",  # Address Details
+            "city": "Seattle",
+            "state": "WA",
+            "zip_code": "98101",
+            "country_alpha2_code": "US",
+            "email": "test@example.com",  # Contact Information
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+        }
+    },
+    "auth_type": "NO_THREE_DS",  # Authentication Details
+    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
+    "webhook_url": "https://example.com/webhook",
+    "complete_authorize_url": "https://example.com/complete",
+    "merchant_order_id": "probe_order_001",
+    "browser_info": {
+        "color_depth": 24,  # Display Information
+        "screen_height": 900,
+        "screen_width": 1440,
+        "java_enabled": false,  # Browser Settings
+        "java_script_enabled": true,
+        "language": "en-US",
+        "time_zone_offset_minutes": -480,
+        "accept_header": "application/json",  # Browser Headers
+        "user_agent": "Mozilla/5.0 (probe-bot)",
+        "accept_language": "en-US,en;q=0.9",
+        "ip_address": "1.2.3.4"  # Device Information
+    },
+    "state": {  # State Information
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "merchant_order_id": "probe_order_001",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  },
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
-    }
-  }
 }
 ```
 
@@ -278,23 +374,25 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Minimum Request**
+**Example Request**
 
-```json
+> **Client call:** `PaymentClient.capture(request)`
+
+```python
 {
-  "merchant_capture_id": "probe_capture_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount_to_capture": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
+    "merchant_capture_id": "probe_capture_001",  # Identification
+    "connector_transaction_id": "probe_connector_txn_001",
+    "amount_to_capture": {  # Capture Details
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "state": {  # State Information
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  }
 }
 ```
 
@@ -307,22 +405,24 @@ Initialize an order in the payment processor system. Sets up payment context bef
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Minimum Request**
+**Example Request**
 
-```json
+> **Client call:** `PaymentClient.createOrder(request)`
+
+```python
 {
-  "merchant_order_id": "probe_order_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
+    "merchant_order_id": "probe_order_001",  # Identification
+    "amount": {  # Amount Information
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "state": {  # State Information
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  }
 }
 ```
 
@@ -335,22 +435,24 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Minimum Request**
+**Example Request**
 
-```json
+> **Client call:** `PaymentClient.get(request)`
+
+```python
 {
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
+    "connector_transaction_id": "probe_connector_txn_001",
+    "amount": {  # Amount Information
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "state": {  # State Information
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  }
 }
 ```
 
@@ -363,25 +465,27 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Minimum Request**
+**Example Request**
 
-```json
+> **Client call:** `PaymentClient.refund(request)`
+
+```python
 {
-  "merchant_refund_id": "probe_refund_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "payment_amount": 1000,
-  "refund_amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "reason": "customer_request",
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
+    "merchant_refund_id": "probe_refund_001",  # Identification
+    "connector_transaction_id": "probe_connector_txn_001",
+    "payment_amount": 1000,  # Amount Information
+    "refund_amount": {
+        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "reason": "customer_request",  # Reason for the refund
+    "state": {  # State data for access token storage and other connector-specific state
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  }
 }
 ```
 
@@ -394,23 +498,36 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Minimum Request**
+**Example Request**
 
-```json
+> **Client call:** `PaymentClient.void(request)`
+
+```python
 {
-  "merchant_void_id": "probe_void_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "state": {
-    "access_token": {
-      "token": "probe_access_token",
-      "expires_in_seconds": 3600,
-      "token_type": "Bearer"
+    "merchant_void_id": "probe_void_001",  # Identification
+    "connector_transaction_id": "probe_connector_txn_001",
+    "state": {  # State Information
+        "access_token": {  # Access token obtained from connector
+            "token": "probe_access_token",  # The token string.
+            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
+            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
+        }
     }
-  }
 }
 ```
 
 ### Authentication
+
+#### PaymentMethodAuthenticationService.Authenticate
+
+Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
+
+<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/airwallex.yaml` -->
 
 #### MerchantAuthenticationService.CreateAccessToken
 
@@ -421,8 +538,25 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Minimum Request**
+**Example Request**
+#### PaymentMethodAuthenticationService.PostAuthenticate
 
-```json
-{}
-```
+Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
+
+<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/airwallex.yaml` -->
+
+#### PaymentMethodAuthenticationService.PreAuthenticate
+
+Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+
+<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/airwallex.yaml` -->

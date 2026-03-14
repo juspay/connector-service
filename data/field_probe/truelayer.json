@@ -1,6 +1,18 @@
 {
   "connector": "truelayer",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
     "create_access_token": {
       "default": {
         "status": "supported",
@@ -9,8 +21,8 @@
           "url": "https://auth.truelayer-sandbox.com/connect/token",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
           "body": "grant_type=client_credentials&client_id=probe_id&client_secret=probe_secret&scope=payments"
         }
@@ -37,18 +49,30 @@
           "url": "https://api.truelayer-sandbox.com/v3/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json; charset=UTF-8",
             "authorization": "Bearer probe_access_token",
+            "content-type": "application/json; charset=UTF-8",
             "via": "HyperSwitch"
           },
           "body": null
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "error",
-        "error": "Integration error: Failed to decode message"
+        "error": "Failed to decode message: None"
       }
     }
   }

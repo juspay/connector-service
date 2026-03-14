@@ -1,6 +1,12 @@
 {
   "connector": "helcim",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -75,13 +81,17 @@
           "url": "https://api.helcim.com/v2/payment/purchase",
           "method": "Post",
           "headers": {
+            "api-token": "probe_key",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "idempotency-key": "HS_NJDytFdcNelh8kawq2qqcg",
-            "api-token": "probe_key"
+            "idempotency-key": "HS_probe00000000000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"amount\":10.0,\"currency\":\"USD\",\"ipAddress\":\"1.2.3.4\",\"cardData\":{\"cardNumber\":\"4111111111111111\",\"cardExpiry\":\"0330\",\"cardCVV\":\"737\"},\"invoice\":{\"invoiceNumber\":\"probe_txn_001\",\"lineItems\":[{\"description\":\"No Description\",\"quantity\":1,\"price\":10.0,\"total\":10.0}]},\"billingAddress\":{\"name\":\"John Doe\",\"street1\":\"123 Main St\",\"postalCode\":\"98101\",\"city\":\"Seattle\",\"email\":\"test@example.com\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -90,7 +100,7 @@
         "required_fields": [
           "browser_info.ip_address"
         ],
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       }
     },
     "get": {
@@ -107,18 +117,30 @@
           "url": "https://api.helcim.com/v2/card-transactions/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
             "api-token": "probe_key",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": null
         }
       }
     },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "refund": {
       "default": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       }
     },
     "void": {
@@ -127,7 +149,7 @@
         "required_fields": [
           "browser_info.ip_address"
         ],
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       }
     }
   }

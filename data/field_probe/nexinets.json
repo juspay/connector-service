@@ -1,6 +1,12 @@
 {
   "connector": "nexinets",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "ApplePay": {
         "status": "supported",
@@ -82,9 +88,9 @@
           "url": "https://apitest.payengine.de/v1/orders/debit",
           "method": "Post",
           "headers": {
+            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5"
+            "via": "HyperSwitch"
           },
           "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"applepay\",\"payment\":{\"applePayToken\":{\"paymentData\":{\"version\":\"EC_v1\",\"data\":\"probe\",\"signature\":\"probe\"},\"paymentMethod\":{\"displayName\":\"Visa 1111\",\"network\":\"Visa\",\"type\":\"debit\"},\"transactionIdentifier\":\"probe_txn_id\"}},\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":null}"
         }
@@ -162,9 +168,9 @@
           "url": "https://apitest.payengine.de/v1/orders/debit",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5"
+            "via": "HyperSwitch"
           },
           "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"creditcard\",\"payment\":{\"cardNumber\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"verification\":\"737\",\"cofContract\":null},\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":\"probe_txn_001\"}"
         }
@@ -236,8 +242,8 @@
           "url": "https://apitest.payengine.de/v1/orders/debit",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"ideal\",\"payment\":{\"bic\":null},\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":null}"
@@ -318,6 +324,10 @@
           },
           "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"paypal\",\"payment\":null,\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":null}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -326,7 +336,7 @@
         "required_fields": [
           "connector_meta_data"
         ],
-        "error": "Integration error: Parsing failed"
+        "error": "Parsing failed"
       }
     },
     "get": {
@@ -344,11 +354,23 @@
           "method": "Get",
           "headers": {
             "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -368,8 +390,8 @@
           "url": "https://apitest.payengine.de/v1/orders/probe_order_001/transactions/probe_connector_txn_001/refund",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfbWVyY2hhbnQ6cHJvYmVfa2V5",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"initialAmount\":1000,\"currency\":\"USD\"}"
@@ -382,7 +404,7 @@
         "required_fields": [
           "connector_meta_data"
         ],
-        "error": "Integration error: Parsing failed"
+        "error": "Parsing failed"
       }
     }
   }

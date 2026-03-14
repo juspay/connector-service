@@ -1,6 +1,12 @@
 {
   "connector": "novalnet",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Ach": {
         "status": "supported",
@@ -73,9 +79,9 @@
           "url": "https://payport.novalnet.de/v2/payment",
           "method": "Post",
           "headers": {
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M=",
-            "content-type": "application/json"
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\",\"mobile\":\"4155552671\",\"billing\":{\"house_no\":\"123 Main St\",\"street\":null,\"city\":\"Seattle\",\"zip\":\"98101\",\"country_code\":\"US\"},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"DIRECT_DEBIT_ACH\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":{\"account_holder\":\"John Doe\",\"account_number\":\"000123456789\",\"routing_number\":\"110000000\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":\"https://example.com/return\",\"error_return_url\":\"https://example.com/return\",\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en-US\"}}"
         }
@@ -161,8 +167,8 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M=",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\",\"mobile\":\"4155552671\",\"billing\":{\"house_no\":\"123 Main St\",\"street\":null,\"city\":\"Seattle\",\"zip\":\"98101\",\"country_code\":\"US\"},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"APPLEPAY\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":{\"wallet_data\":\"{\\\"version\\\":\\\"EC_v1\\\",\\\"data\\\":\\\"probe\\\",\\\"signature\\\":\\\"probe\\\"}\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":null,\"error_return_url\":null,\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en-US\"}}"
         }
@@ -242,7 +248,7 @@
           "headers": {
             "content-type": "application/json",
             "via": "HyperSwitch",
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M="
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\",\"mobile\":\"4155552671\",\"billing\":{\"house_no\":\"123 Main St\",\"street\":null,\"city\":\"Seattle\",\"zip\":\"98101\",\"country_code\":\"US\"},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"CREDITCARD\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":{\"card_number\":\"4111111111111111\",\"card_expiry_month\":\"03\",\"card_expiry_year\":\"2030\",\"card_cvc\":\"737\",\"card_holder\":\"John Doe\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":\"https://example.com/return\",\"error_return_url\":\"https://example.com/return\",\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en-US\"}}"
         }
@@ -330,9 +336,9 @@
           "url": "https://payport.novalnet.de/v2/payment",
           "method": "Post",
           "headers": {
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M=",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\",\"mobile\":\"4155552671\",\"billing\":{\"house_no\":\"123 Main St\",\"street\":null,\"city\":\"Seattle\",\"zip\":\"98101\",\"country_code\":\"US\"},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"GOOGLEPAY\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":{\"wallet_data\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":null,\"error_return_url\":null,\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en-US\"}}"
         }
@@ -407,11 +413,15 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M=",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\",\"mobile\":\"4155552671\",\"billing\":{\"house_no\":\"123 Main St\",\"street\":null,\"city\":\"Seattle\",\"zip\":\"98101\",\"country_code\":\"US\"},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"PAYPAL\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":null,\"hook_url\":\"https://example.com/webhook\",\"return_url\":\"https://example.com/return\",\"error_return_url\":\"https://example.com/return\",\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en-US\"}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       },
       "Sepa": {
         "status": "supported",
@@ -483,9 +493,9 @@
           "url": "https://payport.novalnet.de/v2/payment",
           "method": "Post",
           "headers": {
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M=",
             "content-type": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\",\"mobile\":\"4155552671\",\"billing\":{\"house_no\":\"123 Main St\",\"street\":null,\"city\":\"Seattle\",\"zip\":\"98101\",\"country_code\":\"US\"},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"DIRECT_DEBIT_SEPA\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":{\"account_holder\":\"John Doe\",\"iban\":\"DE89370400440532013000\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":\"https://example.com/return\",\"error_return_url\":\"https://example.com/return\",\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en-US\"}}"
         }
@@ -506,9 +516,9 @@
           "url": "https://payport.novalnet.de/v2/transaction/capture",
           "method": "Post",
           "headers": {
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M=",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"transaction\":{\"tid\":\"probe_connector_txn_001\",\"amount\":\"1000\",\"capture\":{\"type\":\"Final\",\"reference\":\"probe_capture_001\"}},\"custom\":{\"lang\":\"en\"}}"
         }
@@ -528,12 +538,24 @@
           "url": "https://payport.novalnet.de/v2/transaction/details",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "content-type": "application/json",
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M="
+            "via": "HyperSwitch",
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"transaction\":{\"tid\":\"probe_connector_txn_001\"},\"custom\":{\"lang\":\"en\"}}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -542,7 +564,7 @@
         "required_fields": [
           "email"
         ],
-        "error": "Stuck on field: email — Integration error: Missing required field: email"
+        "error": "Stuck on field: email — Missing required field: email"
       }
     },
     "refund": {
@@ -564,7 +586,7 @@
           "headers": {
             "content-type": "application/json",
             "via": "HyperSwitch",
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M="
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"transaction\":{\"tid\":\"probe_connector_txn_001\",\"amount\":\"1000\"},\"custom\":{\"lang\":\"en\"}}"
         }
@@ -576,7 +598,7 @@
         "required_fields": [
           "webhook_url"
         ],
-        "error": "Stuck on field: webhook_url — Integration error: Missing required field: webhook_url"
+        "error": "Stuck on field: webhook_url — Missing required field: webhook_url"
       }
     },
     "void": {
@@ -591,8 +613,8 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "x-nn-access-key": "cHJvYmVfcGF5bWVudF9hY2Nlc3M=",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
           "body": "{\"transaction\":{\"tid\":\"probe_connector_txn_001\"},\"custom\":{\"lang\":\"en\"}}"
         }

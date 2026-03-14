@@ -1,6 +1,12 @@
 {
   "connector": "getnet",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -82,13 +88,17 @@
           "url": "https://api-sbx.globalgetnet.com/dpm/payments-gwproxy/v2/payments",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Bearer probe_access_token",
-            "x-transaction-channel-entry": "XX",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-transaction-channel-entry": "XX"
           },
           "body": "{\"request_id\":\"probe_txn_001\",\"idempotency_key\":\"probe_txn_001\",\"order_id\":\"probe_txn_001\",\"data\":{\"customer_id\":\"cus_default\",\"amount\":1000,\"currency\":\"USD\",\"payment\":{\"payment_id\":\"probe_txn_001\",\"payment_method\":\"CREDIT\",\"transaction_type\":\"FULL\",\"number_installments\":1,\"card\":{\"number\":\"4111111111111111\",\"expiration_month\":\"03\",\"expiration_year\":\"30\",\"cardholder_name\":\"John Doe\",\"security_code\":\"737\"}}}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -114,9 +124,9 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
-            "x-transaction-channel-entry": "XX",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-transaction-channel-entry": "XX"
           },
           "body": "{\"idempotency_key\":\"probe_capture_001\",\"payment_id\":\"probe_connector_txn_001\",\"amount\":1000}"
         }
@@ -130,9 +140,9 @@
           "url": "https://api-sbx.globalgetnet.com/authentication/oauth2/access_token",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/x-www-form-urlencoded",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "via": "HyperSwitch"
           },
           "body": "grant_type=client_credentials"
         }
@@ -159,13 +169,25 @@
           "url": "https://api-sbx.globalgetnet.com/dpm/hub-payment-info/v1/payments/info/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "x-transaction-channel-entry": "XX",
+            "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
             "via": "HyperSwitch",
-            "authorization": "Bearer probe_access_token"
+            "x-transaction-channel-entry": "XX"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -192,10 +214,10 @@
           "url": "https://api-sbx.globalgetnet.com/dpm/payments-gwproxy/v2/payments/cancel",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Bearer probe_access_token",
-            "x-transaction-channel-entry": "XX",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-transaction-channel-entry": "XX"
           },
           "body": "{\"idempotency_key\":\"probe_refund_001\",\"payment_id\":\"probe_connector_txn_001\",\"amount\":1000,\"payment_method\":\"CREDIT\"}"
         }
@@ -227,9 +249,9 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
-            "x-transaction-channel-entry": "XX",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-transaction-channel-entry": "XX"
           },
           "body": "{\"idempotency_key\":\"probe_void_001\",\"payment_id\":\"probe_connector_txn_001\",\"amount\":1000,\"payment_method\":\"CREDIT_AUTHORIZATION\"}"
         }

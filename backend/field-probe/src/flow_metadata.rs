@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::Path;
 
 /// Flow metadata extracted from services.proto
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -306,6 +307,271 @@ fn clean_description(desc: &str) -> String {
     } else {
         cleaned
     }
+}
+
+// ============================================================================
+// MESSAGE SCHEMA EXTRACTION
+// Parses all *.proto files and extracts per-field comments and message-type
+// information so that SDK doc snippets can annotate request payloads.
+// ============================================================================
+
+/// Schema for a single protobuf message type.
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct MessageSchema {
+    /// Proto doc comments keyed by field name.
+    /// e.g. {"minor_amount": "Amount in minor units (e.g., 1000 = $10.00)"}
+    pub comments: HashMap<String, String>,
+    /// Field name → declared message type, for non-scalar fields only.
+    /// Used by the doc generator to recurse into nested JSON objects.
+    /// e.g. {"amount": "Money", "payment_method": "PaymentMethod"}
+    pub field_types: HashMap<String, String>,
+}
+
+/// Proto scalar / wrapper types that serialize as JSON scalars.
+/// Fields of these types are not recursed into during annotation.
+const SCALAR_TYPES: &[&str] = &[
+    "string",
+    "int32",
+    "int64",
+    "uint32",
+    "uint64",
+    "sint32",
+    "sint64",
+    "fixed32",
+    "fixed64",
+    "sfixed32",
+    "sfixed64",
+    "bool",
+    "bytes",
+    "double",
+    "float",
+    // UCS wrapper types that serialize as plain strings in JSON
+    "SecretString",
+    "CardNumberType",
+    "NetworkTokenType",
+];
+
+/// Parse all relevant *.proto files and return a map of
+/// `{MessageName → MessageSchema}`.
+///
+/// Searches for the proto directory using the same strategy as
+/// `parse_services_proto` (repo-relative path first, then CARGO_MANIFEST_DIR).
+pub fn parse_message_schemas() -> HashMap<String, MessageSchema> {
+    let proto_dirs = [
+        "backend/grpc-api-types/proto",
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../grpc-api-types/proto"),
+    ];
+
+    for dir in &proto_dirs {
+        let path = Path::new(dir);
+        if path.is_dir() {
+            let schemas = parse_proto_dir(path);
+            eprintln!(
+                "Extracted field schemas for {} message types from {:?}",
+                schemas.len(),
+                path
+            );
+            return schemas;
+        }
+    }
+
+    eprintln!("WARNING: Could not find proto directory for message schema extraction");
+    HashMap::new()
+}
+
+fn parse_proto_dir(dir: &Path) -> HashMap<String, MessageSchema> {
+    // Parse these files; order doesn't matter since types are merged into one map.
+    let files = [
+        "payment.proto",
+        "payment_methods.proto",
+        "services.proto",
+        "sdk_config.proto",
+    ];
+
+    let mut all: HashMap<String, MessageSchema> = HashMap::new();
+    for file in &files {
+        let path = dir.join(file);
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            all.extend(parse_proto_messages(&content));
+        }
+    }
+    all
+}
+
+/// Line-by-line state-machine parser: extracts `{MessageName → MessageSchema}`
+/// from a single proto file's content.
+fn parse_proto_messages(content: &str) -> HashMap<String, MessageSchema> {
+    let mut schemas: HashMap<String, MessageSchema> = HashMap::new();
+
+    // Each entry: "message" | "oneof" | "enum"
+    let mut context_stack: Vec<&'static str> = Vec::new();
+    // Innermost message name at each nesting level
+    let mut msg_path: Vec<String> = Vec::new();
+    // Accumulated leading comment lines (reset after each field or blank line)
+    let mut pending_comment = String::new();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+
+        // ── Closing brace ────────────────────────────────────────────────────
+        if trimmed == "}" {
+            if let Some(kind) = context_stack.pop() {
+                if kind == "message" {
+                    msg_path.pop();
+                }
+            }
+            pending_comment.clear();
+            continue;
+        }
+
+        // ── Message definition ───────────────────────────────────────────────
+        if trimmed.starts_with("message ") && trimmed.ends_with('{') {
+            let name = trimmed
+                .strip_prefix("message ")
+                .unwrap_or("")
+                .trim_end_matches('{')
+                .trim()
+                .to_string();
+            context_stack.push("message");
+            msg_path.push(name);
+            pending_comment.clear();
+            continue;
+        }
+
+        // ── Oneof block ──────────────────────────────────────────────────────
+        // Fields inside oneof belong to the enclosing message — don't push to msg_path.
+        if trimmed.starts_with("oneof ") && trimmed.ends_with('{') {
+            context_stack.push("oneof");
+            pending_comment.clear();
+            continue;
+        }
+
+        // ── Enum block ───────────────────────────────────────────────────────
+        if trimmed.starts_with("enum ") && trimmed.ends_with('{') {
+            context_stack.push("enum");
+            pending_comment.clear();
+            continue;
+        }
+
+        // ── Comment line ─────────────────────────────────────────────────────
+        if trimmed.starts_with("//") {
+            let text = trimmed.trim_start_matches('/').trim();
+            // Skip decoration lines (====, ----, file-level banner rows)
+            let is_decoration =
+                text.is_empty() || text.chars().all(|c| matches!(c, '=' | '-' | ' '));
+            if !is_decoration {
+                if !pending_comment.is_empty() {
+                    pending_comment.push(' ');
+                }
+                pending_comment.push_str(text);
+            }
+            continue;
+        }
+
+        // ── Field definition ─────────────────────────────────────────────────
+        // Enum values match the field regex but live inside enum blocks — skip them.
+        let in_enum = context_stack.last() == Some(&"enum");
+        if !in_enum {
+            if let Some((type_name, field_name, inline_comment)) = parse_field_line(trimmed) {
+                if let Some(current_msg) = msg_path.last() {
+                    let comment = if !inline_comment.is_empty() {
+                        inline_comment
+                    } else {
+                        pending_comment.clone()
+                    };
+
+                    let schema = schemas.entry(current_msg.clone()).or_default();
+
+                    if !comment.is_empty() {
+                        schema.comments.insert(field_name.clone(), comment);
+                    }
+
+                    // Only record message-type fields (needed for recursive annotation)
+                    let is_msg_type = type_name
+                        .chars()
+                        .next()
+                        .map(|c| c.is_uppercase())
+                        .unwrap_or(false)
+                        && !SCALAR_TYPES.contains(&type_name.as_str())
+                        && !type_name.starts_with("map<");
+
+                    if is_msg_type {
+                        schema.field_types.insert(field_name, type_name);
+                    }
+                }
+                pending_comment.clear();
+                continue;
+            }
+        }
+
+        // ── Blank / other lines ──────────────────────────────────────────────
+        if trimmed.is_empty() {
+            pending_comment.clear();
+        }
+    }
+
+    schemas
+}
+
+/// Extract `(type_name, field_name, inline_comment)` from a single proto field line.
+///
+/// Handles:
+///   `[optional|repeated] TYPE FIELD_NAME = NUMBER [options] ;  [// comment]`
+///   `map<K, V> FIELD_NAME = NUMBER ;  [// comment]`
+///
+/// Returns `None` for enum values, service/rpc lines, reserved statements, etc.
+fn parse_field_line(trimmed: &str) -> Option<(String, String, String)> {
+    // Strip optional / repeated modifier
+    let s = trimmed
+        .strip_prefix("optional ")
+        .or_else(|| trimmed.strip_prefix("repeated "))
+        .unwrap_or(trimmed);
+
+    // Must contain a semicolon
+    let semi_pos = s.find(';')?;
+    let before_semi = s[..semi_pos].trim();
+    let after_semi = s[semi_pos + 1..].trim();
+
+    // Inline comment comes after the semicolon
+    let inline_comment = after_semi
+        .strip_prefix("//")
+        .map(|c| c.trim().to_string())
+        .unwrap_or_default();
+
+    // before_semi: "TYPE FIELD_NAME = NUMBER [options]"
+    // rfind('=') locates the field-number assignment
+    let eq_pos = before_semi.rfind('=')?;
+
+    // The digit right after '=' confirms this is a field-number assignment,
+    // not some option expression that happens to contain '='.
+    let after_eq = before_semi[eq_pos + 1..].trim();
+    if !after_eq
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_digit())
+        .unwrap_or(false)
+    {
+        return None;
+    }
+
+    let before_eq = before_semi[..eq_pos].trim();
+
+    // The last whitespace-separated token is the field name
+    let field_name = before_eq.split_whitespace().last()?.to_string();
+    if !field_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return None;
+    }
+
+    // Everything before the field name is the type
+    let type_end = before_eq.len().saturating_sub(field_name.len());
+    let type_name = before_eq[..type_end].trim().to_string();
+
+    // Enum values have no leading type token — their "type_name" would be empty
+    if type_name.is_empty() {
+        return None;
+    }
+
+    Some((type_name, field_name, inline_comment))
 }
 
 #[cfg(test)]

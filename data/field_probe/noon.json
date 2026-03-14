@@ -1,6 +1,12 @@
 {
   "connector": "noon",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "ApplePay": {
         "status": "error",
@@ -8,7 +14,7 @@
           "Apple pay encrypted data",
           "payment_method_token"
         ],
-        "error": "Stuck on field: payment_method_token — Integration error: Failed to parse Apple Pay wallet token"
+        "error": "Stuck on field: payment_method_token — Failed to parse Apple Pay wallet token"
       },
       "Card": {
         "status": "supported",
@@ -89,8 +95,8 @@
           "url": "https://api-test.noonpayments.com/payment/v1/order",
           "method": "Post",
           "headers": {
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Key cHJvYmVfaWQucHJvYmVfYXBwX2lkOnByb2JlX2tleQ==",
             "via": "HyperSwitch"
           },
           "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":\"1.2.3.4\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"CARD\",\"data\":{\"nameOnCard\":\"John Doe\",\"numberPlain\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"cvv\":\"737\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":\"123 Main St\",\"street2\":null,\"city\":\"Seattle\",\"stateProvince\":\"WA\",\"country\":\"US\",\"postalCode\":\"98101\"}}}"
@@ -182,9 +188,9 @@
           "url": "https://api-test.noonpayments.com/payment/v1/order",
           "method": "Post",
           "headers": {
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Key cHJvYmVfaWQucHJvYmVfYXBwX2lkOnByb2JlX2tleQ=="
+            "via": "HyperSwitch"
           },
           "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":\"1.2.3.4\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"GOOGLEPAY\",\"data\":{\"apiVersionMinor\":0,\"apiVersion\":2,\"paymentMethodData\":{\"type\":\"CARD\",\"description\":\"Visa •••• 1111\",\"info\":{\"card_network\":\"VISA\",\"card_details\":\"1111\",\"assurance_details\":null},\"tokenization_data\":{\"cardExpMonth\":\"03\",\"cardExpYear\":\"2030\",\"applicationPrimaryAccountNumber\":\"4111111111111111\",\"cryptogram\":\"AAAAAA==\",\"eciIndicator\":\"05\"}}}},\"subscription\":null,\"billing\":{\"address\":{\"street\":\"123 Main St\",\"street2\":null,\"city\":\"Seattle\",\"stateProvince\":\"WA\",\"country\":\"US\",\"postalCode\":\"98101\"}}}"
         }
@@ -264,12 +270,16 @@
           "url": "https://api-test.noonpayments.com/payment/v1/order",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Key cHJvYmVfaWQucHJvYmVfYXBwX2lkOnByb2JlX2tleQ=="
+            "via": "HyperSwitch"
           },
           "body": "{\"apiOperation\":\"INITIATE\",\"order\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"channel\":\"WEB\",\"category\":\"mobile\",\"reference\":\"probe_txn_001\",\"name\":\"Probe payment\",\"nvp\":null,\"ipAddress\":\"1.2.3.4\"},\"configuration\":{\"tokenizeCC\":null,\"paymentAction\":\"SALE\",\"returnUrl\":\"https://example.com/return\"},\"paymentData\":{\"type\":\"PAYPAL\",\"data\":{\"returnUrl\":\"https://example.com/return\"}},\"subscription\":null,\"billing\":{\"address\":{\"street\":\"123 Main St\",\"street2\":null,\"city\":\"Seattle\",\"stateProvince\":\"WA\",\"country\":\"US\",\"postalCode\":\"98101\"}}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -287,9 +297,9 @@
           "url": "https://api-test.noonpayments.com/payment/v1/order",
           "method": "Post",
           "headers": {
-            "authorization": "Key cHJvYmVfaWQucHJvYmVfYXBwX2lkOnByb2JlX2tleQ==",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"apiOperation\":\"CAPTURE\",\"order\":{\"id\":\"probe_connector_txn_001\"},\"transaction\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"transactionReference\":null}}"
         }
@@ -309,12 +319,24 @@
           "url": "https://api-test.noonpayments.com/payment/v1/order/getbyreference/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "authorization": "Key cHJvYmVfaWQucHJvYmVfYXBwX2lkOnByb2JlX2tleQ=="
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -323,7 +345,7 @@
         "required_fields": [
           "description"
         ],
-        "error": "Stuck on field: description — Integration error: Missing required field: description"
+        "error": "Stuck on field: description — Missing required field: description"
       }
     },
     "refund": {
@@ -343,9 +365,9 @@
           "url": "https://api-test.noonpayments.com/payment/v1/order",
           "method": "Post",
           "headers": {
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "authorization": "Key cHJvYmVfaWQucHJvYmVfYXBwX2lkOnByb2JlX2tleQ=="
+            "via": "HyperSwitch"
           },
           "body": "{\"apiOperation\":\"REFUND\",\"order\":{\"id\":\"probe_connector_txn_001\"},\"transaction\":{\"amount\":\"10.00\",\"currency\":\"USD\",\"transactionReference\":\"probe_refund_001\"}}"
         }
@@ -357,7 +379,7 @@
         "required_fields": [
           "order_category in metadata"
         ],
-        "error": "Stuck on field: order_category in metadata — Integration error: Missing required field: order_category in metadata"
+        "error": "Stuck on field: order_category in metadata — Missing required field: order_category in metadata"
       }
     },
     "void": {
@@ -371,9 +393,9 @@
           "url": "https://api-test.noonpayments.com/payment/v1/order",
           "method": "Post",
           "headers": {
-            "authorization": "Key cHJvYmVfaWQucHJvYmVfYXBwX2lkOnByb2JlX2tleQ==",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "authorization": "Key cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"apiOperation\":\"REVERSE\",\"order\":{\"id\":\"probe_connector_txn_001\"}}"
         }

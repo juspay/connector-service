@@ -1,6 +1,12 @@
 {
   "connector": "zift",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -80,18 +86,34 @@
           },
           "body": "requestType=sale&userName=probe_user&password=probe_pass&accountId=probe_id&accountType=R&accountNumber=4111111111111111&accountAccessory=0330&transactionCode=probe_txn_001&csc=737&transactionIndustryType=EC&transactionCategoryCode=EC&holderName=John+Doe&holderType=P&amount=1000"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
       "default": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       }
     },
     "get": {
       "default": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -194,7 +216,7 @@
     "void": {
       "default": {
         "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "error": "Failed to encode connector request"
       }
     }
   }

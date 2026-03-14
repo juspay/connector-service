@@ -1,6 +1,12 @@
 {
   "connector": "braintree",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -79,13 +85,17 @@
           "url": "https://payments.sandbox.braintree-api.com/graphql",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
-            "via": "HyperSwitch",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "braintree-version": "2019-01-01"
+            "braintree-version": "2019-01-01",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"query\":\"mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id legacyId createdAt amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"paymentMethodId\":\"probe_pm_token\",\"transaction\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"channel\":\"HyperSwitchBT_Ecom\",\"customerDetails\":{\"email\":\"test@example.com\"},\"orderId\":\"probe_txn_001\"}}}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -103,10 +113,10 @@
           "url": "https://payments.sandbox.braintree-api.com/graphql",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "braintree-version": "2019-01-01"
+            "braintree-version": "2019-01-01",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
           "body": "{\"query\":\"mutation captureTransaction($input: CaptureTransactionInput!) { captureTransaction(input: $input) { clientMutationId transaction { id legacyId amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\",\"transaction\":{\"amount\":\"10.00\"}}}}"
         }
@@ -127,12 +137,24 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "content-type": "application/json",
             "braintree-version": "2019-01-01",
+            "content-type": "application/json",
             "via": "HyperSwitch"
           },
           "body": "{\"query\":\"query($input: TransactionSearchInput!) { search { transactions(input: $input) { edges { node { id status } } } } }\",\"variables\":{\"input\":{\"id\":{\"is\":\"probe_connector_txn_001\"}}}}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -153,9 +175,9 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "via": "HyperSwitch",
+            "braintree-version": "2019-01-01",
             "content-type": "application/json",
-            "braintree-version": "2019-01-01"
+            "via": "HyperSwitch"
           },
           "body": "{\"query\":\"mutation refundTransaction($input:  RefundTransactionInput!) { refundTransaction(input: $input) {clientMutationId refund { id legacyId amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\",\"refund\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"orderId\":\"probe_refund_001\"}}}}"
         }
@@ -205,9 +227,9 @@
           "method": "Post",
           "headers": {
             "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "braintree-version": "2019-01-01",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "braintree-version": "2019-01-01"
+            "via": "HyperSwitch"
           },
           "body": "{\"query\":\"mutation  tokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { clientMutationId paymentMethod { id } } }\",\"variables\":{\"input\":{\"creditCard\":{\"number\":\"4111111111111111\",\"expirationYear\":\"2030\",\"expirationMonth\":\"03\",\"cvv\":\"737\",\"cardholderName\":\"John Doe\"}}}}"
         }
@@ -224,10 +246,10 @@
           "url": "https://payments.sandbox.braintree-api.com/graphql",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "braintree-version": "2019-01-01",
             "content-type": "application/json",
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
+            "via": "HyperSwitch"
           },
           "body": "{\"query\":\"mutation voidTransaction($input:  ReverseTransactionInput!) { reverseTransaction(input: $input) { clientMutationId reversal { ...  on Transaction { id legacyId amount { value currencyCode } status } } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\"}}}"
         }

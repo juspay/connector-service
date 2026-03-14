@@ -1,6 +1,12 @@
 {
   "connector": "worldpay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "ApplePay": {
         "status": "supported",
@@ -82,10 +88,10 @@
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json",
             "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
           "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"applepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"version\\\":\\\"EC_v1\\\",\\\"data\\\":\\\"probe\\\",\\\"signature\\\":\\\"probe\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
@@ -164,11 +170,11 @@
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "wp-api-version": "2024-06-01",
-            "accept": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
           "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"plain\",\"cardNumber\":\"4111111111111111\",\"expiryDate\":{\"month\":3,\"year\":2030},\"cvc\":\"737\",\"cardHolderName\":\"John Doe\",\"billingAddress\":{\"address1\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"postalCode\":\"98101\",\"countryCode\":\"US\"}},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
         }
@@ -256,14 +262,18 @@
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
-            "wp-api-version": "2024-06-01",
-            "via": "HyperSwitch",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "accept": "application/json"
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
           "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"googlepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -282,8 +292,8 @@
           "method": "Post",
           "headers": {
             "accept": "application/json",
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
@@ -305,14 +315,26 @@
           "url": "https://try.access.worldpay.com/api/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "wp-api-version": "2024-06-01",
-            "accept": "application/json"
+            "wp-api-version": "2024-06-01"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "recurring_charge": {
@@ -340,11 +362,11 @@
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "wp-api-version": "2024-06-01",
-            "accept": "application/json"
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
           "body": "{\"transactionReference\":\"\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"token\",\"href\":\"probe_mandate_123\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":{\"type\":\"subscription\",\"storedCardUsage\":\"subsequent\"}}}"
         }
@@ -367,11 +389,11 @@
           "url": "https://try.access.worldpay.com/api/payments/probe_connector_txn_001/partialRefunds",
           "method": "Post",
           "headers": {
-            "wp-api-version": "2024-06-01",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "accept": "application/json",
-            "content-type": "application/json"
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
           "body": "{\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"reference\":\"probe-refund-001\"}"
         }
@@ -388,11 +410,11 @@
           "url": "https://try.access.worldpay.com/api/payments/probe_connector_txn_001/cancellations",
           "method": "Post",
           "headers": {
-            "wp-api-version": "2024-06-01",
             "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
             "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "wp-api-version": "2024-06-01"
           },
           "body": null
         }

@@ -1,6 +1,12 @@
 {
   "connector": "globalpay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
     "authorize": {
       "Card": {
         "status": "supported",
@@ -82,10 +88,10 @@
           "url": "https://apis.sandbox.globalpay.com/ucp/transactions",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
             "authorization": "Bearer probe_access_token",
-            "x-gp-version": "2021-03-22",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-gp-version": "2021-03-22"
           },
           "body": "{\"account_name\":\"transaction_processing\",\"channel\":\"CNP\",\"amount\":\"1000\",\"currency\":\"USD\",\"reference\":\"probe_txn_001\",\"country\":\"US\",\"capture_mode\":\"AUTO\",\"notifications\":{\"cancel_url\":\"https://example.com/return\",\"return_url\":\"https://example.com/return\",\"status_url\":\"https://example.com/webhook\"},\"payment_method\":{\"entry_mode\":\"ECOM\",\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvv\":\"737\",\"cvv_indicator\":\"PRESENT\"}}}"
         }
@@ -165,12 +171,16 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "x-gp-version": "2021-03-22",
-            "content-type": "application/json"
+            "x-gp-version": "2021-03-22"
           },
           "body": "{\"account_name\":\"transaction_processing\",\"channel\":\"CNP\",\"amount\":\"1000\",\"currency\":\"USD\",\"reference\":\"probe_txn_001\",\"country\":\"US\",\"capture_mode\":\"AUTO\",\"notifications\":{\"cancel_url\":\"https://example.com/return\",\"return_url\":\"https://example.com/return\",\"status_url\":\"https://example.com/webhook\"},\"payment_method\":{\"entry_mode\":\"ECOM\",\"apm\":{\"provider\":\"ideal\"}}}"
         }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -196,9 +206,9 @@
           "method": "Post",
           "headers": {
             "authorization": "Bearer probe_access_token",
-            "x-gp-version": "2021-03-22",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "content-type": "application/json"
+            "x-gp-version": "2021-03-22"
           },
           "body": "{\"amount\":\"1000\",\"capture_sequence\":null,\"reference\":null}"
         }
@@ -212,11 +222,11 @@
           "url": "https://apis.sandbox.globalpay.com/ucp/accesstoken",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "content-type": "application/json",
+            "via": "HyperSwitch",
             "x-gp-version": "2021-03-22"
           },
-          "body": "{\"app_id\":\"probe_id\",\"nonce\":\"r9n6PAa2wJ9u\",\"secret\":\"59fb103a5b588c03bc7ca4cec4664d95bbe84459bb173a0d11b17759f750c024984d26bea387814e2de6fe71b0ac3ee59fde217236697b88a8846d0e5917f5ad\",\"grant_type\":\"client_credentials\"}"
+          "body": "{\"app_id\":\"probe_id\",\"nonce\":\"probeNonceVal001\",\"secret\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\",\"grant_type\":\"client_credentials\"}"
         }
       }
     },
@@ -241,12 +251,24 @@
           "url": "https://apis.sandbox.globalpay.com/ucp/transactions/probe_connector_txn_001",
           "method": "Get",
           "headers": {
+            "authorization": "Bearer probe_access_token",
             "via": "HyperSwitch",
-            "x-gp-version": "2021-03-22",
-            "authorization": "Bearer probe_access_token"
+            "x-gp-version": "2021-03-22"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
       }
     },
     "refund": {
@@ -273,10 +295,10 @@
           "url": "https://apis.sandbox.globalpay.com/ucp/transactions/probe_connector_txn_001/refund",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
-            "x-gp-version": "2021-03-22",
             "authorization": "Bearer probe_access_token",
-            "via": "HyperSwitch"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-gp-version": "2021-03-22"
           },
           "body": "{\"amount\":\"1000\"}"
         }
@@ -300,10 +322,10 @@
           "url": "https://apis.sandbox.globalpay.com/ucp/transactions/probe_connector_txn_001/reversal",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "x-gp-version": "2021-03-22",
             "authorization": "Bearer probe_access_token",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "x-gp-version": "2021-03-22"
           },
           "body": "{\"amount\":null}"
         }
