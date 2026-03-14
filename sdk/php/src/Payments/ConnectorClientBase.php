@@ -94,7 +94,13 @@ abstract class ConnectorClientBase
      */
     private function parseReqResult(string $bytes): FfiConnectorHttpRequest
     {
-        // Try to decode as RequestError first; if status is non-zero, it's an error.
+        // Attempt to decode as RequestError. Proto parsing can fail with a wire-type
+        // mismatch when the bytes are actually a valid FfiConnectorHttpRequest (success
+        // case), because field 1 of FfiConnectorHttpRequest is a string (LEN wire type)
+        // while field 1 of RequestError is a PaymentStatus enum (varint wire type).
+        // If parsing succeeds and status is non-zero it is definitively an error.
+        // If parsing succeeds and status is zero we fall through to the success parse.
+        // If parsing throws we also fall through, because the bytes are not a RequestError.
         try {
             $error = new RequestErrorProto();
             $error->mergeFromString($bytes);
@@ -104,11 +110,18 @@ abstract class ConnectorClientBase
         } catch (RequestException $e) {
             throw $e;
         } catch (\Throwable) {
-            // Not a RequestError (or status is zero) — fall through
+            // bytes are not a RequestError — fall through to success parse
         }
 
         $req = new FfiConnectorHttpRequest();
-        $req->mergeFromString($bytes);
+        try {
+            $req->mergeFromString($bytes);
+        } catch (\Throwable $e) {
+            // Both parses failed: surface as a ConnectorException with context.
+            throw new ConnectorException(
+                'Failed to parse FFI req_transformer output: ' . $e->getMessage()
+            );
+        }
         return $req;
     }
 
@@ -138,7 +151,13 @@ abstract class ConnectorClientBase
 
         /** @var T $response */
         $response = new $responseClass();
-        $response->mergeFromString($bytes);
+        try {
+            $response->mergeFromString($bytes);
+        } catch (\Throwable $e) {
+            throw new ConnectorException(
+                'Failed to parse FFI res_transformer output: ' . $e->getMessage()
+            );
+        }
         return $response;
     }
 
