@@ -31,17 +31,11 @@
           extensions = [ "rust-src" "clippy" "rustfmt" "rust-analyzer" ];
         };
 
-        # PHP 8.3 with FFI enabled via php.ini.
-        # FFI and JSON are compiled into PHP core (since 7.4 and 8.0) — they
-        # are NOT separate nixpkgs extensions.  We only list extensions that
-        # ship as separate shared objects in nixpkgs.
+        # PHP 8.3 with FFI enabled.
+        # curl, openssl, mbstring, json, tokenizer, ffi are all compiled into
+        # the default nixpkgs PHP build — no separate extension packages needed.
+        # We only need buildEnv to inject the ffi.enable=1 php.ini setting.
         phpWithFfi = pkgs.php83.buildEnv {
-          extensions = exts: with exts; [
-            curl       # HTTP client support (used by Guzzle)
-            openssl    # TLS/SSL support
-            mbstring   # Multi-byte string functions
-            tokenizer  # Needed by Composer autoloader
-          ];
           extraConfig = ''
             ffi.enable = 1
           '';
