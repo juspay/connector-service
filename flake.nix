@@ -32,10 +32,11 @@
         };
 
         # PHP 8.3 with FFI enabled.
-        # curl, openssl, mbstring, json, tokenizer, ffi are all compiled into
-        # the default nixpkgs PHP build — no separate extension packages needed.
-        # We only need buildEnv to inject the ffi.enable=1 php.ini setting.
+        # nixpkgs PHP does not include the FFI extension by default; we must
+        # request it explicitly via the extensions argument, then set
+        # ffi.enable = 1 in extraConfig to allow scripts to use it.
         phpWithFfi = pkgs.php83.buildEnv {
+          extensions = { enabled, all }: enabled ++ [ all.ffi ];
           extraConfig = ''
             ffi.enable = 1
           '';
