@@ -10,7 +10,7 @@ use domain_types::{
     payment_method_data::{
         BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -28,15 +28,16 @@ pub struct NuveiAuthType {
     pub(super) merchant_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for NuveiAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for NuveiAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nuvei {
+            ConnectorSpecificConfig::Nuvei {
                 merchant_id,
                 merchant_site_id,
                 merchant_secret,
+                ..
             } => Ok(Self {
                 merchant_id: merchant_id.clone(),
                 merchant_site_id: merchant_site_id.clone(),
@@ -451,7 +452,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data
@@ -567,7 +568,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
 
@@ -634,7 +635,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         // Extract payment method data
         let payment_option = match &router_data.request.payment_method_data {
@@ -989,7 +990,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data
@@ -1250,7 +1251,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data
@@ -1323,7 +1324,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
 
@@ -1536,7 +1537,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data

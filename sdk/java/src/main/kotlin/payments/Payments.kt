@@ -90,7 +90,7 @@ typealias ConnectorResponseData = types.Payment.ConnectorResponseData
 typealias CardConnectorResponse = types.Payment.CardConnectorResponse
 typealias AuthenticationData = types.Payment.AuthenticationData
 typealias Metadata = types.Payment.Metadata
-typealias ConnectorAuth = types.Payment.ConnectorAuth
+typealias ConnectorSpecificConfig = types.Payment.ConnectorSpecificConfig
 
 // ---------------------------------------------------------------------------
 // Enums

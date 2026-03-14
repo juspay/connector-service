@@ -35,7 +35,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
-use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificAuth};
+use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificConfig};
 use grpc_api_types::payments::{
     self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,
     AcceptanceType, Address, BrowserInformation, CaptureMethod, CardDetails,
@@ -956,7 +956,7 @@ fn base_post_authenticate_request() -> PaymentMethodAuthenticationServicePostAut
 // Auth builders — one dummy variant per connector
 // ---------------------------------------------------------------------------
 
-fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificAuth {
+fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
     let k = || Secret::new("probe_key".to_string());
     let s = || Secret::new("probe_secret".to_string());
     let m = || Secret::new("probe_merchant".to_string());
@@ -965,316 +965,438 @@ fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificAuth {
     let id = || Secret::new("probe_id".to_string());
 
     match connector {
-        ConnectorEnum::Stripe => ConnectorSpecificAuth::Stripe { api_key: k() },
-        ConnectorEnum::Calida => ConnectorSpecificAuth::Calida { api_key: k() },
-        ConnectorEnum::Celero => ConnectorSpecificAuth::Celero { api_key: k() },
-        ConnectorEnum::Helcim => ConnectorSpecificAuth::Helcim { api_key: k() },
-        ConnectorEnum::Mifinity => ConnectorSpecificAuth::Mifinity { key: k() },
-        ConnectorEnum::Multisafepay => ConnectorSpecificAuth::Multisafepay { api_key: k() },
-        ConnectorEnum::Nexixpay => ConnectorSpecificAuth::Nexixpay { api_key: k() },
-        ConnectorEnum::Shift4 => ConnectorSpecificAuth::Shift4 { api_key: k() },
-        ConnectorEnum::Stax => ConnectorSpecificAuth::Stax { api_key: k() },
-        ConnectorEnum::Xendit => ConnectorSpecificAuth::Xendit { api_key: k() },
-        ConnectorEnum::Revolut => ConnectorSpecificAuth::Revolut {
+        ConnectorEnum::Stripe => ConnectorSpecificConfig::Stripe {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Calida => ConnectorSpecificConfig::Calida {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Celero => ConnectorSpecificConfig::Celero {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Helcim => ConnectorSpecificConfig::Helcim {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Mifinity => ConnectorSpecificConfig::Mifinity {
+            key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Multisafepay => ConnectorSpecificConfig::Multisafepay {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Nexixpay => ConnectorSpecificConfig::Nexixpay {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Shift4 => ConnectorSpecificConfig::Shift4 {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Stax => ConnectorSpecificConfig::Stax {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Xendit => ConnectorSpecificConfig::Xendit {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Revolut => ConnectorSpecificConfig::Revolut {
             secret_api_key: k(),
             signing_secret: None,
+            base_url: None,
         },
-        ConnectorEnum::Bambora => ConnectorSpecificAuth::Bambora {
+        ConnectorEnum::Bambora => ConnectorSpecificConfig::Bambora {
             merchant_id: m(),
             api_key: k(),
+            base_url: None,
         },
-        ConnectorEnum::Nexinets => ConnectorSpecificAuth::Nexinets {
+        ConnectorEnum::Nexinets => ConnectorSpecificConfig::Nexinets {
             merchant_id: m(),
             api_key: k(),
+            base_url: None,
         },
-        ConnectorEnum::Razorpay => ConnectorSpecificAuth::Razorpay {
+        ConnectorEnum::Razorpay => ConnectorSpecificConfig::Razorpay {
             api_key: k(),
             api_secret: Some(s()),
+            base_url: None,
         },
-        ConnectorEnum::RazorpayV2 => ConnectorSpecificAuth::RazorpayV2 {
+        ConnectorEnum::RazorpayV2 => ConnectorSpecificConfig::RazorpayV2 {
             api_key: k(),
             api_secret: Some(s()),
+            base_url: None,
         },
-        ConnectorEnum::Aci => ConnectorSpecificAuth::Aci {
+        ConnectorEnum::Aci => ConnectorSpecificConfig::Aci {
             api_key: k(),
             entity_id: id(),
+            base_url: None,
         },
-        ConnectorEnum::Airwallex => ConnectorSpecificAuth::Airwallex {
+        ConnectorEnum::Airwallex => ConnectorSpecificConfig::Airwallex {
             api_key: k(),
             client_id: id(),
+            base_url: None,
         },
-        ConnectorEnum::Authorizedotnet => ConnectorSpecificAuth::Authorizedotnet {
+        ConnectorEnum::Authorizedotnet => ConnectorSpecificConfig::Authorizedotnet {
             name: u(),
             transaction_key: k(),
+            base_url: None,
         },
-        ConnectorEnum::Billwerk => ConnectorSpecificAuth::Billwerk {
+        ConnectorEnum::Billwerk => ConnectorSpecificConfig::Billwerk {
             api_key: k(),
             public_api_key: Secret::new("probe_pub_key".to_string()),
+            base_url: None,
+            secondary_base_url: None,
         },
-        ConnectorEnum::Bluesnap => ConnectorSpecificAuth::Bluesnap {
+        ConnectorEnum::Bluesnap => ConnectorSpecificConfig::Bluesnap {
             username: u(),
             password: p(),
+            base_url: None,
         },
-        ConnectorEnum::Cashfree => ConnectorSpecificAuth::Cashfree {
+        ConnectorEnum::Cashfree => ConnectorSpecificConfig::Cashfree {
             app_id: id(),
             secret_key: k(),
+            base_url: None,
         },
-        ConnectorEnum::Cryptopay => ConnectorSpecificAuth::Cryptopay {
+        ConnectorEnum::Cryptopay => ConnectorSpecificConfig::Cryptopay {
             api_key: k(),
             api_secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Datatrans => ConnectorSpecificAuth::Datatrans {
+        ConnectorEnum::Datatrans => ConnectorSpecificConfig::Datatrans {
             merchant_id: m(),
             password: p(),
+            base_url: None,
         },
-        ConnectorEnum::Globalpay => ConnectorSpecificAuth::Globalpay {
+        ConnectorEnum::Globalpay => ConnectorSpecificConfig::Globalpay {
             app_id: id(),
             app_key: k(),
+            base_url: None,
         },
-        ConnectorEnum::Hipay => ConnectorSpecificAuth::Hipay {
+        ConnectorEnum::Hipay => ConnectorSpecificConfig::Hipay {
             api_key: k(),
             api_secret: s(),
+            base_url: None,
+            secondary_base_url: None,
+            third_base_url: None,
         },
-        ConnectorEnum::Jpmorgan => ConnectorSpecificAuth::Jpmorgan {
+        ConnectorEnum::Jpmorgan => ConnectorSpecificConfig::Jpmorgan {
             client_id: id(),
             client_secret: s(),
+            base_url: None,
+            secondary_base_url: None,
+            company_name: None,
+            product_name: None,
+            merchant_purchase_description: None,
+            statement_descriptor: None,
         },
-        ConnectorEnum::Loonio => ConnectorSpecificAuth::Loonio {
+        ConnectorEnum::Loonio => ConnectorSpecificConfig::Loonio {
             merchant_id: m(),
             merchant_token: k(),
+            base_url: None,
         },
-        ConnectorEnum::Paysafe => ConnectorSpecificAuth::Paysafe {
+        ConnectorEnum::Paysafe => ConnectorSpecificConfig::Paysafe {
             username: u(),
             password: p(),
+            base_url: None,
+            account_id: None,
         },
-        ConnectorEnum::Payu => ConnectorSpecificAuth::Payu {
+        ConnectorEnum::Payu => ConnectorSpecificConfig::Payu {
             api_key: k(),
             api_secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Placetopay => ConnectorSpecificAuth::Placetopay {
+        ConnectorEnum::Placetopay => ConnectorSpecificConfig::Placetopay {
             login: u(),
             tran_key: k(),
+            base_url: None,
         },
-        ConnectorEnum::Powertranz => ConnectorSpecificAuth::Powertranz {
+        ConnectorEnum::Powertranz => ConnectorSpecificConfig::Powertranz {
             power_tranz_id: id(),
             power_tranz_password: p(),
+            base_url: None,
         },
-        ConnectorEnum::Rapyd => ConnectorSpecificAuth::Rapyd {
+        ConnectorEnum::Rapyd => ConnectorSpecificConfig::Rapyd {
             access_key: k(),
             secret_key: s(),
+            base_url: None,
         },
-        ConnectorEnum::Authipay => ConnectorSpecificAuth::Authipay {
+        ConnectorEnum::Authipay => ConnectorSpecificConfig::Authipay {
             api_key: k(),
             api_secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Fiservemea => ConnectorSpecificAuth::Fiservemea {
+        ConnectorEnum::Fiservemea => ConnectorSpecificConfig::Fiservemea {
             api_key: k(),
             api_secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Mollie => ConnectorSpecificAuth::Mollie {
+        ConnectorEnum::Mollie => ConnectorSpecificConfig::Mollie {
             api_key: k(),
             profile_token: None,
+            base_url: None,
+            secondary_base_url: None,
         },
-        ConnectorEnum::Nmi => ConnectorSpecificAuth::Nmi {
+        ConnectorEnum::Nmi => ConnectorSpecificConfig::Nmi {
             api_key: k(),
             public_key: None,
+            base_url: None,
         },
-        ConnectorEnum::Payme => ConnectorSpecificAuth::Payme {
+        ConnectorEnum::Payme => ConnectorSpecificConfig::Payme {
             seller_payme_id: id(),
             payme_client_key: None,
+            base_url: None,
         },
-        ConnectorEnum::Braintree => ConnectorSpecificAuth::Braintree {
+        ConnectorEnum::Braintree => ConnectorSpecificConfig::Braintree {
             public_key: k(),
             private_key: s(),
+            base_url: None,
+            merchant_account_id: None,
+            merchant_config_currency: None,
         },
-        ConnectorEnum::Truelayer => ConnectorSpecificAuth::Truelayer {
+        ConnectorEnum::Truelayer => ConnectorSpecificConfig::Truelayer {
             client_id: id(),
             client_secret: s(),
+            base_url: None,
+            secondary_base_url: None,
         },
-        ConnectorEnum::Worldpay => ConnectorSpecificAuth::Worldpay {
+        ConnectorEnum::Worldpay => ConnectorSpecificConfig::Worldpay {
             username: u(),
             password: p(),
             entity_id: id(),
+            base_url: None,
+            merchant_name: None,
         },
-        ConnectorEnum::Adyen => ConnectorSpecificAuth::Adyen {
+        ConnectorEnum::Adyen => ConnectorSpecificConfig::Adyen {
             api_key: k(),
             merchant_account: m(),
             review_key: None,
+            base_url: None,
+            dispute_base_url: None,
         },
-        ConnectorEnum::Bankofamerica => ConnectorSpecificAuth::BankOfAmerica {
+        ConnectorEnum::Bankofamerica => ConnectorSpecificConfig::BankOfAmerica {
             api_key: k(),
             merchant_account: m(),
             api_secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Bamboraapac => ConnectorSpecificAuth::Bamboraapac {
+        ConnectorEnum::Bamboraapac => ConnectorSpecificConfig::Bamboraapac {
             username: u(),
             password: p(),
             account_number: Secret::new("probe_acct_num".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Barclaycard => ConnectorSpecificAuth::Barclaycard {
+        ConnectorEnum::Barclaycard => ConnectorSpecificConfig::Barclaycard {
             api_key: k(),
             merchant_account: m(),
             // Must be valid base64 — used for HMAC-SHA256 signing
             api_secret: Secret::new("cHJvYmVfc2VjcmV0".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Checkout => ConnectorSpecificAuth::Checkout {
+        ConnectorEnum::Checkout => ConnectorSpecificConfig::Checkout {
             api_key: k(),
             api_secret: s(),
             processing_channel_id: id(),
+            base_url: None,
         },
-        ConnectorEnum::Cybersource => ConnectorSpecificAuth::Cybersource {
+        ConnectorEnum::Cybersource => ConnectorSpecificConfig::Cybersource {
             api_key: k(),
             merchant_account: m(),
             // Must be valid base64 — used for HMAC-SHA256 signing in header generation
             api_secret: Secret::new("cHJvYmVfc2VjcmV0".to_string()),
+            base_url: None,
+            disable_avs: None,
+            disable_cvn: None,
         },
-        ConnectorEnum::Dlocal => ConnectorSpecificAuth::Dlocal {
+        ConnectorEnum::Dlocal => ConnectorSpecificConfig::Dlocal {
             x_login: u(),
             x_trans_key: k(),
             secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Elavon => ConnectorSpecificAuth::Elavon {
+        ConnectorEnum::Elavon => ConnectorSpecificConfig::Elavon {
             ssl_merchant_id: m(),
             ssl_user_id: u(),
             ssl_pin: Secret::new("probe_pin".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Fiserv => ConnectorSpecificAuth::Fiserv {
+        ConnectorEnum::Fiserv => ConnectorSpecificConfig::Fiserv {
             api_key: k(),
             merchant_account: m(),
             api_secret: s(),
+            base_url: None,
+            terminal_id: None,
         },
-        ConnectorEnum::Fiuu => ConnectorSpecificAuth::Fiuu {
+        ConnectorEnum::Fiuu => ConnectorSpecificConfig::Fiuu {
             merchant_id: m(),
             verify_key: k(),
             secret_key: s(),
+            base_url: None,
+            secondary_base_url: None,
         },
-        ConnectorEnum::Getnet => ConnectorSpecificAuth::Getnet {
+        ConnectorEnum::Getnet => ConnectorSpecificConfig::Getnet {
             api_key: k(),
             api_secret: s(),
             seller_id: id(),
+            base_url: None,
         },
-        ConnectorEnum::Gigadat => ConnectorSpecificAuth::Gigadat {
+        ConnectorEnum::Gigadat => ConnectorSpecificConfig::Gigadat {
             security_token: k(),
             access_token: Secret::new("probe_access_token".to_string()),
             campaign_id: id(),
+            base_url: None,
         },
-        ConnectorEnum::Hyperpg => ConnectorSpecificAuth::Hyperpg {
+        ConnectorEnum::Hyperpg => ConnectorSpecificConfig::Hyperpg {
             username: u(),
             password: p(),
             merchant_id: m(),
+            base_url: None,
         },
-        ConnectorEnum::Iatapay => ConnectorSpecificAuth::Iatapay {
+        ConnectorEnum::Iatapay => ConnectorSpecificConfig::Iatapay {
             client_id: id(),
             merchant_id: m(),
             client_secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Noon => ConnectorSpecificAuth::Noon {
+        ConnectorEnum::Noon => ConnectorSpecificConfig::Noon {
             api_key: k(),
             business_identifier: id(),
             application_identifier: Secret::new("probe_app_id".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Novalnet => ConnectorSpecificAuth::Novalnet {
+        ConnectorEnum::Novalnet => ConnectorSpecificConfig::Novalnet {
             product_activation_key: k(),
             payment_access_key: Secret::new("probe_payment_access".to_string()),
             tariff_id: id(),
+            base_url: None,
         },
-        ConnectorEnum::Nuvei => ConnectorSpecificAuth::Nuvei {
+        ConnectorEnum::Nuvei => ConnectorSpecificConfig::Nuvei {
             merchant_id: m(),
             merchant_site_id: id(),
             merchant_secret: s(),
+            base_url: None,
         },
-        ConnectorEnum::Phonepe => ConnectorSpecificAuth::Phonepe {
+        ConnectorEnum::Phonepe => ConnectorSpecificConfig::Phonepe {
             merchant_id: m(),
             salt_key: k(),
             salt_index: Secret::new("1".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Redsys => ConnectorSpecificAuth::Redsys {
+        ConnectorEnum::Redsys => ConnectorSpecificConfig::Redsys {
             merchant_id: m(),
             terminal_id: id(),
             sha256_pwd: s(),
+            base_url: None,
         },
-        ConnectorEnum::Silverflow => ConnectorSpecificAuth::Silverflow {
+        ConnectorEnum::Silverflow => ConnectorSpecificConfig::Silverflow {
             api_key: k(),
             api_secret: s(),
             merchant_acceptor_key: m(),
+            base_url: None,
         },
-        ConnectorEnum::Trustpay => ConnectorSpecificAuth::Trustpay {
+        ConnectorEnum::Trustpay => ConnectorSpecificConfig::Trustpay {
             api_key: k(),
             project_id: id(),
             secret_key: s(),
+            base_url: None,
+            base_url_bank_redirects: None,
         },
-        ConnectorEnum::Trustpayments => ConnectorSpecificAuth::Trustpayments {
+        ConnectorEnum::Trustpayments => ConnectorSpecificConfig::Trustpayments {
             username: u(),
             password: p(),
             site_reference: Secret::new("probe_site_ref".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Tsys => ConnectorSpecificAuth::Tsys {
+        ConnectorEnum::Tsys => ConnectorSpecificConfig::Tsys {
             device_id: id(),
             transaction_key: k(),
             developer_id: Secret::new("probe_dev_id".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Wellsfargo => ConnectorSpecificAuth::Wellsfargo {
+        ConnectorEnum::Wellsfargo => ConnectorSpecificConfig::Wellsfargo {
             api_key: k(),
             merchant_account: m(),
             // Must be valid base64 — used for HMAC-SHA256 signing
             api_secret: Secret::new("cHJvYmVfc2VjcmV0".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Worldpayvantiv => ConnectorSpecificAuth::Worldpayvantiv {
+        ConnectorEnum::Worldpayvantiv => ConnectorSpecificConfig::Worldpayvantiv {
             user: u(),
             password: p(),
             merchant_id: m(),
+            base_url: None,
+            report_group: None,
+            merchant_config_currency: None,
+            secondary_base_url: None,
         },
-        ConnectorEnum::Worldpayxml => ConnectorSpecificAuth::Worldpayxml {
+        ConnectorEnum::Worldpayxml => ConnectorSpecificConfig::Worldpayxml {
             api_username: u(),
             api_password: p(),
             merchant_code: Secret::new("probe_merchant_code".to_string()),
+            base_url: None,
         },
-        ConnectorEnum::Zift => ConnectorSpecificAuth::Zift {
+        ConnectorEnum::Zift => ConnectorSpecificConfig::Zift {
             user_name: u(),
             password: p(),
             account_id: id(),
+            base_url: None,
         },
-        ConnectorEnum::Paypal => ConnectorSpecificAuth::Paypal {
+        ConnectorEnum::Paypal => ConnectorSpecificConfig::Paypal {
             client_id: id(),
             client_secret: s(),
             payer_id: None,
+            base_url: None,
         },
-        ConnectorEnum::Forte => ConnectorSpecificAuth::Forte {
+        ConnectorEnum::Forte => ConnectorSpecificConfig::Forte {
             api_access_id: id(),
             organization_id: Secret::new("probe_org_id".to_string()),
             location_id: Secret::new("probe_loc_id".to_string()),
             api_secret_key: k(),
+            base_url: None,
         },
-        ConnectorEnum::Paybox => ConnectorSpecificAuth::Paybox {
+        ConnectorEnum::Paybox => ConnectorSpecificConfig::Paybox {
             site: Secret::new("probe_site".to_string()),
             rank: Secret::new("probe_rank".to_string()),
             key: k(),
             merchant_id: m(),
+            base_url: None,
         },
-        ConnectorEnum::Paytm => ConnectorSpecificAuth::Paytm {
+        ConnectorEnum::Paytm => ConnectorSpecificConfig::Paytm {
             merchant_id: m(),
             merchant_key: k(),
             website: Secret::new("probe_website".to_string()),
             client_id: None,
+            base_url: None,
         },
-        ConnectorEnum::Volt => ConnectorSpecificAuth::Volt {
+        ConnectorEnum::Volt => ConnectorSpecificConfig::Volt {
             username: u(),
             password: p(),
             client_id: id(),
             client_secret: s(),
+            base_url: None,
+            secondary_base_url: None,
         },
-        ConnectorEnum::Cashtocode => ConnectorSpecificAuth::Cashtocode {
+        ConnectorEnum::Cashtocode => ConnectorSpecificConfig::Cashtocode {
             auth_key_map: HashMap::new(),
+            base_url: None,
         },
-        ConnectorEnum::Payload => ConnectorSpecificAuth::Payload {
+        ConnectorEnum::Payload => ConnectorSpecificConfig::Payload {
             auth_key_map: HashMap::new(),
+            base_url: None,
         },
-        ConnectorEnum::Revolv3 => ConnectorSpecificAuth::Revolv3 { api_key: k() },
-        ConnectorEnum::Finix => ConnectorSpecificAuth::Finix {
+        ConnectorEnum::Revolv3 => ConnectorSpecificConfig::Revolv3 {
+            api_key: k(),
+            base_url: None,
+        },
+        ConnectorEnum::Finix => ConnectorSpecificConfig::Finix {
             finix_user_name: u(),
             finix_password: p(),
             merchant_identity_id: id(),
             merchant_id: m(),
+            base_url: None,
         },
     }
 }
@@ -2260,7 +2382,7 @@ where
 fn probe_capture(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_capture_request();
@@ -2288,7 +2410,7 @@ fn probe_capture(
 fn probe_refund(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_refund_request();
@@ -2316,7 +2438,7 @@ fn probe_refund(
 fn probe_void(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_void_request();
@@ -2344,7 +2466,7 @@ fn probe_void(
 fn probe_get(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_get_request();
@@ -2372,7 +2494,7 @@ fn probe_get(
 fn probe_reverse(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_reverse_request();
@@ -2397,7 +2519,7 @@ fn probe_reverse(
 fn probe_create_order(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_create_order_request();
@@ -2439,7 +2561,7 @@ fn patch_setup_recurring_request(req: &mut PaymentServiceSetupRecurringRequest, 
 fn probe_setup_recurring(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_setup_recurring_request();
@@ -2475,7 +2597,7 @@ fn probe_setup_recurring(
 fn probe_recurring_charge(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_recurring_charge_request();
@@ -2503,7 +2625,7 @@ fn probe_recurring_charge(
 fn probe_create_customer(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_create_customer_request();
@@ -2528,7 +2650,7 @@ fn probe_create_customer(
 fn probe_tokenize(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_tokenize_request();
@@ -2553,7 +2675,7 @@ fn probe_tokenize(
 fn probe_create_access_token(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let req = base_create_access_token_request();
@@ -2575,7 +2697,7 @@ fn probe_create_access_token(
 fn probe_create_session_token(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_create_session_token_request();
@@ -2600,7 +2722,7 @@ fn probe_create_session_token(
 fn probe_pre_authenticate(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_pre_authenticate_request();
@@ -2628,7 +2750,7 @@ fn probe_pre_authenticate(
 fn probe_authenticate(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_authenticate_request();
@@ -2656,7 +2778,7 @@ fn probe_authenticate(
 fn probe_post_authenticate(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let mut req = base_post_authenticate_request();
@@ -2754,7 +2876,7 @@ fn probe_authorize(
     pm_name: &str,
     pm: PaymentMethod,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     // Pre-populate connector_feature_data for connectors that require it
@@ -2994,7 +3116,7 @@ fn patch_defend_dispute_request(_req: &mut DisputeServiceDefendRequest, _field_n
 fn probe_accept_dispute(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let req = base_accept_dispute_request();
@@ -3016,7 +3138,7 @@ fn probe_accept_dispute(
 fn probe_submit_evidence(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let req = base_submit_evidence_request();
@@ -3038,7 +3160,7 @@ fn probe_submit_evidence(
 fn probe_defend_dispute(
     connector: &ConnectorEnum,
     config: &Arc<ucs_env::configs::Config>,
-    auth: ConnectorSpecificAuth,
+    auth: ConnectorSpecificConfig,
     metadata: &MaskedMetadata,
 ) -> FlowResult {
     let req = base_defend_dispute_request();

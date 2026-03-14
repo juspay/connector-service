@@ -69,7 +69,7 @@ The `Tokenize` RPC securely stores payment method details at the payment process
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_payment_method_id": "pm_user_001",
     "amount": {

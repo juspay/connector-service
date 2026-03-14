@@ -47,7 +47,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 try:
     from payments import (
         ConnectorConfig,
-        Connector,
         Environment,
         RequestError,
         ResponseError,

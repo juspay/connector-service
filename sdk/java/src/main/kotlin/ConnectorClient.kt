@@ -31,13 +31,12 @@ open class ConnectorClient(
     }
 
     /**
-     * Builds FfiOptions from config. Environment comes from ConnectorConfig (immutable).
+     * Builds FfiOptions from config. Environment comes from config.options.
      */
     private fun resolveFfiOptions(overrides: RequestConfig?): FfiOptions {
         return FfiOptions.newBuilder()
-            .setEnvironment(config.environment)
-            .setConnector(config.connector)
-            .setAuth(config.auth)
+            .setEnvironment(config.options.environment)
+            .setConnectorConfig(config.connectorConfig)
             .build()
     }
 
