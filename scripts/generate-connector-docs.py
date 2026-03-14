@@ -11,14 +11,12 @@ Usage:
     python3 scripts/generate-connector-docs.py --all-connectors-doc
 
 How it works:
-  1. Loads probe data from data/{connector}.json
-  2. Flow metadata (service names, RPC names, descriptions) comes from probe.json
-  3. Merges with connector-annotations/{name}.yaml for sample payloads and human notes
-  4. Outputs docs/connectors/{name}.md
+  1. Loads probe data from data/field_probe/{connector}.json
+  2. All content is derived exclusively from probe data — no manual annotation files
+  3. Outputs docs/connectors/{name}.md
 
 To add docs for a new connector:
   - Run field-probe to generate probe data: cd backend/field-probe && cargo r
-  - Create scripts/connector-annotations/{name}.yaml with sample payloads
   - Run: python3 scripts/generate-connector-docs.py {name}
 """
 
@@ -103,17 +101,6 @@ _PROBE_PM_DISPLAY: dict[str, str] = {
     "SamsungPay":     "Samsung Pay",
 }
 
-# Mapping from sample title keywords → probe PM key (for filtering samples)
-_SAMPLE_TITLE_TO_PM: list[tuple[str, str]] = [
-    ("google pay",  "GooglePay"),
-    ("apple pay",   "ApplePay"),
-    ("sepa",        "Sepa"),
-    ("bacs",        "Bacs"),
-    ("ach",         "Ach"),
-    ("becs",        "Becs"),
-    ("card",        "Card"),
-]
-
 
 def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
     """
@@ -142,6 +129,11 @@ def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
         _FLOW_METADATA = manifest.get("flow_metadata", [])
         _MESSAGE_SCHEMAS = manifest.get("message_schemas", {})
         connector_names = manifest.get("connectors", [])
+
+        # Load proto type map for wrapper-type detection (SecretString, CardNumberType, etc.)
+        proto_dir = probe_dir.parent.parent / "backend" / "grpc-api-types" / "proto"
+        if proto_dir.exists():
+            sdk_snippets.load_proto_type_map(proto_dir)
 
         _PROBE_DATA = {}
         for conn_name in connector_names:
@@ -221,56 +213,15 @@ def _probe_samples_for_flow(probe_connector: dict, flow_key: str) -> list[tuple[
     return result
 
 
-def _sample_pm_key(title: str) -> Optional[str]:
-    """Map a sample title to a probe PM key."""
-    lower = title.lower()
-    for keyword, pm_key in _SAMPLE_TITLE_TO_PM:
-        if keyword in lower:
-            return pm_key
-    return None
-
-try:
-    import yaml
-except ImportError:
-    yaml = None  # Handled gracefully below
-
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
-REPO_ROOT = Path(__file__).parent.parent
-DOCS_DIR = REPO_ROOT / "docs/connectors"
-ANNOTATIONS_DIR = Path(__file__).parent / "connector-annotations"
-PROTO_DIR = REPO_ROOT / "backend/grpc-api-types/proto"
+REPO_ROOT       = Path(__file__).parent.parent
+DOCS_DIR     = REPO_ROOT / "docs/connectors"
+EXAMPLES_DIR = REPO_ROOT / "examples"
+PROTO_DIR    = REPO_ROOT / "backend/grpc-api-types/proto"
 
 # Category order for grouping flows in documentation
 CATEGORY_ORDER = ["Payments", "Refunds", "Mandates", "Customers", "Disputes", "Authentication", "Session", "Other"]
-
-# ─── Annotation Loading ───────────────────────────────────────────────────────
-
-def _load_yaml(path: Path) -> dict:
-    """Load a YAML file, returning {} on missing or parse error."""
-    if yaml is None or not path.exists():
-        return {}
-    try:
-        return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except Exception as exc:
-        print(f"  Warning: failed to parse {path}: {exc}", file=sys.stderr)
-        return {}
-
-
-def load_annotations(connector_name: str) -> dict:
-    """
-    Load connector-specific annotations (display_name, overview, credentials,
-    test_credentials, and per-flow notes/required_fields).
-
-    Sample payloads are sourced exclusively from probe data (data/field_probe/),
-    not from annotation files.
-    """
-    for ext in ("yaml", "yml"):
-        data = _load_yaml(ANNOTATIONS_DIR / f"{connector_name}.{ext}")
-        if data:
-            return data
-    return {}
-
 
 # ─── Display Name ─────────────────────────────────────────────────────────────
 
@@ -308,17 +259,11 @@ _DISPLAY_NAMES = {
 }
 
 
-def display_name(connector_name: str, annotations: dict) -> str:
-    if annotations.get("display_name"):
-        return annotations["display_name"]
+def display_name(connector_name: str) -> str:
     return _DISPLAY_NAMES.get(connector_name, connector_name.replace("_", " ").title())
 
 
 # ─── Markdown Generation ──────────────────────────────────────────────────────
-
-def _json_block(data) -> str:
-    return "```json\n" + json.dumps(data, indent=2) + "\n```"
-
 
 def get_flows_from_probe(probe_connector: dict) -> list[str]:
     """Extract list of supported flow keys from probe data."""
@@ -331,6 +276,172 @@ def get_flow_meta(flow_key: str) -> dict:
     return flow_metadata.get(flow_key, {})
 
 
+def _get_flow_proto_requests(
+    probe_connector: dict,
+    scenario: "sdk_snippets.ScenarioSpec",
+) -> dict[str, dict]:
+    """
+    Build flow_key → proto_request dict for the flows in a scenario.
+
+    For authorize: uses the PM-specific entry keyed by scenario.pm_key.
+    For all other flows: uses the "default" entry.
+    Returns {} for any flow whose payload is missing or status != supported.
+    """
+    flows = probe_connector.get("flows", {})
+    result: dict[str, dict] = {}
+    for flow_key in scenario.flows:
+        pm_key = scenario.pm_key if flow_key == "authorize" else "default"
+        entry  = flows.get(flow_key, {}).get(pm_key or "default", {})
+        if entry.get("status") == "supported":
+            result[flow_key] = entry.get("proto_request") or {}
+    return result
+
+
+def generate_scenario_files(
+    connector_name: str,
+    probe_connector: dict,
+    examples_dir: Path,
+) -> list[Path]:
+    """
+    Write examples/{connector}/python/{scenario_key}.py and
+    examples/{connector}/javascript/{scenario_key}.js for each detected scenario.
+
+    Returns list of written paths. Creates directories as needed.
+    """
+    flow_metadata = get_flow_metadata()
+    scenarios     = sdk_snippets.detect_scenarios(probe_connector)
+    written: list[Path] = []
+
+    for scenario in scenarios:
+        flow_payloads = _get_flow_proto_requests(probe_connector, scenario)
+        if not flow_payloads:
+            continue
+
+        for sdk, ext, render_fn in [
+            ("python",     "py", sdk_snippets.render_scenario_python),
+            ("javascript", "js", sdk_snippets.render_scenario_javascript),
+        ]:
+            out_dir  = examples_dir / connector_name / sdk
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_path = out_dir / f"{scenario.key}.{ext}"
+            content  = render_fn(scenario, connector_name, flow_payloads, flow_metadata, _MESSAGE_SCHEMAS)
+            out_path.write_text(content, encoding="utf-8")
+            written.append(out_path)
+
+    return written
+
+
+# PM priority for selecting the representative authorize payload
+_AUTHORIZE_PM_PRIORITY = [
+    "Card", "GooglePay", "ApplePay", "SamsungPay",
+    "Sepa", "Ach", "Bacs", "Becs",
+    "Ideal", "PaypalRedirect", "Blik", "Klarna", "Afterpay", "UpiCollect", "Affirm",
+]
+
+
+def generate_flow_files(
+    connector_name: str,
+    probe_connector: dict,
+    examples_dir: Path,
+) -> dict[str, list[Path]]:
+    """
+    Write examples/{connector}/{lang}/{flow_key}.{ext} for each supported flow.
+
+    For authorize: uses the primary PM (Card preferred, else first available).
+    For all other flows: uses the "default" entry.
+    Returns {flow_key: [py_path, js_path]} dict.
+    """
+    flow_metadata   = get_flow_metadata()
+    flows           = probe_connector.get("flows", {})
+    scenario_keys   = {s.key for s in sdk_snippets.detect_scenarios(probe_connector)}
+    result: dict[str, list[Path]] = {}
+
+    for flow_key, flow_data in flows.items():
+        # Skip flow keys that collide with a scenario key (scenario file takes precedence)
+        if flow_key in scenario_keys:
+            continue
+        if flow_key == "authorize":
+            proto_req = None
+            pm_label  = ""
+            for pm in _AUTHORIZE_PM_PRIORITY:
+                entry = flow_data.get(pm, {})
+                if entry.get("status") == "supported" and entry.get("proto_request"):
+                    proto_req = entry["proto_request"]
+                    pm_label  = pm
+                    break
+            if proto_req is None:
+                continue
+        else:
+            entry = flow_data.get("default", {})
+            if entry.get("status") != "supported":
+                continue
+            proto_req = entry.get("proto_request") or {}
+            pm_label  = ""
+
+        written: list[Path] = []
+        for sdk, ext, render_fn in [
+            ("python",     "py", sdk_snippets.render_flow_python),
+            ("javascript", "js", sdk_snippets.render_flow_javascript),
+            ("kotlin",     "kt", sdk_snippets.render_flow_kotlin),
+            ("rust",       "rs", sdk_snippets.render_flow_rust),
+        ]:
+            out_dir  = examples_dir / connector_name / sdk
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_path = out_dir / f"{flow_key}.{ext}"
+            content  = render_fn(flow_key, connector_name, proto_req, flow_metadata, _MESSAGE_SCHEMAS, pm_label)
+            out_path.write_text(content, encoding="utf-8")
+            written.append(out_path)
+
+        result[flow_key] = written
+
+    return result
+
+
+def generate_llms_txt(probe_data: dict[str, dict], docs_dir: Path) -> None:
+    """
+    Write docs/llms.txt — a machine-readable navigation index for AI assistants.
+    """
+    lines: list[str] = [
+        "# Connector Service — LLM Navigation Index",
+        f"# Connectors: {len(probe_data)}",
+        "#",
+        "# This file helps AI coding assistants navigate connector-service documentation.",
+        "# Each connector block lists: doc path, scenarios, supported payment methods,",
+        "# supported flows, and paths to runnable Python/JavaScript examples.",
+        "#",
+        "# Usage: fetch this file first, then fetch the specific connector doc or example.",
+        "",
+        "overview:",
+        f"  total_connectors: {len(probe_data)}",
+        "  docs_root: docs/connectors/",
+        "  examples_root: examples/",
+        "  all_connectors_matrix: docs/all_connector.md",
+        "",
+        "integration_pattern:",
+        "  1. Configure ConnectorConfig with connector name and credentials",
+        "  2. Call flows in sequence per scenario (see Integration Scenarios in connector doc)",
+        "  3. Branch on response.status: AUTHORIZED / PENDING / FAILED",
+        "  4. PENDING means await webhook or poll Get before capturing",
+        "  5. Pass connector_transaction_id from Authorize response to Capture/Refund",
+        "",
+        "---",
+        "",
+    ]
+
+    for connector_name in sorted(probe_data.keys()):
+        probe_connector = probe_data[connector_name]
+        name            = display_name(connector_name)
+        scenarios       = sdk_snippets.detect_scenarios(probe_connector)
+        entry           = sdk_snippets.render_llms_txt_entry(
+            connector_name, name, probe_connector, scenarios
+        )
+        lines.append(entry)
+
+    out_path = docs_dir.parent / "llms.txt"
+    out_path.write_text("\n".join(lines), encoding="utf-8")
+    print(f"  llms.txt → {out_path.relative_to(REPO_ROOT)}")
+
+
 def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = None) -> Optional[str]:
     """Generate complete markdown documentation for a connector."""
     probe_connector = (probe_data or {}).get(connector_name, {})
@@ -341,8 +452,7 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
         print(f"  No flows found for '{connector_name}' – skipping.", file=sys.stderr)
         return None
 
-    ann = load_annotations(connector_name)
-    name = display_name(connector_name, ann)
+    name = display_name(connector_name)
 
     out: list[str] = []
     a = out.append  # shorthand
@@ -357,25 +467,34 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
     a("-->")
     a("")
 
-    # ── Overview ────────────────────────────────────────────────────────────
-    if ann.get("overview"):
-        a("## Overview")
-        a("")
-        a(ann["overview"].strip())
-        a("")
-
-    # ── Credentials ─────────────────────────────────────────────────────────
-    if ann.get("credentials"):
-        a("## Required Credentials")
-        a("")
-        a("| Field | Description |")
-        a("|-------|-------------|")
-        for c in ann["credentials"]:
-            a(f"| `{c['name']}` | {c['description']} |")
-        a("")
-
     # ── SDK Configuration (once per connector) ──────────────────────────────
     for line in sdk_snippets.render_config_section(connector_name):
+        a(line)
+
+    # ── Integration Scenarios ────────────────────────────────────────────────
+    scenarios     = sdk_snippets.detect_scenarios(probe_connector)
+    flow_metadata = get_flow_metadata()
+    if scenarios:
+        a("## Integration Scenarios")
+        a("")
+        a(
+            "Complete, runnable examples for common integration patterns. "
+            "Each example shows the full flow with status handling. "
+            "Copy-paste into your app and replace placeholder values."
+        )
+        a("")
+        for scenario in scenarios:
+            flow_payloads = _get_flow_proto_requests(probe_connector, scenario)
+            for line in sdk_snippets.render_scenario_section(
+                scenario, connector_name, flow_payloads,
+                flow_metadata, _MESSAGE_SCHEMAS, {},
+            ):
+                a(line)
+
+    # ── Payment Method Reference ──────────────────────────────────────────────
+    for line in sdk_snippets.render_pm_reference_section(
+        probe_connector, flow_metadata, _MESSAGE_SCHEMAS
+    ):
         a(line)
 
     # ── Flow summary table ───────────────────────────────────────────────────
@@ -399,7 +518,7 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
     a("")
 
     # ── Per-flow detail ──────────────────────────────────────────────────────
-    a("## Flow Details")
+    a("## Flow Reference")
     a("")
 
     # Group by category
@@ -417,7 +536,6 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
 
         for f in by_cat[cat]:
             meta = get_flow_meta(f)
-            flow_ann = ann.get("flows", {}).get(f, {})
 
             # Flow heading with anchor and full Service.RPC name
             service = meta.get("service_name", "")
@@ -454,115 +572,23 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
                         a(f"| {pm_label} | {mark} |")
                 a("")
 
-            # Flow-level notes from annotations
-            if flow_ann.get("notes"):
-                notes = flow_ann["notes"]
-                if isinstance(notes, str):
-                    notes = [notes]
-                for note in notes:
-                    a(f"> {note}")
-                a("")
-
-            # Connector-specific required fields for this flow
-            if flow_ann.get("required_fields"):
-                a("**Connector-specific required fields:**")
-                a("")
-                for rf in flow_ann["required_fields"]:
-                    if isinstance(rf, dict):
-                        a(f"- `{rf['field']}` — {rf.get('note', '')}")
-                    else:
-                        a(f"- `{rf}`")
-                a("")
-
-            # Sample payloads: prefer probe-verified proto_requests (actual payloads
-            # that succeeded in the req_transformer), fall back to YAML annotations.
-            probe_samples = _probe_samples_for_flow(probe_connector, f)
-            yaml_samples = flow_ann.get("samples", [])
-
-            if probe_samples:
-                # Probe-verified samples — these are the exact payloads the SDK
-                # accepts and that produced a successful transformer call.
-                for title, proto_req in probe_samples:
-                    a(f"**{title}**")
-                    for line in sdk_snippets.render_payload_block(
-                        f,
-                        meta.get("service_name", ""),
-                        meta.get("grpc_request", ""),
-                        proto_req,
-                        _MESSAGE_SCHEMAS,
-                    ):
-                        a(line)
-            elif yaml_samples:
-                # Fall back to YAML annotation samples
-                for sample in yaml_samples:
-                    title = sample.get("title", "Minimum Request Payload")
-                    # Skip samples for PM types that the probe confirmed unsupported
-                    if pm_support is not None:
-                        sample_pm = _sample_pm_key(title)
-                        if sample_pm is not None and not pm_support.get(sample_pm, True):
-                            continue
-                    a(f"**{title}**")
-                    a("")
-
-                    if sample.get("required_fields_table"):
-                        a("*Required fields for this variant:*")
-                        a("")
-                        a("| Field | Type | Description |")
-                        a("|-------|------|-------------|")
-                        for rf in sample["required_fields_table"]:
-                            a(f"| `{rf['field']}` | `{rf.get('type', 'varies')}` | {rf.get('desc', '')} |")
-                        a("")
-
-                    if sample.get("request"):
-                        a(_json_block(sample["request"]))
-                        a("")
-
-                    if sample.get("notes"):
-                        note_lines = sample["notes"]
-                        if isinstance(note_lines, str):
-                            note_lines = [note_lines]
-                        for n in note_lines:
-                            a(f"> {n}")
-                        a("")
-            else:
-                a(
-                    f"<!-- TODO: Add sample payload for `{f}` in "
-                    f"`scripts/connector-annotations/{connector_name}.yaml` -->"
+            # Link to per-flow example files instead of embedding code
+            flow_data = probe_connector.get("flows", {}).get(f, {})
+            has_payload = (
+                flow_data.get("default", {}).get("status") == "supported"
+                or any(
+                    v.get("status") == "supported"
+                    for k, v in flow_data.items()
+                    if k != "default"
                 )
+            )
+            if has_payload:
+                py_path = f"../../examples/{connector_name}/python/{f}.py"
+                js_path = f"../../examples/{connector_name}/javascript/{f}.js"
+                kt_path = f"../../examples/{connector_name}/kotlin/{f}.kt"
+                rs_path = f"../../examples/{connector_name}/rust/{f}.rs"
+                a(f"**Examples:** [Python]({py_path}) · [JavaScript]({js_path}) · [Kotlin]({kt_path}) · [Rust]({rs_path})")
                 a("")
-
-    # ── Test credentials / cards from annotations ────────────────────────────
-    tc = ann.get("test_credentials", {})
-    if tc:
-        a("## Testing")
-        a("")
-        if tc.get("note"):
-            a(tc["note"].strip())
-            a("")
-        if tc.get("api_key"):
-            a(f"**Test API Key:** `{tc['api_key']}`")
-            a("")
-        if tc.get("webhook_secret"):
-            a(f"**Test Webhook Secret:** `{tc['webhook_secret']}`")
-            a("")
-        if tc.get("cards"):
-            a("### Test Cards")
-            a("")
-            a("| Card Number | Brand | CVV | Expiry | Scenario |")
-            a("|------------|-------|-----|--------|----------|")
-            for card in tc["cards"]:
-                a(
-                    f"| `{card['number']}` | {card.get('brand', '—')} "
-                    f"| `{card.get('cvc', 'any')}` | `{card.get('expiry', 'any future')}` "
-                    f"| {card.get('scenario', '')} |"
-                )
-            a("")
-        if tc.get("payment_methods"):
-            a("### Test Payment Methods")
-            a("")
-            for pm in tc["payment_methods"]:
-                a(f"- **{pm['type']}**: {pm.get('note', '')}")
-            a("")
 
     return "\n".join(out)
 
@@ -576,21 +602,99 @@ def list_connectors() -> list[str]:
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
 
+def check_example_syntax(examples_dir: Path) -> None:
+    """Run syntax checks on all generated example files."""
+    import subprocess
+
+    py_files = sorted(examples_dir.rglob("*.py"))
+    js_files = sorted(examples_dir.rglob("*.js"))
+    kt_files = sorted(examples_dir.rglob("*.kt"))
+    rs_files = sorted(examples_dir.rglob("*.rs"))
+
+    errors: list[str] = []
+
+    # Python — full AST parse
+    for f in py_files:
+        result = subprocess.run(
+            [sys.executable, "-m", "py_compile", str(f)],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            errors.append(f"Python: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
+
+    # JavaScript — syntax check
+    node_ok = False
+    try:
+        subprocess.run(["node", "--version"], capture_output=True, check=True)
+        node_ok = True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    if node_ok:
+        for f in js_files:
+            result = subprocess.run(["node", "--check", str(f)], capture_output=True, text=True)
+            if result.returncode != 0:
+                errors.append(f"JS: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
+
+    # Kotlin — syntax check via kotlinc -script (if available)
+    # Full compilation requires SDK JARs: ./gradlew compileKotlin (from sdk/java/)
+    kt_ok = False
+    try:
+        subprocess.run(["kotlinc", "-version"], capture_output=True, check=True)
+        kt_ok = True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    if kt_ok:
+        for f in kt_files:
+            result = subprocess.run(
+                ["kotlinc", "-nowarn", str(f), "-d", "/dev/null"],
+                capture_output=True, text=True,
+            )
+            if result.returncode != 0:
+                errors.append(f"Kotlin: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
+
+    # Rust — format check via rustfmt (syntax-level); full compile needs cargo check
+    # Full compilation: cargo check -p hyperswitch-payments-client (from repo root)
+    rustfmt_ok = False
+    try:
+        subprocess.run(["rustfmt", "--version"], capture_output=True, check=True)
+        rustfmt_ok = True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    if rustfmt_ok:
+        for f in rs_files:
+            result = subprocess.run(
+                ["rustfmt", "--check", "--edition", "2021", str(f)],
+                capture_output=True, text=True,
+            )
+            # rustfmt --check exits 1 only on formatting diffs, not syntax errors.
+            # Run rustfmt without --check to detect parse errors.
+            result2 = subprocess.run(
+                ["rustfmt", "--edition", "2021", "--check", str(f)],
+                capture_output=True, text=True,
+            )
+            if "error" in result2.stderr.lower():
+                errors.append(f"Rust: {f.relative_to(examples_dir.parent)}: {result2.stderr.strip()}")
+
+    if errors:
+        print(f"\n  Syntax errors in {len(errors)} example file(s):")
+        for e in errors:
+            print(f"    {e}")
+    else:
+        checks = f"{len(py_files)} Python, {len(js_files)} JavaScript, {len(kt_files)} Kotlin, {len(rs_files)} Rust"
+        js_note = "" if node_ok else " (node unavailable — JS skipped)"
+        kt_note = "" if kt_ok else " (kotlinc unavailable — Kotlin skipped)"
+        rs_note = "" if rustfmt_ok else " (rustfmt unavailable — Rust skipped)"
+        print(f"  ✓ Syntax check passed ({checks}){js_note}{kt_note}{rs_note}")
+
+
 def cmd_list():
     connectors = list_connectors()
     print(f"Available connectors ({len(connectors)}):\n")
     for name in connectors:
-        has_ann = any((ANNOTATIONS_DIR / f"{name}.{ext}").exists() for ext in ("yaml", "yml"))
-        marker = "✓" if has_ann else "○"
-        print(f"  {marker}  {name}")
-    print("\n  ✓ = annotation file present   ○ = auto-generated only")
+        print(f"  {name}")
 
 
 def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[Path] = None):
-    if yaml is None:
-        print("Warning: PyYAML not installed – annotation files will be ignored.")
-        print("Install with: pip install pyyaml\n")
-
     probe_data = load_probe_data(probe_path)
     if not probe_data:
         print("Error: No probe data available. Run field-probe first.", file=sys.stderr)
@@ -608,14 +712,21 @@ def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[P
         if doc:
             out = output_dir / f"{name}.md"
             out.write_text(doc, encoding="utf-8")
-            n_flows = len(get_flows_from_probe(probe_data.get(name, {})))
-            print(f"✓  ({n_flows} flows → {out.relative_to(REPO_ROOT)})")
+            probe_connector = probe_data.get(name, {})
+            n_flows         = len(get_flows_from_probe(probe_connector))
+            scenario_files  = generate_scenario_files(name, probe_connector, EXAMPLES_DIR)
+            flow_files      = generate_flow_files(name, probe_connector, EXAMPLES_DIR)
+            n_scenarios     = len(scenario_files) // 2  # python + js per scenario
+            n_flow_files    = len(flow_files)
+            print(f"✓  ({n_flows} flows, {n_scenarios} scenarios, {n_flow_files} flow examples → {out.relative_to(REPO_ROOT)})")
             ok += 1
         else:
             print("skipped")
             skip += 1
 
+    generate_llms_txt(probe_data, output_dir)
     print(f"\nDone: {ok} generated, {skip} skipped.")
+    check_example_syntax(EXAMPLES_DIR)
 
 
 # ─── All Connectors Coverage Document ─────────────────────────────────────────

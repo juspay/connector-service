@@ -18,15 +18,15 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2
+from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.IATAPAY,
+    connector=payment_pb2.Connector.IATAPAY,
     environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
 )
+# Set credentials before running (field names depend on connector auth type):
+# config.auth.iatapay.api_key.value = "YOUR_API_KEY"
+
 ```
 
 </details>
@@ -91,6 +91,29 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
+## Payment Method Reference
+
+Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
+
+### iDEAL
+
+```python
+"payment_method": {
+    "ideal": {
+    }
+}
+```
+
+### UPI Collect
+
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
+
 ## Implemented Flows
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
@@ -103,7 +126,7 @@ let config = ConnectorConfig {
 | [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 
-## Flow Details
+## Flow Reference
 
 ### Payments
 
@@ -124,81 +147,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | UPI | ✓ |
 | Samsung Pay | — |
 
-**iDEAL**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "ideal": {
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    },
-    "state": {  # State Information
-        "access_token": {  # Access token obtained from connector
-            "token": "probe_access_token",  # The token string.
-            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-        }
-    }
-}
-```
+**Examples:** [Python](../../examples/iatapay/python/authorize.py) · [JavaScript](../../examples/iatapay/javascript/authorize.js) · [Kotlin](../../examples/iatapay/kotlin/authorize.kt) · [Rust](../../examples/iatapay/rust/authorize.rs)
 
 #### PaymentService.Get
 
@@ -209,27 +158,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.get(request)`
-
-```python
-{
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {  # Amount Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "state": {  # State Information
-        "access_token": {  # Access token obtained from connector
-            "token": "probe_access_token",  # The token string.
-            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-        }
-    },
-    "connector_order_reference_id": "probe_order_ref_001"  # Connector Reference Id
-}
-```
+**Examples:** [Python](../../examples/iatapay/python/get.py) · [JavaScript](../../examples/iatapay/javascript/get.js) · [Kotlin](../../examples/iatapay/kotlin/get.kt) · [Rust](../../examples/iatapay/rust/get.rs)
 
 #### PaymentService.Refund
 
@@ -240,30 +169,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.refund(request)`
-
-```python
-{
-    "merchant_refund_id": "probe_refund_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "payment_amount": 1000,  # Amount Information
-    "refund_amount": {
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "reason": "customer_request",  # Reason for the refund
-    "webhook_url": "https://example.com/webhook",  # URL for webhook notifications
-    "state": {  # State data for access token storage and other connector-specific state
-        "access_token": {  # Access token obtained from connector
-            "token": "probe_access_token",  # The token string.
-            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-        }
-    }
-}
-```
+**Examples:** [Python](../../examples/iatapay/python/refund.py) · [JavaScript](../../examples/iatapay/javascript/refund.js) · [Kotlin](../../examples/iatapay/kotlin/refund.kt) · [Rust](../../examples/iatapay/rust/refund.rs)
 
 ### Authentication
 
@@ -276,8 +182,6 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/iatapay.yaml` -->
-
 #### MerchantAuthenticationService.CreateAccessToken
 
 Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
@@ -287,7 +191,8 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Example Request**
+**Examples:** [Python](../../examples/iatapay/python/create_access_token.py) · [JavaScript](../../examples/iatapay/javascript/create_access_token.js) · [Kotlin](../../examples/iatapay/kotlin/create_access_token.kt) · [Rust](../../examples/iatapay/rust/create_access_token.rs)
+
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
 Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -297,8 +202,6 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/iatapay.yaml` -->
-
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
 Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -307,5 +210,3 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 |---|---------|
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
-
-<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/iatapay.yaml` -->

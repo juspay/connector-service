@@ -18,15 +18,15 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2
+from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.VOLT,
+    connector=payment_pb2.Connector.VOLT,
     environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
 )
+# Set credentials before running (field names depend on connector auth type):
+# config.auth.volt.api_key.value = "YOUR_API_KEY"
+
 ```
 
 </details>
@@ -103,7 +103,7 @@ let config = ConnectorConfig {
 | [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 
-## Flow Details
+## Flow Reference
 
 ### Payments
 
@@ -122,8 +122,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 |----------------|:---------:|
 | Samsung Pay | — |
 
-<!-- TODO: Add sample payload for `authorize` in `scripts/connector-annotations/volt.yaml` -->
-
 #### PaymentService.Get
 
 Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
@@ -133,26 +131,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.get(request)`
-
-```python
-{
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {  # Amount Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "state": {  # State Information
-        "access_token": {  # Access token obtained from connector
-            "token": "probe_access_token",  # The token string.
-            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-        }
-    }
-}
-```
+**Examples:** [Python](../../examples/volt/python/get.py) · [JavaScript](../../examples/volt/javascript/get.js) · [Kotlin](../../examples/volt/kotlin/get.kt) · [Rust](../../examples/volt/rust/get.rs)
 
 #### PaymentService.Refund
 
@@ -163,29 +142,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.refund(request)`
-
-```python
-{
-    "merchant_refund_id": "probe_refund_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "payment_amount": 1000,  # Amount Information
-    "refund_amount": {
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "reason": "customer_request",  # Reason for the refund
-    "state": {  # State data for access token storage and other connector-specific state
-        "access_token": {  # Access token obtained from connector
-            "token": "probe_access_token",  # The token string.
-            "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-            "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-        }
-    }
-}
-```
+**Examples:** [Python](../../examples/volt/python/refund.py) · [JavaScript](../../examples/volt/javascript/refund.js) · [Kotlin](../../examples/volt/kotlin/refund.kt) · [Rust](../../examples/volt/rust/refund.rs)
 
 ### Authentication
 
@@ -198,8 +155,6 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/volt.yaml` -->
-
 #### MerchantAuthenticationService.CreateAccessToken
 
 Generate short-lived connector authentication token. Provides secure credentials for connector API access without storing secrets client-side.
@@ -209,7 +164,8 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Example Request**
+**Examples:** [Python](../../examples/volt/python/create_access_token.py) · [JavaScript](../../examples/volt/javascript/create_access_token.js) · [Kotlin](../../examples/volt/kotlin/create_access_token.kt) · [Rust](../../examples/volt/rust/create_access_token.rs)
+
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
 Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -219,8 +175,6 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/volt.yaml` -->
-
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
 Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -229,5 +183,3 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 |---|---------|
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
-
-<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/volt.yaml` -->

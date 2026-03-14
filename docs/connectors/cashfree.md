@@ -18,15 +18,15 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2
+from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.CASHFREE,
+    connector=payment_pb2.Connector.CASHFREE,
     environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
 )
+# Set credentials before running (field names depend on connector auth type):
+# config.auth.cashfree.api_key.value = "YOUR_API_KEY"
+
 ```
 
 </details>
@@ -91,6 +91,20 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
+## Payment Method Reference
+
+Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
+
+### UPI Collect
+
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
+
 ## Implemented Flows
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
@@ -101,7 +115,7 @@ let config = ConnectorConfig {
 | [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 
-## Flow Details
+## Flow Reference
 
 ### Payments
 
@@ -121,7 +135,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | UPI | ✓ |
 | Samsung Pay | — |
 
-<!-- TODO: Add sample payload for `authorize` in `scripts/connector-annotations/cashfree.yaml` -->
+**Examples:** [Python](../../examples/cashfree/python/authorize.py) · [JavaScript](../../examples/cashfree/javascript/authorize.js) · [Kotlin](../../examples/cashfree/kotlin/authorize.kt) · [Rust](../../examples/cashfree/rust/authorize.rs)
 
 #### PaymentService.CreateOrder
 
@@ -131,8 +145,6 @@ Initialize an order in the payment processor system. Sets up payment context bef
 |---|---------|
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
-
-<!-- TODO: Add sample payload for `create_order` in `scripts/connector-annotations/cashfree.yaml` -->
 
 ### Authentication
 
@@ -145,8 +157,6 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/cashfree.yaml` -->
-
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
 Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -156,8 +166,6 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/cashfree.yaml` -->
-
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
 Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -166,5 +174,3 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 |---|---------|
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
-
-<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/cashfree.yaml` -->

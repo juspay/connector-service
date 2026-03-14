@@ -18,15 +18,15 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2
+from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.ZIFT,
+    connector=payment_pb2.Connector.ZIFT,
     environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
 )
+# Set credentials before running (field names depend on connector auth type):
+# config.auth.zift.api_key.value = "YOUR_API_KEY"
+
 ```
 
 </details>
@@ -91,6 +91,52 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
+## Integration Scenarios
+
+Complete, runnable examples for common integration patterns. Each example shows the full flow with status handling. Copy-paste into your app and replace placeholder values.
+
+### Card Payment (Automatic Capture)
+
+Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/zift/python/checkout_autocapture.py) · [JavaScript](../../examples/zift/javascript/checkout_autocapture.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Refund a Payment
+
+Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+
+**Examples:** [Python](../../examples/zift/python/refund.py) · [JavaScript](../../examples/zift/javascript/refund.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+## Payment Method Reference
+
+Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
+
+### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
 ## Implemented Flows
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
@@ -105,7 +151,7 @@ let config = ConnectorConfig {
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-## Flow Details
+## Flow Reference
 
 ### Payments
 
@@ -125,79 +171,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | Samsung Pay | — |
 
-**Card (Raw PAN)**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "card": {  # Generic card payment
-            "card_number": "4111111111111111",  # Card Identification
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe"  # Cardholder Information
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
+**Examples:** [Python](../../examples/zift/python/authorize.py) · [JavaScript](../../examples/zift/javascript/authorize.js) · [Kotlin](../../examples/zift/kotlin/authorize.kt) · [Rust](../../examples/zift/rust/authorize.rs)
 
 #### PaymentService.Capture
 
@@ -208,8 +182,6 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-<!-- TODO: Add sample payload for `capture` in `scripts/connector-annotations/zift.yaml` -->
-
 #### PaymentService.Get
 
 Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
@@ -218,8 +190,6 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 |---|---------|
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
-
-<!-- TODO: Add sample payload for `get` in `scripts/connector-annotations/zift.yaml` -->
 
 #### PaymentService.Refund
 
@@ -230,22 +200,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.refund(request)`
-
-```python
-{
-    "merchant_refund_id": "probe_refund_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "payment_amount": 1000,  # Amount Information
-    "refund_amount": {
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "reason": "customer_request"  # Reason for the refund
-}
-```
+**Examples:** [Python](../../examples/zift/python/refund.py) · [JavaScript](../../examples/zift/javascript/refund.js) · [Kotlin](../../examples/zift/kotlin/refund.kt) · [Rust](../../examples/zift/rust/refund.rs)
 
 #### PaymentService.SetupRecurring
 
@@ -256,71 +211,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.setupRecurring(request)`
-
-```python
-{
-    "merchant_recurring_payment_id": "probe_mandate_001",  # Identification
-    "amount": {  # Mandate Details
-        "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {
-        "card": {  # Generic card payment
-            "card_number": "4111111111111111",  # Card Identification
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe"  # Cardholder Information
-        }
-    },
-    "customer": {
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-    "enrolled_for_3ds": false,  # Indicates if the customer is enrolled for 3D Secure
-    "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-    "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
-    "request_incremental_authorization": false,  # Indicates if incremental authorization is requested
-    "customer_acceptance": {  # Details of customer acceptance
-        "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
-        "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "browser_info": {  # Information about the customer's browser
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
+**Examples:** [Python](../../examples/zift/python/setup_recurring.py) · [JavaScript](../../examples/zift/javascript/setup_recurring.js) · [Kotlin](../../examples/zift/kotlin/setup_recurring.kt) · [Rust](../../examples/zift/rust/setup_recurring.rs)
 
 #### PaymentService.Void
 
@@ -330,8 +221,6 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 |---|---------|
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
-
-<!-- TODO: Add sample payload for `void` in `scripts/connector-annotations/zift.yaml` -->
 
 ### Authentication
 
@@ -344,8 +233,6 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/zift.yaml` -->
-
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
 Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -355,8 +242,6 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/zift.yaml` -->
-
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
 Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -365,5 +250,3 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 |---|---------|
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
-
-<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/zift.yaml` -->

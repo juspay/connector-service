@@ -1,0 +1,30 @@
+// This file is auto-generated. Do not edit manually.
+// Replace YOUR_API_KEY and placeholder values with real data.
+// Regenerate: python3 scripts/generate-connector-docs.py razorpayv2
+//
+// Flow: PaymentService.CreateOrder
+
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+const client = new ConnectorClient({
+    connector: 'Razorpayv2',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+
+async function createOrder(merchantTransactionId) {
+    // Step 1: create_order
+    const createResponse = await client.createOrder({
+        "merchant_order_id": "probe_order_001",  // Identification
+        "amount": {  // Amount Information
+            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    });
+
+    return { status: createResponse.status };
+}
+
+createOrder("order_001").catch(console.error);

@@ -18,15 +18,15 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2
+from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.REDSYS,
+    connector=payment_pb2.Connector.REDSYS,
     environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
 )
+# Set credentials before running (field names depend on connector auth type):
+# config.auth.redsys.api_key.value = "YOUR_API_KEY"
+
 ```
 
 </details>
@@ -104,7 +104,7 @@ let config = ConnectorConfig {
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-## Flow Details
+## Flow Reference
 
 ### Payments
 
@@ -123,8 +123,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 |----------------|:---------:|
 | Samsung Pay | — |
 
-<!-- TODO: Add sample payload for `authorize` in `scripts/connector-annotations/redsys.yaml` -->
-
 #### PaymentService.Capture
 
 Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
@@ -133,8 +131,6 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 |---|---------|
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
-
-<!-- TODO: Add sample payload for `capture` in `scripts/connector-annotations/redsys.yaml` -->
 
 #### PaymentService.Get
 
@@ -145,8 +141,6 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-<!-- TODO: Add sample payload for `get` in `scripts/connector-annotations/redsys.yaml` -->
-
 #### PaymentService.Refund
 
 Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
@@ -156,8 +150,6 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-<!-- TODO: Add sample payload for `refund` in `scripts/connector-annotations/redsys.yaml` -->
-
 #### PaymentService.Void
 
 Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
@@ -166,8 +158,6 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 |---|---------|
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
-
-<!-- TODO: Add sample payload for `void` in `scripts/connector-annotations/redsys.yaml` -->
 
 ### Authentication
 
@@ -180,8 +170,6 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/redsys.yaml` -->
-
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
 Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -191,8 +179,6 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/redsys.yaml` -->
-
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
 Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -201,5 +187,3 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 |---|---------|
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
-
-<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/redsys.yaml` -->

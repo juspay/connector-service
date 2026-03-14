@@ -18,15 +18,15 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2
+from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.PAYME,
+    connector=payment_pb2.Connector.PAYME,
     environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
 )
+# Set credentials before running (field names depend on connector auth type):
+# config.auth.payme.api_key.value = "YOUR_API_KEY"
+
 ```
 
 </details>
@@ -105,7 +105,7 @@ let config = ConnectorConfig {
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-## Flow Details
+## Flow Reference
 
 ### Payments
 
@@ -125,8 +125,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | — |
 | Samsung Pay | — |
 
-<!-- TODO: Add sample payload for `authorize` in `scripts/connector-annotations/payme.yaml` -->
-
 #### PaymentService.Capture
 
 Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
@@ -136,20 +134,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.capture(request)`
-
-```python
-{
-    "merchant_capture_id": "probe_capture_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount_to_capture": {  # Capture Details
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    }
-}
-```
+**Examples:** [Python](../../examples/payme/python/capture.py) · [JavaScript](../../examples/payme/javascript/capture.js) · [Kotlin](../../examples/payme/kotlin/capture.kt) · [Rust](../../examples/payme/rust/capture.rs)
 
 #### PaymentService.CreateOrder
 
@@ -160,19 +145,7 @@ Initialize an order in the payment processor system. Sets up payment context bef
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.createOrder(request)`
-
-```python
-{
-    "merchant_order_id": "probe_order_001",  # Identification
-    "amount": {  # Amount Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    }
-}
-```
+**Examples:** [Python](../../examples/payme/python/create_order.py) · [JavaScript](../../examples/payme/javascript/create_order.js) · [Kotlin](../../examples/payme/kotlin/create_order.kt) · [Rust](../../examples/payme/rust/create_order.rs)
 
 #### PaymentService.Get
 
@@ -183,19 +156,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.get(request)`
-
-```python
-{
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {  # Amount Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    }
-}
-```
+**Examples:** [Python](../../examples/payme/python/get.py) · [JavaScript](../../examples/payme/javascript/get.js) · [Kotlin](../../examples/payme/kotlin/get.kt) · [Rust](../../examples/payme/rust/get.rs)
 
 #### PaymentService.Refund
 
@@ -206,22 +167,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.refund(request)`
-
-```python
-{
-    "merchant_refund_id": "probe_refund_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "payment_amount": 1000,  # Amount Information
-    "refund_amount": {
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "reason": "customer_request"  # Reason for the refund
-}
-```
+**Examples:** [Python](../../examples/payme/python/refund.py) · [JavaScript](../../examples/payme/javascript/refund.js) · [Kotlin](../../examples/payme/kotlin/refund.kt) · [Rust](../../examples/payme/rust/refund.rs)
 
 #### PaymentService.Void
 
@@ -232,20 +178,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.void(request)`
-
-```python
-{
-    "merchant_void_id": "probe_void_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {  # Amount Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    }
-}
-```
+**Examples:** [Python](../../examples/payme/python/void.py) · [JavaScript](../../examples/payme/javascript/void.js) · [Kotlin](../../examples/payme/kotlin/void.kt) · [Rust](../../examples/payme/rust/void.rs)
 
 ### Authentication
 
@@ -258,8 +191,6 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/payme.yaml` -->
-
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
 Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -269,8 +200,6 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/payme.yaml` -->
-
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
 Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -279,5 +208,3 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 |---|---------|
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
-
-<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/payme.yaml` -->

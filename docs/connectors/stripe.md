@@ -18,15 +18,15 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 <details><summary>Python</summary>
 
 ```python
-from payments.generated import sdk_config_pb2
+from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=sdk_config_pb2.Connector.STRIPE,
+    connector=payment_pb2.Connector.STRIPE,
     environment=sdk_config_pb2.Environment.SANDBOX,
-    auth=sdk_config_pb2.ConnectorAuthType(
-        header_key=sdk_config_pb2.HeaderKey(api_key="YOUR_API_KEY"),
-    ),
 )
+# Set credentials before running (field names depend on connector auth type):
+# config.auth.stripe.api_key.value = "YOUR_API_KEY"
+
 ```
 
 </details>
@@ -91,6 +91,279 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
+## Integration Scenarios
+
+Complete, runnable examples for common integration patterns. Each example shows the full flow with status handling. Copy-paste into your app and replace placeholder values.
+
+### Card Payment (Authorize + Capture)
+
+Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/stripe/python/checkout_card.py) · [JavaScript](../../examples/stripe/javascript/checkout_card.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Card Payment (Automatic Capture)
+
+Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/stripe/python/checkout_autocapture.py) · [JavaScript](../../examples/stripe/javascript/checkout_autocapture.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Wallet Payment (Google Pay / Apple Pay)
+
+Wallet payments pass an encrypted token from the browser/device SDK. Pass the token blob directly — do not decrypt client-side.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/stripe/python/checkout_wallet.py) · [JavaScript](../../examples/stripe/javascript/checkout_wallet.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Bank Transfer (SEPA / ACH / BACS)
+
+Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC`.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/stripe/python/checkout_bank.py) · [JavaScript](../../examples/stripe/javascript/checkout_bank.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Refund a Payment
+
+Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+
+**Examples:** [Python](../../examples/stripe/python/refund.py) · [JavaScript](../../examples/stripe/javascript/refund.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Recurring / Mandate Payments
+
+Store a payment mandate with SetupRecurring, then charge it repeatedly with RecurringPaymentService.Charge without requiring customer action.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
+| `FAILED` | Setup failed — customer must re-enter payment details |
+
+**Examples:** [Python](../../examples/stripe/python/recurring.py) · [JavaScript](../../examples/stripe/javascript/recurring.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Void a Payment
+
+Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+
+**Examples:** [Python](../../examples/stripe/python/void_payment.py) · [JavaScript](../../examples/stripe/javascript/void_payment.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Get Payment Status
+
+Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+
+**Examples:** [Python](../../examples/stripe/python/get_payment.py) · [JavaScript](../../examples/stripe/javascript/get_payment.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Create Customer
+
+Register a customer record in the connector system. Returns a connector_customer_id that can be reused for recurring payments and tokenized card storage.
+
+**Examples:** [Python](../../examples/stripe/python/create_customer.py) · [JavaScript](../../examples/stripe/javascript/create_customer.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+### Tokenize Payment Method
+
+Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
+
+**Examples:** [Python](../../examples/stripe/python/tokenize.py) · [JavaScript](../../examples/stripe/javascript/tokenize.js)
+
+> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+
+## Payment Method Reference
+
+Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
+
+### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+### Google Pay
+
+```python
+"payment_method": {
+    "google_pay": {  # Google Pay
+        "type": "CARD",  # Type of payment method
+        "description": "Visa 1111",  # User-facing description of the payment method
+        "info": {
+            "card_network": "VISA",  # Card network name
+            "card_details": "1111"  # Card details (usually last 4 digits)
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data
+                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
+                "token_type": "PAYMENT_GATEWAY"  # The type of the token
+            }
+        }
+    }
+}
+```
+
+### Apple Pay
+
+```python
+"payment_method": {
+    "apple_pay": {  # Apple Pay
+        "payment_data": {
+            "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
+        },
+        "payment_method": {
+            "display_name": "Visa 1111",
+            "network": "Visa",
+            "type": "debit"
+        },
+        "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
+    }
+}
+```
+
+### SEPA Direct Debit
+
+```python
+"payment_method": {
+    "sepa": {  # Sepa - Single Euro Payments Area direct debit
+        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
+    }
+}
+```
+
+### BACS Direct Debit
+
+```python
+"payment_method": {
+    "bacs": {  # Bacs - Bankers' Automated Clearing Services
+        "account_number": {"value": "55779911"},  # Account number for Bacs payment method
+        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method
+        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit
+    }
+}
+```
+
+### ACH Direct Debit
+
+```python
+"payment_method": {
+    "ach": {  # Ach - Automated Clearing House
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
+    }
+}
+```
+
+### BECS Direct Debit
+
+```python
+"payment_method": {
+    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit
+        "account_number": {"value": "000123456"},  # Account number for Becs payment method
+        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
+    }
+}
+```
+
+### iDEAL
+
+```python
+"payment_method": {
+    "ideal": {
+    }
+}
+```
+
+### BLIK
+
+```python
+"payment_method": {
+    "blik": {
+        "blik_code": "777124"
+    }
+}
+```
+
+### Klarna
+
+```python
+"payment_method": {
+    "klarna": {  # Klarna - Swedish BNPL service
+    }
+}
+```
+
+### Afterpay / Clearpay
+
+```python
+"payment_method": {
+    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service
+    }
+}
+```
+
+### Affirm
+
+```python
+"payment_method": {
+    "affirm": {  # Affirm - US BNPL service
+    }
+}
+```
+
 ## Implemented Flows
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
@@ -108,7 +381,7 @@ let config = ConnectorConfig {
 | [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-## Flow Details
+## Flow Reference
 
 ### Payments
 
@@ -139,803 +412,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Affirm | ✓ |
 | Samsung Pay | — |
 
-**Card (Raw PAN)**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "card": {  # Generic card payment
-            "card_number": "4111111111111111",  # Card Identification
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe"  # Cardholder Information
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**Google Pay**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "google_pay": {  # Google Pay
-            "type": "CARD",  # Type of payment method
-            "description": "Visa 1111",  # User-facing description of the payment method
-            "info": {
-                "card_network": "VISA",  # Card network name
-                "card_details": "1111"  # Card details (usually last 4 digits)
-            },
-            "tokenization_data": {
-                "encrypted_data": {  # Encrypted Google Pay payment data
-                    "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
-                    "token_type": "PAYMENT_GATEWAY"  # The type of the token
-                }
-            }
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**Apple Pay**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "apple_pay": {  # Apple Pay
-            "payment_data": {
-                "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
-            },
-            "payment_method": {
-                "display_name": "Visa 1111",
-                "network": "Visa",
-                "type": "debit"
-            },
-            "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    },
-    "payment_method_token": "probe_pm_token"  # Payment Method Token
-}
-```
-
-**SEPA Direct Debit**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "sepa": {  # Sepa - Single Euro Payments Area direct debit
-            "iban": "DE89370400440532013000",  # International bank account number (iban) for SEPA
-            "bank_account_holder_name": "John Doe"  # Owner name for bank debit
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**BACS Direct Debit**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "bacs": {  # Bacs - Bankers' Automated Clearing Services
-            "account_number": "55779911",  # Account number for Bacs payment method
-            "sort_code": "200000",  # Sort code for Bacs payment method
-            "bank_account_holder_name": "John Doe"  # Holder name for bank debit
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**ACH Direct Debit**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "ach": {  # Ach - Automated Clearing House
-            "account_number": "000123456789",  # Account number for ach bank debit payment
-            "routing_number": "110000000",  # Routing number for ach bank debit payment
-            "bank_account_holder_name": "John Doe"  # Bank account holder name
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**BECS Direct Debit**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit
-            "account_number": "000123456",  # Account number for Becs payment method
-            "bsb_number": "000000",  # Bank-State-Branch (bsb) number
-            "bank_account_holder_name": "John Doe"  # Owner name for bank debit
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**iDEAL**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "ideal": {
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**BLIK**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "blik": {
-            "blik_code": "777124"
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**Klarna**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "klarna": {  # Klarna - Swedish BNPL service
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
-
-**Afterpay / Clearpay**
-
-> **Client call:** `PaymentClient.authorize(request)`
-
-```python
-{
-    "merchant_transaction_id": "probe_txn_001",  # Identification
-    "amount": {  # The amount for the payment
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Payment method to be used
-        "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service
-        }
-    },
-    "capture_method": "AUTOMATIC",  # Method for capturing the payment
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "shipping_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        },
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Authentication Details
-    "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
+**Examples:** [Python](../../examples/stripe/python/authorize.py) · [JavaScript](../../examples/stripe/javascript/authorize.js) · [Kotlin](../../examples/stripe/kotlin/authorize.kt) · [Rust](../../examples/stripe/rust/authorize.rs)
 
 #### PaymentService.Capture
 
@@ -946,20 +423,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.capture(request)`
-
-```python
-{
-    "merchant_capture_id": "probe_capture_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount_to_capture": {  # Capture Details
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    }
-}
-```
+**Examples:** [Python](../../examples/stripe/python/capture.py) · [JavaScript](../../examples/stripe/javascript/capture.js) · [Kotlin](../../examples/stripe/kotlin/capture.kt) · [Rust](../../examples/stripe/rust/capture.rs)
 
 #### PaymentService.Get
 
@@ -970,19 +434,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.get(request)`
-
-```python
-{
-    "connector_transaction_id": "probe_connector_txn_001",
-    "amount": {  # Amount Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    }
-}
-```
+**Examples:** [Python](../../examples/stripe/python/get.py) · [JavaScript](../../examples/stripe/javascript/get.js) · [Kotlin](../../examples/stripe/kotlin/get.kt) · [Rust](../../examples/stripe/rust/get.rs)
 
 #### PaymentService.Refund
 
@@ -993,22 +445,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.refund(request)`
-
-```python
-{
-    "merchant_refund_id": "probe_refund_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    "payment_amount": 1000,  # Amount Information
-    "refund_amount": {
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "reason": "customer_request"  # Reason for the refund
-}
-```
+**Examples:** [Python](../../examples/stripe/python/refund.py) · [JavaScript](../../examples/stripe/javascript/refund.js) · [Kotlin](../../examples/stripe/kotlin/refund.kt) · [Rust](../../examples/stripe/rust/refund.rs)
 
 #### PaymentService.SetupRecurring
 
@@ -1019,71 +456,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.setupRecurring(request)`
-
-```python
-{
-    "merchant_recurring_payment_id": "probe_mandate_001",  # Identification
-    "amount": {  # Mandate Details
-        "minor_amount": 0,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {
-        "card": {  # Generic card payment
-            "card_number": "4111111111111111",  # Card Identification
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe"  # Cardholder Information
-        }
-    },
-    "customer": {
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    },
-    "auth_type": "NO_THREE_DS",  # Type of authentication to be used
-    "enrolled_for_3ds": false,  # Indicates if the customer is enrolled for 3D Secure
-    "return_url": "https://example.com/mandate-return",  # URL to redirect after setup
-    "setup_future_usage": "OFF_SESSION",  # Indicates future usage intention
-    "request_incremental_authorization": false,  # Indicates if incremental authorization is requested
-    "customer_acceptance": {  # Details of customer acceptance
-        "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
-        "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "browser_info": {  # Information about the customer's browser
-        "color_depth": 24,  # Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  # Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  # Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4"  # Device Information
-    }
-}
-```
+**Examples:** [Python](../../examples/stripe/python/setup_recurring.py) · [JavaScript](../../examples/stripe/javascript/setup_recurring.js) · [Kotlin](../../examples/stripe/kotlin/setup_recurring.kt) · [Rust](../../examples/stripe/rust/setup_recurring.rs)
 
 #### PaymentMethodService.Tokenize
 
@@ -1094,48 +467,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentMethodClient.tokenize(request)`
-
-```python
-{
-    "amount": {  # Payment Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {
-        "card": {  # Generic card payment
-            "card_number": "4111111111111111",  # Card Identification
-            "card_exp_month": "03",
-            "card_exp_year": "2030",
-            "card_cvc": "737",
-            "card_holder_name": "John Doe"  # Cardholder Information
-        }
-    },
-    "customer": {  # Customer Information
-        "name": "John Doe",  # Customer's full name
-        "email": "test@example.com",  # Customer's email address
-        "id": "cust_probe_123",  # Internal customer ID
-        "phone_number": "4155552671",  # Customer's phone number
-        "phone_country_code": "+1"  # Customer's phone country code
-    },
-    "address": {  # Address Information
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    }
-}
-```
+**Examples:** [Python](../../examples/stripe/python/tokenize.py) · [JavaScript](../../examples/stripe/javascript/tokenize.js) · [Kotlin](../../examples/stripe/kotlin/tokenize.kt) · [Rust](../../examples/stripe/rust/tokenize.rs)
 
 #### PaymentService.Void
 
@@ -1146,16 +478,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Example Request**
-
-> **Client call:** `PaymentClient.void(request)`
-
-```python
-{
-    "merchant_void_id": "probe_void_001",  # Identification
-    "connector_transaction_id": "probe_connector_txn_001"
-}
-```
+**Examples:** [Python](../../examples/stripe/python/void.py) · [JavaScript](../../examples/stripe/javascript/void.js) · [Kotlin](../../examples/stripe/kotlin/void.kt) · [Rust](../../examples/stripe/rust/void.rs)
 
 ### Mandates
 
@@ -1168,30 +491,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Example Request**
-
-> **Client call:** `RecurringPaymentClient.recurringCharge(request)`
-
-```python
-{
-    "connector_recurring_payment_id": {  # Reference to existing mandate
-        "mandate_id_type": {
-            "connector_mandate_id": "probe_mandate_123"
-        }
-    },
-    "amount": {  # Amount Information
-        "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  # Optional payment Method Information (for network transaction flows)
-        "token": "probe_pm_token"  # Payment tokens
-    },
-    "return_url": "https://example.com/recurring-return",
-    "connector_customer_id": "probe_cust_connector_001",
-    "payment_method_type": "PAY_PAL",
-    "off_session": true  # Behavioral Flags and Preferences
-}
-```
+**Examples:** [Python](../../examples/stripe/python/recurring_charge.py) · [JavaScript](../../examples/stripe/javascript/recurring_charge.js) · [Kotlin](../../examples/stripe/kotlin/recurring_charge.kt) · [Rust](../../examples/stripe/rust/recurring_charge.rs)
 
 ### Customers
 
@@ -1204,31 +504,7 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Example Request**
-
-> **Client call:** `CustomerClient.createCustomer(request)`
-
-```python
-{
-    "customer_name": "John Doe",  # Name of the customer
-    "email": "test@example.com",  # Email address of the customer
-    "phone_number": "4155552671",  # Phone number of the customer
-    "address": {  # Address Information
-        "billing_address": {
-            "first_name": "John",  # Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  # Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  # Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-        }
-    }
-}
-```
+**Examples:** [Python](../../examples/stripe/python/create_customer.py) · [JavaScript](../../examples/stripe/javascript/create_customer.js) · [Kotlin](../../examples/stripe/kotlin/create_customer.kt) · [Rust](../../examples/stripe/rust/create_customer.rs)
 
 ### Authentication
 
@@ -1241,8 +517,6 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `authenticate` in `scripts/connector-annotations/stripe.yaml` -->
-
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
 Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -1252,8 +526,6 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
 
-<!-- TODO: Add sample payload for `post_authenticate` in `scripts/connector-annotations/stripe.yaml` -->
-
 #### PaymentMethodAuthenticationService.PreAuthenticate
 
 Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -1262,5 +534,3 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 |---|---------|
 | **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
-
-<!-- TODO: Add sample payload for `pre_authenticate` in `scripts/connector-annotations/stripe.yaml` -->
