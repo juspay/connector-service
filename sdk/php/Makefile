@@ -11,6 +11,9 @@ CONNECTORS ?= stripe
 # Include common SDK build configuration (defines FFI_CRATE, LIBRARY, PLATFORM, etc.)
 include $(SDK_ROOT)/../common.mk
 
+# If FFI is not already loaded (e.g. missing from php.ini), load it dynamically.
+PHP_EXT_FFI := $(shell php -r "echo extension_loaded('ffi') ? '' : '-d extension=ffi';" 2>/dev/null)
+
 # SDK-specific paths continued
 GENERATED_OUT := $(SDK_ROOT)/src/Payments/Generated
 PACKAGE_DIR   := $(ARTIFACTS_DIR)/sdk-php
@@ -124,7 +127,7 @@ test-package: build-ffi-lib generate-all install-deps
 	else \
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
-	@cd /tmp/test-hyperswitch-php && php -d ffi.enable=1 test_smoke.php --connectors $(CONNECTORS)
+	@cd /tmp/test-hyperswitch-php && php $(PHP_EXT_FFI) -d ffi.enable=1 test_smoke.php --connectors $(CONNECTORS)
 	@rm -rf /tmp/test-hyperswitch-php
 	@echo "PHP smoke test passed."
 
