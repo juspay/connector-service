@@ -1,3 +1,11 @@
+// Copyright (c) Juspay Technologies. All rights reserved.
+//
+// Package: ucs.v2
+// File: payment_methods.proto
+//
+// Overview:
+//   This file defines the common messages and types for payment methods.
+
 syntax = "proto3";
 
 package types;

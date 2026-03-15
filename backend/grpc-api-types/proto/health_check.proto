@@ -1,3 +1,11 @@
+// Copyright (c) Juspay Technologies. All rights reserved.
+//
+// Package: grpc.health.v1
+// File: health_check.proto
+//
+// Overview:
+//   This file defines the gRPC health checking service.
+
 syntax = "proto3";
 
 package grpc.health.v1;

@@ -1,3 +1,11 @@
+// Copyright (c) Juspay Technologies. All rights reserved.
+//
+// Package: ucs.v2
+// File: composite_service.proto
+//
+// Overview:
+//   This file defines the gRPC service interface for composite payment operations.
+
 syntax = "proto3";
 
 package types;
