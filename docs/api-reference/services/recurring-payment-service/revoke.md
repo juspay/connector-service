@@ -71,7 +71,7 @@ grpcurl -H "x-connector: stripe" \
     "connector_mandate_id": "seti_3Oxxx..."
   }' \
   localhost:8080 \
-  ucs.v2.RecurringPaymentService/Revoke
+  types.RecurringPaymentService/Revoke
 ```
 
 ### Response (Success)
