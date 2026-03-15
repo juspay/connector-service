@@ -13,4 +13,10 @@ service CompositePaymentService {
 
   // Runs composite get flow.
   rpc CompositeGet(CompositeGetRequest) returns (CompositeGetResponse);
+
+  // Runs composite void flow.
+  rpc Void(CompositeVoidRequest) returns (CompositeVoidResponse);
+
+  // Runs composite capture flow.
+  rpc Capture(CompositeCaptureRequest) returns (CompositeCaptureResponse);
 }
