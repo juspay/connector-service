@@ -1502,6 +1502,7 @@ message SessionToken {
     GpaySessionTokenResponse google_pay = 1;
     PaypalSessionTokenResponse paypal = 2;
     ApplepaySessionTokenResponse apple_pay = 3;
+    StripeSessionTokenResponse stripe = 4;
   }
 }
 
@@ -1692,6 +1693,11 @@ message PaypalTransactionInfo {
 enum PaypalFlow {
   PAYPAL_FLOW_UNSPECIFIED = 0;
   PAYPAL_FLOW_CHECKOUT = 1;
+}
+
+// Stripe Session Token - contains client_secret
+message StripeSessionTokenResponse {
+  SecretString client_secret = 1;
 }
 
 // Common Session Token Types

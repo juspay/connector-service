@@ -9744,6 +9744,14 @@ pub fn generate_payment_sdk_session_token_response(
                                 ),
                             })
                         }
+                        SessionToken::Stripe(_) => {
+                            return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_SESSION_TOKEN_TYPE".to_string(),
+                                error_identifier: 400,
+                                error_message: "Stripe session token is not supported in the SDK session token flow".to_string(),
+                                error_object: None,
+                            })));
+                        }
                     };
 
                     Ok(MerchantAuthenticationServiceCreateSdkSessionTokenResponse {
@@ -10031,6 +10039,16 @@ impl ForeignTryFrom<SessionToken> for grpc_api_types::payments::SessionToken {
                             apple_pay_response,
                         ),
                     ),
+                }
+            }
+            SessionToken::Stripe(stripe_token) => {
+                let stripe_response = grpc_api_types::payments::StripeSessionTokenResponse {
+                    client_secret: Some(stripe_token.client_secret),
+                };
+                grpc_api_types::payments::SessionToken {
+                    wallet_name: Some(grpc_api_types::payments::session_token::WalletName::Stripe(
+                        stripe_response,
+                    )),
                 }
             }
         };
