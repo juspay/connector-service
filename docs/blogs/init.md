@@ -4,7 +4,7 @@ If you have ever integrated a payment processor, you know the drill. You read th
 
 We have been living in this world for years building Hyperswitch, an open-source payment orchestrator. At some point we had integrations for 50+ connectors. The integrations worked well — but they were locked inside our orchestrator, not usable by anyone who just needed to talk to Stripe or Adyen without adopting an entire platform.
 
-This post is about what we did next: unbundling those integrations into a standalone library called the **Connector Service**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
+This post is about how we did that: unbundling those integrations into a standalone library called the **Connector Service**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
 
 ---
 
