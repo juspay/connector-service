@@ -84,7 +84,7 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/Void
+  types.PaymentService/Void
 ```
 
 ### Response
