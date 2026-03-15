@@ -1,0 +1,27 @@
+{
+     "name": "js-payment-demo",
+     "version": "1.0.0",
+     "description": "CLI for payment processing with hs-playlib",
+     "license": "ISC",
+     "author": "",
+     "type": "commonjs",
+     "main": "dist/index.js",
+     "bin": {
+       "paymentcli": "dist/cli-demo/bin.js"
+     },
+     "scripts": {
+       "build": "tsc",
+       "start": "npm run build && node dist/index.js",
+       "test": "echo \"Error: no test specified\" && exit 1"
+     },
+     "dependencies": {
+       "@clack/prompts": "^1.1.0",
+       "commander": "^9.4.1",
+       "hs-playlib": "^0.6.0",
+       "omelette": "^0.4.17"
+     },
+     "devDependencies": {
+       "@types/node": "^20.10.0",
+       "typescript": "^5.3.0"
+     }
+   }

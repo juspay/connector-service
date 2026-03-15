@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# macOS system files
+.DS_Store
+
+# Test coverage
+coverage
+
+# IDE
+.vscode
+.idea
+
+# npm pack output
+*.tgz
