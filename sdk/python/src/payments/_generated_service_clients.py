@@ -107,4 +107,3 @@ class RecurringPaymentClient(_ConnectorClientBase):
     def charge(self, request, options=None):
         """RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details."""
         return self._execute_flow("charge", request, _pb2.RecurringPaymentServiceChargeResponse, options)
-
