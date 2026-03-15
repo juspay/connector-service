@@ -103,13 +103,11 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/forte/python/checkout_autocapture.py) · [JavaScript](../../examples/forte/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/forte/python/forte.py#L22) · [JavaScript](../../examples/forte/javascript/forte.js#L22) · [Kotlin](../../examples/forte/kotlin/forte.kt#L31) · [Rust](../../examples/forte/rust/forte.rs#L26)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -119,74 +117,31 @@ Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/forte/python/checkout_bank.py) · [JavaScript](../../examples/forte/javascript/checkout_bank.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/forte/python/forte.py#L110) · [JavaScript](../../examples/forte/javascript/forte.js#L107) · [Kotlin](../../examples/forte/kotlin/forte.kt#L113) · [Rust](../../examples/forte/rust/forte.rs#L109)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/forte/python/void_payment.py) · [JavaScript](../../examples/forte/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/forte/python/forte.py#L196) · [JavaScript](../../examples/forte/javascript/forte.js#L190) · [Kotlin](../../examples/forte/kotlin/forte.kt#L193) · [Rust](../../examples/forte/rust/forte.rs#L190)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/forte/python/get_payment.py) · [JavaScript](../../examples/forte/javascript/get_payment.js)
+**Examples:** [Python](../../examples/forte/python/forte.py#L293) · [JavaScript](../../examples/forte/javascript/forte.js#L281) · [Kotlin](../../examples/forte/kotlin/forte.kt#L281) · [Rust](../../examples/forte/rust/forte.rs#L279)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### ACH Direct Debit
-
-```python
-"payment_method": {
-    "ach": {  # Ach - Automated Clearing House
-        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
-        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
-        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -207,16 +162,35 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | ACH | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/forte/python/authorize.py) · [JavaScript](../../examples/forte/javascript/authorize.js) · [Kotlin](../../examples/forte/kotlin/authorize.kt) · [Rust](../../examples/forte/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
-#### PaymentService.Capture
+##### Card (Raw PAN)
 
-Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCaptureRequest` |
-| **Response** | `PaymentServiceCaptureResponse` |
+##### ACH Direct Debit
+
+```python
+"payment_method": {
+    "ach": {  # Ach - Automated Clearing House
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
+    }
+}
+```
+
+**Examples:** [Python](../../examples/forte/python/forte.py#L393) · [JavaScript](../../examples/forte/javascript/forte.js#L374) · [Kotlin](../../examples/forte/kotlin/forte.kt#L371) · [Rust](../../examples/forte/rust/forte.rs#L370)
 
 #### PaymentService.Get
 
@@ -227,16 +201,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/forte/python/get.py) · [JavaScript](../../examples/forte/javascript/get.js) · [Kotlin](../../examples/forte/kotlin/get.kt) · [Rust](../../examples/forte/rust/get.rs)
-
-#### PaymentService.Refund
-
-Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceRefundRequest` |
-| **Response** | `RefundResponse` |
+**Examples:** [Python](../../examples/forte/python/forte.py#L478) · [JavaScript](../../examples/forte/javascript/forte.js#L456) · [Kotlin](../../examples/forte/kotlin/forte.kt#L449) · [Rust](../../examples/forte/rust/forte.rs#L449)
 
 #### PaymentService.Void
 
@@ -247,33 +212,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/forte/python/void.py) · [JavaScript](../../examples/forte/javascript/void.js) · [Kotlin](../../examples/forte/kotlin/void.kt) · [Rust](../../examples/forte/rust/void.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/forte/python/forte.py#L497) · [JavaScript](../../examples/forte/javascript/forte.js) · [Kotlin](../../examples/forte/kotlin/forte.kt#L463) · [Rust](../../examples/forte/rust/forte.rs#L461)

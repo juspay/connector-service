@@ -17,11 +17,11 @@ const client = new ConnectorClient({
 async function refund(merchantTransactionId) {
     // Step 1: Refund — return funds to the customer
     const refundResponse = await client.refund({
-        "merchant_refund_id": "probe_refund_001",  // Identification
-        "connector_transaction_id": "probe_connector_txn_001",
-        "payment_amount": 1000,  // Amount Information
-        "refund_amount": {
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": "probe_connector_txn_001",
+        "paymentAmount": 1000,  // Amount Information
+        "refundAmount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "reason": "customer_request"  // Reason for the refund

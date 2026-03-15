@@ -266,14 +266,27 @@ def display_name(connector_name: str) -> str:
 # ─── Markdown Generation ──────────────────────────────────────────────────────
 
 def get_flows_from_probe(probe_connector: dict) -> list[str]:
-    """Extract list of supported flow keys from probe data."""
-    return list(probe_connector.get("flows", {}).keys())
+    """Extract list of flow keys that have at least one supported entry in probe data."""
+    result = []
+    for flow_key, flow_data in probe_connector.get("flows", {}).items():
+        if any(entry.get("status") == "supported" for entry in flow_data.values()):
+            result.append(flow_key)
+    return result
 
 
 def get_flow_meta(flow_key: str) -> dict:
     """Get flow metadata by flow_key from loaded probe.json data."""
     flow_metadata = get_flow_metadata()
     return flow_metadata.get(flow_key, {})
+
+
+# Bank PM keys that require a specific currency rather than the probe default (USD).
+_BANK_PM_CURRENCY_OVERRIDES: dict[str, str] = {
+    "Sepa": "EUR",
+    "Bacs": "GBP",
+    "Becs": "AUD",
+    # Ach is USD — no override needed
+}
 
 
 def _get_flow_proto_requests(
@@ -286,6 +299,8 @@ def _get_flow_proto_requests(
     For authorize: uses the PM-specific entry keyed by scenario.pm_key.
     For all other flows: uses the "default" entry.
     Returns {} for any flow whose payload is missing or status != supported.
+
+    Also applies bank-PM currency overrides so that SEPA uses EUR, BACS uses GBP, etc.
     """
     flows = probe_connector.get("flows", {})
     result: dict[str, dict] = {}
@@ -293,42 +308,156 @@ def _get_flow_proto_requests(
         pm_key = scenario.pm_key if flow_key == "authorize" else "default"
         entry  = flows.get(flow_key, {}).get(pm_key or "default", {})
         if entry.get("status") == "supported":
-            result[flow_key] = entry.get("proto_request") or {}
+            payload = dict(entry.get("proto_request") or {})
+            # For checkout_bank, override the currency to the PM-appropriate one
+            # (probe data defaults to USD which many bank PMs like SEPA don't support).
+            if (
+                scenario.key == "checkout_bank"
+                and flow_key == "authorize"
+                and scenario.pm_key in _BANK_PM_CURRENCY_OVERRIDES
+                and "amount" in payload
+                and isinstance(payload.get("amount"), dict)
+            ):
+                payload["amount"] = dict(payload["amount"])
+                payload["amount"]["currency"] = _BANK_PM_CURRENCY_OVERRIDES[scenario.pm_key]
+            result[flow_key] = payload
     return result
+
+
+def _collect_flow_items(
+    probe_connector: dict,
+    exclude_keys: set,
+) -> list[tuple[str, dict, str]]:
+    """Return (flow_key, proto_req, pm_label) for every supported flow not in exclude_keys."""
+    flows = probe_connector.get("flows", {})
+    items: list[tuple[str, dict, str]] = []
+    for flow_key, flow_data in flows.items():
+        if flow_key in exclude_keys:
+            continue
+        if flow_key == "authorize":
+            for pm in _AUTHORIZE_PM_PRIORITY:
+                entry = flow_data.get(pm, {})
+                if entry.get("status") == "supported" and entry.get("proto_request"):
+                    items.append((flow_key, entry["proto_request"], pm))
+                    break
+        else:
+            entry = flow_data.get("default", {})
+            if entry.get("status") == "supported":
+                items.append((flow_key, entry.get("proto_request") or {}, ""))
+    return items
+
+
+def _find_func_line(content: str, search: str) -> int:
+    """Return the 1-based line number of the first line containing *search*, or 0 if not found."""
+    for i, line in enumerate(content.splitlines(), 1):
+        if search in line:
+            return i
+    return 0
+
+
+# Maps language → (scenario_key → search string template) so we can locate
+# each process_* function inside the generated consolidated file.
+_SCENARIO_FUNC_SEARCH: dict[str, str] = {
+    "python":     "async def process_{key}(",
+    "javascript": "async function process{camel}(",
+    "kotlin":     "fun process{camel}(",
+    "rust":       "fn process_{key}(",
+}
+
+# Same for per-flow functions (used in the Flow Reference section).
+_FLOW_FUNC_SEARCH: dict[str, str] = {
+    "python":     "async def {key}(",
+    "javascript": "async function {camel}(",
+    "kotlin":     "fun {camel}(",
+    "rust":       "fn {key}(",
+}
+
+
+def _scenario_search(sdk: str, scenario_key: str) -> str:
+    """Return the function-name search string for a scenario in a given SDK."""
+    tmpl = _SCENARIO_FUNC_SEARCH[sdk]
+    camel = "".join(w.capitalize() for w in scenario_key.split("_"))
+    return tmpl.format(key=scenario_key, camel=camel)
+
+
+def _flow_search(sdk: str, flow_key: str) -> str:
+    """Return the function-name search string for a flow in a given SDK."""
+    tmpl = _FLOW_FUNC_SEARCH[sdk]
+    camel = sdk_snippets._to_camel(flow_key)  # type: ignore[attr-defined]
+    camel = camel[0].lower() + camel[1:]
+    return tmpl.format(key=flow_key, camel=camel)
 
 
 def generate_scenario_files(
     connector_name: str,
     probe_connector: dict,
     examples_dir: Path,
-) -> list[Path]:
+) -> tuple[list[Path], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     """
-    Write examples/{connector}/python/{scenario_key}.py and
-    examples/{connector}/javascript/{scenario_key}.js for each detected scenario.
+    Write one consolidated examples/{connector}/python/{connector}.py and
+    examples/{connector}/javascript/{connector}.js containing all scenarios
+    plus individual flow functions.  Deletes stale per-scenario files.
 
-    Returns list of written paths. Creates directories as needed.
+    Returns (paths, scenario_lines, flow_lines) where:
+      scenario_lines[scenario_key][sdk] = 1-based line of the process_* function
+      flow_lines[flow_key][sdk]         = 1-based line of the flow function (py/js only)
     """
     flow_metadata = get_flow_metadata()
     scenarios     = sdk_snippets.detect_scenarios(probe_connector)
+
+    # Pair each scenario with its payloads; skip scenarios with no data
+    scenarios_with_payloads = [
+        (s, fp)
+        for s in scenarios
+        for fp in [_get_flow_proto_requests(probe_connector, s)]
+        if fp
+    ]
+
+    if not scenarios_with_payloads:
+        return [], {}, {}
+
+    scenario_keys = {s.key for s, _ in scenarios_with_payloads}
+    flow_items    = _collect_flow_items(probe_connector, scenario_keys)
     written: list[Path] = []
+    # scenario_lines[scenario_key][sdk] = 1-based line number of process_* function
+    scenario_lines: dict[str, dict[str, int]] = {}
+    # flow_lines[flow_key][sdk] = 1-based line number of flow function (py/js)
+    flow_lines: dict[str, dict[str, int]] = {}
 
-    for scenario in scenarios:
-        flow_payloads = _get_flow_proto_requests(probe_connector, scenario)
-        if not flow_payloads:
-            continue
+    for sdk, ext, render_fn in [
+        ("python",     "py", sdk_snippets.render_consolidated_python),
+        ("javascript", "js", sdk_snippets.render_consolidated_javascript),
+    ]:
+        out_dir  = examples_dir / connector_name / sdk
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"{connector_name}.{ext}"
+        content  = render_fn(connector_name, scenarios_with_payloads, flow_metadata, _MESSAGE_SCHEMAS, flow_items)
+        out_path.write_text(content, encoding="utf-8")
+        written.append(out_path)
 
-        for sdk, ext, render_fn in [
-            ("python",     "py", sdk_snippets.render_scenario_python),
-            ("javascript", "js", sdk_snippets.render_scenario_javascript),
-        ]:
-            out_dir  = examples_dir / connector_name / sdk
-            out_dir.mkdir(parents=True, exist_ok=True)
-            out_path = out_dir / f"{scenario.key}.{ext}"
-            content  = render_fn(scenario, connector_name, flow_payloads, flow_metadata, _MESSAGE_SCHEMAS)
-            out_path.write_text(content, encoding="utf-8")
-            written.append(out_path)
+        # Record line numbers for each scenario function
+        for scenario, _ in scenarios_with_payloads:
+            lineno = _find_func_line(content, _scenario_search(sdk, scenario.key))
+            if lineno:
+                scenario_lines.setdefault(scenario.key, {})[sdk] = lineno
 
-    return written
+        # Record line numbers for each flow function (py/js only; kt/rs from generate_flow_files)
+        for flow_key, _, _ in flow_items:
+            lineno = _find_func_line(content, _flow_search(sdk, flow_key))
+            if lineno:
+                flow_lines.setdefault(flow_key, {})[sdk] = lineno
+
+        # Remove stale per-scenario and per-flow files
+        for scenario, _ in scenarios_with_payloads:
+            stale = out_dir / f"{scenario.key}.{ext}"
+            if stale.exists():
+                stale.unlink()
+        for flow_key, _, _ in flow_items:
+            stale = out_dir / f"{flow_key}.{ext}"
+            if stale.exists():
+                stale.unlink()
+
+    return written, scenario_lines, flow_lines
 
 
 # PM priority for selecting the representative authorize payload
@@ -343,58 +472,75 @@ def generate_flow_files(
     connector_name: str,
     probe_connector: dict,
     examples_dir: Path,
-) -> dict[str, list[Path]]:
+) -> tuple[list[Path], dict[str, dict[str, int]], dict[str, dict[str, int]]]:
     """
-    Write examples/{connector}/{lang}/{flow_key}.{ext} for each supported flow.
+    Write one consolidated examples/{connector}/kotlin/{connector}.kt and
+    examples/{connector}/rust/{connector}.rs containing all scenario and flow functions.
+    Deletes stale per-flow files for all languages.
 
-    For authorize: uses the primary PM (Card preferred, else first available).
-    For all other flows: uses the "default" entry.
-    Returns {flow_key: [py_path, js_path]} dict.
+    Returns (list_of_written_paths, flow_line_numbers, scenario_line_numbers_kt_rs) where:
+      flow_line_numbers[flow_key][sdk]           = 1-based line of the flow function
+      scenario_line_numbers_kt_rs[scenario_key][sdk] = 1-based line of the process_* function
     """
-    flow_metadata   = get_flow_metadata()
-    flows           = probe_connector.get("flows", {})
-    scenario_keys   = {s.key for s in sdk_snippets.detect_scenarios(probe_connector)}
-    result: dict[str, list[Path]] = {}
+    flow_metadata = get_flow_metadata()
+    # ALL flows must appear as standalone functions — including flows whose names match a
+    # scenario key (e.g. "refund").
+    flow_items = _collect_flow_items(probe_connector, exclude_keys=set())
 
-    for flow_key, flow_data in flows.items():
-        # Skip flow keys that collide with a scenario key (scenario file takes precedence)
-        if flow_key in scenario_keys:
-            continue
-        if flow_key == "authorize":
-            proto_req = None
-            pm_label  = ""
-            for pm in _AUTHORIZE_PM_PRIORITY:
-                entry = flow_data.get(pm, {})
-                if entry.get("status") == "supported" and entry.get("proto_request"):
-                    proto_req = entry["proto_request"]
-                    pm_label  = pm
-                    break
-            if proto_req is None:
-                continue
-        else:
-            entry = flow_data.get("default", {})
-            if entry.get("status") != "supported":
-                continue
-            proto_req = entry.get("proto_request") or {}
-            pm_label  = ""
+    # Compute scenarios_with_payloads (same logic as generate_scenario_files)
+    scenarios = sdk_snippets.detect_scenarios(probe_connector)
+    scenarios_with_payloads = [
+        (s, fp)
+        for s in scenarios
+        for fp in [_get_flow_proto_requests(probe_connector, s)]
+        if fp
+    ]
 
-        written: list[Path] = []
-        for sdk, ext, render_fn in [
-            ("python",     "py", sdk_snippets.render_flow_python),
-            ("javascript", "js", sdk_snippets.render_flow_javascript),
-            ("kotlin",     "kt", sdk_snippets.render_flow_kotlin),
-            ("rust",       "rs", sdk_snippets.render_flow_rust),
-        ]:
-            out_dir  = examples_dir / connector_name / sdk
-            out_dir.mkdir(parents=True, exist_ok=True)
-            out_path = out_dir / f"{flow_key}.{ext}"
-            content  = render_fn(flow_key, connector_name, proto_req, flow_metadata, _MESSAGE_SCHEMAS, pm_label)
-            out_path.write_text(content, encoding="utf-8")
-            written.append(out_path)
+    if not flow_items and not scenarios_with_payloads:
+        return [], {}, {}
 
-        result[flow_key] = written
+    written: list[Path] = []
+    # flow_line_numbers[flow_key][sdk] = 1-based line number
+    flow_line_numbers: dict[str, dict[str, int]] = {}
+    # scenario_line_numbers[scenario_key][sdk] = 1-based line number of process_* function
+    scenario_line_numbers: dict[str, dict[str, int]] = {}
 
-    return result
+    # All flow keys (including those matching scenario names) — needed for cleanup
+    all_flow_keys = set(probe_connector.get("flows", {}).keys())
+
+    for sdk, ext, render_fn in [
+        ("kotlin", "kt", sdk_snippets.render_consolidated_kotlin),
+        ("rust",   "rs", sdk_snippets.render_consolidated_rust),
+    ]:
+        out_dir  = examples_dir / connector_name / sdk
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / f"{connector_name}.{ext}"
+        content  = render_fn(
+            connector_name, flow_items, flow_metadata, _MESSAGE_SCHEMAS,
+            scenarios_with_payloads=scenarios_with_payloads,
+        )
+        out_path.write_text(content, encoding="utf-8")
+        written.append(out_path)
+
+        # Record line numbers for each flow function
+        for flow_key, _, _ in flow_items:
+            lineno = _find_func_line(content, _flow_search(sdk, flow_key))
+            if lineno:
+                flow_line_numbers.setdefault(flow_key, {})[sdk] = lineno
+
+        # Record line numbers for each scenario function
+        for scenario, _ in scenarios_with_payloads:
+            lineno = _find_func_line(content, _scenario_search(sdk, scenario.key))
+            if lineno:
+                scenario_line_numbers.setdefault(scenario.key, {})[sdk] = lineno
+
+        # Delete ALL stale per-flow files (including scenario-named ones like refund.kt)
+        for flow_key in all_flow_keys:
+            stale = out_dir / f"{flow_key}.{ext}"
+            if stale.exists():
+                stale.unlink()
+
+    return written, flow_line_numbers, scenario_line_numbers
 
 
 def generate_llms_txt(probe_data: dict[str, dict], docs_dir: Path) -> None:
@@ -442,8 +588,19 @@ def generate_llms_txt(probe_data: dict[str, dict], docs_dir: Path) -> None:
     print(f"  llms.txt → {out_path.relative_to(REPO_ROOT)}")
 
 
-def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = None) -> Optional[str]:
-    """Generate complete markdown documentation for a connector."""
+def generate_connector_doc(
+    connector_name: str,
+    probe_data: Optional[dict] = None,
+    scenario_line_numbers: Optional[dict[str, dict[str, int]]] = None,
+    flow_line_numbers: Optional[dict[str, dict[str, int]]] = None,
+) -> Optional[str]:
+    """Generate complete markdown documentation for a connector.
+
+    scenario_line_numbers: {scenario_key: {sdk: line_number}} — from generate_scenario_files.
+    flow_line_numbers:      {flow_key:     {sdk: line_number}} — from generate_flow_files.
+    """
+    scenario_line_numbers = scenario_line_numbers or {}
+    flow_line_numbers     = flow_line_numbers or {}
     probe_connector = (probe_data or {}).get(connector_name, {})
     
     # Get flows from probe data
@@ -488,17 +645,12 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
             for line in sdk_snippets.render_scenario_section(
                 scenario, connector_name, flow_payloads,
                 flow_metadata, _MESSAGE_SCHEMAS, {},
+                line_numbers=scenario_line_numbers.get(scenario.key, {}),
             ):
                 a(line)
 
-    # ── Payment Method Reference ──────────────────────────────────────────────
-    for line in sdk_snippets.render_pm_reference_section(
-        probe_connector, flow_metadata, _MESSAGE_SCHEMAS
-    ):
-        a(line)
-
-    # ── Flow summary table ───────────────────────────────────────────────────
-    a("## Implemented Flows")
+    # ── API Reference ────────────────────────────────────────────────────────
+    a("## API Reference")
     a("")
     a("| Flow (Service.RPC) | Category | gRPC Request Message |")
     a("|--------------------|----------|----------------------|")
@@ -508,19 +660,13 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
         req_msg = meta.get("grpc_request", "—")
         service = meta.get("service_name", "")
         rpc = meta.get("rpc_name", f)
-        if service:
-            flow_display = f"{service}.{rpc}"
-        else:
-            flow_display = f
-        # VS Code/GitHub auto-generate anchors from heading text: lowercase, remove dots/special chars
+        flow_display = f"{service}.{rpc}" if service else f
+        # VS Code/GitHub auto-generate anchors: lowercase, remove dots/special chars
         anchor = flow_display.lower().replace(".", "").replace(" ", "-")
         a(f"| [{flow_display}](#{anchor}) | {cat} | `{req_msg}` |")
     a("")
 
     # ── Per-flow detail ──────────────────────────────────────────────────────
-    a("## Flow Reference")
-    a("")
-
     # Group by category
     by_cat: dict[str, list[str]] = {}
     for f in flows:
@@ -537,13 +683,9 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
         for f in by_cat[cat]:
             meta = get_flow_meta(f)
 
-            # Flow heading with anchor and full Service.RPC name
             service = meta.get("service_name", "")
             rpc = meta.get("rpc_name", f)
-            if service:
-                flow_heading = f"{service}.{rpc}"
-            else:
-                flow_heading = f
+            flow_heading = f"{service}.{rpc}" if service else f
             a(f"#### {flow_heading}")
             a("")
 
@@ -572,7 +714,14 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
                         a(f"| {pm_label} | {mark} |")
                 a("")
 
-            # Link to per-flow example files instead of embedding code
+            # Inline PM reference right after Authorize (where it's most useful)
+            if f == "authorize":
+                for line in sdk_snippets.render_pm_reference_section(
+                    probe_connector, flow_metadata, _MESSAGE_SCHEMAS
+                ):
+                    a(line)
+
+            # Link to per-flow example files
             flow_data = probe_connector.get("flows", {}).get(f, {})
             has_payload = (
                 flow_data.get("default", {}).get("status") == "supported"
@@ -583,10 +732,15 @@ def generate_connector_doc(connector_name: str, probe_data: Optional[dict] = Non
                 )
             )
             if has_payload:
-                py_path = f"../../examples/{connector_name}/python/{f}.py"
-                js_path = f"../../examples/{connector_name}/javascript/{f}.js"
-                kt_path = f"../../examples/{connector_name}/kotlin/{f}.kt"
-                rs_path = f"../../examples/{connector_name}/rust/{f}.rs"
+                fl = flow_line_numbers.get(f, {})
+                base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
+                base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
+                base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
+                base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
+                py_path = base_py + (f"#L{fl['python']}"     if fl.get("python")     else "")
+                js_path = base_js + (f"#L{fl['javascript']}" if fl.get("javascript") else "")
+                kt_path = base_kt + (f"#L{fl['kotlin']}"     if fl.get("kotlin")     else "")
+                rs_path = base_rs + (f"#L{fl['rust']}"       if fl.get("rust")       else "")
                 a(f"**Examples:** [Python]({py_path}) · [JavaScript]({js_path}) · [Kotlin]({kt_path}) · [Rust]({rs_path})")
                 a("")
 
@@ -635,22 +789,40 @@ def check_example_syntax(examples_dir: Path) -> None:
             if result.returncode != 0:
                 errors.append(f"JS: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
 
-    # Kotlin — syntax check via kotlinc -script (if available)
-    # Full compilation requires SDK JARs: ./gradlew compileKotlin (from sdk/java/)
+    # Kotlin — full compile via Gradle (preferred) or kotlinc syntax check (fallback).
+    # Standalone kotlinc cannot resolve payments.* SDK imports, so only Gradle gives
+    # accurate type-checking results.
     kt_ok = False
-    try:
-        subprocess.run(["kotlinc", "-version"], capture_output=True, check=True)
+    sdk_java_dir = examples_dir.parent / "sdk" / "java"
+    gradlew = sdk_java_dir / "gradlew"
+    if gradlew.exists():
         kt_ok = True
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
-    if kt_ok:
-        for f in kt_files:
-            result = subprocess.run(
-                ["kotlinc", "-nowarn", str(f), "-d", "/dev/null"],
-                capture_output=True, text=True,
-            )
-            if result.returncode != 0:
-                errors.append(f"Kotlin: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
+        result = subprocess.run(
+            [str(gradlew), ":smoke-test:compileKotlin", "--rerun-tasks", "-q"],
+            capture_output=True, text=True,
+            cwd=str(sdk_java_dir),
+        )
+        if result.returncode != 0:
+            # Parse errors from Gradle output (lines starting with "e: file://...")
+            for line in (result.stdout + result.stderr).splitlines():
+                if line.startswith("e: file://"):
+                    # Shorten the absolute path for readability
+                    short = line.replace("e: file://" + str(examples_dir.parent) + "/", "")
+                    errors.append(f"Kotlin: {short}")
+    else:
+        try:
+            subprocess.run(["kotlinc", "-version"], capture_output=True, check=True)
+            kt_ok = True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+        if kt_ok:
+            for f in kt_files:
+                result = subprocess.run(
+                    ["kotlinc", "-nowarn", str(f), "-d", "/dev/null"],
+                    capture_output=True, text=True,
+                )
+                if result.returncode != 0:
+                    errors.append(f"Kotlin: {f.relative_to(examples_dir.parent)}: {result.stderr.strip()}")
 
     # Rust — format check via rustfmt (syntax-level); full compile needs cargo check
     # Full compilation: cargo check -p hyperswitch-payments-client (from repo root)
@@ -682,7 +854,7 @@ def check_example_syntax(examples_dir: Path) -> None:
     else:
         checks = f"{len(py_files)} Python, {len(js_files)} JavaScript, {len(kt_files)} Kotlin, {len(rs_files)} Rust"
         js_note = "" if node_ok else " (node unavailable — JS skipped)"
-        kt_note = "" if kt_ok else " (kotlinc unavailable — Kotlin skipped)"
+        kt_note = "" if kt_ok else " (Gradle/kotlinc unavailable — Kotlin skipped)"
         rs_note = "" if rustfmt_ok else " (rustfmt unavailable — Rust skipped)"
         print(f"  ✓ Syntax check passed ({checks}){js_note}{kt_note}{rs_note}")
 
@@ -708,16 +880,35 @@ def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[P
     skip = 0
     for name in connectors:
         print(f"  {name} ... ", end="", flush=True)
-        doc = generate_connector_doc(name, probe_data=probe_data)
+        probe_connector = probe_data.get(name, {})
+        n_flows         = len(get_flows_from_probe(probe_connector))
+
+        # Generate example files first so we can compute line numbers for doc links.
+        scenario_files, scenario_lines, flow_lines_py_js     = generate_scenario_files(name, probe_connector, EXAMPLES_DIR)
+        flow_files, flow_lines_kt_rs, scenario_lines_kt_rs   = generate_flow_files(name, probe_connector, EXAMPLES_DIR)
+
+        # Merge py/js and kt/rs flow line numbers into one dict.
+        merged_flow_lines: dict[str, dict[str, int]] = {}
+        for flow_key, langs in flow_lines_py_js.items():
+            merged_flow_lines.setdefault(flow_key, {}).update(langs)
+        for flow_key, langs in flow_lines_kt_rs.items():
+            merged_flow_lines.setdefault(flow_key, {}).update(langs)
+
+        # Merge kt/rs scenario line numbers into the main scenario_lines dict.
+        for scenario_key, langs in scenario_lines_kt_rs.items():
+            scenario_lines.setdefault(scenario_key, {}).update(langs)
+
+        doc = generate_connector_doc(
+            name,
+            probe_data=probe_data,
+            scenario_line_numbers=scenario_lines,
+            flow_line_numbers=merged_flow_lines,
+        )
         if doc:
             out = output_dir / f"{name}.md"
             out.write_text(doc, encoding="utf-8")
-            probe_connector = probe_data.get(name, {})
-            n_flows         = len(get_flows_from_probe(probe_connector))
-            scenario_files  = generate_scenario_files(name, probe_connector, EXAMPLES_DIR)
-            flow_files      = generate_flow_files(name, probe_connector, EXAMPLES_DIR)
-            n_scenarios     = len(scenario_files) // 2  # python + js per scenario
-            n_flow_files    = len(flow_files)
+            n_scenarios  = len(scenario_files) // 2  # python + js per scenario
+            n_flow_files = len(flow_files)
             print(f"✓  ({n_flows} flows, {n_scenarios} scenarios, {n_flow_files} flow examples → {out.relative_to(REPO_ROOT)})")
             ok += 1
         else:
@@ -915,7 +1106,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
                     
                     for pm_key in _PROBE_PM_DISPLAY:
                         pm_data = flow_data.get(pm_key, {})
-                        status = pm_data.get("status", "unknown")
+                        status = pm_data.get("default", {}).get("status", "unknown")
                         if status == "supported":
                             row.append("✓")
                         elif status == "not_supported":
@@ -1005,6 +1196,143 @@ def cmd_all_connectors_doc(output_dir: Path, probe_path: Optional[Path] = None):
     print("\nDone.")
 
 
+def generate_rust_build_auth(proto_dir: Path, out_file: Path) -> None:
+    """Generate sdk/rust/smoke-test/src/build_auth.rs from payment.proto."""
+    import re as _re
+
+    proto_text = (proto_dir / "payment.proto").read_text(encoding="utf-8")
+    # Strip comments
+    proto_text = _re.sub(r"//[^\n]*", "", proto_text)
+    proto_text = _re.sub(r"/\*.*?\*/", "", proto_text, flags=_re.DOTALL)
+
+    # Find ConnectorAuth oneof body
+    ca_m = _re.search(
+        r"message\s+ConnectorAuth\s*\{.*?oneof\s+auth_type\s*\{(.*?)\}\s*\}",
+        proto_text, _re.DOTALL,
+    )
+    if not ca_m:
+        print("  WARNING: ConnectorAuth oneof not found, skipping build_auth.rs")
+        return
+
+    oneof_body = ca_m.group(1)
+    # Extract: TypeName field_name = num;
+    auth_variants = _re.findall(r"(\w+Auth)\s+(\w+)\s*=\s*\d+\s*;", oneof_body)
+
+    # Parse each *Auth message for its fields
+    auth_type_fields: dict[str, list[tuple[str, bool, str]]] = {}
+    for auth_type_name, _ in auth_variants:
+        msg_m = _re.search(
+            rf"message\s+{_re.escape(auth_type_name)}\s*\{{(.*?)\}}",
+            proto_text, _re.DOTALL,
+        )
+        if not msg_m:
+            auth_type_fields[auth_type_name] = []
+            continue
+        body = msg_m.group(1)
+        fields = []
+        inner_depth = 0
+        for line in body.splitlines():
+            inner_depth += line.count("{") - line.count("}")
+            if inner_depth > 0:
+                continue
+            fm = _re.match(r"\s*(optional\s+)?(\w+)\s+(\w+)\s*=\s*\d+", line)
+            if fm:
+                is_opt = fm.group(1) is not None
+                ftype = fm.group(2)
+                fname = fm.group(3)
+                skip = {"message", "enum", "oneof", "reserved", "option",
+                        "syntax", "import", "package"}
+                if ftype not in skip and fname not in skip:
+                    fields.append((fname, is_opt, ftype))
+        auth_type_fields[auth_type_name] = fields
+
+    # Build the Rust file
+    lines: list[str] = [
+        "// AUTO-GENERATED — do not edit manually.",
+        "// Regenerate: python3 scripts/generate-connector-docs.py --all",
+        "//",
+        "// Maps connector name (from creds.json) to ConnectorAuth proto type.",
+        "",
+        "use grpc_api_types::payments::{connector_auth, ConnectorAuth, *};",
+        "use hyperswitch_masking::Secret;",
+        "",
+        "fn get_val(",
+        "    creds: &serde_json::Map<String, serde_json::Value>,",
+        "    key: &str,",
+        ") -> Result<String, String> {",
+        "    match creds.get(key) {",
+        '        Some(serde_json::Value::String(s)) => Ok(s.clone()),',
+        "        Some(serde_json::Value::Object(obj)) => obj",
+        '            .get("value")',
+        "            .and_then(|v| v.as_str())",
+        "            .map(str::to_string)",
+        '            .ok_or_else(|| format!("field {key}: no .value")),',
+        '        _ => Err(format!("missing or invalid field: {key}")),',
+        "    }",
+        "}",
+        "",
+        "fn get_opt(",
+        "    creds: &serde_json::Map<String, serde_json::Value>,",
+        "    key: &str,",
+        ") -> Option<Secret<String>> {",
+        "    get_val(creds, key).ok().map(Secret::new)",
+        "}",
+        "",
+        "pub fn build_connector_auth(",
+        "    connector: &str,",
+        "    creds: &serde_json::Map<String, serde_json::Value>,",
+        ") -> Result<ConnectorAuth, String> {",
+        "    #[allow(clippy::match_single_binding)]",
+        "    match connector {",
+    ]
+
+    for auth_type_name, field_name in auth_variants:
+        fields = auth_type_fields.get(auth_type_name, [])
+        variant = field_name.capitalize()  # prost oneof variant = first-char-upper of field name
+
+        field_lines: list[str] = []
+        for fname, is_opt, ftype in fields:
+            if ftype in ("SecretString",):
+                if is_opt:
+                    field_lines.append(f'            {fname}: get_opt(creds, "{fname}"),')
+                else:
+                    field_lines.append(f'            {fname}: Some(Secret::new(get_val(creds, "{fname}")?)),')
+            elif ftype in ("string", "uint32", "int32", "bool", "bytes"):
+                if is_opt:
+                    field_lines.append(
+                        f'            {fname}: creds.get("{fname}")'
+                        f'.and_then(|v| v.as_str().map(str::to_string)'
+                        f'.or_else(|| v.get("value").and_then(|v| v.as_str()).map(str::to_string))),'
+                    )
+                else:
+                    field_lines.append(f'            {fname}: get_val(creds, "{fname}")?,')
+            else:
+                # Complex type — skip with comment
+                field_lines.append(f'            // {fname}: ..., // complex type: {ftype}')
+
+        lines.append(f'        "{field_name}" => {{')
+        lines.append(f"            Ok(ConnectorAuth {{")
+        lines.append(f"                auth_type: Some(connector_auth::AuthType::{variant}(")
+        lines.append(f"                    {auth_type_name} {{")
+        lines.extend(field_lines)
+        lines.append(f"                        ..Default::default()")
+        lines.append(f"                    }},")
+        lines.append(f"                )),")
+        lines.append(f"            }})")
+        lines.append(f"        }}")
+
+    lines += [
+        '        _ => Err(format!("unsupported connector for Rust smoke test: {connector}")),',
+        "    }",
+        "}",
+        "",
+    ]
+
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+    out_file.write_text("\n".join(lines), encoding="utf-8")
+    print(f"  ✓ Generated {out_file}")
+
+
 def main():
     import argparse
 
@@ -1052,6 +1380,9 @@ def main():
 
     if args.all:
         targets = list_connectors()
+        # Generate Rust smoke test auth builder
+        rust_build_auth_out = REPO_ROOT / "sdk" / "rust" / "smoke-test" / "src" / "build_auth.rs"
+        generate_rust_build_auth(PROTO_DIR, rust_build_auth_out)
     elif args.connectors:
         targets = args.connectors
     else:

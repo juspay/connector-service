@@ -91,34 +91,13 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-
-## Flow Reference
 
 ### Payments
-
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
-
-**Supported payment method types:**
-
-| Payment Method | Supported |
-|----------------|:---------:|
-| Samsung Pay | — |
 
 #### PaymentService.Get
 
@@ -129,33 +108,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/cryptopay/python/get.py) · [JavaScript](../../examples/cryptopay/javascript/get.js) · [Kotlin](../../examples/cryptopay/kotlin/get.kt) · [Rust](../../examples/cryptopay/rust/get.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/cryptopay/python/cryptopay.py) · [JavaScript](../../examples/cryptopay/javascript/cryptopay.js) · [Kotlin](../../examples/cryptopay/kotlin/cryptopay.kt#L25) · [Rust](../../examples/cryptopay/rust/cryptopay.rs#L25)

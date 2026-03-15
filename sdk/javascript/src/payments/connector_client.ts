@@ -108,8 +108,8 @@ export class ConnectorClient {
     const { ffi, http } = this._resolveConfig(options);
     const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffi).finish());
 
-    // 2. Serialize domain request
-    const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
+    // 2. Serialize domain request (fromObject resolves string enum names → integers)
+    const requestBytes = Buffer.from(reqType.encode(reqType.fromObject(requestMsg)).finish());
 
     // 3. Build connector HTTP request via FFI
     const resultBytes = this.uniffi.callReq(flow, requestBytes, optionsBytes);
@@ -139,7 +139,24 @@ export class ConnectorClient {
 
     // 6. Parse connector response via FFI and decode
     const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, optionsBytes);
-    return resType.decode(resultBytesRes);
+    const result = resType.decode(resultBytesRes) as any;
+
+    // Secondary check: connector error embedded in success proto's statusCode field.
+    // When a connector returns HTTP 4xx/5xx, the Rust transformer stores the HTTP
+    // status code in the success proto's statusCode field rather than returning a
+    // ResponseError proto. Mirror Python SDK's _check_res_error secondary check.
+    const sc: number = result.statusCode ?? 0;
+    if (sc >= 400) {
+      const errProto = v2.ResponseError.create({ statusCode: sc });
+      try {
+        const cd = result.error?.connectorDetails;
+        if (cd?.message) errProto.errorMessage = cd.message;
+        if (cd?.code) errProto.errorCode = cd.code;
+      } catch (_) {}
+      throw errProto;
+    }
+
+    return result;
   }
 
   /**
@@ -160,8 +177,8 @@ export class ConnectorClient {
       throw new Error(`Unknown flow: '${flow}' or missing type names.`);
     }
 
-    // 1. Serialize request
-    const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
+    // 1. Serialize request (fromObject resolves string enum names → integers)
+    const requestBytes = Buffer.from(reqType.encode(reqType.fromObject(requestMsg)).finish());
 
     // 2. Resolve FFI options from identity + defaults + request override
     const { ffi } = this._resolveConfig(options);

@@ -103,55 +103,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/zift/python/checkout_autocapture.py) · [JavaScript](../../examples/zift/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/zift/python/zift.py#L22) · [JavaScript](../../examples/zift/javascript/zift.js#L22) · [Kotlin](../../examples/zift/kotlin/zift.kt#L33) · [Rust](../../examples/zift/rust/zift.rs#L26)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/zift/python/refund.py) · [JavaScript](../../examples/zift/javascript/refund.js)
+**Examples:** [Python](../../examples/zift/python/zift.py#L110) · [JavaScript](../../examples/zift/javascript/zift.js#L107) · [Kotlin](../../examples/zift/kotlin/zift.kt#L115) · [Rust](../../examples/zift/rust/zift.rs#L109)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
-| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -171,25 +141,23 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/zift/python/authorize.py) · [JavaScript](../../examples/zift/javascript/authorize.js) · [Kotlin](../../examples/zift/kotlin/authorize.kt) · [Rust](../../examples/zift/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
-#### PaymentService.Capture
+##### Card (Raw PAN)
 
-Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCaptureRequest` |
-| **Response** | `PaymentServiceCaptureResponse` |
-
-#### PaymentService.Get
-
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
+**Examples:** [Python](../../examples/zift/python/zift.py#L216) · [JavaScript](../../examples/zift/javascript/zift.js#L207) · [Kotlin](../../examples/zift/kotlin/zift.kt#L211) · [Rust](../../examples/zift/rust/zift.rs#L207)
 
 #### PaymentService.Refund
 
@@ -200,7 +168,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/zift/python/refund.py) · [JavaScript](../../examples/zift/javascript/refund.js) · [Kotlin](../../examples/zift/kotlin/refund.kt) · [Rust](../../examples/zift/rust/refund.rs)
+**Examples:** [Python](../../examples/zift/python/zift.py) · [JavaScript](../../examples/zift/javascript/zift.js) · [Kotlin](../../examples/zift/kotlin/zift.kt#L289) · [Rust](../../examples/zift/rust/zift.rs#L286)
 
 #### PaymentService.SetupRecurring
 
@@ -211,42 +179,4 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/zift/python/setup_recurring.py) · [JavaScript](../../examples/zift/javascript/setup_recurring.js) · [Kotlin](../../examples/zift/kotlin/setup_recurring.kt) · [Rust](../../examples/zift/rust/setup_recurring.rs)
-
-#### PaymentService.Void
-
-Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceVoidRequest` |
-| **Response** | `PaymentServiceVoidResponse` |
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/zift/python/zift.py#L301) · [JavaScript](../../examples/zift/javascript/zift.js#L289) · [Kotlin](../../examples/zift/kotlin/zift.kt) · [Rust](../../examples/zift/rust/zift.rs#L301)

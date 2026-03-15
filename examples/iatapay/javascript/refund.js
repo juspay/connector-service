@@ -17,20 +17,20 @@ const client = new ConnectorClient({
 async function refund(merchantTransactionId) {
     // Step 1: Refund — return funds to the customer
     const refundResponse = await client.refund({
-        "merchant_refund_id": "probe_refund_001",  // Identification
-        "connector_transaction_id": "probe_connector_txn_001",
-        "payment_amount": 1000,  // Amount Information
-        "refund_amount": {
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": "probe_connector_txn_001",
+        "paymentAmount": 1000,  // Amount Information
+        "refundAmount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "reason": "customer_request",  // Reason for the refund
-        "webhook_url": "https://example.com/webhook",  // URL for webhook notifications
+        "webhookUrl": "https://example.com/webhook",  // URL for webhook notifications
         "state": {  // State data for access token storage and other connector-specific state
-            "access_token": {  // Access token obtained from connector
+            "accessToken": {  // Access token obtained from connector
                 "token": {"value": "probe_access_token"},  // The token string.
-                "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch)
-                "token_type": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+                "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch)
+                "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         }
     });

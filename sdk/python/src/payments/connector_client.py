@@ -77,12 +77,23 @@ def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
     """
     Parse FFI req_transformer bytes as either a success proto or a RequestError.
 
-    Parse as RequestError first; if parsing succeeds AND status is non-default,
-    treat it as an actual error and raise it. Otherwise, parse as success message.
+    FfiConnectorHttpRequest.method (field 2, string) has the same field number and
+    wire type as RequestError.error_message (field 2, optional string).  Parsing an
+    HTTP-request response as RequestError would therefore put the HTTP method ("POST")
+    into error_message and trigger a false positive.
+
+    Discriminate using field 1 instead:
+      - FfiConnectorHttpRequest.url  (field 1, string) — always non-empty on success
+      - RequestError.status          (field 1, enum)   — non-zero on error
+
+    Strategy: parse as FfiConnectorHttpRequest first.  If url is non-empty, this IS a
+    valid HTTP request — return it immediately.  Otherwise fall through and parse as
+    RequestError.
 
     Args:
         result_bytes: Raw bytes returned by the req_transformer FFI call.
-        success_cls: Protobuf message class for the expected success type.
+        success_cls: Protobuf message class for the expected success type
+                     (always FfiConnectorHttpRequest for req_transformer calls).
 
     Returns:
         Decoded success proto on success.
@@ -90,25 +101,20 @@ def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
     Raises:
         RequestError: If the bytes represent a transformer error.
     """
-    # Try to parse as RequestErrorProto first
+    # Fast path: if the bytes decode to a valid FfiConnectorHttpRequest (non-empty url),
+    # return immediately without any error check.
     try:
-        error_proto = RequestErrorProto()
-        error_proto.ParseFromString(result_bytes)
-
-        # If status is non-default, treat it as an actual error
-        if error_proto.status != 0:
-            raise RequestError(error_proto)
-    except RequestError:
-        # Re-raise our custom exception
-        raise
+        success = success_cls()
+        success.ParseFromString(result_bytes)
+        if success.url:
+            return success
     except Exception:
-        # Parsing failed or status is zero, try success parsing
         pass
 
-    # Parse as success message
-    success = success_cls()
-    success.ParseFromString(result_bytes)
-    return success
+    # url was empty (or parsing failed) — treat as a RequestError.
+    error_proto = RequestErrorProto()
+    error_proto.ParseFromString(result_bytes)
+    raise RequestError(error_proto)
 
 
 def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
@@ -128,24 +134,69 @@ def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
     Raises:
         ResponseError: If the bytes represent a transformer error.
     """
-    # Try to parse as ResponseErrorProto first
+    # Discriminate error bytes from success bytes using status_code (field 4).
+    #
+    # Why not status or error_message?
+    #
+    # Most success response protos (e.g. PaymentServiceAuthorizeResponse) share field
+    # numbers with ResponseError in an incompatible way:
+    #   - Success field 1 (string)  → ResponseError.status (enum varint) → wire mismatch → status=0
+    #   - Success field 2 (string)  → ResponseError.error_message (string) → wire MATCH!
+    #     So a real connector_transaction_id like "pi_xxx" lands in error_message, causing
+    #     HasField("error_message") to return True for every successful response (false positive).
+    #
+    # status_code (field 4) is safe: in success protos field 4 is always a message type
+    # (e.g. ErrorInfo, wire-type 2), which mismatches status_code's uint32 (wire-type 0) →
+    # silently ignored → status_code=0 for all success bytes.
+    # For real errors, the Rust transformer sets status_code to the HTTP status code (4xx/5xx).
+    #
+    # Fallback: status != 0 catches connector-level errors (e.g. PAYMENT_FAILED enum) where
+    # field 1 happens to be a varint-compatible field in the success proto.
     try:
         error_proto = ResponseErrorProto()
         error_proto.ParseFromString(result_bytes)
 
-        # If status is non-default, treat it as an actual error
-        if error_proto.status != 0:
+        if error_proto.status_code >= 400 or error_proto.status != 0:
             raise ResponseError(error_proto)
     except ResponseError:
-        # Re-raise our custom exception
         raise
     except Exception:
-        # Parsing failed or status is zero, try success parsing
         pass
 
     # Parse as success message
     success = success_cls()
     success.ParseFromString(result_bytes)
+
+    # Secondary check: the Rust res_transformer embeds connector errors inside the
+    # success proto (PaymentServiceAuthorize/Charge/etc. Response) rather than returning
+    # a ResponseError when a payment fails (e.g. SEPA+USD not supported, card declined).
+    # The HTTP status code from the connector is stored in the success proto's
+    # `status_code` field.  An HTTP 4xx/5xx here means the connector rejected the
+    # payment — surface it as ResponseError so callers can handle it uniformly.
+    #
+    # We also try to forward the embedded error message and code from the
+    # `error.connector_details` message field so the caller sees meaningful details.
+    try:
+        sc = getattr(success, "status_code", 0)
+        if sc >= 400:
+            synth = ResponseErrorProto()
+            synth.status_code = sc
+            try:
+                error_info = success.error  # ErrorInfo field (name is consistent across protos)
+                if error_info.HasField("connector_details"):
+                    cd = error_info.connector_details
+                    if cd.message:
+                        synth.error_message = cd.message
+                    if cd.code:
+                        synth.error_code = cd.code
+            except Exception:
+                pass
+            raise ResponseError(synth)
+    except ResponseError:
+        raise
+    except Exception:
+        pass
+
     return success
 
 

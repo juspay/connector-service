@@ -17,10 +17,10 @@ const client = new ConnectorClient({
 async function capture(merchantTransactionId) {
     // Step 1: Capture — settle the reserved funds
     const captureResponse = await client.capture({
-        "merchant_capture_id": "probe_capture_001",  // Identification
-        "connector_transaction_id": "probe_connector_txn_001",
-        "amount_to_capture": {  // Capture Details
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "merchantCaptureId": "probe_capture_001",  // Identification
+        "connectorTransactionId": "probe_connector_txn_001",
+        "amountToCapture": {  // Capture Details
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
     });

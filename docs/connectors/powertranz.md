@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/powertranz/python/checkout_card.py) · [JavaScript](../../examples/powertranz/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L22) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L22) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L33) · [Rust](../../examples/powertranz/rust/powertranz.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,70 +117,39 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/powertranz/python/checkout_autocapture.py) · [JavaScript](../../examples/powertranz/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L126) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L121) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L128) · [Rust](../../examples/powertranz/rust/powertranz.rs#L123)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/powertranz/python/refund.py) · [JavaScript](../../examples/powertranz/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L214) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L206) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L210) · [Rust](../../examples/powertranz/rust/powertranz.rs#L206)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/powertranz/python/void_payment.py) · [JavaScript](../../examples/powertranz/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L320) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L307) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L307) · [Rust](../../examples/powertranz/rust/powertranz.rs#L305)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/powertranz/python/get_payment.py) · [JavaScript](../../examples/powertranz/javascript/get_payment.js)
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L417) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L398) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L395) · [Rust](../../examples/powertranz/rust/powertranz.rs#L394)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -202,7 +169,23 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/powertranz/python/authorize.py) · [JavaScript](../../examples/powertranz/javascript/authorize.js) · [Kotlin](../../examples/powertranz/kotlin/authorize.kt) · [Rust](../../examples/powertranz/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L517) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L491) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L485) · [Rust](../../examples/powertranz/rust/powertranz.rs#L485)
 
 #### PaymentService.Capture
 
@@ -213,7 +196,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/powertranz/python/capture.py) · [JavaScript](../../examples/powertranz/javascript/capture.js) · [Kotlin](../../examples/powertranz/kotlin/capture.kt) · [Rust](../../examples/powertranz/rust/capture.rs)
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L602) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L573) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L563) · [Rust](../../examples/powertranz/rust/powertranz.rs#L564)
 
 #### PaymentService.Get
 
@@ -224,7 +207,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/powertranz/python/get.py) · [JavaScript](../../examples/powertranz/javascript/get.js) · [Kotlin](../../examples/powertranz/kotlin/get.kt) · [Rust](../../examples/powertranz/rust/get.rs)
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L625) · [JavaScript](../../examples/powertranz/javascript/powertranz.js#L592) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L580) · [Rust](../../examples/powertranz/rust/powertranz.rs#L577)
 
 #### PaymentService.Refund
 
@@ -235,7 +218,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/powertranz/python/refund.py) · [JavaScript](../../examples/powertranz/javascript/refund.js) · [Kotlin](../../examples/powertranz/kotlin/refund.kt) · [Rust](../../examples/powertranz/rust/refund.rs)
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py) · [JavaScript](../../examples/powertranz/javascript/powertranz.js) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L594) · [Rust](../../examples/powertranz/rust/powertranz.rs#L589)
 
 #### PaymentService.Void
 
@@ -246,33 +229,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/powertranz/python/void.py) · [JavaScript](../../examples/powertranz/javascript/void.js) · [Kotlin](../../examples/powertranz/kotlin/void.kt) · [Rust](../../examples/powertranz/rust/void.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/powertranz/python/powertranz.py#L644) · [JavaScript](../../examples/powertranz/javascript/powertranz.js) · [Kotlin](../../examples/powertranz/kotlin/powertranz.kt#L613) · [Rust](../../examples/powertranz/rust/powertranz.rs#L604)

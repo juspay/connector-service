@@ -29,6 +29,18 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# ── ANSI color helpers ─────────────────────────────────────────────────────────
+_NO_COLOR = not sys.stdout.isatty() or os.environ.get("NO_COLOR")
+
+def _c(code: str, text: str) -> str:
+    return text if _NO_COLOR else f"\033[{code}m{text}\033[0m"
+
+def _green(t: str)  -> str: return _c("32", t)
+def _yellow(t: str) -> str: return _c("33", t)
+def _red(t: str)    -> str: return _c("31", t)
+def _grey(t: str)   -> str: return _c("90", t)
+def _bold(t: str)   -> str: return _c("1",  t)
+
 # Add parent directory to path for imports when running directly
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
@@ -106,6 +118,22 @@ def _build_connector_config(connector_key: str, auth_config: Dict[str, Any]) -> 
     return config
 
 
+# Canonical scenario order for consolidated-file discovery
+_SCENARIO_NAMES = [
+    "checkout_autocapture",
+    "checkout_card",
+    "checkout_wallet",
+    "checkout_bank",
+    "refund",
+    "recurring",
+    "void_payment",
+    "get_payment",
+    "create_customer",
+    "tokenize",
+    "authentication",
+]
+
+
 async def test_connector_scenarios(
     connector_name: str,
     config: ConnectorConfig,
@@ -113,10 +141,10 @@ async def test_connector_scenarios(
     dry_run: bool = False,
 ) -> Dict[str, Any]:
     """
-    Discover and run all Python scenario files for a connector.
+    Discover and run all Python scenario functions for a connector.
 
-    Looks in examples_dir/{connector_name}/python/ for files matching
-    checkout_*.py, refund.py, recurring.py and calls their
+    Loads examples_dir/{connector_name}/python/{connector_name}.py and calls each
+    process_* function found in _SCENARIO_NAMES order.
     process_{scenario_key}(txn_id, config=config) function.
     """
     result: Dict[str, Any] = {
@@ -136,58 +164,44 @@ async def test_connector_scenarios(
         result["scenarios"] = {"skipped": True, "reason": "no_examples_dir"}
         return result
 
-    # Collect scenario files in a predictable order
-    scenario_files: List[Path] = sorted(connector_dir.glob("checkout_*.py"))
-    for name in (
-        "refund.py",
-        "recurring.py",
-        "void_payment.py",
-        "get_payment.py",
-        "create_customer.py",
-        "tokenize.py",
-        "authentication.py",
-    ):
-        p = connector_dir / name
-        if p.exists():
-            scenario_files.append(p)
+    consolidated_file = connector_dir / f"{connector_name}.py"
+    if not consolidated_file.exists():
+        result["status"] = "skipped"
+        result["scenarios"] = {"skipped": True, "reason": "no_scenario_files"}
+        return result
 
-    if not scenario_files:
+    spec = importlib.util.spec_from_file_location(
+        f"examples.{connector_name}", consolidated_file
+    )
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+    except Exception as e:
+        print(_red(f"    IMPORT ERROR: {e}"), flush=True)
+        result["status"] = "failed"
+        result["error"] = f"import error: {e}"
+        return result
+
+    # Discover process_* functions in canonical scenario order
+    scenario_fns: List[tuple] = []
+    for name in _SCENARIO_NAMES:
+        fn = getattr(module, f"process_{name}", None)
+        if fn is not None and callable(fn):
+            scenario_fns.append((name, fn))
+
+    if not scenario_fns:
         result["status"] = "skipped"
         result["scenarios"] = {"skipped": True, "reason": "no_scenario_files"}
         return result
 
     any_failed = False
-    for scenario_file in scenario_files:
-        scenario_key = scenario_file.stem
-        func_name = f"process_{scenario_key}"
-
-        spec = importlib.util.spec_from_file_location(
-            f"examples.{connector_name}.{scenario_key}", scenario_file
-        )
-        module = importlib.util.module_from_spec(spec)
-        try:
-            spec.loader.exec_module(module)  # type: ignore[union-attr]
-        except Exception as e:
-            print(f"    [{scenario_key}] IMPORT ERROR: {e}", flush=True)
-            result["scenarios"][scenario_key] = {"passed": False, "error": f"import error: {e}"}
-            any_failed = True
-            continue
-
-        process_fn = getattr(module, func_name, None)
-        if process_fn is None:
-            print(f"    [{scenario_key}] ERROR: {func_name} not found", flush=True)
-            result["scenarios"][scenario_key] = {
-                "passed": False,
-                "error": f"{func_name} not found in {scenario_file.name}",
-            }
-            any_failed = True
-            continue
+    for scenario_key, process_fn in scenario_fns:
 
         txn_id = f"smoke_{scenario_key}_{os.urandom(4).hex()}"
         print(f"    [{scenario_key}] running (txn={txn_id}) ...", flush=True)
         try:
             response = await process_fn(txn_id, config=config)
-            print(f"    [{scenario_key}] OK — {response}", flush=True)
+            print(_green(f"    [{scenario_key}] OK") + f" — {response}", flush=True)
             result["scenarios"][scenario_key] = {"passed": True, "result": response}
         except (RequestError, ResponseError) as e:
             # Connector rejected our test data — SDK round-trip succeeded.
@@ -197,7 +211,7 @@ async def test_connector_scenarios(
             msg = getattr(e, 'error_message', None) or str(e)
             code = getattr(e, 'error_code', None)
             detail = f"{code}: {msg}" if code else msg
-            print(f"    [{scenario_key}] connector error (round-trip ok) — {type(e).__name__}: {detail}", flush=True)
+            print(_yellow(f"    [{scenario_key}] connector error (round-trip ok)") + f" — {type(e).__name__}: {detail}", flush=True)
             result["scenarios"][scenario_key] = {
                 "passed": True,
                 "connector_error": f"{type(e).__name__}: {detail}",
@@ -205,7 +219,7 @@ async def test_connector_scenarios(
         except Exception as e:
             # Unexpected Python-level failure — import crash, serialization bug, etc.
             # This indicates a real SDK or example-file problem.
-            print(f"    [{scenario_key}] FAILED — {type(e).__name__}: {e}", flush=True)
+            print(_red(f"    [{scenario_key}] FAILED") + f" — {type(e).__name__}: {e}", flush=True)
             result["scenarios"][scenario_key] = {
                 "passed": False,
                 "error": f"{type(e).__name__}: {e}",
@@ -238,12 +252,12 @@ async def run_tests_async(
         auth_config_value = credentials.get(connector_name)
 
         if auth_config_value is None:
-            print(f"\n--- Testing {connector_name} ---")
-            print(f"  SKIPPED (not found in credentials file)")
+            print(f"\n{_bold(f'--- Testing {connector_name} ---')}")
+            print(_grey(f"  SKIPPED (not found in credentials file)"))
             results.append({"connector": connector_name, "status": "skipped", "reason": "not_found"})
             continue
 
-        print(f"\n--- Testing {connector_name} ---")
+        print(f"\n{_bold(f'--- Testing {connector_name} ---')}")
 
         if isinstance(auth_config_value, list):
             # Multi-instance connector
@@ -252,7 +266,7 @@ async def run_tests_async(
                 print(f"  Instance: {instance_name}")
 
                 if not has_valid_credentials(instance_auth):
-                    print(f"  SKIPPED (placeholder credentials)")
+                    print(_grey(f"  SKIPPED (placeholder credentials)"))
                     results.append({
                         "connector": instance_name,
                         "status": "skipped",
@@ -263,7 +277,7 @@ async def run_tests_async(
                 try:
                     config = _build_connector_config(connector_name, instance_auth)
                 except ValueError as e:
-                    print(f"  SKIPPED ({e})")
+                    print(_grey(f"  SKIPPED ({e})"))
                     results.append({"connector": instance_name, "status": "skipped", "reason": str(e)})
                     continue
 
@@ -275,7 +289,7 @@ async def run_tests_async(
             auth_config = auth_config_value
 
             if not has_valid_credentials(auth_config):
-                print(f"  SKIPPED (placeholder credentials)")
+                print(_grey(f"  SKIPPED (placeholder credentials)"))
                 results.append({
                     "connector": connector_name,
                     "status": "skipped",
@@ -286,7 +300,7 @@ async def run_tests_async(
             try:
                 config = _build_connector_config(connector_name, auth_config)
             except ValueError as e:
-                print(f"  SKIPPED ({e})")
+                print(_grey(f"  SKIPPED ({e})"))
                 results.append({"connector": connector_name, "status": "skipped", "reason": str(e)})
                 continue
 
@@ -302,23 +316,23 @@ def _print_result(result: Dict[str, Any]) -> None:
     status = result["status"]
     if status == "passed":
         scenarios = result.get("scenarios", {})
-        print(f"  PASSED ({len(scenarios)} scenario(s))")
+        print(_green(f"  PASSED") + f" ({len(scenarios)} scenario(s))")
         for key, detail in scenarios.items():
             if isinstance(detail, dict) and detail.get("connector_error"):
-                print(f"    {key}: connector error (round-trip ok) — {detail['connector_error']}")
+                print(_yellow(f"    {key}: connector error (round-trip ok)") + f" — {detail['connector_error']}")
     elif status == "dry_run":
-        print(f"  DRY RUN")
+        print(_grey(f"  DRY RUN"))
     elif status == "skipped":
         reason = result.get("scenarios", {}).get("reason") or result.get("reason", "unknown")
-        print(f"  SKIPPED ({reason})")
+        print(_grey(f"  SKIPPED ({reason})"))
     else:
-        print(f"  FAILED")
+        print(_red(f"  FAILED"))
         for key, detail in result.get("scenarios", {}).items():
             if isinstance(detail, dict) and not detail.get("passed", True):
                 msg = detail.get("error_message") or detail.get("error") or "unknown error"
-                print(f"    {key}: {detail.get('error_type', 'Error')} — {msg}")
+                print(_red(f"    {key}: {detail.get('error_type', 'Error')} — {msg}"))
         if result.get("error"):
-            print(f"  Error: {result['error']}")
+            print(_red(f"  Error: {result['error']}"))
 
 
 def run_tests(
@@ -335,7 +349,7 @@ def run_tests(
 def print_summary(results: List[Dict[str, Any]]) -> int:
     """Print test summary and return exit code."""
     print(f"\n{'='*60}")
-    print("TEST SUMMARY")
+    print(_bold("TEST SUMMARY"))
     print(f"{'='*60}\n")
 
     passed = sum(1 for r in results if r["status"] in ("passed", "dry_run"))
@@ -344,25 +358,25 @@ def print_summary(results: List[Dict[str, Any]]) -> int:
     total = len(results)
 
     print(f"Total:   {total}")
-    print(f"Passed:  {passed}")
-    print(f"Skipped: {skipped} (placeholder credentials or no examples)")
-    print(f"Failed:  {failed}")
+    print(_green(f"Passed:  {passed}"))
+    print(_grey(f"Skipped: {skipped} (placeholder credentials or no examples)"))
+    print((_red if failed > 0 else _green)(f"Failed:  {failed}"))
     print()
 
     if failed > 0:
-        print("Failed connectors:")
+        print(_red("Failed connectors:"))
         for result in results:
             if result["status"] == "failed":
-                print(f"  - {result['connector']}: {result.get('error', 'see scenarios above')}")
+                print(_red(f"  - {result['connector']}: {result.get('error', 'see scenarios above')}"))
         print()
         return 1
 
     if passed == 0 and skipped > 0:
-        print("All tests skipped (no valid credentials found)")
+        print(_yellow("All tests skipped (no valid credentials found)"))
         print("Update creds.json with real credentials to run tests")
         return 1
 
-    print("All tests completed successfully!")
+    print(_green("All tests completed successfully!"))
     return 0
 
 

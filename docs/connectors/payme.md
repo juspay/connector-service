@@ -91,39 +91,17 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.CreateOrder](#paymentservicecreateorder) | Payments | `PaymentServiceCreateOrderRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-## Flow Reference
-
 ### Payments
-
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
-
-**Supported payment method types:**
-
-| Payment Method | Supported |
-|----------------|:---------:|
-| Card | — |
-| Samsung Pay | — |
 
 #### PaymentService.Capture
 
@@ -134,7 +112,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/payme/python/capture.py) · [JavaScript](../../examples/payme/javascript/capture.js) · [Kotlin](../../examples/payme/kotlin/capture.kt) · [Rust](../../examples/payme/rust/capture.rs)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L29) · [Rust](../../examples/payme/rust/payme.rs#L25)
 
 #### PaymentService.CreateOrder
 
@@ -145,7 +123,7 @@ Initialize an order in the payment processor system. Sets up payment context bef
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Examples:** [Python](../../examples/payme/python/create_order.py) · [JavaScript](../../examples/payme/javascript/create_order.js) · [Kotlin](../../examples/payme/kotlin/create_order.kt) · [Rust](../../examples/payme/rust/create_order.rs)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt) · [Rust](../../examples/payme/rust/payme.rs#L38)
 
 #### PaymentService.Get
 
@@ -156,7 +134,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payme/python/get.py) · [JavaScript](../../examples/payme/javascript/get.js) · [Kotlin](../../examples/payme/kotlin/get.kt) · [Rust](../../examples/payme/rust/get.rs)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L60) · [Rust](../../examples/payme/rust/payme.rs#L50)
 
 #### PaymentService.Refund
 
@@ -167,7 +145,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/payme/python/refund.py) · [JavaScript](../../examples/payme/javascript/refund.js) · [Kotlin](../../examples/payme/kotlin/refund.kt) · [Rust](../../examples/payme/rust/refund.rs)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L74) · [Rust](../../examples/payme/rust/payme.rs#L62)
 
 #### PaymentService.Void
 
@@ -178,33 +156,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/payme/python/void.py) · [JavaScript](../../examples/payme/javascript/void.js) · [Kotlin](../../examples/payme/kotlin/void.kt) · [Rust](../../examples/payme/rust/void.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L93) · [Rust](../../examples/payme/rust/payme.rs#L77)

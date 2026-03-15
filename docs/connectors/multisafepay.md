@@ -103,13 +103,11 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/multisafepay/python/checkout_autocapture.py) · [JavaScript](../../examples/multisafepay/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/multisafepay/python/multisafepay.py#L22) · [JavaScript](../../examples/multisafepay/javascript/multisafepay.js#L22) · [Kotlin](../../examples/multisafepay/kotlin/multisafepay.kt#L31) · [Rust](../../examples/multisafepay/rust/multisafepay.rs#L26)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -119,100 +117,31 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/multisafepay/python/checkout_wallet.py) · [JavaScript](../../examples/multisafepay/javascript/checkout_wallet.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/multisafepay/python/multisafepay.py#L111) · [JavaScript](../../examples/multisafepay/javascript/multisafepay.js#L108) · [Kotlin](../../examples/multisafepay/kotlin/multisafepay.kt#L114) · [Rust](../../examples/multisafepay/rust/multisafepay.rs#L110)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/multisafepay/python/refund.py) · [JavaScript](../../examples/multisafepay/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/multisafepay/python/multisafepay.py#L207) · [JavaScript](../../examples/multisafepay/javascript/multisafepay.js#L201) · [Kotlin](../../examples/multisafepay/kotlin/multisafepay.kt#L204) · [Rust](../../examples/multisafepay/rust/multisafepay.rs#L201)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/multisafepay/python/get_payment.py) · [JavaScript](../../examples/multisafepay/javascript/get_payment.js)
+**Examples:** [Python](../../examples/multisafepay/python/multisafepay.py#L314) · [JavaScript](../../examples/multisafepay/javascript/multisafepay.js#L303) · [Kotlin](../../examples/multisafepay/kotlin/multisafepay.kt#L302) · [Rust](../../examples/multisafepay/rust/multisafepay.rs#L301)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### Google Pay
-
-```python
-"payment_method": {
-    "google_pay": {  # Google Pay
-        "type": "CARD",  # Type of payment method
-        "description": "Visa 1111",  # User-facing description of the payment method
-        "info": {
-            "card_network": "VISA",  # Card network name
-            "card_details": "1111"  # Card details (usually last 4 digits)
-        },
-        "tokenization_data": {
-            "encrypted_data": {  # Encrypted Google Pay payment data
-                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
-                "token_type": "PAYMENT_GATEWAY"  # The type of the token
-            }
-        }
-    }
-}
-```
-
-### iDEAL
-
-```python
-"payment_method": {
-    "ideal": {
-    }
-}
-```
-
-### PayPal Redirect
-
-```python
-"payment_method": {
-    "paypal_redirect": {  # PayPal
-        "email": {"value": "test@example.com"}  # PayPal's email address
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -235,7 +164,63 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | PayPal | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/multisafepay/python/authorize.py) · [JavaScript](../../examples/multisafepay/javascript/authorize.js) · [Kotlin](../../examples/multisafepay/kotlin/authorize.kt) · [Rust](../../examples/multisafepay/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### Google Pay
+
+```python
+"payment_method": {
+    "google_pay": {  # Google Pay
+        "type": "CARD",  # Type of payment method
+        "description": "Visa 1111",  # User-facing description of the payment method
+        "info": {
+            "card_network": "VISA",  # Card network name
+            "card_details": "1111"  # Card details (usually last 4 digits)
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data
+                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
+                "token_type": "PAYMENT_GATEWAY"  # The type of the token
+            }
+        }
+    }
+}
+```
+
+##### iDEAL
+
+```python
+"payment_method": {
+    "ideal": {
+    }
+}
+```
+
+##### PayPal Redirect
+
+```python
+"payment_method": {
+    "paypal_redirect": {  # PayPal
+        "email": {"value": "test@example.com"}  # PayPal's email address
+    }
+}
+```
+
+**Examples:** [Python](../../examples/multisafepay/python/multisafepay.py#L415) · [JavaScript](../../examples/multisafepay/javascript/multisafepay.js#L397) · [Kotlin](../../examples/multisafepay/kotlin/multisafepay.kt#L393) · [Rust](../../examples/multisafepay/rust/multisafepay.rs#L393)
 
 #### PaymentService.Get
 
@@ -246,7 +231,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/multisafepay/python/get.py) · [JavaScript](../../examples/multisafepay/javascript/get.js) · [Kotlin](../../examples/multisafepay/kotlin/get.kt) · [Rust](../../examples/multisafepay/rust/get.rs)
+**Examples:** [Python](../../examples/multisafepay/python/multisafepay.py#L501) · [JavaScript](../../examples/multisafepay/javascript/multisafepay.js#L480) · [Kotlin](../../examples/multisafepay/kotlin/multisafepay.kt#L472) · [Rust](../../examples/multisafepay/rust/multisafepay.rs#L473)
 
 #### PaymentService.Refund
 
@@ -257,33 +242,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/multisafepay/python/refund.py) · [JavaScript](../../examples/multisafepay/javascript/refund.js) · [Kotlin](../../examples/multisafepay/kotlin/refund.kt) · [Rust](../../examples/multisafepay/rust/refund.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/multisafepay/python/multisafepay.py) · [JavaScript](../../examples/multisafepay/javascript/multisafepay.js) · [Kotlin](../../examples/multisafepay/kotlin/multisafepay.kt#L486) · [Rust](../../examples/multisafepay/rust/multisafepay.rs#L485)

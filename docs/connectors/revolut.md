@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/checkout_card.py) · [JavaScript](../../examples/revolut/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L22) · [JavaScript](../../examples/revolut/javascript/revolut.js#L22) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L32) · [Rust](../../examples/revolut/rust/revolut.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,13 +117,11 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/checkout_autocapture.py) · [JavaScript](../../examples/revolut/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L126) · [JavaScript](../../examples/revolut/javascript/revolut.js#L121) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L127) · [Rust](../../examples/revolut/rust/revolut.rs#L123)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -135,13 +131,11 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/checkout_wallet.py) · [JavaScript](../../examples/revolut/javascript/checkout_wallet.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L214) · [JavaScript](../../examples/revolut/javascript/revolut.js#L206) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L209) · [Rust](../../examples/revolut/rust/revolut.rs#L206)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -151,213 +145,32 @@ Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/checkout_bank.py) · [JavaScript](../../examples/revolut/javascript/checkout_bank.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L309) · [JavaScript](../../examples/revolut/javascript/revolut.js#L298) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L298) · [Rust](../../examples/revolut/rust/revolut.rs#L296)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/revolut/python/refund.py) · [JavaScript](../../examples/revolut/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L394) · [JavaScript](../../examples/revolut/javascript/revolut.js#L380) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L377) · [Rust](../../examples/revolut/rust/revolut.rs#L376)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/revolut/python/get_payment.py) · [JavaScript](../../examples/revolut/javascript/get_payment.js)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L500) · [JavaScript](../../examples/revolut/javascript/revolut.js#L481) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L474) · [Rust](../../examples/revolut/rust/revolut.rs#L475)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### Google Pay
-
-```python
-"payment_method": {
-    "google_pay": {  # Google Pay
-        "type": "CARD",  # Type of payment method
-        "description": "Visa 1111",  # User-facing description of the payment method
-        "info": {
-            "card_network": "VISA",  # Card network name
-            "card_details": "1111"  # Card details (usually last 4 digits)
-        },
-        "tokenization_data": {
-            "encrypted_data": {  # Encrypted Google Pay payment data
-                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
-                "token_type": "PAYMENT_GATEWAY"  # The type of the token
-            }
-        }
-    }
-}
-```
-
-### Apple Pay
-
-```python
-"payment_method": {
-    "apple_pay": {  # Apple Pay
-        "payment_data": {
-            "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
-        },
-        "payment_method": {
-            "display_name": "Visa 1111",
-            "network": "Visa",
-            "type": "debit"
-        },
-        "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
-    }
-}
-```
-
-### SEPA Direct Debit
-
-```python
-"payment_method": {
-    "sepa": {  # Sepa - Single Euro Payments Area direct debit
-        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA
-        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
-    }
-}
-```
-
-### BACS Direct Debit
-
-```python
-"payment_method": {
-    "bacs": {  # Bacs - Bankers' Automated Clearing Services
-        "account_number": {"value": "55779911"},  # Account number for Bacs payment method
-        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method
-        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit
-    }
-}
-```
-
-### ACH Direct Debit
-
-```python
-"payment_method": {
-    "ach": {  # Ach - Automated Clearing House
-        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
-        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
-        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
-    }
-}
-```
-
-### BECS Direct Debit
-
-```python
-"payment_method": {
-    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit
-        "account_number": {"value": "000123456"},  # Account number for Becs payment method
-        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number
-        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
-    }
-}
-```
-
-### iDEAL
-
-```python
-"payment_method": {
-    "ideal": {
-    }
-}
-```
-
-### PayPal Redirect
-
-```python
-"payment_method": {
-    "paypal_redirect": {  # PayPal
-        "email": {"value": "test@example.com"}  # PayPal's email address
-    }
-}
-```
-
-### BLIK
-
-```python
-"payment_method": {
-    "blik": {
-        "blik_code": "777124"
-    }
-}
-```
-
-### Klarna
-
-```python
-"payment_method": {
-    "klarna": {  # Klarna - Swedish BNPL service
-    }
-}
-```
-
-### Afterpay / Clearpay
-
-```python
-"payment_method": {
-    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service
-    }
-}
-```
-
-### UPI Collect
-
-```python
-"payment_method": {
-    "upi_collect": {  # UPI Collect
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
-    }
-}
-```
-
-### Affirm
-
-```python
-"payment_method": {
-    "affirm": {  # Affirm - US BNPL service
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -390,7 +203,175 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Affirm | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/revolut/python/authorize.py) · [JavaScript](../../examples/revolut/javascript/authorize.js) · [Kotlin](../../examples/revolut/kotlin/authorize.kt) · [Rust](../../examples/revolut/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### Google Pay
+
+```python
+"payment_method": {
+    "google_pay": {  # Google Pay
+        "type": "CARD",  # Type of payment method
+        "description": "Visa 1111",  # User-facing description of the payment method
+        "info": {
+            "card_network": "VISA",  # Card network name
+            "card_details": "1111"  # Card details (usually last 4 digits)
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data
+                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
+                "token_type": "PAYMENT_GATEWAY"  # The type of the token
+            }
+        }
+    }
+}
+```
+
+##### Apple Pay
+
+```python
+"payment_method": {
+    "apple_pay": {  # Apple Pay
+        "payment_data": {
+            "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
+        },
+        "payment_method": {
+            "display_name": "Visa 1111",
+            "network": "Visa",
+            "type": "debit"
+        },
+        "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
+    }
+}
+```
+
+##### SEPA Direct Debit
+
+```python
+"payment_method": {
+    "sepa": {  # Sepa - Single Euro Payments Area direct debit
+        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
+    }
+}
+```
+
+##### BACS Direct Debit
+
+```python
+"payment_method": {
+    "bacs": {  # Bacs - Bankers' Automated Clearing Services
+        "account_number": {"value": "55779911"},  # Account number for Bacs payment method
+        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method
+        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit
+    }
+}
+```
+
+##### ACH Direct Debit
+
+```python
+"payment_method": {
+    "ach": {  # Ach - Automated Clearing House
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
+    }
+}
+```
+
+##### BECS Direct Debit
+
+```python
+"payment_method": {
+    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit
+        "account_number": {"value": "000123456"},  # Account number for Becs payment method
+        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
+    }
+}
+```
+
+##### iDEAL
+
+```python
+"payment_method": {
+    "ideal": {
+    }
+}
+```
+
+##### PayPal Redirect
+
+```python
+"payment_method": {
+    "paypal_redirect": {  # PayPal
+        "email": {"value": "test@example.com"}  # PayPal's email address
+    }
+}
+```
+
+##### BLIK
+
+```python
+"payment_method": {
+    "blik": {
+        "blik_code": "777124"
+    }
+}
+```
+
+##### Klarna
+
+```python
+"payment_method": {
+    "klarna": {  # Klarna - Swedish BNPL service
+    }
+}
+```
+
+##### Afterpay / Clearpay
+
+```python
+"payment_method": {
+    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service
+    }
+}
+```
+
+##### UPI Collect
+
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
+
+##### Affirm
+
+```python
+"payment_method": {
+    "affirm": {  # Affirm - US BNPL service
+    }
+}
+```
+
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L600) · [JavaScript](../../examples/revolut/javascript/revolut.js#L574) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L564) · [Rust](../../examples/revolut/rust/revolut.rs#L566)
 
 #### PaymentService.Capture
 
@@ -401,7 +382,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/revolut/python/capture.py) · [JavaScript](../../examples/revolut/javascript/capture.js) · [Kotlin](../../examples/revolut/kotlin/capture.kt) · [Rust](../../examples/revolut/rust/capture.rs)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L685) · [JavaScript](../../examples/revolut/javascript/revolut.js#L656) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L642) · [Rust](../../examples/revolut/rust/revolut.rs#L645)
 
 #### PaymentService.Get
 
@@ -412,7 +393,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/revolut/python/get.py) · [JavaScript](../../examples/revolut/javascript/get.js) · [Kotlin](../../examples/revolut/kotlin/get.kt) · [Rust](../../examples/revolut/rust/get.rs)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L708) · [JavaScript](../../examples/revolut/javascript/revolut.js#L675) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L659) · [Rust](../../examples/revolut/rust/revolut.rs#L658)
 
 #### PaymentService.Refund
 
@@ -423,33 +404,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/revolut/python/refund.py) · [JavaScript](../../examples/revolut/javascript/refund.js) · [Kotlin](../../examples/revolut/kotlin/refund.kt) · [Rust](../../examples/revolut/rust/refund.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/revolut/python/revolut.py) · [JavaScript](../../examples/revolut/javascript/revolut.js) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L673) · [Rust](../../examples/revolut/rust/revolut.rs#L670)

@@ -241,7 +241,7 @@ export class UniffiClient {
         const bytes = liftBytes(result);
         try {
           const resErr = types.ResponseError.decode(bytes);
-          if (resErr.errorMessage) {
+          if (resErr.errorMessage || (resErr.statusCode ?? 0) >= 400) {
             throw resErr;
           }
         } catch (e) {

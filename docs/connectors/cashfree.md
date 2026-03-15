@@ -91,31 +91,11 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### UPI Collect
-
-```python
-"payment_method": {
-    "upi_collect": {  # UPI Collect
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.CreateOrder](#paymentservicecreateorder) | Payments | `PaymentServiceCreateOrderRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -135,42 +115,16 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | UPI | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/cashfree/python/authorize.py) · [JavaScript](../../examples/cashfree/javascript/authorize.js) · [Kotlin](../../examples/cashfree/kotlin/authorize.kt) · [Rust](../../examples/cashfree/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
-#### PaymentService.CreateOrder
+##### UPI Collect
 
-Initialize an order in the payment processor system. Sets up payment context before customer enters card details for improved authorization rates.
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCreateOrderRequest` |
-| **Response** | `PaymentServiceCreateOrderResponse` |
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/cashfree/python/cashfree.py) · [JavaScript](../../examples/cashfree/javascript/cashfree.js) · [Kotlin](../../examples/cashfree/kotlin/cashfree.kt#L28) · [Rust](../../examples/cashfree/rust/cashfree.rs#L25)

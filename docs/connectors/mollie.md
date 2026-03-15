@@ -103,71 +103,38 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/mollie/python/checkout_autocapture.py) · [JavaScript](../../examples/mollie/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L22) · [JavaScript](../../examples/mollie/javascript/mollie.js#L22) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L32) · [Rust](../../examples/mollie/rust/mollie.rs#L26)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/mollie/python/refund.py) · [JavaScript](../../examples/mollie/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L111) · [JavaScript](../../examples/mollie/javascript/mollie.js#L108) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L115) · [Rust](../../examples/mollie/rust/mollie.rs#L110)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/mollie/python/void_payment.py) · [JavaScript](../../examples/mollie/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L218) · [JavaScript](../../examples/mollie/javascript/mollie.js#L210) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L213) · [Rust](../../examples/mollie/rust/mollie.rs#L210)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/mollie/python/get_payment.py) · [JavaScript](../../examples/mollie/javascript/get_payment.js)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L316) · [JavaScript](../../examples/mollie/javascript/mollie.js#L302) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L302) · [Rust](../../examples/mollie/rust/mollie.rs#L300)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
-| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -187,16 +154,23 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/mollie/python/authorize.py) · [JavaScript](../../examples/mollie/javascript/authorize.js) · [Kotlin](../../examples/mollie/kotlin/authorize.kt) · [Rust](../../examples/mollie/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
-#### PaymentService.Capture
+##### Card (Raw PAN)
 
-Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
 
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceCaptureRequest` |
-| **Response** | `PaymentServiceCaptureResponse` |
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L417) · [JavaScript](../../examples/mollie/javascript/mollie.js#L396) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L393) · [Rust](../../examples/mollie/rust/mollie.rs#L392)
 
 #### PaymentService.Get
 
@@ -207,7 +181,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/mollie/python/get.py) · [JavaScript](../../examples/mollie/javascript/get.js) · [Kotlin](../../examples/mollie/kotlin/get.kt) · [Rust](../../examples/mollie/rust/get.rs)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L503) · [JavaScript](../../examples/mollie/javascript/mollie.js#L479) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L472) · [Rust](../../examples/mollie/rust/mollie.rs#L472)
 
 #### PaymentService.Refund
 
@@ -218,16 +192,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/mollie/python/refund.py) · [JavaScript](../../examples/mollie/javascript/refund.js) · [Kotlin](../../examples/mollie/kotlin/refund.kt) · [Rust](../../examples/mollie/rust/refund.rs)
-
-#### PaymentMethodService.Tokenize
-
-Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodServiceTokenizeRequest` |
-| **Response** | `PaymentMethodServiceTokenizeResponse` |
+**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.js) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L486) · [Rust](../../examples/mollie/rust/mollie.rs#L484)
 
 #### PaymentService.Void
 
@@ -238,33 +203,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/mollie/python/void.py) · [JavaScript](../../examples/mollie/javascript/void.js) · [Kotlin](../../examples/mollie/kotlin/void.kt) · [Rust](../../examples/mollie/rust/void.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L522) · [JavaScript](../../examples/mollie/javascript/mollie.js) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L505) · [Rust](../../examples/mollie/rust/mollie.rs#L499)

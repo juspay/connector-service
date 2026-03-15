@@ -17,9 +17,9 @@ const client = new ConnectorClient({
 async function get(merchantTransactionId) {
     // Step 1: Get — retrieve current payment status from the connector
     const getResponse = await client.get({
-        "connector_transaction_id": "probe_connector_txn_001",
+        "connectorTransactionId": "probe_connector_txn_001",
         "amount": {  // Amount Information
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
     });

@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/python/checkout_card.py) · [JavaScript](../../examples/noon/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/noon/python/noon.py#L22) · [JavaScript](../../examples/noon/javascript/noon.js#L22) · [Kotlin](../../examples/noon/kotlin/noon.kt#L33) · [Rust](../../examples/noon/rust/noon.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,13 +117,11 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/python/checkout_autocapture.py) · [JavaScript](../../examples/noon/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/noon/python/noon.py#L128) · [JavaScript](../../examples/noon/javascript/noon.js#L123) · [Kotlin](../../examples/noon/kotlin/noon.kt#L130) · [Rust](../../examples/noon/rust/noon.rs#L125)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -135,103 +131,39 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/noon/python/checkout_wallet.py) · [JavaScript](../../examples/noon/javascript/checkout_wallet.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/noon/python/noon.py#L218) · [JavaScript](../../examples/noon/javascript/noon.js#L210) · [Kotlin](../../examples/noon/kotlin/noon.kt#L214) · [Rust](../../examples/noon/rust/noon.rs#L210)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/noon/python/refund.py) · [JavaScript](../../examples/noon/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/noon/python/noon.py#L315) · [JavaScript](../../examples/noon/javascript/noon.js#L304) · [Kotlin](../../examples/noon/kotlin/noon.kt#L305) · [Rust](../../examples/noon/rust/noon.rs#L302)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/noon/python/void_payment.py) · [JavaScript](../../examples/noon/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/noon/python/noon.py#L423) · [JavaScript](../../examples/noon/javascript/noon.js#L407) · [Kotlin](../../examples/noon/kotlin/noon.kt#L404) · [Rust](../../examples/noon/rust/noon.rs#L403)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/noon/python/get_payment.py) · [JavaScript](../../examples/noon/javascript/get_payment.js)
+**Examples:** [Python](../../examples/noon/python/noon.py#L522) · [JavaScript](../../examples/noon/javascript/noon.js#L500) · [Kotlin](../../examples/noon/kotlin/noon.kt#L494) · [Rust](../../examples/noon/rust/noon.rs#L494)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### Google Pay
-
-```python
-"payment_method": {
-    "google_pay": {  # Google Pay
-        "type": "CARD",  # Type of payment method
-        "description": "Visa 1111",  # User-facing description of the payment method
-        "info": {
-            "card_network": "VISA",  # Card network name
-            "card_details": "1111"  # Card details (usually last 4 digits)
-        },
-        "tokenization_data": {
-            "encrypted_data": {  # Encrypted Google Pay payment data
-                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
-                "token_type": "PAYMENT_GATEWAY"  # The type of the token
-            }
-        }
-    }
-}
-```
-
-### PayPal Redirect
-
-```python
-"payment_method": {
-    "paypal_redirect": {  # PayPal
-        "email": {"value": "test@example.com"}  # PayPal's email address
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -254,7 +186,54 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | PayPal | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/noon/python/authorize.py) · [JavaScript](../../examples/noon/javascript/authorize.js) · [Kotlin](../../examples/noon/kotlin/authorize.kt) · [Rust](../../examples/noon/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### Google Pay
+
+```python
+"payment_method": {
+    "google_pay": {  # Google Pay
+        "type": "CARD",  # Type of payment method
+        "description": "Visa 1111",  # User-facing description of the payment method
+        "info": {
+            "card_network": "VISA",  # Card network name
+            "card_details": "1111"  # Card details (usually last 4 digits)
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data
+                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
+                "token_type": "PAYMENT_GATEWAY"  # The type of the token
+            }
+        }
+    }
+}
+```
+
+##### PayPal Redirect
+
+```python
+"payment_method": {
+    "paypal_redirect": {  # PayPal
+        "email": {"value": "test@example.com"}  # PayPal's email address
+    }
+}
+```
+
+**Examples:** [Python](../../examples/noon/python/noon.py#L624) · [JavaScript](../../examples/noon/javascript/noon.js#L595) · [Kotlin](../../examples/noon/kotlin/noon.kt#L586) · [Rust](../../examples/noon/rust/noon.rs#L587)
 
 #### PaymentService.Capture
 
@@ -265,7 +244,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/noon/python/capture.py) · [JavaScript](../../examples/noon/javascript/capture.js) · [Kotlin](../../examples/noon/kotlin/capture.kt) · [Rust](../../examples/noon/rust/capture.rs)
+**Examples:** [Python](../../examples/noon/python/noon.py#L711) · [JavaScript](../../examples/noon/javascript/noon.js#L679) · [Kotlin](../../examples/noon/kotlin/noon.kt#L666) · [Rust](../../examples/noon/rust/noon.rs#L668)
 
 #### PaymentService.Get
 
@@ -276,7 +255,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/noon/python/get.py) · [JavaScript](../../examples/noon/javascript/get.js) · [Kotlin](../../examples/noon/kotlin/get.kt) · [Rust](../../examples/noon/rust/get.rs)
+**Examples:** [Python](../../examples/noon/python/noon.py#L734) · [JavaScript](../../examples/noon/javascript/noon.js#L698) · [Kotlin](../../examples/noon/kotlin/noon.kt#L683) · [Rust](../../examples/noon/rust/noon.rs#L681)
 
 #### PaymentService.Refund
 
@@ -287,16 +266,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/noon/python/refund.py) · [JavaScript](../../examples/noon/javascript/refund.js) · [Kotlin](../../examples/noon/kotlin/refund.kt) · [Rust](../../examples/noon/rust/refund.rs)
-
-#### PaymentService.SetupRecurring
-
-Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceSetupRecurringRequest` |
-| **Response** | `PaymentServiceSetupRecurringResponse` |
+**Examples:** [Python](../../examples/noon/python/noon.py) · [JavaScript](../../examples/noon/javascript/noon.js) · [Kotlin](../../examples/noon/kotlin/noon.kt#L697) · [Rust](../../examples/noon/rust/noon.rs#L693)
 
 #### PaymentService.Void
 
@@ -307,44 +277,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/noon/python/void.py) · [JavaScript](../../examples/noon/javascript/void.js) · [Kotlin](../../examples/noon/kotlin/void.kt) · [Rust](../../examples/noon/rust/void.rs)
-
-### Mandates
-
-#### RecurringPaymentService.Charge
-
-Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
-
-| | Message |
-|---|---------|
-| **Request** | `RecurringPaymentServiceChargeRequest` |
-| **Response** | `RecurringPaymentServiceChargeResponse` |
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/noon/python/noon.py#L753) · [JavaScript](../../examples/noon/javascript/noon.js) · [Kotlin](../../examples/noon/kotlin/noon.kt#L716) · [Rust](../../examples/noon/rust/noon.rs#L708)

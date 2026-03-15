@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiuu/python/checkout_card.py) · [JavaScript](../../examples/fiuu/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L22) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L22) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L33) · [Rust](../../examples/fiuu/rust/fiuu.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,13 +117,11 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiuu/python/checkout_autocapture.py) · [JavaScript](../../examples/fiuu/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L126) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L121) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L128) · [Rust](../../examples/fiuu/rust/fiuu.rs#L123)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -135,110 +131,39 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiuu/python/checkout_wallet.py) · [JavaScript](../../examples/fiuu/javascript/checkout_wallet.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L214) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L206) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L210) · [Rust](../../examples/fiuu/rust/fiuu.rs#L206)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/fiuu/python/refund.py) · [JavaScript](../../examples/fiuu/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L309) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L298) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L299) · [Rust](../../examples/fiuu/rust/fiuu.rs#L296)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/fiuu/python/void_payment.py) · [JavaScript](../../examples/fiuu/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L416) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L400) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L397) · [Rust](../../examples/fiuu/rust/fiuu.rs#L396)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/fiuu/python/get_payment.py) · [JavaScript](../../examples/fiuu/javascript/get_payment.js)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L513) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L491) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L485) · [Rust](../../examples/fiuu/rust/fiuu.rs#L485)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### Google Pay
-
-```python
-"payment_method": {
-    "google_pay": {  # Google Pay
-        "type": "CARD",  # Type of payment method
-        "description": "Visa 1111",  # User-facing description of the payment method
-        "info": {
-            "card_network": "VISA",  # Card network name
-            "card_details": "1111"  # Card details (usually last 4 digits)
-        },
-        "tokenization_data": {
-            "encrypted_data": {  # Encrypted Google Pay payment data
-                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
-                "token_type": "PAYMENT_GATEWAY"  # The type of the token
-            }
-        }
-    }
-}
-```
-
-### Apple Pay
-
-```python
-"payment_method": {
-    "apple_pay": {  # Apple Pay
-        "payment_data": {
-            "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
-        },
-        "payment_method": {
-            "display_name": "Visa 1111",
-            "network": "Visa",
-            "type": "debit"
-        },
-        "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -260,7 +185,62 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Apple Pay | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/fiuu/python/authorize.py) · [JavaScript](../../examples/fiuu/javascript/authorize.js) · [Kotlin](../../examples/fiuu/kotlin/authorize.kt) · [Rust](../../examples/fiuu/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### Google Pay
+
+```python
+"payment_method": {
+    "google_pay": {  # Google Pay
+        "type": "CARD",  # Type of payment method
+        "description": "Visa 1111",  # User-facing description of the payment method
+        "info": {
+            "card_network": "VISA",  # Card network name
+            "card_details": "1111"  # Card details (usually last 4 digits)
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data
+                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
+                "token_type": "PAYMENT_GATEWAY"  # The type of the token
+            }
+        }
+    }
+}
+```
+
+##### Apple Pay
+
+```python
+"payment_method": {
+    "apple_pay": {  # Apple Pay
+        "payment_data": {
+            "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
+        },
+        "payment_method": {
+            "display_name": "Visa 1111",
+            "network": "Visa",
+            "type": "debit"
+        },
+        "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
+    }
+}
+```
+
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L613) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L584) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L575) · [Rust](../../examples/fiuu/rust/fiuu.rs#L576)
 
 #### PaymentService.Capture
 
@@ -271,7 +251,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/fiuu/python/capture.py) · [JavaScript](../../examples/fiuu/javascript/capture.js) · [Kotlin](../../examples/fiuu/kotlin/capture.kt) · [Rust](../../examples/fiuu/rust/capture.rs)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L698) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L666) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L653) · [Rust](../../examples/fiuu/rust/fiuu.rs#L655)
 
 #### PaymentService.Get
 
@@ -282,7 +262,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/fiuu/python/get.py) · [JavaScript](../../examples/fiuu/javascript/get.js) · [Kotlin](../../examples/fiuu/kotlin/get.kt) · [Rust](../../examples/fiuu/rust/get.rs)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L721) · [JavaScript](../../examples/fiuu/javascript/fiuu.js#L685) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L670) · [Rust](../../examples/fiuu/rust/fiuu.rs#L668)
 
 #### PaymentService.Refund
 
@@ -293,7 +273,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/fiuu/python/refund.py) · [JavaScript](../../examples/fiuu/javascript/refund.js) · [Kotlin](../../examples/fiuu/kotlin/refund.kt) · [Rust](../../examples/fiuu/rust/refund.rs)
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py) · [JavaScript](../../examples/fiuu/javascript/fiuu.js) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L684) · [Rust](../../examples/fiuu/rust/fiuu.rs#L680)
 
 #### PaymentService.Void
 
@@ -304,44 +284,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/fiuu/python/void.py) · [JavaScript](../../examples/fiuu/javascript/void.js) · [Kotlin](../../examples/fiuu/kotlin/void.kt) · [Rust](../../examples/fiuu/rust/void.rs)
-
-### Mandates
-
-#### RecurringPaymentService.Charge
-
-Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
-
-| | Message |
-|---|---------|
-| **Request** | `RecurringPaymentServiceChargeRequest` |
-| **Response** | `RecurringPaymentServiceChargeResponse` |
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/fiuu/python/fiuu.py#L740) · [JavaScript](../../examples/fiuu/javascript/fiuu.js) · [Kotlin](../../examples/fiuu/kotlin/fiuu.kt#L704) · [Rust](../../examples/fiuu/rust/fiuu.rs#L696)

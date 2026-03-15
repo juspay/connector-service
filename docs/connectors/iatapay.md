@@ -91,42 +91,14 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### iDEAL
-
-```python
-"payment_method": {
-    "ideal": {
-    }
-}
-```
-
-### UPI Collect
-
-```python
-"payment_method": {
-    "upi_collect": {  # UPI Collect
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [MerchantAuthenticationService.CreateAccessToken](#merchantauthenticationservicecreateaccesstoken) | Authentication | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -147,7 +119,28 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | UPI | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/iatapay/python/authorize.py) · [JavaScript](../../examples/iatapay/javascript/authorize.js) · [Kotlin](../../examples/iatapay/kotlin/authorize.kt) · [Rust](../../examples/iatapay/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### iDEAL
+
+```python
+"payment_method": {
+    "ideal": {
+    }
+}
+```
+
+##### UPI Collect
+
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
+
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L32) · [Rust](../../examples/iatapay/rust/iatapay.rs#L25)
 
 #### PaymentService.Get
 
@@ -158,7 +151,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/iatapay/python/get.py) · [JavaScript](../../examples/iatapay/javascript/get.js) · [Kotlin](../../examples/iatapay/kotlin/get.kt) · [Rust](../../examples/iatapay/rust/get.rs)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L122) · [Rust](../../examples/iatapay/rust/iatapay.rs#L114)
 
 #### PaymentService.Refund
 
@@ -169,18 +162,9 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/iatapay/python/refund.py) · [JavaScript](../../examples/iatapay/javascript/refund.js) · [Kotlin](../../examples/iatapay/kotlin/refund.kt) · [Rust](../../examples/iatapay/rust/refund.rs)
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt#L144) · [Rust](../../examples/iatapay/rust/iatapay.rs#L134)
 
 ### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
 
 #### MerchantAuthenticationService.CreateAccessToken
 
@@ -191,22 +175,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/iatapay/python/create_access_token.py) · [JavaScript](../../examples/iatapay/javascript/create_access_token.js) · [Kotlin](../../examples/iatapay/kotlin/create_access_token.kt) · [Rust](../../examples/iatapay/rust/create_access_token.rs)
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/iatapay/python/iatapay.py) · [JavaScript](../../examples/iatapay/javascript/iatapay.js) · [Kotlin](../../examples/iatapay/kotlin/iatapay.kt) · [Rust](../../examples/iatapay/rust/iatapay.rs#L106)

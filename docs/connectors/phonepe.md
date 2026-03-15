@@ -91,31 +91,12 @@ let config = ConnectorConfig {
 </tr>
 </table>
 
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### UPI Collect
-
-```python
-"payment_method": {
-    "upi_collect": {  # UPI Collect
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -135,7 +116,19 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | UPI | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/phonepe/python/authorize.py) · [JavaScript](../../examples/phonepe/javascript/authorize.js) · [Kotlin](../../examples/phonepe/kotlin/authorize.kt) · [Rust](../../examples/phonepe/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### UPI Collect
+
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
+
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L29) · [Rust](../../examples/phonepe/rust/phonepe.rs#L25)
 
 #### PaymentService.Get
 
@@ -146,33 +139,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/phonepe/python/get.py) · [JavaScript](../../examples/phonepe/javascript/get.js) · [Kotlin](../../examples/phonepe/kotlin/get.kt) · [Rust](../../examples/phonepe/rust/get.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L103) · [Rust](../../examples/phonepe/rust/phonepe.rs#L100)

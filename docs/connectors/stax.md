@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/python/checkout_card.py) · [JavaScript](../../examples/stax/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/stax/python/stax.py#L24) · [JavaScript](../../examples/stax/javascript/stax.js#L22) · [Kotlin](../../examples/stax/kotlin/stax.kt#L37) · [Rust](../../examples/stax/rust/stax.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,13 +117,11 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/python/checkout_autocapture.py) · [JavaScript](../../examples/stax/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/stax/python/stax.py#L129) · [JavaScript](../../examples/stax/javascript/stax.js#L122) · [Kotlin](../../examples/stax/kotlin/stax.kt#L133) · [Rust](../../examples/stax/rust/stax.rs#L124)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -135,135 +131,53 @@ Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/python/checkout_bank.py) · [JavaScript](../../examples/stax/javascript/checkout_bank.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/stax/python/stax.py#L218) · [JavaScript](../../examples/stax/javascript/stax.js#L208) · [Kotlin](../../examples/stax/kotlin/stax.kt#L216) · [Rust](../../examples/stax/rust/stax.rs#L208)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/stax/python/refund.py) · [JavaScript](../../examples/stax/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/stax/python/stax.py#L304) · [JavaScript](../../examples/stax/javascript/stax.js#L291) · [Kotlin](../../examples/stax/kotlin/stax.kt#L296) · [Rust](../../examples/stax/rust/stax.rs#L289)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/stax/python/void_payment.py) · [JavaScript](../../examples/stax/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/stax/python/stax.py#L411) · [JavaScript](../../examples/stax/javascript/stax.js#L393) · [Kotlin](../../examples/stax/kotlin/stax.kt#L394) · [Rust](../../examples/stax/rust/stax.rs#L389)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/stax/python/get_payment.py) · [JavaScript](../../examples/stax/javascript/get_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/stax/python/stax.py#L509) · [JavaScript](../../examples/stax/javascript/stax.js#L485) · [Kotlin](../../examples/stax/kotlin/stax.kt#L483) · [Rust](../../examples/stax/rust/stax.rs#L479)
 
 ### Create Customer
 
 Register a customer record in the connector system. Returns a connector_customer_id that can be reused for recurring payments and tokenized card storage.
 
-**Examples:** [Python](../../examples/stax/python/create_customer.py) · [JavaScript](../../examples/stax/javascript/create_customer.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/stax/python/stax.py#L610) · [JavaScript](../../examples/stax/javascript/stax.js#L580) · [Kotlin](../../examples/stax/kotlin/stax.kt#L575) · [Rust](../../examples/stax/rust/stax.rs#L572)
 
 ### Tokenize Payment Method
 
 Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
 
-**Examples:** [Python](../../examples/stax/python/tokenize.py) · [JavaScript](../../examples/stax/javascript/tokenize.js)
+**Examples:** [Python](../../examples/stax/python/stax.py#L644) · [JavaScript](../../examples/stax/javascript/stax.js#L609) · [Kotlin](../../examples/stax/kotlin/stax.kt#L604) · [Rust](../../examples/stax/rust/stax.rs#L599)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### SEPA Direct Debit
-
-```python
-"payment_method": {
-    "sepa": {  # Sepa - Single Euro Payments Area direct debit
-        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA
-        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
-    }
-}
-```
-
-### BACS Direct Debit
-
-```python
-"payment_method": {
-    "bacs": {  # Bacs - Bankers' Automated Clearing Services
-        "account_number": {"value": "55779911"},  # Account number for Bacs payment method
-        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method
-        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit
-    }
-}
-```
-
-### ACH Direct Debit
-
-```python
-"payment_method": {
-    "ach": {  # Ach - Automated Clearing House
-        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
-        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
-        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
-    }
-}
-```
-
-### BECS Direct Debit
-
-```python
-"payment_method": {
-    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit
-        "account_number": {"value": "000123456"},  # Account number for Becs payment method
-        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number
-        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [CustomerService.Create](#customerservicecreate) | Customers | `CustomerServiceCreateRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentMethodService.Tokenize](#paymentmethodservicetokenize) | Payments | `PaymentMethodServiceTokenizeRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -287,7 +201,70 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | BECS | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/stax/python/authorize.py) · [JavaScript](../../examples/stax/javascript/authorize.js) · [Kotlin](../../examples/stax/kotlin/authorize.kt) · [Rust](../../examples/stax/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### SEPA Direct Debit
+
+```python
+"payment_method": {
+    "sepa": {  # Sepa - Single Euro Payments Area direct debit
+        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
+    }
+}
+```
+
+##### BACS Direct Debit
+
+```python
+"payment_method": {
+    "bacs": {  # Bacs - Bankers' Automated Clearing Services
+        "account_number": {"value": "55779911"},  # Account number for Bacs payment method
+        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method
+        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit
+    }
+}
+```
+
+##### ACH Direct Debit
+
+```python
+"payment_method": {
+    "ach": {  # Ach - Automated Clearing House
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
+    }
+}
+```
+
+##### BECS Direct Debit
+
+```python
+"payment_method": {
+    "becs": {  # Becs - Bulk Electronic Clearing System - Australian direct debit
+        "account_number": {"value": "000123456"},  # Account number for Becs payment method
+        "bsb_number": {"value": "000000"},  # Bank-State-Branch (bsb) number
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
+    }
+}
+```
+
+**Examples:** [Python](../../examples/stax/python/stax.py#L695) · [JavaScript](../../examples/stax/javascript/stax.js#L654) · [Kotlin](../../examples/stax/kotlin/stax.kt#L649) · [Rust](../../examples/stax/rust/stax.rs#L644)
 
 #### PaymentService.Capture
 
@@ -298,7 +275,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/stax/python/capture.py) · [JavaScript](../../examples/stax/javascript/capture.js) · [Kotlin](../../examples/stax/kotlin/capture.kt) · [Rust](../../examples/stax/rust/capture.rs)
+**Examples:** [Python](../../examples/stax/python/stax.py#L781) · [JavaScript](../../examples/stax/javascript/stax.js#L737) · [Kotlin](../../examples/stax/kotlin/stax.kt#L728) · [Rust](../../examples/stax/rust/stax.rs#L724)
 
 #### PaymentService.Get
 
@@ -309,7 +286,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/stax/python/get.py) · [JavaScript](../../examples/stax/javascript/get.js) · [Kotlin](../../examples/stax/kotlin/get.kt) · [Rust](../../examples/stax/rust/get.rs)
+**Examples:** [Python](../../examples/stax/python/stax.py#L804) · [JavaScript](../../examples/stax/javascript/stax.js#L756) · [Kotlin](../../examples/stax/kotlin/stax.kt#L771) · [Rust](../../examples/stax/rust/stax.rs#L761)
 
 #### PaymentService.Refund
 
@@ -320,7 +297,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stax/python/refund.py) · [JavaScript](../../examples/stax/javascript/refund.js) · [Kotlin](../../examples/stax/kotlin/refund.kt) · [Rust](../../examples/stax/rust/refund.rs)
+**Examples:** [Python](../../examples/stax/python/stax.py) · [JavaScript](../../examples/stax/javascript/stax.js) · [Kotlin](../../examples/stax/kotlin/stax.kt#L785) · [Rust](../../examples/stax/rust/stax.rs#L773)
 
 #### PaymentMethodService.Tokenize
 
@@ -331,7 +308,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/stax/python/tokenize.py) · [JavaScript](../../examples/stax/javascript/tokenize.js) · [Kotlin](../../examples/stax/kotlin/tokenize.kt) · [Rust](../../examples/stax/rust/tokenize.rs)
+**Examples:** [Python](../../examples/stax/python/stax.py) · [JavaScript](../../examples/stax/javascript/stax.js) · [Kotlin](../../examples/stax/kotlin/stax.kt#L804) · [Rust](../../examples/stax/rust/stax.rs#L788)
 
 #### PaymentService.Void
 
@@ -342,7 +319,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/stax/python/void.py) · [JavaScript](../../examples/stax/javascript/void.js) · [Kotlin](../../examples/stax/kotlin/void.kt) · [Rust](../../examples/stax/rust/void.rs)
+**Examples:** [Python](../../examples/stax/python/stax.py#L823) · [JavaScript](../../examples/stax/javascript/stax.js) · [Kotlin](../../examples/stax/kotlin/stax.kt#L847) · [Rust](../../examples/stax/rust/stax.rs#L831)
 
 ### Customers
 
@@ -355,33 +332,4 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/stax/python/create_customer.py) · [JavaScript](../../examples/stax/javascript/create_customer.js) · [Kotlin](../../examples/stax/kotlin/create_customer.kt) · [Rust](../../examples/stax/rust/create_customer.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/stax/python/stax.py) · [JavaScript](../../examples/stax/javascript/stax.js) · [Kotlin](../../examples/stax/kotlin/stax.kt) · [Rust](../../examples/stax/rust/stax.rs#L737)

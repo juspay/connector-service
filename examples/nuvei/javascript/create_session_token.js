@@ -18,7 +18,7 @@ async function createSessionToken(merchantTransactionId) {
     // Step 1: create_session_token
     const createResponse = await client.createSessionToken({
         "amount": {  // Amount Information
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
     });

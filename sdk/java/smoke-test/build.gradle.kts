@@ -14,6 +14,13 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 
+sourceSets {
+    main {
+        // Include generated connector examples so process* functions are available via reflection
+        kotlin.srcDir(file("../../../examples"))
+    }
+}
+
 application {
     mainClass.set("SmokeTestKt")
 }

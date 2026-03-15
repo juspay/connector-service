@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/xendit/python/checkout_card.py) · [JavaScript](../../examples/xendit/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L22) · [JavaScript](../../examples/xendit/javascript/xendit.js#L22) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L32) · [Rust](../../examples/xendit/rust/xendit.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,61 +117,32 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/xendit/python/checkout_autocapture.py) · [JavaScript](../../examples/xendit/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L126) · [JavaScript](../../examples/xendit/javascript/xendit.js#L121) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L127) · [Rust](../../examples/xendit/rust/xendit.rs#L123)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/xendit/python/refund.py) · [JavaScript](../../examples/xendit/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L214) · [JavaScript](../../examples/xendit/javascript/xendit.js#L206) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L209) · [Rust](../../examples/xendit/rust/xendit.rs#L206)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/xendit/python/get_payment.py) · [JavaScript](../../examples/xendit/javascript/get_payment.js)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L320) · [JavaScript](../../examples/xendit/javascript/xendit.js#L307) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L306) · [Rust](../../examples/xendit/rust/xendit.rs#L305)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -193,7 +162,23 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/xendit/python/authorize.py) · [JavaScript](../../examples/xendit/javascript/authorize.js) · [Kotlin](../../examples/xendit/kotlin/authorize.kt) · [Rust](../../examples/xendit/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L420) · [JavaScript](../../examples/xendit/javascript/xendit.js#L400) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L396) · [Rust](../../examples/xendit/rust/xendit.rs#L396)
 
 #### PaymentService.Capture
 
@@ -204,7 +189,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/xendit/python/capture.py) · [JavaScript](../../examples/xendit/javascript/capture.js) · [Kotlin](../../examples/xendit/kotlin/capture.kt) · [Rust](../../examples/xendit/rust/capture.rs)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L505) · [JavaScript](../../examples/xendit/javascript/xendit.js#L482) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L474) · [Rust](../../examples/xendit/rust/xendit.rs#L475)
 
 #### PaymentService.Get
 
@@ -215,7 +200,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/xendit/python/get.py) · [JavaScript](../../examples/xendit/javascript/get.js) · [Kotlin](../../examples/xendit/kotlin/get.kt) · [Rust](../../examples/xendit/rust/get.rs)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L528) · [JavaScript](../../examples/xendit/javascript/xendit.js#L501) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L491) · [Rust](../../examples/xendit/rust/xendit.rs#L488)
 
 #### PaymentService.Refund
 
@@ -226,33 +211,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/xendit/python/refund.py) · [JavaScript](../../examples/xendit/javascript/refund.js) · [Kotlin](../../examples/xendit/kotlin/refund.kt) · [Rust](../../examples/xendit/rust/refund.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/xendit/python/xendit.py) · [JavaScript](../../examples/xendit/javascript/xendit.js) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L505) · [Rust](../../examples/xendit/rust/xendit.rs#L500)

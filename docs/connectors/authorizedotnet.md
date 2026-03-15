@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/checkout_card.py) · [JavaScript](../../examples/authorizedotnet/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L23) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L22) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L35) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,13 +117,11 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/checkout_autocapture.py) · [JavaScript](../../examples/authorizedotnet/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L127) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L121) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L130) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L123)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -135,93 +131,46 @@ Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/checkout_bank.py) · [JavaScript](../../examples/authorizedotnet/javascript/checkout_bank.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L215) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L206) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L212) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L206)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/authorizedotnet/python/refund.py) · [JavaScript](../../examples/authorizedotnet/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L301) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L289) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L292) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L287)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/authorizedotnet/python/void_payment.py) · [JavaScript](../../examples/authorizedotnet/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L407) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L390) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L389) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L386)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/authorizedotnet/python/get_payment.py) · [JavaScript](../../examples/authorizedotnet/javascript/get_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L504) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L481) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L477) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L475)
 
 ### Create Customer
 
 Register a customer record in the connector system. Returns a connector_customer_id that can be reused for recurring payments and tokenized card storage.
 
-**Examples:** [Python](../../examples/authorizedotnet/python/create_customer.py) · [JavaScript](../../examples/authorizedotnet/javascript/create_customer.js)
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L604) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L575) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L568) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L567)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### ACH Direct Debit
-
-```python
-"payment_method": {
-    "ach": {  # Ach - Automated Clearing House
-        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
-        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
-        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [CustomerService.Create](#customerservicecreate) | Customers | `CustomerServiceCreateRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -251,7 +200,35 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Affirm | — |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/authorize.py) · [JavaScript](../../examples/authorizedotnet/javascript/authorize.js) · [Kotlin](../../examples/authorizedotnet/kotlin/authorize.kt) · [Rust](../../examples/authorizedotnet/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### ACH Direct Debit
+
+```python
+"payment_method": {
+    "ach": {  # Ach - Automated Clearing House
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
+    }
+}
+```
+
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L638) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L603) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L596) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L593)
 
 #### PaymentService.Capture
 
@@ -262,7 +239,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/capture.py) · [JavaScript](../../examples/authorizedotnet/javascript/capture.js) · [Kotlin](../../examples/authorizedotnet/kotlin/capture.kt) · [Rust](../../examples/authorizedotnet/rust/capture.rs)
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L723) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L685) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L674) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L672)
 
 #### PaymentService.Get
 
@@ -273,7 +250,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/get.py) · [JavaScript](../../examples/authorizedotnet/javascript/get.js) · [Kotlin](../../examples/authorizedotnet/kotlin/get.kt) · [Rust](../../examples/authorizedotnet/rust/get.rs)
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L746) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js#L704) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L717) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L709)
 
 #### PaymentService.Refund
 
@@ -284,16 +261,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/refund.py) · [JavaScript](../../examples/authorizedotnet/javascript/refund.js) · [Kotlin](../../examples/authorizedotnet/kotlin/refund.kt) · [Rust](../../examples/authorizedotnet/rust/refund.rs)
-
-#### PaymentService.SetupRecurring
-
-Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceSetupRecurringRequest` |
-| **Response** | `PaymentServiceSetupRecurringResponse` |
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L731) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L721)
 
 #### PaymentService.Void
 
@@ -304,18 +272,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/void.py) · [JavaScript](../../examples/authorizedotnet/javascript/void.js) · [Kotlin](../../examples/authorizedotnet/kotlin/void.kt) · [Rust](../../examples/authorizedotnet/rust/void.rs)
-
-### Mandates
-
-#### RecurringPaymentService.Charge
-
-Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
-
-| | Message |
-|---|---------|
-| **Request** | `RecurringPaymentServiceChargeRequest` |
-| **Response** | `RecurringPaymentServiceChargeResponse` |
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py#L765) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt#L750) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L736)
 
 ### Customers
 
@@ -328,33 +285,4 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/authorizedotnet/python/create_customer.py) · [JavaScript](../../examples/authorizedotnet/javascript/create_customer.js) · [Kotlin](../../examples/authorizedotnet/kotlin/create_customer.kt) · [Rust](../../examples/authorizedotnet/rust/create_customer.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/authorizedotnet/python/authorizedotnet.py) · [JavaScript](../../examples/authorizedotnet/javascript/authorizedotnet.js) · [Kotlin](../../examples/authorizedotnet/kotlin/authorizedotnet.kt) · [Rust](../../examples/authorizedotnet/rust/authorizedotnet.rs#L685)

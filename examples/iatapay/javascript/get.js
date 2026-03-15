@@ -17,19 +17,19 @@ const client = new ConnectorClient({
 async function get(merchantTransactionId) {
     // Step 1: Get — retrieve current payment status from the connector
     const getResponse = await client.get({
-        "connector_transaction_id": "probe_connector_txn_001",
+        "connectorTransactionId": "probe_connector_txn_001",
         "amount": {  // Amount Information
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "state": {  // State Information
-            "access_token": {  // Access token obtained from connector
+            "accessToken": {  // Access token obtained from connector
                 "token": {"value": "probe_access_token"},  // The token string.
-                "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch)
-                "token_type": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+                "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch)
+                "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
         },
-        "connector_order_reference_id": "probe_order_ref_001"  // Connector Reference Id
+        "connectorOrderReferenceId": "probe_order_ref_001"  // Connector Reference Id
     });
 
     return { status: getResponse.status };

@@ -17,10 +17,10 @@ const client = new ConnectorClient({
 async function voidPayment(merchantTransactionId) {
     // Step 1: Void — release reserved funds (cancel authorization)
     const voidResponse = await client.void({
-        "merchant_void_id": "probe_void_001",  // Identification
-        "connector_transaction_id": "probe_connector_txn_001",
+        "merchantVoidId": "probe_void_001",  // Identification
+        "connectorTransactionId": "probe_connector_txn_001",
         "amount": {  // Amount Information
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
     });

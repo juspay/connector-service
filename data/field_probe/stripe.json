@@ -1243,7 +1243,7 @@
             "stripe-version": "2022-11-15",
             "via": "HyperSwitch"
           },
-          "body": "type=card&card%5Bnumber%5D=4111111111111111&card%5Bexp_month%5D=03&card%5Bexp_year%5D=2030&card%5Bcvc%5D=737&billing_details%5Bname%5D=John+Doe&billing_details%5Bemail%5D=test%40example.com&billing_details%5Bphone%5D=4155552671&billing_details%5Baddress%5D%5Bline1%5D=123+Main+St&billing_details%5Baddress%5D%5Bstate%5D=WA&billing_details%5Baddress%5D%5Bcity%5D=Seattle"
+          "body": "card%5Bnumber%5D=4111111111111111&card%5Bexp_month%5D=03&card%5Bexp_year%5D=2030&card%5Bcvc%5D=737"
         }
       }
     },

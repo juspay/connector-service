@@ -1,0 +1,14 @@
+[workspace]
+
+[package]
+name = "hyperswitch-smoke-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hyperswitch-payments-client = { path = ".." }
+grpc-api-types = { path = "../../../backend/grpc-api-types" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = "1.0.107"

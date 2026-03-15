@@ -566,28 +566,10 @@ pub enum StripePaymentMethodData<
     BankTransfer(StripeBankTransferData),
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize)]
-pub struct StripeBillingAddressCardToken {
-    #[serde(rename = "billing_details[name]")]
-    pub name: Option<Secret<String>>,
-    #[serde(rename = "billing_details[email]")]
-    pub email: Option<Email>,
-    #[serde(rename = "billing_details[phone]")]
-    pub phone: Option<Secret<String>>,
-    #[serde(rename = "billing_details[address][line1]")]
-    pub address_line1: Option<Secret<String>>,
-    #[serde(rename = "billing_details[address][line2]")]
-    pub address_line2: Option<Secret<String>>,
-    #[serde(rename = "billing_details[address][state]")]
-    pub state: Option<Secret<String>>,
-    #[serde(rename = "billing_details[address][city]")]
-    pub city: Option<Secret<String>>,
-}
-// Struct to call the Stripe tokens API to create a PSP token for the card details provided
+// Struct to call the Stripe tokens API to create a PSP token for the card details provided.
+// Note: /v1/tokens only accepts card[*] fields — NOT `type` or `billing_details[*]`.
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripeCardToken<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
-    #[serde(rename = "type")]
-    pub payment_method_type: Option<StripePaymentMethodType>,
     #[serde(rename = "card[number]")]
     pub token_card_number: RawCardNumber<T>,
     #[serde(rename = "card[exp_month]")]
@@ -596,8 +578,6 @@ pub struct StripeCardToken<T: PaymentMethodDataTypes + Debug + Sync + Send + 'st
     pub token_card_exp_year: Secret<String>,
     #[serde(rename = "card[cvc]")]
     pub token_card_cvc: Secret<String>,
-    #[serde(flatten)]
-    pub billing: StripeBillingAddressCardToken,
 }
 
 #[derive(Debug, Eq, PartialEq, Serialize)]
@@ -5175,47 +5155,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let billing_address = StripeBillingAddressCardToken {
-            name: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_full_name(),
-            email: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_email(),
-            phone: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_phone_number(),
-            address_line1: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_line1(),
-            address_line2: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_line2(),
-            city: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_city(),
-            state: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_state(),
-        };
-
-        // Card flow for tokenization is handled separately because of API contact difference
+        // Card flow for tokenization is handled separately because of API contact difference.
+        // /v1/tokens only accepts card[*] fields — do NOT include `type` or `billing_details[*]`.
         let request_payment_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_details) => {
                 StripePaymentMethodData::CardToken(StripeCardToken {
-                    payment_method_type: Some(StripePaymentMethodType::Card),
                     token_card_number: card_details.card_number.clone(),
                     token_card_exp_month: card_details.card_exp_month.clone(),
                     token_card_exp_year: card_details.card_exp_year.clone(),
                     token_card_cvc: card_details.card_cvc.clone(),
-                    billing: billing_address,
                 })
             }
             _ => {

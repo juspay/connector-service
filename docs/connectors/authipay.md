@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/authipay/python/checkout_card.py) · [JavaScript](../../examples/authipay/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L22) · [JavaScript](../../examples/authipay/javascript/authipay.js#L22) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L33) · [Rust](../../examples/authipay/rust/authipay.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,70 +117,39 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/authipay/python/checkout_autocapture.py) · [JavaScript](../../examples/authipay/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L126) · [JavaScript](../../examples/authipay/javascript/authipay.js#L121) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L128) · [Rust](../../examples/authipay/rust/authipay.rs#L123)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/authipay/python/refund.py) · [JavaScript](../../examples/authipay/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L214) · [JavaScript](../../examples/authipay/javascript/authipay.js#L206) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L210) · [Rust](../../examples/authipay/rust/authipay.rs#L206)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/authipay/python/void_payment.py) · [JavaScript](../../examples/authipay/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L320) · [JavaScript](../../examples/authipay/javascript/authipay.js#L307) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L307) · [Rust](../../examples/authipay/rust/authipay.rs#L305)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/authipay/python/get_payment.py) · [JavaScript](../../examples/authipay/javascript/get_payment.js)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L417) · [JavaScript](../../examples/authipay/javascript/authipay.js#L398) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L395) · [Rust](../../examples/authipay/rust/authipay.rs#L394)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -202,7 +169,23 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/authipay/python/authorize.py) · [JavaScript](../../examples/authipay/javascript/authorize.js) · [Kotlin](../../examples/authipay/kotlin/authorize.kt) · [Rust](../../examples/authipay/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L517) · [JavaScript](../../examples/authipay/javascript/authipay.js#L491) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L485) · [Rust](../../examples/authipay/rust/authipay.rs#L485)
 
 #### PaymentService.Capture
 
@@ -213,7 +196,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/capture.py) · [JavaScript](../../examples/authipay/javascript/capture.js) · [Kotlin](../../examples/authipay/kotlin/capture.kt) · [Rust](../../examples/authipay/rust/capture.rs)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L602) · [JavaScript](../../examples/authipay/javascript/authipay.js#L573) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L563) · [Rust](../../examples/authipay/rust/authipay.rs#L564)
 
 #### PaymentService.Get
 
@@ -224,7 +207,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/get.py) · [JavaScript](../../examples/authipay/javascript/get.js) · [Kotlin](../../examples/authipay/kotlin/get.kt) · [Rust](../../examples/authipay/rust/get.rs)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L625) · [JavaScript](../../examples/authipay/javascript/authipay.js#L592) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L580) · [Rust](../../examples/authipay/rust/authipay.rs#L577)
 
 #### PaymentService.Refund
 
@@ -235,7 +218,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/refund.py) · [JavaScript](../../examples/authipay/javascript/refund.js) · [Kotlin](../../examples/authipay/kotlin/refund.kt) · [Rust](../../examples/authipay/rust/refund.rs)
+**Examples:** [Python](../../examples/authipay/python/authipay.py) · [JavaScript](../../examples/authipay/javascript/authipay.js) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L594) · [Rust](../../examples/authipay/rust/authipay.rs#L589)
 
 #### PaymentService.Void
 
@@ -246,33 +229,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/void.py) · [JavaScript](../../examples/authipay/javascript/void.js) · [Kotlin](../../examples/authipay/kotlin/void.kt) · [Rust](../../examples/authipay/rust/void.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L644) · [JavaScript](../../examples/authipay/javascript/authipay.js) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L613) · [Rust](../../examples/authipay/rust/authipay.rs#L604)

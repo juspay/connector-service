@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/aci/python/checkout_card.py) · [JavaScript](../../examples/aci/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/aci/python/aci.py#L23) · [JavaScript](../../examples/aci/javascript/aci.js#L22) · [Kotlin](../../examples/aci/kotlin/aci.kt#L39) · [Rust](../../examples/aci/rust/aci.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,21 +117,17 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/aci/python/checkout_autocapture.py) · [JavaScript](../../examples/aci/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/aci/python/aci.py#L127) · [JavaScript](../../examples/aci/javascript/aci.js#L121) · [Kotlin](../../examples/aci/kotlin/aci.kt#L134) · [Rust](../../examples/aci/rust/aci.rs#L123)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/aci/python/refund.py) · [JavaScript](../../examples/aci/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/aci/python/aci.py#L215) · [JavaScript](../../examples/aci/javascript/aci.js#L206) · [Kotlin](../../examples/aci/kotlin/aci.kt#L216) · [Rust](../../examples/aci/rust/aci.rs#L206)
 
 ### Recurring / Mandate Payments
 
@@ -146,97 +140,31 @@ Store a payment mandate with SetupRecurring, then charge it repeatedly with Recu
 | `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
 | `FAILED` | Setup failed — customer must re-enter payment details |
 
-**Examples:** [Python](../../examples/aci/python/recurring.py) · [JavaScript](../../examples/aci/javascript/recurring.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/aci/python/aci.py#L321) · [JavaScript](../../examples/aci/javascript/aci.js#L307) · [Kotlin](../../examples/aci/kotlin/aci.kt#L313) · [Rust](../../examples/aci/rust/aci.rs#L305)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/aci/python/void_payment.py) · [JavaScript](../../examples/aci/javascript/void_payment.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/aci/python/aci.py#L419) · [JavaScript](../../examples/aci/javascript/aci.js#L396) · [Kotlin](../../examples/aci/kotlin/aci.kt#L404) · [Rust](../../examples/aci/rust/aci.rs#L393)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/aci/python/get_payment.py) · [JavaScript](../../examples/aci/javascript/get_payment.js)
+**Examples:** [Python](../../examples/aci/python/aci.py#L516) · [JavaScript](../../examples/aci/javascript/aci.js#L487) · [Kotlin](../../examples/aci/kotlin/aci.kt#L492) · [Rust](../../examples/aci/rust/aci.rs#L482)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### iDEAL
-
-```python
-"payment_method": {
-    "ideal": {
-        "bank_name": "Ing"  # The bank name for ideal
-    }
-}
-```
-
-### Klarna
-
-```python
-"payment_method": {
-    "klarna": {  # Klarna - Swedish BNPL service
-    }
-}
-```
-
-### Afterpay / Clearpay
-
-```python
-"payment_method": {
-    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service
-    }
-}
-```
-
-### Affirm
-
-```python
-"payment_method": {
-    "affirm": {  # Affirm - US BNPL service
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -260,7 +188,60 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Affirm | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/aci/python/authorize.py) · [JavaScript](../../examples/aci/javascript/authorize.js) · [Kotlin](../../examples/aci/kotlin/authorize.kt) · [Rust](../../examples/aci/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### iDEAL
+
+```python
+"payment_method": {
+    "ideal": {
+        "bank_name": "Ing"  # The bank name for ideal
+    }
+}
+```
+
+##### Klarna
+
+```python
+"payment_method": {
+    "klarna": {  # Klarna - Swedish BNPL service
+    }
+}
+```
+
+##### Afterpay / Clearpay
+
+```python
+"payment_method": {
+    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service
+    }
+}
+```
+
+##### Affirm
+
+```python
+"payment_method": {
+    "affirm": {  # Affirm - US BNPL service
+    }
+}
+```
+
+**Examples:** [Python](../../examples/aci/python/aci.py#L616) · [JavaScript](../../examples/aci/javascript/aci.js#L580) · [Kotlin](../../examples/aci/kotlin/aci.kt#L582) · [Rust](../../examples/aci/rust/aci.rs#L573)
 
 #### PaymentService.Capture
 
@@ -271,7 +252,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/aci/python/capture.py) · [JavaScript](../../examples/aci/javascript/capture.js) · [Kotlin](../../examples/aci/kotlin/capture.kt) · [Rust](../../examples/aci/rust/capture.rs)
+**Examples:** [Python](../../examples/aci/python/aci.py#L701) · [JavaScript](../../examples/aci/javascript/aci.js#L662) · [Kotlin](../../examples/aci/kotlin/aci.kt#L660) · [Rust](../../examples/aci/rust/aci.rs#L652)
 
 #### PaymentService.Get
 
@@ -282,7 +263,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/aci/python/get.py) · [JavaScript](../../examples/aci/javascript/get.js) · [Kotlin](../../examples/aci/kotlin/get.kt) · [Rust](../../examples/aci/rust/get.rs)
+**Examples:** [Python](../../examples/aci/python/aci.py#L724) · [JavaScript](../../examples/aci/javascript/aci.js#L681) · [Kotlin](../../examples/aci/kotlin/aci.kt#L677) · [Rust](../../examples/aci/rust/aci.rs#L665)
 
 #### PaymentService.Refund
 
@@ -293,7 +274,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/aci/python/refund.py) · [JavaScript](../../examples/aci/javascript/refund.js) · [Kotlin](../../examples/aci/kotlin/refund.kt) · [Rust](../../examples/aci/rust/refund.rs)
+**Examples:** [Python](../../examples/aci/python/aci.py) · [JavaScript](../../examples/aci/javascript/aci.js) · [Kotlin](../../examples/aci/kotlin/aci.kt#L720) · [Rust](../../examples/aci/rust/aci.rs#L702)
 
 #### PaymentService.SetupRecurring
 
@@ -304,7 +285,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/aci/python/setup_recurring.py) · [JavaScript](../../examples/aci/javascript/setup_recurring.js) · [Kotlin](../../examples/aci/kotlin/setup_recurring.kt) · [Rust](../../examples/aci/rust/setup_recurring.rs)
+**Examples:** [Python](../../examples/aci/python/aci.py#L776) · [JavaScript](../../examples/aci/javascript/aci.js#L724) · [Kotlin](../../examples/aci/kotlin/aci.kt) · [Rust](../../examples/aci/rust/aci.rs#L717)
 
 #### PaymentService.Void
 
@@ -315,7 +296,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/aci/python/void.py) · [JavaScript](../../examples/aci/javascript/void.js) · [Kotlin](../../examples/aci/kotlin/void.kt) · [Rust](../../examples/aci/rust/void.rs)
+**Examples:** [Python](../../examples/aci/python/aci.py#L853) · [JavaScript](../../examples/aci/javascript/aci.js) · [Kotlin](../../examples/aci/kotlin/aci.kt#L808) · [Rust](../../examples/aci/rust/aci.rs#L786)
 
 ### Mandates
 
@@ -328,33 +309,4 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/aci/python/recurring_charge.py) · [JavaScript](../../examples/aci/javascript/recurring_charge.js) · [Kotlin](../../examples/aci/kotlin/recurring_charge.kt) · [Rust](../../examples/aci/rust/recurring_charge.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/aci/python/aci.py#L743) · [JavaScript](../../examples/aci/javascript/aci.js#L695) · [Kotlin](../../examples/aci/kotlin/aci.kt) · [Rust](../../examples/aci/rust/aci.rs#L677)

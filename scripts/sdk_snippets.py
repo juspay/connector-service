@@ -48,6 +48,14 @@ _PROTO_FIELD_TYPES: dict[str, dict[str, str]] = {}
 # {"value": ...} dicts in ParseDict calls.
 _PROTO_WRAPPER_TYPES: frozenset[str] = frozenset()
 
+# Proto messages that wrap a single oneof field.  In prost + serde, the outer
+# struct has one field with the same name as the oneof (snake_case), so when
+# building serde_json::json!({...}) we must add that extra wrapping layer.
+_ONEOF_WRAPPER_FIELD: dict[str, str] = {
+    "PaymentMethod": "payment_method",
+    "MandateId":     "mandate_id_type",
+}
+
 
 def load_proto_type_map(proto_dir: Path) -> None:
     """Parse all *.proto files in proto_dir to build _PROTO_FIELD_TYPES and _PROTO_WRAPPER_TYPES."""
@@ -131,10 +139,17 @@ _WALLET_PM_KEYS = ["GooglePay", "ApplePay", "SamsungPay"]
 # PM keys that represent bank transfers (first supported one is used for checkout_bank)
 _BANK_PM_KEYS = ["Sepa", "Ach", "Bacs", "Becs"]
 
-# Default status handling for flows that return payment status
+# Status handling for authorize+capture scenarios (separate capture step follows)
 _AUTHORIZE_STATUS_HANDLING: dict[str, str] = {
     "AUTHORIZED": "Funds reserved — proceed to Capture to settle",
     "PENDING":    "Awaiting async confirmation — wait for webhook before capturing",
+    "FAILED":     "Payment declined — surface error to customer, do not retry without new details",
+}
+
+# Status handling for autocapture/wallet/bank scenarios (no separate capture step)
+_AUTOCAPTURE_STATUS_HANDLING: dict[str, str] = {
+    "AUTHORIZED": "Payment authorized and captured — funds will be settled automatically",
+    "PENDING":    "Payment processing — await webhook for final status before fulfilling",
     "FAILED":     "Payment declined — surface error to customer, do not retry without new details",
 }
 
@@ -162,8 +177,11 @@ _STEP_DESCRIPTIONS: dict[str, str] = {
 # Flow keys whose SDK method name differs from the flow key itself.
 # All other flows use the flow key directly as the method name (snake_case).
 _FLOW_KEY_TO_METHOD: dict[str, str] = {
-    "recurring_charge": "charge",    # RecurringPaymentService.charge(), not .recurring_charge()
-    "create_customer":  "create",    # CustomerClient.create(), not .create_customer()
+    "recurring_charge":          "charge",           # RecurringPaymentService.charge()
+    "create_customer":           "create",           # CustomerClient.create()
+    "dispute_accept":            "accept",           # DisputeClient.accept()
+    "dispute_defend":            "defend",           # DisputeClient.defend()
+    "dispute_submit_evidence":   "submit_evidence",  # DisputeClient.submit_evidence()
 }
 
 # Variable name used for the response of each flow step.
@@ -184,7 +202,87 @@ _DYNAMIC_FIELDS: dict[tuple[str, str, str], str] = {
     ("refund",             "refund",            "connector_transaction_id"): "authorize_response.connector_transaction_id",
     ("void_payment",       "void",             "connector_transaction_id"): "authorize_response.connector_transaction_id",
     ("get_payment",        "get",              "connector_transaction_id"): "authorize_response.connector_transaction_id",
-    ("recurring",          "recurring_charge",  "connector_recurring_payment_id"): '{"connector_mandate_id": {"connector_mandate_id": setup_response.connector_recurring_payment_id}}',
+    # Use mandate_reference.connector_mandate_id (pm_xxx) not connector_recurring_payment_id (seti_xxx).
+    # connector_recurring_payment_id (field 1) is the SetupIntent/resource ID; the actual
+    # PaymentMethod ID used by recurring charges lives in mandate_reference.connector_mandate_id.
+    ("recurring",          "recurring_charge",  "connector_recurring_payment_id"): '{"connector_mandate_id": {"connector_mandate_id": setup_response.mandate_reference.connector_mandate_id.connector_mandate_id}}',
+}
+
+# Fields to drop from the probe payload for specific (scenario_key, flow_key) pairs.
+# These are probe-only placeholder values that would cause connector errors if sent
+# (e.g. customer IDs and token PMs that don't correspond to real objects).
+_SCENARIO_DROP_FIELDS: dict[tuple[str, str], frozenset[str]] = {
+    ("recurring", "recurring_charge"): frozenset({
+        # connector_customer_id is a probe placeholder; real recurring charges use
+        # the mandate (pm_xxx) without needing a customer lookup.
+        "connector_customer_id",
+        # payment_method_type from probe is "PAY_PAL" which is wrong for card mandates.
+        "payment_method_type",
+        # payment_method token is a static probe placeholder — mandate provides the PM.
+        "payment_method",
+    }),
+}
+
+# Same as _DYNAMIC_FIELDS but using JavaScript camelCase variable names and field access
+_DYNAMIC_FIELDS_JS: dict[tuple[str, str, str], str] = {
+    ("checkout_card",      "capture",          "connector_transaction_id"): "authorizeResponse.connectorTransactionId",
+    ("refund",             "refund",            "connector_transaction_id"): "authorizeResponse.connectorTransactionId",
+    ("void_payment",       "void",             "connector_transaction_id"): "authorizeResponse.connectorTransactionId",
+    ("get_payment",        "get",              "connector_transaction_id"): "authorizeResponse.connectorTransactionId",
+    # Use mandateReference.connectorMandateId (pm_xxx) not connectorRecurringPaymentId (seti_xxx).
+    # connectorRecurringPaymentId (field 1) is the SetupIntent/resource ID; the actual
+    # PaymentMethod ID used by recurring charges lives in mandateReference.connectorMandateId.
+    ("recurring",          "recurring_charge",  "connector_recurring_payment_id"): '{ connectorMandateId: { connectorMandateId: setupResponse.mandateReference?.connectorMandateId?.connectorMandateId } }',
+}
+
+# Kotlin builder lines for dynamic scenario step fields.
+# Each entry: list of raw Kotlin lines emitted inside the .apply { } block.
+_DYNAMIC_FIELDS_KT: dict[tuple[str, str, str], list[str]] = {
+    ("checkout_card",  "capture",          "connector_transaction_id"):
+        ["connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize"],
+    ("refund",         "refund",           "connector_transaction_id"):
+        ["connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize"],
+    ("void_payment",   "void",             "connector_transaction_id"):
+        ["connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize"],
+    ("get_payment",    "get",              "connector_transaction_id"):
+        ["connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize"],
+    ("recurring",      "recurring_charge", "connector_recurring_payment_id"):
+        ["connectorRecurringPaymentIdBuilder.apply {",
+         "    connectorMandateIdBuilder.apply {",
+         "        connectorMandateId = setupResponse.mandateReference.connectorMandateId.connectorMandateId  // from SetupRecurring",
+         "    }",
+         "}"],
+}
+
+# Rust struct-literal field lines for dynamic scenario step fields.
+_DYNAMIC_FIELDS_RS: dict[tuple[str, str, str], list[str]] = {
+    ("checkout_card",  "capture",          "connector_transaction_id"):
+        ["connector_transaction_id: Some(authorize_response.connector_transaction_id.clone()),  // from Authorize"],
+    ("refund",         "refund",           "connector_transaction_id"):
+        ["connector_transaction_id: Some(authorize_response.connector_transaction_id.clone()),  // from Authorize"],
+    ("void_payment",   "void",             "connector_transaction_id"):
+        ["connector_transaction_id: Some(authorize_response.connector_transaction_id.clone()),  // from Authorize"],
+    ("get_payment",    "get",              "connector_transaction_id"):
+        ["connector_transaction_id: Some(authorize_response.connector_transaction_id.clone()),  // from Authorize"],
+    # Complex nested message — see Python/JS examples for the full mandate_reference extraction.
+    ("recurring",      "recurring_charge", "connector_recurring_payment_id"):
+        ["// connector_recurring_payment_id: TODO — extract from setup_response.mandate_reference"],
+}
+
+# Same as _DYNAMIC_FIELDS_RS but expressed as serde_json::json!({...}) key-value
+# lines that are injected directly inside the json! macro call.
+_DYNAMIC_FIELDS_RS_JSON: dict[tuple[str, str, str], list[str]] = {
+    ("checkout_card",  "capture",          "connector_transaction_id"):
+        ['"connector_transaction_id": &authorize_response.connector_transaction_id,  // from Authorize'],
+    ("refund",         "refund",           "connector_transaction_id"):
+        ['"connector_transaction_id": &authorize_response.connector_transaction_id,  // from Authorize'],
+    ("void_payment",   "void",             "connector_transaction_id"):
+        ['"connector_transaction_id": &authorize_response.connector_transaction_id,  // from Authorize'],
+    ("get_payment",    "get",              "connector_transaction_id"):
+        ['"connector_transaction_id": &authorize_response.connector_transaction_id,  // from Authorize'],
+    # Mandate ID is a nested message — left as a TODO comment in the JSON block.
+    ("recurring",      "recurring_charge", "connector_recurring_payment_id"):
+        ['// "connector_recurring_payment_id": ???,  // TODO: extract from setup_response.mandate_reference'],
 }
 
 
@@ -260,7 +358,7 @@ def detect_scenarios(probe_connector: dict) -> list[ScenarioSpec]:
                 "Authorize and capture in one call using `capture_method=AUTOMATIC`. "
                 "Use for digital goods or immediate fulfillment."
             ),
-            status_handling=_AUTHORIZE_STATUS_HANDLING,
+            status_handling=_AUTOCAPTURE_STATUS_HANDLING,
         ))
 
     for wallet_pm in _WALLET_PM_KEYS:
@@ -274,7 +372,7 @@ def detect_scenarios(probe_connector: dict) -> list[ScenarioSpec]:
                     "Wallet payments pass an encrypted token from the browser/device SDK. "
                     "Pass the token blob directly — do not decrypt client-side."
                 ),
-                status_handling=_AUTHORIZE_STATUS_HANDLING,
+                status_handling=_AUTOCAPTURE_STATUS_HANDLING,
             ))
             break
 
@@ -289,7 +387,7 @@ def detect_scenarios(probe_connector: dict) -> list[ScenarioSpec]:
                     f"Direct bank debit ({bank_pm}). "
                     "Bank transfers typically use `capture_method=AUTOMATIC`."
                 ),
-                status_handling=_AUTHORIZE_STATUS_HANDLING,
+                status_handling=_AUTOCAPTURE_STATUS_HANDLING,
             ))
             break
 
@@ -425,12 +523,14 @@ class _SchemaDB:
 
 # ── Annotated JSON rendering ───────────────────────────────────────────────────
 
-def _json_scalar(val: object) -> str:
-    """Convert a scalar value to its Python literal representation."""
+def _json_scalar(val: object, js: bool = False) -> str:
+    """Convert a scalar value to its language literal representation."""
     if isinstance(val, bool):
+        if js:
+            return "true" if val else "false"
         return "True" if val else "False"
     if val is None:
-        return "None"
+        return "null" if js else "None"
     return json.dumps(val)
 
 
@@ -440,6 +540,7 @@ def _annotate_inline_lines(
     db: _SchemaDB,
     indent: int,
     cmt: str,
+    camel_keys: bool = False,
 ) -> list[str]:
     pad   = "    " * indent
     lines: list[str] = []
@@ -450,31 +551,33 @@ def _annotate_inline_lines(
         comment   = db.get_comment(msg_name, key)
         child_msg = db.get_type(msg_name, key)
         cmt_part  = f"  {cmt} {comment}" if comment else ""
+        out_key   = _to_camel(key) if camel_keys else key
 
         if isinstance(val, dict):
-            lines.append(f'{pad}"{key}": {{{cmt_part}')
-            lines.extend(_annotate_inline_lines(val, child_msg, db, indent + 1, cmt))
+            lines.append(f'{pad}"{out_key}": {{{cmt_part}')
+            lines.extend(_annotate_inline_lines(val, child_msg, db, indent + 1, cmt, camel_keys))
             lines.append(f"{pad}}}{trailing}")
         elif isinstance(val, list) and val and isinstance(val[0], dict):
-            lines.append(f'{pad}"{key}": [{cmt_part}')
+            lines.append(f'{pad}"{out_key}": [{cmt_part}')
             for j, item in enumerate(val):
                 item_trailing = "," if j < len(val) - 1 else ""
                 lines.append(f"{pad}    {{")
-                lines.extend(_annotate_inline_lines(item, child_msg, db, indent + 2, cmt))
+                lines.extend(_annotate_inline_lines(item, child_msg, db, indent + 2, cmt, camel_keys))
                 lines.append(f"{pad}    }}{item_trailing}")
             lines.append(f"{pad}]{trailing}")
         elif child_msg and db.is_wrapper(child_msg):
             # Scalar stored in probe data, but proto field is a wrapper message — needs {"value": ...}
-            lines.append(f'{pad}"{key}": {{"value": {_json_scalar(val)}}}{trailing}{cmt_part}')
+            lines.append(f'{pad}"{out_key}": {{"value": {_json_scalar(val, js=camel_keys)}}}{trailing}{cmt_part}')
         elif child_msg and not isinstance(val, (dict, list)):
             # Scalar for a non-wrapper message — check if msg has one field that is itself a wrapper
-            inner_key = db.single_field_wrapper_key(child_msg)
+            _sfwk = db.single_field_wrapper_key(child_msg)
+            inner_key = _to_camel(_sfwk) if (camel_keys and _sfwk) else _sfwk
             if inner_key:
-                lines.append(f'{pad}"{key}": {{"{inner_key}": {{"value": {_json_scalar(val)}}}}}{trailing}{cmt_part}')
+                lines.append(f'{pad}"{out_key}": {{"{inner_key}": {{"value": {_json_scalar(val, js=camel_keys)}}}}}{trailing}{cmt_part}')
             else:
-                lines.append(f'{pad}"{key}": {_json_scalar(val)}{trailing}{cmt_part}')
+                lines.append(f'{pad}"{out_key}": {_json_scalar(val, js=camel_keys)}{trailing}{cmt_part}')
         else:
-            lines.append(f'{pad}"{key}": {_json_scalar(val)}{trailing}{cmt_part}')
+            lines.append(f'{pad}"{out_key}": {_json_scalar(val, js=camel_keys)}{trailing}{cmt_part}')
 
     return lines
 
@@ -545,8 +648,19 @@ def _to_camel(snake: str) -> str:
     return parts[0] + "".join(p.title() for p in parts[1:])
 
 
+_CONN_ENUM_OVERRIDES: dict[str, str] = {
+    "razorpayv2": "RAZORPAY",  # razorpayv2 uses the same RAZORPAY proto enum
+}
+
+
 def _conn_enum(connector_name: str) -> str:
-    return connector_name.upper()
+    return _CONN_ENUM_OVERRIDES.get(connector_name, connector_name.upper())
+
+
+def _conn_enum_rust(connector_name: str) -> str:
+    """Return the PascalCase Rust Connector enum variant (e.g. Stripe, Razorpay)."""
+    name = _CONN_ENUM_OVERRIDES.get(connector_name, connector_name)
+    return name.replace("_", "").capitalize()
 
 
 def _conn_display(connector_name: str) -> str:
@@ -648,8 +762,9 @@ def _scenario_step_python(
     lines.append(f"    {var_name} = await {client_var}.{method}(ParseDict(")
     lines.append("        {")
 
+    drop_fields = _SCENARIO_DROP_FIELDS.get((scenario_key, flow_key), frozenset())
     if payload:
-        items = list(payload.items())
+        items = [(k, v) for k, v in payload.items() if k not in drop_fields]
         for idx, (key, val) in enumerate(items):
             trailing  = "," if idx < len(items) - 1 else ""
             comment   = db.get_comment(grpc_req, key)
@@ -829,35 +944,48 @@ def _scenario_step_javascript(
     payload: dict,
     grpc_req: str,
     db: _SchemaDB,
+    client_var: str = "client",
 ) -> list[str]:
     """Return lines for one step inside a JavaScript scenario function body."""
-    method   = _to_camel(flow_key)
+    method   = _to_camel(_FLOW_KEY_TO_METHOD.get(flow_key, flow_key))
     _js_var_defaults = {k: _to_camel(v.replace("_response", "Response")) for k, v in _FLOW_VAR_NAME.items()}
     var_name = _js_var_defaults.get(flow_key, f"{flow_key.split('_')[0]}Response")
     desc     = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
     lines: list[str] = []
 
     lines.append(f"    // Step {step_num}: {desc}")
-    lines.append(f"    const {var_name} = await client.{method}({{")
+    lines.append(f"    const {var_name} = await {client_var}.{method}({{")
 
+    drop_fields_js = _SCENARIO_DROP_FIELDS.get((scenario_key, flow_key), frozenset())
     if payload:
-        items = list(payload.items())
+        items = [(k, v) for k, v in payload.items() if k not in drop_fields_js]
         for idx, (key, val) in enumerate(items):
             trailing  = "," if idx < len(items) - 1 else ""
             comment   = db.get_comment(grpc_req, key)
             child_msg = db.get_type(grpc_req, key)
             cmt_part  = f"  // {comment}" if comment else ""
 
-            dyn = _DYNAMIC_FIELDS.get((scenario_key, flow_key, key))
+            dyn = _DYNAMIC_FIELDS_JS.get((scenario_key, flow_key, key))
             if dyn:
-                extra = "  // from authorize response"
-                lines.append(f'        "{key}": {dyn},{extra}')
+                extra = "  // from authorize response" if "authorize" in dyn.lower() else "  // from setup response"
+                lines.append(f'        "{_to_camel(key)}": {dyn},{extra}')
             elif isinstance(val, dict):
-                lines.append(f'        "{key}": {{{cmt_part}')
-                lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//"))
+                lines.append(f'        "{_to_camel(key)}": {{{cmt_part}')
+                lines.extend(_annotate_inline_lines(val, child_msg, db, indent=3, cmt="//", camel_keys=True))
                 lines.append(f'        }}{trailing}')
+            elif child_msg and db.is_wrapper(child_msg):
+                # Scalar stored in probe data, but proto type is a wrapper message — needs {"value": ...}
+                lines.append(f'        "{_to_camel(key)}": {{"value": {_json_scalar(val, js=True)}}}{trailing}{cmt_part}')
+            elif child_msg and not isinstance(val, (dict, list)):
+                # Scalar for a non-wrapper message — check if msg has one field that is itself a wrapper
+                _sfwk = db.single_field_wrapper_key(child_msg)
+                inner_key = _to_camel(_sfwk) if _sfwk else None
+                if inner_key:
+                    lines.append(f'        "{_to_camel(key)}": {{"{inner_key}": {{"value": {_json_scalar(val, js=True)}}}}}{trailing}{cmt_part}')
+                else:
+                    lines.append(f'        "{_to_camel(key)}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
             else:
-                lines.append(f'        "{key}": {_json_scalar(val)}{trailing}{cmt_part}')
+                lines.append(f'        "{_to_camel(key)}": {_json_scalar(val, js=True)}{trailing}{cmt_part}')
     else:
         lines.append('        // No required fields')
 
@@ -870,7 +998,7 @@ def _scenario_step_javascript(
         lines.append("    }")
         lines.append(f"    if ({var_name}.status === 'PENDING') {{")
         lines.append(f"        // Awaiting async confirmation — handle via webhook")
-        lines.append(f"        return {{ status: 'pending', transactionId: {var_name}.connector_transaction_id }};")
+        lines.append(f"        return {{ status: 'pending', transactionId: {var_name}.connectorTransactionId }};")
         lines.append("    }")
         lines.append("")
     elif flow_key == "setup_recurring":
@@ -889,24 +1017,184 @@ def _scenario_step_javascript(
 
 def _scenario_return_javascript(scenario: ScenarioSpec) -> str:
     if scenario.key == "checkout_card":
-        return "    return { status: captureResponse.status, transactionId: authorizeResponse.connector_transaction_id };"
+        return "    return { status: captureResponse.status, transactionId: authorizeResponse.connectorTransactionId };"
     elif scenario.key in ("checkout_autocapture", "checkout_wallet", "checkout_bank"):
-        return "    return { status: authorizeResponse.status, transactionId: authorizeResponse.connector_transaction_id };"
+        return "    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };"
     elif scenario.key == "refund":
         return "    return { status: refundResponse.status };"
     elif scenario.key == "recurring":
-        return "    return { status: recurringResponse.status, transactionId: recurringResponse.connector_transaction_id ?? '' };"
+        return "    return { status: recurringResponse.status, transactionId: recurringResponse.connectorTransactionId ?? '' };"
     elif scenario.key == "void_payment":
-        return "    return { status: voidResponse.status, transactionId: authorizeResponse.connector_transaction_id };"
+        return "    return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId };"
     elif scenario.key == "get_payment":
-        return "    return { status: getResponse.status, transactionId: getResponse.connector_transaction_id };"
+        return "    return { status: getResponse.status, transactionId: getResponse.connectorTransactionId };"
     elif scenario.key == "create_customer":
-        return "    return { customerId: createResponse.connector_customer_id };"
+        return "    return { customerId: createResponse.connectorCustomerId };"
     elif scenario.key == "tokenize":
-        return "    return { token: tokenizeResponse.payment_method_token };"
+        return "    return { token: tokenizeResponse.paymentMethodToken };"
     elif scenario.key == "authentication":
         return "    return { status: postAuthenticateResponse.status };"
     return "    return {};"
+
+
+def _scenario_step_kotlin(
+    scenario_key: str,
+    flow_key: str,
+    step_num: int,
+    payload: dict,
+    grpc_req: str,
+    message_schemas: dict,
+    client_var: str,
+) -> list[str]:
+    """Return Kotlin lines for one step inside a scenario function body (indent=1)."""
+    pad  = "    "
+    pad2 = "        "
+    var_name = _to_camel(_FLOW_VAR_NAME.get(flow_key, f"{flow_key.split('_')[0]}_response"))
+    desc     = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
+
+    # Collect dynamic overrides for this (scenario, flow)
+    dyn_by_field: dict[str, list[str]] = {}
+    for (sk, fk, field_name), raw_lines in _DYNAMIC_FIELDS_KT.items():
+        if sk == scenario_key and fk == flow_key:
+            dyn_by_field[field_name] = raw_lines
+
+    # Static payload: remove dropped and dynamically-overridden fields
+    drop_fields    = _SCENARIO_DROP_FIELDS.get((scenario_key, flow_key), frozenset())
+    static_payload = {k: v for k, v in payload.items() if k not in drop_fields and k not in dyn_by_field}
+
+    lines: list[str] = []
+    lines.append(f"{pad}// Step {step_num}: {desc}")
+    # Kotlin SDK uses snake_case method names (same as Python); recurring_charge → charge
+    kt_method = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)
+    lines.append(f"{pad}val {var_name} = {client_var}.{kt_method}({grpc_req}.newBuilder().apply {{")
+    for body_line in _kotlin_payload_lines(static_payload, grpc_req, message_schemas, indent=2):
+        lines.append(body_line)
+    for raw_lines in dyn_by_field.values():
+        for raw_line in raw_lines:
+            lines.append(f"{pad2}{raw_line}")
+    lines.append(f"{pad}}}.build())")
+    lines.append("")
+
+    if flow_key == "authorize":
+        lines.append(f'{pad}when ({var_name}.status.name) {{')
+        lines.append(f'{pad}    "FAILED"  -> throw RuntimeException("Payment failed: ${{{var_name}.error.unifiedDetails.message}}")')
+        lines.append(f'{pad}    "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding')
+        lines.append(f'{pad}}}')
+        lines.append("")
+    elif flow_key == "setup_recurring":
+        lines.append(f'{pad}if ({var_name}.status.name == "FAILED")')
+        lines.append(f'{pad}    throw RuntimeException("Setup failed: ${{{var_name}.error.unifiedDetails.message}}")')
+        lines.append("")
+    elif flow_key in ("capture", "refund", "recurring_charge"):
+        lines.append(f'{pad}if ({var_name}.status.name == "FAILED")')
+        lines.append(f'{pad}    throw RuntimeException("{flow_key.replace("_", " ").title()} failed: ${{{var_name}.error.unifiedDetails.message}}")')
+        lines.append("")
+
+    return lines
+
+
+def _scenario_return_kotlin(scenario: "ScenarioSpec") -> str:
+    if scenario.key == "checkout_card":
+        return '    return mapOf("status" to captureResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)'
+    elif scenario.key in ("checkout_autocapture", "checkout_wallet", "checkout_bank"):
+        return '    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)'
+    elif scenario.key == "refund":
+        return '    return mapOf("status" to refundResponse.status.name)'
+    elif scenario.key == "recurring":
+        return '    return mapOf("status" to recurringResponse.status.name, "transactionId" to (recurringResponse.connectorTransactionId ?: ""))'
+    elif scenario.key == "void_payment":
+        return '    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)'
+    elif scenario.key == "get_payment":
+        return '    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId)'
+    elif scenario.key == "create_customer":
+        return '    return mapOf("customerId" to createResponse.connectorCustomerId)'
+    elif scenario.key == "tokenize":
+        return '    return mapOf("token" to tokenizeResponse.paymentMethodToken)'
+    elif scenario.key == "authentication":
+        return '    return mapOf("status" to postAuthenticateResponse.status.name)'
+    return '    return mapOf()'
+
+
+def _scenario_step_rust(
+    scenario_key: str,
+    flow_key: str,
+    step_num: int,
+    payload: dict,
+    grpc_req: str,
+    message_schemas: dict,
+) -> list[str]:
+    """Return Rust lines for one step inside a scenario function body (indent=1)."""
+    pad  = "    "
+    pad2 = "        "
+    var_name = _FLOW_VAR_NAME.get(flow_key, f"{flow_key.split('_')[0]}_response")
+    desc     = _STEP_DESCRIPTIONS.get(flow_key, flow_key)
+
+    # Collect dynamic JSON-format overrides for this (scenario, flow)
+    dyn_by_field: dict[str, list[str]] = {}
+    for (sk, fk, field_name), raw_lines in _DYNAMIC_FIELDS_RS_JSON.items():
+        if sk == scenario_key and fk == flow_key:
+            dyn_by_field[field_name] = raw_lines
+
+    drop_fields    = _SCENARIO_DROP_FIELDS.get((scenario_key, flow_key), frozenset())
+    static_payload = {k: v for k, v in payload.items() if k not in drop_fields and k not in dyn_by_field}
+
+    lines: list[str] = []
+    lines.append(f"{pad}// Step {step_num}: {desc}")
+    lines.append(f"{pad}let {var_name} = client.{flow_key}(serde_json::from_value::<{grpc_req}>(serde_json::json!({{")
+    for json_line in _rust_json_lines(static_payload, grpc_req, message_schemas, indent=2):
+        lines.append(json_line)
+    for raw_lines in dyn_by_field.values():
+        for raw_line in raw_lines:
+            lines.append(f"{pad2}{raw_line}")
+    lines.append(f"{pad}}})).unwrap_or_default(), &HashMap::new(), None).await?;")
+    lines.append("")
+
+    if flow_key == "authorize":
+        lines.append(f'{pad}match {var_name}.status() {{')
+        lines.append(f'{pad}    PaymentStatus::Failure | PaymentStatus::AuthorizationFailed => return Err(format!("Payment failed: {{:?}}", {var_name}.error).into()),')
+        lines.append(f'{pad}    PaymentStatus::Pending => return Ok("pending — awaiting webhook".to_string()),')
+        lines.append(f'{pad}    _                      => {{}},')
+        lines.append(f'{pad}}}')
+        lines.append("")
+    elif flow_key == "setup_recurring":
+        lines.append(f'{pad}if {var_name}.status() == PaymentStatus::Failure {{')
+        lines.append(f'{pad}    return Err(format!("Setup failed: {{:?}}", {var_name}.error).into());')
+        lines.append(f'{pad}}}')
+        lines.append("")
+    elif flow_key in ("capture", "recurring_charge"):
+        lines.append(f'{pad}if {var_name}.status() == PaymentStatus::Failure {{')
+        lines.append(f'{pad}    return Err(format!("{flow_key.replace("_", " ").title()} failed: {{:?}}", {var_name}.error).into());')
+        lines.append(f'{pad}}}')
+        lines.append("")
+    elif flow_key == "refund":
+        lines.append(f'{pad}if {var_name}.status() == RefundStatus::RefundFailure {{')
+        lines.append(f'{pad}    return Err(format!("Refund failed: {{:?}}", {var_name}.error).into());')
+        lines.append(f'{pad}}}')
+        lines.append("")
+
+    return lines
+
+
+def _scenario_return_rust(scenario: "ScenarioSpec") -> str:
+    if scenario.key == "checkout_card":
+        return '    Ok(format!("Payment completed: {}", authorize_response.connector_transaction_id.as_deref().unwrap_or("")))'
+    elif scenario.key in ("checkout_autocapture", "checkout_wallet", "checkout_bank"):
+        return '    Ok(format!("Payment: {:?} — {}", authorize_response.status(), authorize_response.connector_transaction_id.as_deref().unwrap_or("")))'
+    elif scenario.key == "refund":
+        return '    Ok(format!("Refunded: {:?}", refund_response.status()))'
+    elif scenario.key == "recurring":
+        return '    Ok(format!("Charged: {:?}", recurring_response.status()))'
+    elif scenario.key == "void_payment":
+        return '    Ok(format!("Voided: {:?}", void_response.status()))'
+    elif scenario.key == "get_payment":
+        return '    Ok(format!("Status: {:?}", get_response.status()))'
+    elif scenario.key == "create_customer":
+        return '    Ok(format!("Customer: {}", create_response.connector_customer_id))'
+    elif scenario.key == "tokenize":
+        return '    Ok(format!("Token: {}", tokenize_response.payment_method_token))'
+    elif scenario.key == "authentication":
+        return '    Ok(format!("Auth: {:?}", post_authenticate_response.status()))'
+    return '    Ok("done".to_string())'
 
 
 def render_scenario_javascript(
@@ -917,14 +1205,36 @@ def render_scenario_javascript(
     message_schemas: dict,
 ) -> str:
     """Return the full content of a runnable JavaScript scenario file."""
-    db           = _SchemaDB(message_schemas)
-    conn_display = _conn_display(connector_name)
-    func_name    = _to_camel(f"process_{scenario.key}")
+    db        = _SchemaDB(message_schemas)
+    conn_enum = _conn_enum(connector_name)
+    func_name = _to_camel(f"process_{scenario.key}")
+
+    # Collect unique services and their client classes
+    service_names: list[str] = []
+    for fk in scenario.flows:
+        svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+        if svc not in service_names:
+            service_names.append(svc)
+
+    client_names = [_client_class(svc) for svc in service_names]
+    client_imports = ", ".join(client_names)
 
     body_lines: list[str] = []
+
+    # Instantiate clients
+    for svc in service_names:
+        cls     = _client_class(svc)
+        var     = cls[0].lower() + cls[1:].replace("Client", "Client")  # camelCase var
+        var     = var[0].lower() + var[1:]  # ensure starts lowercase
+        body_lines.append(f"    const {var} = new {cls}(config);")
+    body_lines.append("")
+
     for step_num, flow_key in enumerate(scenario.flows, 1):
-        meta     = flow_metadata.get(flow_key, {})
-        grpc_req = meta.get("grpc_request", "")
+        meta       = flow_metadata.get(flow_key, {})
+        svc        = meta.get("service_name", "PaymentService")
+        grpc_req   = meta.get("grpc_request", "")
+        cls        = _client_class(svc)
+        client_var = cls[0].lower() + cls[1:]
 
         payload = dict(flow_payloads.get(flow_key, {}))
         if flow_key == "authorize":
@@ -934,7 +1244,7 @@ def render_scenario_javascript(
                 payload["capture_method"] = "AUTOMATIC"
 
         body_lines.extend(_scenario_step_javascript(
-            scenario.key, flow_key, step_num, payload, grpc_req, db
+            scenario.key, flow_key, step_num, payload, grpc_req, db, client_var
         ))
 
     body_lines.append(_scenario_return_javascript(scenario))
@@ -947,22 +1257,325 @@ def render_scenario_javascript(
 //
 // Scenario: {scenario.title}
 // {scenario.description}
+'use strict';
 
-const {{ ConnectorClient }} = require('connector-service-node-ffi');
+const {{ {client_imports} }} = require('hs-playlib');
+const {{ ConnectorConfig, Environment, Connector }} = require('hs-playlib').types;
 
-const client = new ConnectorClient({{
-    connector: '{conn_display}',
-    environment: 'sandbox',
-    connector_auth_type: {{
-        header_key: {{ api_key: 'YOUR_API_KEY' }},
-    }},
+const _defaultConfig = ConnectorConfig.create({{
+    connector: Connector.{conn_enum},
+    environment: Environment.SANDBOX,
 }});
+// Standalone credentials (field names depend on connector auth type):
+// _defaultConfig.auth = {{ {connector_name}: {{ apiKey: {{ value: 'YOUR_API_KEY' }} }} }};
 
-async function {func_name}(merchantTransactionId) {{
+
+async function {func_name}(merchantTransactionId, config = _defaultConfig) {{
     // {scenario.title}
     // {scenario.description}
 
 {body}
+}}
+
+module.exports = {{ {func_name} }};
+
+if (require.main === module) {{
+    {func_name}('order_001').catch(console.error);
+}}
+"""
+
+
+# ── Public API: Consolidated scenario files ────────────────────────────────────
+
+def render_consolidated_python(
+    connector_name: str,
+    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_metadata: dict[str, dict],
+    message_schemas: dict,
+    flow_items: "list[tuple[str, dict, str]] | None" = None,
+) -> str:
+    """Return one Python file containing all scenario functions (and flow functions) for a connector."""
+    db        = _SchemaDB(message_schemas)
+    conn_enum = _conn_enum(connector_name)
+
+    # Merged imports — collect every service needed across scenarios AND flows
+    all_service_names: list[str] = []
+    for scenario, _ in scenarios_with_payloads:
+        for fk in scenario.flows:
+            svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+            if svc not in all_service_names:
+                all_service_names.append(svc)
+    for fk, _, _ in (flow_items or []):
+        svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+        if svc not in all_service_names:
+            all_service_names.append(svc)
+
+    client_imports = "\n".join(
+        f"from payments import {_client_class(svc)}" for svc in all_service_names
+    )
+
+    # Build one function block per scenario
+    func_blocks: list[str] = []
+    func_names:  list[str] = []
+
+    for scenario, flow_payloads in scenarios_with_payloads:
+        func_name = f"process_{scenario.key}"
+        func_names.append(func_name)
+
+        svc_names: list[str] = []
+        for fk in scenario.flows:
+            svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+            if svc not in svc_names:
+                svc_names.append(svc)
+
+        body_lines: list[str] = []
+        for svc in svc_names:
+            cls = _client_class(svc)
+            var = cls.lower().replace("client", "_client")
+            body_lines.append(f"    {var} = {cls}(config)")
+        body_lines.append("")
+
+        for step_num, flow_key in enumerate(scenario.flows, 1):
+            meta       = flow_metadata.get(flow_key, {})
+            svc        = meta.get("service_name", "PaymentService")
+            grpc_req   = meta.get("grpc_request", "")
+            client_var = _client_class(svc).lower().replace("client", "_client")
+
+            payload = dict(flow_payloads.get(flow_key, {}))
+            if flow_key == "authorize":
+                if scenario.key in ("checkout_card", "void_payment", "get_payment"):
+                    payload["capture_method"] = "MANUAL"
+                elif scenario.key == "refund":
+                    payload["capture_method"] = "AUTOMATIC"
+
+            body_lines.extend(_scenario_step_python(
+                scenario.key, flow_key, step_num, payload, grpc_req, client_var, db
+            ))
+
+        body_lines.append(_scenario_return_python(scenario))
+        body = "\n".join(body_lines)
+
+        func_blocks.append(
+            f"async def {func_name}(merchant_transaction_id: str, "
+            f"config: sdk_config_pb2.ConnectorConfig = _default_config):\n"
+            f'    """{scenario.title}\n\n'
+            f"    {scenario.description}\n"
+            f'    """\n'
+            f"{body}\n"
+        )
+
+    # Append individual flow functions (flows not already covered by a scenario)
+    for flow_key, proto_req, pm_label in (flow_items or []):
+        meta       = flow_metadata.get(flow_key, {})
+        svc        = meta.get("service_name", "PaymentService")
+        grpc_req   = meta.get("grpc_request", "")
+        rpc_name   = meta.get("rpc_name", flow_key)
+        client_cls = _client_class(svc)
+        client_var = client_cls.lower().replace("client", "_client")
+        resp_var   = f"{flow_key.split('_')[0]}_response"
+        pm_part    = f" ({pm_label})" if pm_label else ""
+
+        body_lines: list[str] = [f"    {client_var} = {client_cls}(config)", ""]
+        body_lines.extend(_scenario_step_python("_standalone_", flow_key, 1, proto_req, grpc_req, client_var, db))
+        if flow_key == "authorize":
+            body_lines.append(f'    return {{"status": {resp_var}.status, "transaction_id": {resp_var}.connector_transaction_id}}')
+        elif flow_key == "setup_recurring":
+            body_lines.append(f'    return {{"status": {resp_var}.status, "mandate_id": {resp_var}.connector_transaction_id}}')
+        else:
+            body_lines.append(f'    return {{"status": {resp_var}.status}}')
+
+        body = "\n".join(body_lines)
+        func_names.append(flow_key)
+        func_blocks.append(
+            f"async def {flow_key}(merchant_transaction_id: str, "
+            f"config: sdk_config_pb2.ConnectorConfig = _default_config):\n"
+            f'    """Flow: {svc}.{rpc_name}{pm_part}"""\n'
+            f"{body}\n"
+        )
+
+    functions_text = "\n\n".join(func_blocks)
+    first_scenario = func_names[0][8:] if func_names[0].startswith("process_") else func_names[0] if func_names else "checkout_autocapture"
+
+    return f"""\
+# This file is auto-generated. Do not edit manually.
+# Replace YOUR_API_KEY and placeholder values with real data.
+# Regenerate: python3 scripts/generate-connector-docs.py {connector_name}
+#
+# {connector_name.title()} — all integration scenarios and flows in one file.
+# Run a scenario:  python3 {connector_name}.py checkout_card
+
+import asyncio
+import sys
+from google.protobuf.json_format import ParseDict
+{client_imports}
+from payments.generated import sdk_config_pb2, payment_pb2
+
+_default_config = sdk_config_pb2.ConnectorConfig(
+    connector=payment_pb2.Connector.{conn_enum},
+    environment=sdk_config_pb2.Environment.SANDBOX,
+)
+# Standalone credentials (field names depend on connector auth type):
+# _default_config.auth.{connector_name}.api_key.value = "YOUR_API_KEY"
+
+
+{functions_text}
+if __name__ == "__main__":
+    scenario = sys.argv[1] if len(sys.argv) > 1 else "{first_scenario}"
+    fn = globals().get(f"process_{{scenario}}")
+    if not fn:
+        available = [k[8:] for k in globals() if k.startswith("process_")]
+        print(f"Unknown scenario: {{scenario}}. Available: {{available}}", file=sys.stderr)
+        sys.exit(1)
+    asyncio.run(fn("order_001"))
+"""
+
+
+def render_consolidated_javascript(
+    connector_name: str,
+    scenarios_with_payloads: list[tuple["ScenarioSpec", dict[str, dict]]],
+    flow_metadata: dict[str, dict],
+    message_schemas: dict,
+    flow_items: "list[tuple[str, dict, str]] | None" = None,
+) -> str:
+    """Return one JavaScript file containing all scenario functions (and flow functions) for a connector."""
+    db        = _SchemaDB(message_schemas)
+    conn_enum = _conn_enum(connector_name)
+
+    # Merged imports — scenarios + flows
+    all_service_names: list[str] = []
+    for scenario, _ in scenarios_with_payloads:
+        for fk in scenario.flows:
+            svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+            if svc not in all_service_names:
+                all_service_names.append(svc)
+    for fk, _, _ in (flow_items or []):
+        svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+        if svc not in all_service_names:
+            all_service_names.append(svc)
+
+    client_imports = ", ".join(_client_class(svc) for svc in all_service_names)
+
+    # Build one function block per scenario
+    func_blocks:   list[str] = []
+    func_names_js: list[str] = []
+
+    for scenario, flow_payloads in scenarios_with_payloads:
+        func_name = _to_camel(f"process_{scenario.key}")
+        func_names_js.append(func_name)
+
+        svc_names: list[str] = []
+        for fk in scenario.flows:
+            svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+            if svc not in svc_names:
+                svc_names.append(svc)
+
+        body_lines: list[str] = []
+        for svc in svc_names:
+            cls = _client_class(svc)
+            var = cls[0].lower() + cls[1:]
+            body_lines.append(f"    const {var} = new {cls}(config);")
+        body_lines.append("")
+
+        for step_num, flow_key in enumerate(scenario.flows, 1):
+            meta       = flow_metadata.get(flow_key, {})
+            svc        = meta.get("service_name", "PaymentService")
+            grpc_req   = meta.get("grpc_request", "")
+            cls        = _client_class(svc)
+            client_var = cls[0].lower() + cls[1:]
+
+            payload = dict(flow_payloads.get(flow_key, {}))
+            if flow_key == "authorize":
+                if scenario.key in ("checkout_card", "void_payment", "get_payment"):
+                    payload["capture_method"] = "MANUAL"
+                elif scenario.key == "refund":
+                    payload["capture_method"] = "AUTOMATIC"
+
+            body_lines.extend(_scenario_step_javascript(
+                scenario.key, flow_key, step_num, payload, grpc_req, db, client_var
+            ))
+
+        body_lines.append(_scenario_return_javascript(scenario))
+        body = "\n".join(body_lines)
+
+        func_blocks.append(
+            f"// {scenario.title}\n"
+            f"// {scenario.description}\n"
+            f"async function {func_name}(merchantTransactionId, config = _defaultConfig) {{\n"
+            f"{body}\n"
+            f"}}"
+        )
+
+    # Append individual flow functions
+    _JS_RESERVED = frozenset({"void", "delete", "return", "new", "in", "do", "for", "if"})
+    for flow_key, proto_req, pm_label in (flow_items or []):
+        meta       = flow_metadata.get(flow_key, {})
+        svc        = meta.get("service_name", "PaymentService")
+        grpc_req   = meta.get("grpc_request", "")
+        rpc_name   = meta.get("rpc_name", flow_key)
+        cls        = _client_class(svc)
+        client_var = cls[0].lower() + cls[1:]
+        func_name  = _to_camel(flow_key) if flow_key not in _JS_RESERVED else f"{flow_key}Payment"
+        var_name   = f"{flow_key.split('_')[0]}Response"
+        pm_part    = f" ({pm_label})" if pm_label else ""
+
+        body_lines: list[str] = list(_scenario_step_javascript("_standalone_", flow_key, 1, proto_req, grpc_req, db, client_var))
+        if flow_key == "authorize":
+            body_lines.append(f"    return {{ status: {var_name}.status, transactionId: {var_name}.connectorTransactionId }};")
+        elif flow_key == "setup_recurring":
+            body_lines.append(f"    return {{ status: {var_name}.status, mandateId: {var_name}.connectorTransactionId }};")
+        else:
+            body_lines.append(f"    return {{ status: {var_name}.status }};")
+
+        body = "\n".join(body_lines)
+        func_names_js.append(func_name)
+        func_blocks.append(
+            f"// Flow: {svc}.{rpc_name}{pm_part}\n"
+            f"async function {func_name}(merchantTransactionId, config = _defaultConfig) {{\n"
+            f"{body}\n"
+            f"}}"
+        )
+
+    exports       = ", ".join(func_names_js)
+    funcs_text    = "\n\n".join(func_blocks)
+    first_scenario = scenarios_with_payloads[0][0].key if scenarios_with_payloads else "checkout_autocapture"
+
+    return f"""\
+// This file is auto-generated. Do not edit manually.
+// Replace YOUR_API_KEY and placeholder values with real data.
+// Regenerate: python3 scripts/generate-connector-docs.py {connector_name}
+//
+// {connector_name.title()} — all integration scenarios and flows in one file.
+// Run a scenario:  node {connector_name}.js checkout_card
+'use strict';
+
+const {{ {client_imports} }} = require('hs-playlib');
+const {{ ConnectorConfig, Environment, Connector }} = require('hs-playlib').types;
+
+const _defaultConfig = ConnectorConfig.create({{
+    connector: Connector.{conn_enum},
+    environment: Environment.SANDBOX,
+}});
+// Standalone credentials (field names depend on connector auth type):
+// _defaultConfig.auth = {{ {connector_name}: {{ apiKey: {{ value: 'YOUR_API_KEY' }} }} }};
+
+
+{funcs_text}
+
+
+module.exports = {{ {exports} }};
+
+if (require.main === module) {{
+    const scenario = process.argv[2] || '{first_scenario}';
+    const key = 'process' + scenario.replace(/_([a-z])/g, (_, l) => l.toUpperCase()).replace(/^(.)/, c => c.toUpperCase());
+    const fn = module.exports[key];
+    if (!fn) {{
+        const available = Object.keys(module.exports).map(k =>
+            k.replace(/^process/, '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '')
+        );
+        console.error(`Unknown scenario: ${{scenario}}. Available: ${{available.join(', ')}}`);
+        process.exit(1);
+    }}
+    fn('order_001').catch(console.error);
 }}
 """
 
@@ -1010,6 +1623,7 @@ def render_scenario_section(
     flow_metadata: dict[str, dict],
     message_schemas: dict,
     ann_scenario: dict,
+    line_numbers: dict[str, int] | None = None,
 ) -> list[str]:
     """
     Return markdown lines for one scenario subsection inside ## Integration Scenarios.
@@ -1036,12 +1650,16 @@ def render_scenario_section(
             a(f"| `{status}` | {action} |")
         a("")
 
-    py_path = f"../../examples/{connector_name}/python/{scenario.key}.py"
-    js_path = f"../../examples/{connector_name}/javascript/{scenario.key}.js"
-    a(f"**Examples:** [Python]({py_path}) · [JavaScript]({js_path})")
-    a("")
-    a("> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/`"
-      " for per-flow examples covering each individual API call in this scenario.")
+    ln = line_numbers or {}
+    base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
+    base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
+    base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
+    base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
+    py_path = base_py + (f"#L{ln['python']}"     if ln.get("python")     else "")
+    js_path = base_js + (f"#L{ln['javascript']}" if ln.get("javascript") else "")
+    kt_path = base_kt + (f"#L{ln['kotlin']}"     if ln.get("kotlin")     else "")
+    rs_path = base_rs + (f"#L{ln['rust']}"       if ln.get("rust")       else "")
+    a(f"**Examples:** [Python]({py_path}) · [JavaScript]({js_path}) · [Kotlin]({kt_path}) · [Rust]({rs_path})")
     a("")
 
     return out
@@ -1168,6 +1786,42 @@ async function {func_name}(merchantTransactionId) {{
 """
 
 
+# Per-flow status block for flows that don't have a PaymentStatus status field.
+_KT_FLOW_STATUS_BLOCK: dict[str, str] = {
+    "tokenize":                  '    println("Token: ${response.paymentMethodToken}")',
+    "create_customer":           '    println("Customer: ${response.connectorCustomerId}")',
+    "dispute_accept":            '    println("Dispute status: ${response.disputeStatus.name}")',
+    "dispute_defend":            '    println("Dispute status: ${response.disputeStatus.name}")',
+    "dispute_submit_evidence":   '    println("Dispute status: ${response.disputeStatus.name}")',
+    "create_access_token":       '    println("Access token obtained (statusCode=${response.statusCode})")',
+    "create_session_token":      '    println("Session token obtained (statusCode=${response.statusCode})")',
+    "create_order":              '    println("Order: ${response.connectorOrderId}")',
+}
+
+
+def _preprocess_kt_payload(flow_key: str, proto_req: dict) -> dict:
+    """Fix probe data encodings that are invalid for Kotlin builder generation.
+
+    Specifically, oneof group names (e.g. mandate_id_type in MandateReference) appear as
+    extra nesting levels in probe JSON but have no corresponding builder in the Kotlin API.
+    """
+    if flow_key == "recurring_charge" and "connector_recurring_payment_id" in proto_req:
+        cri = proto_req["connector_recurring_payment_id"]
+        if isinstance(cri, dict) and "mandate_id_type" in cri:
+            mit = cri["mandate_id_type"]
+            if isinstance(mit, dict) and "connector_mandate_id" in mit:
+                # Rewrite: { mandate_id_type: { connector_mandate_id: val } }
+                # →        { connector_mandate_id: { connector_mandate_id: val } }
+                processed = dict(proto_req)
+                processed["connector_recurring_payment_id"] = {
+                    "connector_mandate_id": {
+                        "connector_mandate_id": mit["connector_mandate_id"],
+                    }
+                }
+                return processed
+    return proto_req
+
+
 def render_flow_kotlin(
     flow_key: str,
     connector_name: str,
@@ -1183,9 +1837,11 @@ def render_flow_kotlin(
     rpc_name   = meta.get("rpc_name", flow_key)
     conn_enum  = _conn_enum(connector_name)
     client_cls = _client_class(svc)
-    method     = _to_camel(flow_key)
+    # Kotlin SDK uses snake_case method names; recurring_charge → charge
+    method     = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)
 
-    body_lines = _kotlin_payload_lines(proto_req, grpc_req, message_schemas, indent=2)
+    processed_req = _preprocess_kt_payload(flow_key, proto_req)
+    body_lines = _kotlin_payload_lines(processed_req, grpc_req, message_schemas, indent=2)
     body       = "\n".join(body_lines)
 
     svc_label  = f"{svc}.{rpc_name}"
@@ -1195,7 +1851,7 @@ def render_flow_kotlin(
     if flow_key == "authorize":
         status_block = (
             '    when (response.status.name) {\n'
-            '        "FAILED"  -> throw RuntimeException("Authorize failed: ${response.error.message}")\n'
+            '        "FAILED"  -> throw RuntimeException("Authorize failed: ${response.error.unifiedDetails.message}")\n'
             '        "PENDING" -> println("Pending — await webhook before proceeding")\n'
             '        else      -> println("Authorized: ${response.connectorTransactionId}")\n'
             '    }'
@@ -1203,18 +1859,18 @@ def render_flow_kotlin(
     elif flow_key == "setup_recurring":
         status_block = (
             '    when (response.status.name) {\n'
-            '        "FAILED" -> throw RuntimeException("Setup failed: ${response.error.message}")\n'
-            '        else     -> println("Mandate stored: ${response.connectorTransactionId}")\n'
+            '        "FAILED" -> throw RuntimeException("Setup failed: ${response.error.unifiedDetails.message}")\n'
+            '        else     -> println("Mandate stored: ${response.connectorRecurringPaymentId}")\n'
             '    }'
         )
     elif flow_key in ("capture", "refund", "recurring_charge", "void"):
         status_block = (
             f'    if (response.status.name == "FAILED")\n'
-            f'        throw RuntimeException("{flow_key.title()} failed: ${{response.error.message}}")\n'
+            f'        throw RuntimeException("{flow_key.title()} failed: ${{response.error.unifiedDetails.message}}")\n'
             f'    println("Done: ${{response.status.name}}")'
         )
     else:
-        status_block = '    println("Status: ${response.status.name}")'
+        status_block = _KT_FLOW_STATUS_BLOCK.get(flow_key, '    println("Status: ${response.status.name}")')
 
     return f"""\
 // This file is auto-generated. Do not edit manually.
@@ -1250,6 +1906,29 @@ fun main() {{
 """
 
 
+# Proto primitive type names — fields of these types use direct Kotlin assignment
+_KOTLIN_PRIMITIVES = frozenset({
+    "string", "bool", "int32", "int64", "uint32", "uint64",
+    "float", "double", "bytes", "sint32", "sint64",
+    "fixed32", "fixed64", "sfixed32", "sfixed64",
+})
+
+
+def _kotlin_collect_enum_types(obj: dict, msg_name: str, db: "_SchemaDB") -> set[str]:
+    """Recursively collect enum type names used in a payload dict (for import generation)."""
+    types: set[str] = set()
+    for key, val in obj.items():
+        child_msg = db.get_type(msg_name, key)
+        if isinstance(val, dict):
+            types.update(_kotlin_collect_enum_types(val, child_msg or "", db))
+        elif isinstance(val, str) and child_msg:
+            if (not db.is_wrapper(child_msg)
+                    and child_msg not in _KOTLIN_PRIMITIVES
+                    and child_msg not in _PROTO_FIELD_TYPES):
+                types.add(child_msg)
+    return types
+
+
 def _kotlin_payload_lines(
     obj: dict,
     msg_name: str,
@@ -1262,26 +1941,51 @@ def _kotlin_payload_lines(
     lines: list[str] = []
 
     for key, val in obj.items():
-        camel = _to_camel(key)
-        comment = db.get_comment(msg_name, key)
+        camel     = _to_camel(key)
+        comment   = db.get_comment(msg_name, key)
         child_msg = db.get_type(msg_name, key)
-        cmt_part = f"  // {comment}" if comment else ""
+        cmt_part  = f"  // {comment}" if comment else ""
 
         if isinstance(val, dict):
-            lines.append(f"{pad}{camel}Builder.apply {{{cmt_part}")
-            lines.extend(_kotlin_payload_lines(val, child_msg, message_schemas, indent + 1))
-            lines.append(f"{pad}}}")
+            if not child_msg:
+                # Unknown field — likely a oneof group name (e.g. mandate_id_type).
+                # Flatten by processing inner fields at the current message level.
+                lines.extend(_kotlin_payload_lines(val, msg_name, message_schemas, indent))
+            else:
+                lines.append(f"{pad}{camel}Builder.apply {{{cmt_part}")
+                lines.extend(_kotlin_payload_lines(val, child_msg, message_schemas, indent + 1))
+                lines.append(f"{pad}}}")
         elif isinstance(val, bool):
             lines.append(f"{pad}{camel} = {str(val).lower()}{cmt_part}")
         elif isinstance(val, int):
-            lines.append(f"{pad}{camel} = {val}L{cmt_part}")
+            # Use Long (L) suffix only for 64-bit proto types; 32-bit types use plain Int
+            _INT32_TYPES = frozenset({"int32", "uint32", "sint32", "fixed32", "sfixed32"})
+            if child_msg and child_msg in _INT32_TYPES:
+                lines.append(f"{pad}{camel} = {val}{cmt_part}")
+            else:
+                lines.append(f"{pad}{camel} = {val}L{cmt_part}")
         elif isinstance(val, float):
             lines.append(f"{pad}{camel} = {val}{cmt_part}")
         elif isinstance(val, str):
-            # String wrapper proto fields (e.g. card_number, card_cvc) use Builder.value
-            # Heuristic: if child_msg is empty (scalar string), use Builder.value for sensitive-looking fields
-            # For simplicity emit both options as a comment
-            lines.append(f'{pad}{camel}Builder.value = {json.dumps(val)}{cmt_part}')
+            if child_msg and db.is_wrapper(child_msg):
+                # Wrapper message (e.g. SecretString) — uses Builder.value
+                lines.append(f'{pad}{camel}Builder.value = {json.dumps(val)}{cmt_part}')
+            elif child_msg and child_msg not in _KOTLIN_PRIMITIVES and child_msg not in _PROTO_FIELD_TYPES:
+                # Enum type — use EnumType.ENUM_VALUE format
+                lines.append(f'{pad}{camel} = {child_msg}.{val}{cmt_part}')
+            elif child_msg and child_msg not in _KOTLIN_PRIMITIVES:
+                # Message type with a string scalar — check single_field_wrapper pattern
+                sfwk = db.single_field_wrapper_key(child_msg)
+                if sfwk:
+                    inner_camel = _to_camel(sfwk)
+                    lines.append(f'{pad}{camel}Builder.apply {{{cmt_part}')
+                    lines.append(f'{pad}    {inner_camel}Builder.value = {json.dumps(val)}')
+                    lines.append(f'{pad}}}')
+                else:
+                    lines.append(f'{pad}{camel} = {json.dumps(val)}{cmt_part}')
+            else:
+                # Plain string field — direct assignment
+                lines.append(f'{pad}{camel} = {json.dumps(val)}{cmt_part}')
         else:
             lines.append(f"{pad}// {camel}: {json.dumps(val)}{cmt_part}")
 
@@ -1301,11 +2005,11 @@ def render_flow_rust(
     svc       = meta.get("service_name", "PaymentService")
     grpc_req  = meta.get("grpc_request", "")
     rpc_name  = meta.get("rpc_name", flow_key)
-    conn_enum = connector_name.replace("_", "").title()  # "adyen" -> "Adyen"
+    conn_enum = _conn_enum_rust(connector_name)
     method    = flow_key  # Rust uses snake_case
 
-    body_lines = _rust_payload_lines(proto_req, grpc_req, message_schemas, indent=1)
-    body       = "\n".join(body_lines)
+    json_lines = _rust_json_lines(proto_req, grpc_req, message_schemas, indent=1)
+    json_body  = "\n".join(json_lines)
 
     svc_label = f"{svc}.{rpc_name}"
     pm_part   = f" ({pm_label})" if pm_label else ""
@@ -1313,18 +2017,26 @@ def render_flow_rust(
     if flow_key == "authorize":
         status_block = (
             '    match response.status() {\n'
-            '        PaymentStatus::Failed  => panic!("Authorize failed: {:?}", response.error),\n'
+            '        PaymentStatus::Failure | PaymentStatus::AuthorizationFailed\n'
+            '            => eprintln!("Authorize failed: {:?}", response.error),\n'
             '        PaymentStatus::Pending => println!("Pending — await webhook"),\n'
-            '        _                      => println!("Authorized: {}", response.connector_transaction_id),\n'
+            '        _  => println!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or("")),\n'
             '    }'
         )
     elif flow_key == "setup_recurring":
         status_block = (
-            '    if response.status() == PaymentStatus::Failed {\n'
-            '        panic!("Setup failed: {:?}", response.error);\n'
-            '    }\n'
-            '    println!("Mandate: {}", response.connector_transaction_id);'
+            '    if response.status() == PaymentStatus::Failure {\n'
+            '        eprintln!("Setup failed: {:?}", response.error);\n'
+            '    } else {\n'
+            '        println!("Mandate: {}", response.connector_recurring_payment_id.as_deref().unwrap_or(""));\n'
+            '    }'
         )
+    elif flow_key == "tokenize":
+        status_block = '    println!("token: {}", response.payment_method_token);'
+    elif flow_key == "create_customer":
+        status_block = '    println!("customer_id: {}", response.connector_customer_id);'
+    elif flow_key in ("dispute_accept", "dispute_defend", "dispute_submit_evidence"):
+        status_block = '    println!("dispute_status: {:?}", response.dispute_status());'
     else:
         status_block = '    println!("Status: {:?}", response.status());'
 
@@ -1338,8 +2050,9 @@ def render_flow_rust(
 // SDK: sdk/rust (native Rust — uses hyperswitch_payments_client)
 // Build: cargo check -p hyperswitch-payments-client  (from repo root)
 
-use grpc_api_types::payments::{{Connector, ConnectorConfig, Environment, {grpc_req}}};
+use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
+use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() {{
@@ -1350,20 +2063,33 @@ async fn main() {{
         ..Default::default()
     }};
 
-    let client = ConnectorClient::new(config);
+    let client = ConnectorClient::new(config, None).unwrap();
 
-    // Build request with probe-verified field values.
-    // Note: sensitive fields use Secret::new("value") and card_number uses .try_into().
-    // See sdk/rust/examples/basic.rs for the full type-safe construction pattern.
-    let request = {grpc_req} {{
-{body}
-        ..Default::default()
-    }};
-
-    let response = client.{method}(request).await.unwrap();
+    // Build request from probe-verified field values via serde_json deserialization.
+    // See sdk/rust/examples/basic.rs for the type-safe struct construction pattern.
+    let response = client.{method}(
+        serde_json::from_value::<{grpc_req}>(serde_json::json!({{
+{json_body}
+        }})).unwrap_or_default(),
+        &HashMap::new(), None,
+    ).await.unwrap();
 {status_block}
 }}
 """
+
+
+# Rust reserved keywords that may collide with proto field names.
+_RUST_KEYWORDS = frozenset({
+    "as", "break", "const", "continue", "crate", "else", "enum", "extern",
+    "false", "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod",
+    "move", "mut", "pub", "ref", "return", "self", "Self", "static", "struct",
+    "super", "trait", "true", "type", "unsafe", "use", "where", "while",
+})
+
+
+def _rust_field(key: str) -> str:
+    """Return the Rust field name, prefixing reserved keywords with r#."""
+    return f"r#{key}" if key in _RUST_KEYWORDS else key
 
 
 def _rust_payload_lines(
@@ -1381,22 +2107,73 @@ def _rust_payload_lines(
         comment   = db.get_comment(msg_name, key)
         child_msg = db.get_type(msg_name, key)
         cmt_part  = f"  // {comment}" if comment else ""
+        field     = _rust_field(key)
 
         if isinstance(val, dict):
             inner = _rust_payload_lines(val, child_msg, message_schemas, indent + 1)
             inner_str = "\n".join(inner)
-            lines.append(f"{pad}{key}: Some({child_msg or 'Message'} {{{cmt_part}")
+            lines.append(f"{pad}{field}: Some({child_msg or 'Message'} {{{cmt_part}")
             lines.append(inner_str)
             lines.append(f"{pad}    ..Default::default()")
             lines.append(f"{pad}}}),")
         elif isinstance(val, bool):
-            lines.append(f"{pad}{key}: Some({str(val).lower()}),{cmt_part}")
+            lines.append(f"{pad}{field}: Some({str(val).lower()}),{cmt_part}")
         elif isinstance(val, (int, float)):
-            lines.append(f"{pad}{key}: Some({val}),{cmt_part}")
+            lines.append(f"{pad}{field}: Some({val}),{cmt_part}")
         elif isinstance(val, str):
-            lines.append(f'{pad}{key}: Some("{val}".to_string()),{cmt_part}')
+            # json.dumps handles escaping of embedded quotes, backslashes, etc.
+            lines.append(f"{pad}{field}: Some({json.dumps(val)}.to_string()),{cmt_part}")
         else:
-            lines.append(f"{pad}// {key}: {json.dumps(val)}{cmt_part}")
+            lines.append(f"{pad}// {field}: {json.dumps(val)}{cmt_part}")
+
+    return lines
+
+
+def _rust_json_lines(
+    obj: dict,
+    msg_name: str,
+    message_schemas: dict,
+    indent: int,
+) -> list[str]:
+    """Recursively build serde_json::json!({...}) key-value content lines.
+
+    Probe data maps almost directly to prost's serde JSON format except for
+    oneof-wrapper messages (e.g. PaymentMethod), which need an extra field
+    wrapping layer: {"card": {...}} → {"payment_method": {"card": {...}}}.
+    """
+    pad    = "    " * indent
+    db     = _SchemaDB(message_schemas)
+    lines: list[str] = []
+
+    for key, val in obj.items():
+        comment   = db.get_comment(msg_name, key)
+        child_msg = db.get_type(msg_name, key)
+        cmt_part  = f"  // {comment}" if comment else ""
+        json_key  = json.dumps(key)
+
+        if isinstance(val, dict):
+            if child_msg and child_msg in _ONEOF_WRAPPER_FIELD:
+                # Oneof wrapper: add the struct field name that holds the enum.
+                wrapper_key = _ONEOF_WRAPPER_FIELD[child_msg]
+                inner = _rust_json_lines(val, child_msg, message_schemas, indent + 2)
+                lines.append(f"{pad}{json_key}: {{{cmt_part}")
+                lines.append(f'{pad}    "{wrapper_key}": {{')
+                lines.extend(inner)
+                lines.append(f"{pad}    }}")
+                lines.append(f"{pad}}},")
+            else:
+                inner = _rust_json_lines(val, child_msg, message_schemas, indent + 1)
+                lines.append(f"{pad}{json_key}: {{{cmt_part}")
+                lines.extend(inner)
+                lines.append(f"{pad}}},")
+        elif isinstance(val, bool):
+            lines.append(f"{pad}{json_key}: {str(val).lower()},{cmt_part}")
+        elif isinstance(val, (int, float)):
+            lines.append(f"{pad}{json_key}: {val},{cmt_part}")
+        elif isinstance(val, str):
+            lines.append(f"{pad}{json_key}: {json.dumps(val)},{cmt_part}")
+        else:
+            lines.append(f"{pad}// {json_key}: {json.dumps(val)}{cmt_part}")
 
     return lines
 
@@ -1453,14 +2230,11 @@ def render_pm_reference_section(
             continue
 
         if not rendered_any:
-            a("## Payment Method Reference")
-            a("")
-            a("Use these `payment_method` objects in your Authorize request. "
-              "All other fields (amount, customer, address) remain the same across payment methods.")
+            a("**Payment method objects** — use these in the `payment_method` field of the Authorize request.")
             a("")
             rendered_any = True
 
-        a(f"### {label}")
+        a(f"##### {label}")
         a("")
         # Render just the payment_method sub-object
         pm_msg = db.get_type(grpc_req, "payment_method")
@@ -1505,6 +2279,360 @@ def render_payload_block(
     ]
 
 
+def render_consolidated_kotlin(
+    connector_name: str,
+    flow_items: "list[tuple[str, dict, str]]",
+    flow_metadata: dict[str, dict],
+    message_schemas: dict,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
+) -> str:
+    """Return one Kotlin file containing all scenario and flow functions for a connector."""
+    conn_enum = _conn_enum(connector_name)
+    db = _SchemaDB(message_schemas)
+
+    # Collect unique client classes from scenarios and flows
+    all_client_cls: list[str] = []
+    for scenario, _ in (scenarios_with_payloads or []):
+        for fk in scenario.flows:
+            cls = _client_class(flow_metadata.get(fk, {}).get("service_name", "PaymentService"))
+            if cls not in all_client_cls:
+                all_client_cls.append(cls)
+    for flow_key, _, _ in flow_items:
+        cls = _client_class(flow_metadata.get(flow_key, {}).get("service_name", "PaymentService"))
+        if cls not in all_client_cls:
+            all_client_cls.append(cls)
+
+    # Collect grpc request types (needed for .newBuilder() calls)
+    grpc_req_types: list[str] = []
+    for scenario, flow_payloads in (scenarios_with_payloads or []):
+        for fk in scenario.flows:
+            grpc_req = flow_metadata.get(fk, {}).get("grpc_request", "")
+            if grpc_req and grpc_req not in grpc_req_types:
+                grpc_req_types.append(grpc_req)
+    for flow_key, _, _ in flow_items:
+        grpc_req = flow_metadata.get(flow_key, {}).get("grpc_request", "")
+        if grpc_req and grpc_req not in grpc_req_types:
+            grpc_req_types.append(grpc_req)
+
+    # Collect enum types used in payload fields (for Currency.USD, CaptureMethod.MANUAL, etc.)
+    enum_types: set[str] = set()
+    for scenario, flow_payloads in (scenarios_with_payloads or []):
+        for fk in scenario.flows:
+            payload = dict(flow_payloads.get(fk, {}))
+            if fk == "authorize":
+                if scenario.key in ("checkout_card", "void_payment", "get_payment"):
+                    payload["capture_method"] = "MANUAL"
+                elif scenario.key == "refund":
+                    payload["capture_method"] = "AUTOMATIC"
+            grpc_req = flow_metadata.get(fk, {}).get("grpc_request", "")
+            enum_types.update(_kotlin_collect_enum_types(payload, grpc_req, db))
+    for flow_key, proto_req, _ in flow_items:
+        grpc_req = flow_metadata.get(flow_key, {}).get("grpc_request", "")
+        enum_types.update(_kotlin_collect_enum_types(proto_req, grpc_req, db))
+
+    all_import_types = all_client_cls + grpc_req_types + sorted(enum_types)
+    imports = "\n".join(f"import payments.{t}" for t in all_import_types)
+
+    func_blocks: list[str] = []
+    func_names:  list[str] = []
+
+    # Generate scenario function blocks first
+    for scenario, flow_payloads in (scenarios_with_payloads or []):
+        func_name = _to_camel(f"process_{scenario.key}")
+        func_names.append(func_name)
+
+        # Collect unique service names for this scenario
+        svc_names: list[str] = []
+        for fk in scenario.flows:
+            svc = flow_metadata.get(fk, {}).get("service_name", "PaymentService")
+            if svc not in svc_names:
+                svc_names.append(svc)
+
+        body_lines: list[str] = []
+        # Instantiate clients
+        for svc in svc_names:
+            cls = _client_class(svc)
+            var = cls[0].lower() + cls[1:]
+            body_lines.append(f"    val {var} = {cls}(config)")
+        body_lines.append("")
+
+        for step_num, flow_key in enumerate(scenario.flows, 1):
+            meta       = flow_metadata.get(flow_key, {})
+            svc        = meta.get("service_name", "PaymentService")
+            grpc_req   = meta.get("grpc_request", "")
+            cls        = _client_class(svc)
+            client_var = cls[0].lower() + cls[1:]
+
+            payload = dict(flow_payloads.get(flow_key, {}))
+            if flow_key == "authorize":
+                if scenario.key in ("checkout_card", "void_payment", "get_payment"):
+                    payload["capture_method"] = "MANUAL"
+                elif scenario.key == "refund":
+                    payload["capture_method"] = "AUTOMATIC"
+
+            body_lines.extend(_scenario_step_kotlin(
+                scenario.key, flow_key, step_num, payload, grpc_req, message_schemas, client_var
+            ))
+
+        body_lines.append(_scenario_return_kotlin(scenario))
+        body = "\n".join(body_lines)
+
+        func_blocks.append(
+            f"// Scenario: {scenario.title}\n"
+            f"// {scenario.description}\n"
+            f"fun {func_name}(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {{\n"
+            f"{body}\n"
+            f"}}"
+        )
+
+    # Generate standalone flow function blocks
+    for flow_key, proto_req, pm_label in flow_items:
+        meta       = flow_metadata.get(flow_key, {})
+        svc        = meta.get("service_name", "PaymentService")
+        grpc_req   = meta.get("grpc_request", "")
+        rpc_name   = meta.get("rpc_name", flow_key)
+        client_cls = _client_class(svc)
+        # Kotlin SDK uses snake_case method names; recurring_charge → charge
+        method     = _FLOW_KEY_TO_METHOD.get(flow_key, flow_key)
+        pm_part    = f" ({pm_label})" if pm_label else ""
+
+        processed_req = _preprocess_kt_payload(flow_key, proto_req)
+        body_lines = _kotlin_payload_lines(processed_req, grpc_req, message_schemas, indent=2)
+        body       = "\n".join(body_lines)
+
+        if flow_key == "authorize":
+            status_block = (
+                '    when (response.status.name) {\n'
+                '        "FAILED"  -> throw RuntimeException("Authorize failed: ${response.error.unifiedDetails.message}")\n'
+                '        "PENDING" -> println("Pending — await webhook before proceeding")\n'
+                '        else      -> println("Authorized: ${response.connectorTransactionId}")\n'
+                '    }'
+            )
+        elif flow_key == "setup_recurring":
+            status_block = (
+                '    when (response.status.name) {\n'
+                '        "FAILED" -> throw RuntimeException("Setup failed: ${response.error.unifiedDetails.message}")\n'
+                '        else     -> println("Mandate stored: ${response.connectorRecurringPaymentId}")\n'
+                '    }'
+            )
+        elif flow_key in ("capture", "refund", "recurring_charge", "void"):
+            status_block = (
+                f'    if (response.status.name == "FAILED")\n'
+                f'        throw RuntimeException("{flow_key.title()} failed: ${{response.error.unifiedDetails.message}}")\n'
+                f'    println("Done: ${{response.status.name}}")'
+            )
+        else:
+            status_block = _KT_FLOW_STATUS_BLOCK.get(flow_key, '    println("Status: ${response.status.name}")')
+
+        func_names.append(method)
+        func_blocks.append(
+            f"// Flow: {svc}.{rpc_name}{pm_part}\n"
+            f"fun {method}(txnId: String) {{\n"
+            f"    val client = {client_cls}(_defaultConfig)\n"
+            f"    val request = {grpc_req}.newBuilder().apply {{\n"
+            f"{body}\n"
+            f"    }}.build()\n"
+            f"    val response = client.{method}(request)\n"
+            f"{status_block}\n"
+            f"}}"
+        )
+
+    funcs_text    = "\n\n".join(func_blocks)
+    when_branches = "\n".join(f'        "{n}" -> {n}(txnId)' for n in func_names)
+    first         = func_names[0] if func_names else "authorize"
+
+    when_branches_main = "\n".join(f'        "{n}" -> {n}(txnId)' for n in func_names)
+
+    return f"""\
+// This file is auto-generated. Do not edit manually.
+// Replace YOUR_API_KEY and placeholder values with real data.
+// Regenerate: python3 scripts/generate-connector-docs.py {connector_name}
+//
+// {connector_name.title()} — all scenarios and flows in one file.
+// Run a scenario:  ./gradlew run --args="{connector_name} processCheckoutCard"
+
+package examples.{connector_name}
+
+{imports}
+import payments.ConnectorConfig
+import payments.Connector
+import payments.Environment
+
+val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
+    .setConnector(Connector.{conn_enum})
+    .setEnvironment(Environment.SANDBOX)
+    // .setAuth(...) — set your connector auth here
+    .build()
+
+
+{funcs_text}
+
+
+fun main(args: Array<String>) {{
+    val txnId = "order_001"
+    val flow = args.firstOrNull() ?: "{first}"
+    when (flow) {{
+{when_branches_main}
+        else -> System.err.println("Unknown flow: $flow. Available: {', '.join(func_names)}")
+    }}
+}}
+"""
+
+
+def render_consolidated_rust(
+    connector_name: str,
+    flow_items: "list[tuple[str, dict, str]]",
+    flow_metadata: dict[str, dict],
+    message_schemas: dict,
+    scenarios_with_payloads: "list[tuple[ScenarioSpec, dict[str, dict]]] | None" = None,
+) -> str:
+    """Return one Rust file containing all scenario and flow functions for a connector."""
+    conn_enum = _conn_enum_rust(connector_name)
+
+    # Collect all grpc_req types for use imports (from scenarios and flows)
+    grpc_reqs: list[str] = []
+    for scenario, flow_payloads in (scenarios_with_payloads or []):
+        for fk in scenario.flows:
+            grpc_req = flow_metadata.get(fk, {}).get("grpc_request", "")
+            if grpc_req and grpc_req not in grpc_reqs:
+                grpc_reqs.append(grpc_req)
+    for flow_key, _, _ in flow_items:
+        grpc_req = flow_metadata.get(flow_key, {}).get("grpc_request", "")
+        if grpc_req and grpc_req not in grpc_reqs:
+            grpc_reqs.append(grpc_req)
+
+    func_blocks: list[str] = []
+    func_names:  list[str] = []
+    match_arms:  list[str] = []
+
+    # Generate scenario function blocks first
+    for scenario, flow_payloads in (scenarios_with_payloads or []):
+        process_scenario_key = f"process_{scenario.key}"
+        func_names.append(process_scenario_key)
+        match_arms.append(f'        "{process_scenario_key}" => {process_scenario_key}(&client, "order_001").await,')
+
+        body_lines: list[str] = []
+        for step_num, flow_key in enumerate(scenario.flows, 1):
+            meta     = flow_metadata.get(flow_key, {})
+            grpc_req = meta.get("grpc_request", "")
+
+            payload = dict(flow_payloads.get(flow_key, {}))
+            if flow_key == "authorize":
+                if scenario.key in ("checkout_card", "void_payment", "get_payment"):
+                    payload["capture_method"] = "MANUAL"
+                elif scenario.key == "refund":
+                    payload["capture_method"] = "AUTOMATIC"
+
+            body_lines.extend(_scenario_step_rust(
+                scenario.key, flow_key, step_num, payload, grpc_req, message_schemas
+            ))
+
+        body_lines.append(_scenario_return_rust(scenario))
+        body = "\n".join(body_lines)
+
+        func_blocks.append(
+            f"// Scenario: {scenario.title}\n"
+            f"// {scenario.description}\n"
+            f"pub async fn {process_scenario_key}(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+            f"{body}\n"
+            f"}}"
+        )
+
+    # Generate standalone flow function blocks
+    for flow_key, proto_req, pm_label in flow_items:
+        meta      = flow_metadata.get(flow_key, {})
+        svc       = meta.get("service_name", "PaymentService")
+        grpc_req  = meta.get("grpc_request", "")
+        rpc_name  = meta.get("rpc_name", flow_key)
+        pm_part   = f" ({pm_label})" if pm_label else ""
+
+        json_lines = _rust_json_lines(proto_req, grpc_req, message_schemas, indent=1)
+        json_body  = "\n".join(json_lines)
+
+        if flow_key == "authorize":
+            status_block = (
+                '    match response.status() {\n'
+                '        PaymentStatus::Failure | PaymentStatus::AuthorizationFailed\n'
+                '            => return Err(format!("Authorize failed: {:?}", response.error).into()),\n'
+                '        PaymentStatus::Pending => return Ok("pending — await webhook".to_string()),\n'
+                '        _  => return Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),\n'
+                '    }'
+            )
+        elif flow_key == "setup_recurring":
+            status_block = (
+                '    if response.status() == PaymentStatus::Failure {\n'
+                '        return Err(format!("Setup failed: {:?}", response.error).into());\n'
+                '    }\n'
+                '    return Ok(format!("Mandate: {}", response.connector_recurring_payment_id.as_deref().unwrap_or("")));'
+            )
+        elif flow_key == "tokenize":
+            status_block = '    return Ok(format!("token: {}", response.payment_method_token));'
+        elif flow_key == "create_customer":
+            status_block = '    return Ok(format!("customer_id: {}", response.connector_customer_id));'
+        elif flow_key in ("dispute_accept", "dispute_defend", "dispute_submit_evidence"):
+            status_block = '    return Ok(format!("dispute_status: {:?}", response.dispute_status()));'
+        else:
+            status_block = '    return Ok(format!("status: {:?}", response.status()));'
+
+        func_names.append(flow_key)
+        match_arms.append(f'        "{flow_key}" => {flow_key}(&client, "order_001").await,')
+        func_blocks.append(
+            f"// Flow: {svc}.{rpc_name}{pm_part}\n"
+            f"pub async fn {flow_key}(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+            f"    let response = client.{flow_key}(serde_json::from_value::<{grpc_req}>(serde_json::json!({{\n"
+            f"{json_body}\n"
+            f"    }})).unwrap_or_default(), &HashMap::new(), None).await?;\n"
+            f"{status_block}\n"
+            f"}}"
+        )
+
+    funcs_text   = "\n\n".join(func_blocks)
+    match_arms_str = "\n".join(match_arms)
+    first        = func_names[0] if func_names else "authorize"
+
+    return f"""\
+// This file is auto-generated. Do not edit manually.
+// Replace YOUR_API_KEY and placeholder values with real data.
+// Regenerate: python3 scripts/generate-connector-docs.py {connector_name}
+//
+// {connector_name.title()} — all scenarios and flows in one file.
+// Run a scenario:  cargo run --example {connector_name} -- process_checkout_card
+
+use grpc_api_types::payments::*;
+use hyperswitch_payments_client::ConnectorClient;
+use std::collections::HashMap;
+
+
+fn build_client() -> ConnectorClient {{
+    let config = ConnectorConfig {{
+        connector: Connector::{conn_enum}.into(),
+        environment: Environment::Sandbox.into(),
+        // auth: Some(ConnectorAuth {{ ... }})  — set your connector auth here
+        ..Default::default()
+    }};
+    ConnectorClient::new(config, None).unwrap()
+}}
+
+
+{funcs_text}
+
+
+#[tokio::main]
+async fn main() {{
+    let client = build_client();
+    let flow = std::env::args().nth(1).unwrap_or_else(|| "{first}".to_string());
+    let result: Result<String, Box<dyn std::error::Error>> = match flow.as_str() {{
+{match_arms_str}
+        _ => {{ eprintln!("Unknown flow: {{}}. Available: {', '.join(func_names)}", flow); return; }}
+    }};
+    match result {{
+        Ok(msg) => println!("✓ {{msg}}"),
+        Err(e) => eprintln!("✗ {{e}}"),
+    }}
+}}
+"""
+
+
 # ── Public API: llms.txt entry ────────────────────────────────────────────────
 
 def render_llms_txt_entry(
@@ -1528,9 +2656,7 @@ def render_llms_txt_entry(
         if any(v.get("status") == "supported" for v in fdata.values())
     ]
     scenario_keys = [s.key for s in scenarios]
-    example_paths = [
-        f"examples/{connector_name}/python/{s.key}.py" for s in scenarios
-    ]
+    example_paths = [f"examples/{connector_name}/python/{connector_name}.py"] if scenario_keys else []
 
     lines = [
         f"## {display_name}",

@@ -17,9 +17,9 @@ const client = new ConnectorClient({
 async function createOrder(merchantTransactionId) {
     // Step 1: create_order
     const createResponse = await client.createOrder({
-        "merchant_order_id": "probe_order_001",  // Identification
+        "merchantOrderId": "probe_order_001",  // Identification
         "amount": {  // Amount Information
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
     });

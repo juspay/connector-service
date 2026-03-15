@@ -107,9 +107,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/razorpay/python/checkout_card.py) · [JavaScript](../../examples/razorpay/javascript/checkout_card.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L22) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L22) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L33) · [Rust](../../examples/razorpay/rust/razorpay.rs#L26)
 
 ### Card Payment (Automatic Capture)
 
@@ -119,72 +117,33 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 
 | Status | Recommended action |
 |--------|-------------------|
-| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
-| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/razorpay/python/checkout_autocapture.py) · [JavaScript](../../examples/razorpay/javascript/checkout_autocapture.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L127) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L122) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L129) · [Rust](../../examples/razorpay/rust/razorpay.rs#L124)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/razorpay/python/refund.py) · [JavaScript](../../examples/razorpay/javascript/refund.js)
-
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L216) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L208) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L212) · [Rust](../../examples/razorpay/rust/razorpay.rs#L208)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/razorpay/python/get_payment.py) · [JavaScript](../../examples/razorpay/javascript/get_payment.js)
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L323) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L310) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L310) · [Rust](../../examples/razorpay/rust/razorpay.rs#L308)
 
-> **Kotlin / Rust:** See `examples/{connector_name}/kotlin/` and `examples/{connector_name}/rust/` for per-flow examples covering each individual API call in this scenario.
-
-## Payment Method Reference
-
-Use these `payment_method` objects in your Authorize request. All other fields (amount, customer, address) remain the same across payment methods.
-
-### Card (Raw PAN)
-
-```python
-"payment_method": {
-    "card": {  # Generic card payment
-        "card_number": {"value": "4111111111111111"},  # Card Identification
-        "card_exp_month": {"value": "03"},
-        "card_exp_year": {"value": "2030"},
-        "card_cvc": {"value": "737"},
-        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-    }
-}
-```
-
-### UPI Collect
-
-```python
-"payment_method": {
-    "upi_collect": {  # UPI Collect
-        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
-    }
-}
-```
-
-## Implemented Flows
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentMethodAuthenticationService.Authenticate](#paymentmethodauthenticationserviceauthenticate) | Authentication | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.CreateOrder](#paymentservicecreateorder) | Payments | `PaymentServiceCreateOrderRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
-| [PaymentMethodAuthenticationService.PostAuthenticate](#paymentmethodauthenticationservicepostauthenticate) | Authentication | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-
-## Flow Reference
 
 ### Payments
 
@@ -205,7 +164,33 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | UPI | ✓ |
 | Samsung Pay | — |
 
-**Examples:** [Python](../../examples/razorpay/python/authorize.py) · [JavaScript](../../examples/razorpay/javascript/authorize.js) · [Kotlin](../../examples/razorpay/kotlin/authorize.kt) · [Rust](../../examples/razorpay/rust/authorize.rs)
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
+    }
+}
+```
+
+##### UPI Collect
+
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
+
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L424) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L404) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L401) · [Rust](../../examples/razorpay/rust/razorpay.rs#L400)
 
 #### PaymentService.Capture
 
@@ -216,7 +201,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/razorpay/python/capture.py) · [JavaScript](../../examples/razorpay/javascript/capture.js) · [Kotlin](../../examples/razorpay/kotlin/capture.kt) · [Rust](../../examples/razorpay/rust/capture.rs)
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L510) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L487) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L480) · [Rust](../../examples/razorpay/rust/razorpay.rs#L480)
 
 #### PaymentService.CreateOrder
 
@@ -227,7 +212,7 @@ Initialize an order in the payment processor system. Sets up payment context bef
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Examples:** [Python](../../examples/razorpay/python/create_order.py) · [JavaScript](../../examples/razorpay/javascript/create_order.js) · [Kotlin](../../examples/razorpay/kotlin/create_order.kt) · [Rust](../../examples/razorpay/rust/create_order.rs)
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L533) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L506) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt) · [Rust](../../examples/razorpay/rust/razorpay.rs#L493)
 
 #### PaymentService.Get
 
@@ -238,7 +223,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/razorpay/python/get.py) · [JavaScript](../../examples/razorpay/javascript/get.js) · [Kotlin](../../examples/razorpay/kotlin/get.kt) · [Rust](../../examples/razorpay/rust/get.rs)
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py#L552) · [JavaScript](../../examples/razorpay/javascript/razorpay.js#L520) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L511) · [Rust](../../examples/razorpay/rust/razorpay.rs#L505)
 
 #### PaymentService.Refund
 
@@ -249,33 +234,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/razorpay/python/refund.py) · [JavaScript](../../examples/razorpay/javascript/refund.js) · [Kotlin](../../examples/razorpay/kotlin/refund.kt) · [Rust](../../examples/razorpay/rust/refund.rs)
-
-### Authentication
-
-#### PaymentMethodAuthenticationService.Authenticate
-
-Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServiceAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServiceAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PostAuthenticate
-
-Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePostAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePostAuthenticateResponse` |
-
-#### PaymentMethodAuthenticationService.PreAuthenticate
-
-Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
-| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+**Examples:** [Python](../../examples/razorpay/python/razorpay.py) · [JavaScript](../../examples/razorpay/javascript/razorpay.js) · [Kotlin](../../examples/razorpay/kotlin/razorpay.kt#L525) · [Rust](../../examples/razorpay/rust/razorpay.rs#L517)

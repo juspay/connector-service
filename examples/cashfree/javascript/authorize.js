@@ -17,67 +17,67 @@ const client = new ConnectorClient({
 async function authorize(merchantTransactionId) {
     // Step 1: Authorize — reserve funds on the payment method
     const authorizeResponse = await client.authorize({
-        "merchant_transaction_id": "probe_txn_001",  // Identification
+        "merchantTransactionId": "probe_txn_001",  // Identification
         "amount": {  // The amount for the payment
-            "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
-        "payment_method": {  // Payment method to be used
-            "upi_collect": {  // UPI Collect
-                "vpa_id": {"value": "test@upi"}  // Virtual Payment Address
+        "paymentMethod": {  // Payment method to be used
+            "upiCollect": {  // UPI Collect
+                "vpaId": {"value": "test@upi"}  // Virtual Payment Address
             }
         },
-        "capture_method": "AUTOMATIC",  // Method for capturing the payment
+        "captureMethod": "AUTOMATIC",  // Method for capturing the payment
         "customer": {  // Customer Information
             "name": "John Doe",  // Customer's full name
             "email": {"value": "test@example.com"},  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
-            "phone_number": "4155552671",  // Customer's phone number
-            "phone_country_code": "+1"  // Customer's phone country code
+            "phoneNumber": "4155552671",  // Customer's phone number
+            "phoneCountryCode": "+1"  // Customer's phone country code
         },
         "address": {  // Address Information
-            "shipping_address": {
-                "first_name": {"value": "John"},  // Personal Information
-                "last_name": {"value": "Doe"},
+            "shippingAddress": {
+                "firstName": {"value": "John"},  // Personal Information
+                "lastName": {"value": "Doe"},
                 "line1": {"value": "123 Main St"},  // Address Details
                 "city": {"value": "Seattle"},
                 "state": {"value": "WA"},
-                "zip_code": {"value": "98101"},
-                "country_alpha2_code": "US",
+                "zipCode": {"value": "98101"},
+                "countryAlpha2Code": "US",
                 "email": {"value": "test@example.com"},  // Contact Information
-                "phone_number": {"value": "4155552671"},
-                "phone_country_code": "+1"
+                "phoneNumber": {"value": "4155552671"},
+                "phoneCountryCode": "+1"
             },
-            "billing_address": {
-                "first_name": {"value": "John"},  // Personal Information
-                "last_name": {"value": "Doe"},
+            "billingAddress": {
+                "firstName": {"value": "John"},  // Personal Information
+                "lastName": {"value": "Doe"},
                 "line1": {"value": "123 Main St"},  // Address Details
                 "city": {"value": "Seattle"},
                 "state": {"value": "WA"},
-                "zip_code": {"value": "98101"},
-                "country_alpha2_code": "US",
+                "zipCode": {"value": "98101"},
+                "countryAlpha2Code": "US",
                 "email": {"value": "test@example.com"},  // Contact Information
-                "phone_number": {"value": "4155552671"},
-                "phone_country_code": "+1"
+                "phoneNumber": {"value": "4155552671"},
+                "phoneCountryCode": "+1"
             }
         },
-        "auth_type": "NO_THREE_DS",  // Authentication Details
-        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhook_url": "https://example.com/webhook",
-        "complete_authorize_url": "https://example.com/complete",
-        "merchant_order_id": "probe_session_id",
-        "browser_info": {
-            "color_depth": 24,  // Display Information
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": False,  // Browser Settings
-            "java_script_enabled": True,
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
+        "webhookUrl": "https://example.com/webhook",
+        "completeAuthorizeUrl": "https://example.com/complete",
+        "merchantOrderId": "probe_session_id",
+        "browserInfo": {
+            "colorDepth": 24,  // Display Information
+            "screenHeight": 900,
+            "screenWidth": 1440,
+            "javaEnabled": false,  // Browser Settings
+            "javaScriptEnabled": true,
             "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",  // Browser Headers
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"  // Device Information
+            "timeZoneOffsetMinutes": -480,
+            "acceptHeader": "application/json",  // Browser Headers
+            "userAgent": "Mozilla/5.0 (probe-bot)",
+            "acceptLanguage": "en-US,en;q=0.9",
+            "ipAddress": "1.2.3.4"  // Device Information
         }
     });
 
@@ -86,7 +86,7 @@ async function authorize(merchantTransactionId) {
     }
     if (authorizeResponse.status === 'PENDING') {
         // Awaiting async confirmation — handle via webhook
-        return { status: 'pending', transactionId: authorizeResponse.connector_transaction_id };
+        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
     }
 
     return { status: authorizeResponse.status, transactionId: authorizeResponse.connector_transaction_id };
