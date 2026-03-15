@@ -870,7 +870,7 @@ impl<
             + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<T>
+    > ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<T> //
 {
     type Error = ApplicationErrorResponse;
 
@@ -885,13 +885,13 @@ impl<
                 // CARD METHODS
                 // ============================================================================
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_details) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
+                    let card = payment_method_data::Card::<T>::foreign_try_from((Some(card_details), None))?;
                     Ok(Self::Card(card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(
                     card_details,
                 ) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
+                    let card = payment_method_data::Card::<T>::foreign_try_from((None, Some(card_details)))?;
                     Ok(Self::Card(card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(
@@ -2288,8 +2288,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
 //   - DefaultPCIHolder handles CardDetails (and rejects ProxyCardDetails)
 //   - VaultTokenHolder handles ProxyCardDetails (and rejects CardDetails)
 pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
+<<<<<<< HEAD
     fn convert_card(
         card: grpc_api_types::payments::CardDetails,
+=======
+    fn convert_card_details(
+        card: Option<grpc_api_types::payments::CardDetails>,
+        proxy_card: Option<grpc_api_types::payments::ProxyCardDetails>,
+>>>>>>> 0fa3ae298 (add Proxy Card details)
     ) -> Result<payment_method_data::Card<T>, error_stack::Report<ApplicationErrorResponse>>;
 
     fn convert_proxy_card(
@@ -2299,10 +2305,22 @@ pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
 
 // Implementation for DefaultPCIHolder — accepts only CardDetails
 impl CardConversionHelper<Self> for DefaultPCIHolder {
+<<<<<<< HEAD
     fn convert_card(
         card: grpc_api_types::payments::CardDetails,
+=======
+    fn convert_card_details(
+        card: Option<grpc_api_types::payments::CardDetails>,
+        _proxy_card: Option<grpc_api_types::payments::ProxyCardDetails>,
+>>>>>>> 0fa3ae298 (add Proxy Card details)
     ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>
     {
+        let card = card.ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_CARD_DETAILS".to_owned(),
+            error_identifier: 400,
+            error_message: "Card details are required for card payment method".to_owned(),
+            error_object: None,
+        }))?;
         let card_network = match card.card_network() {
             grpc_api_types::payments::CardNetwork::Unspecified => None,
             _ => Some(CardNetwork::foreign_try_from(card.card_network())?),
@@ -2368,6 +2386,7 @@ impl CardConversionHelper<Self> for DefaultPCIHolder {
 
 // Implementation for VaultTokenHolder — accepts only ProxyCardDetails
 impl CardConversionHelper<Self> for VaultTokenHolder {
+<<<<<<< HEAD
     fn convert_card(
         _card: grpc_api_types::payments::CardDetails,
     ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>
@@ -2384,8 +2403,19 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
 
     fn convert_proxy_card(
         card: grpc_api_types::payments::ProxyCardDetails,
+=======
+    fn convert_card_details(
+        _card: Option<grpc_api_types::payments::CardDetails>,
+        proxy_card: Option<grpc_api_types::payments::ProxyCardDetails>,
+>>>>>>> 0fa3ae298 (add Proxy Card details)
     ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>
     {
+        let card = proxy_card.ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "MISSING_CARD_DETAILS".to_owned(),
+            error_identifier: 400,
+            error_message: "Card details are required for card payment method".to_owned(),
+            error_object: None,
+        }))?;
         Ok(payment_method_data::Card {
             card_number: RawCardNumber(
                 card.card_number
@@ -2432,8 +2462,13 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
     }
 }
 
+<<<<<<< HEAD
 // Generic ForeignTryFrom for CardDetails → Card<T>
 impl<T> ForeignTryFrom<grpc_api_types::payments::CardDetails> for payment_method_data::Card<T>
+=======
+// Generic ForeignTryFrom implementation using the helper trait
+impl<T> ForeignTryFrom<(Option<grpc_api_types::payments::CardDetails>, Option<grpc_api_types::payments::ProxyCardDetails>)> for payment_method_data::Card<T>
+>>>>>>> 0fa3ae298 (add Proxy Card details)
 where
     T: PaymentMethodDataTypes
         + Default
@@ -2448,8 +2483,9 @@ where
 {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
-        card: grpc_api_types::payments::CardDetails,
+        (card, proxy_card): (Option<grpc_api_types::payments::CardDetails>,Option<grpc_api_types::payments::ProxyCardDetails>),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+<<<<<<< HEAD
         T::convert_card(card)
     }
 }
@@ -2474,6 +2510,9 @@ where
         card: grpc_api_types::payments::ProxyCardDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         T::convert_proxy_card(card)
+=======
+        T::convert_card_details(card, proxy_card)
+>>>>>>> 0fa3ae298 (add Proxy Card details)
     }
 }
 
