@@ -337,4 +337,3 @@ That is why community ownership matters here, not as a marketing posture, but as
 
 The longer arc here is for `services.proto` to evolve into something the payments community — developers, processors, orchestrators, and everyone else in the stack — maintains collectively. The same way OpenTelemetry's semantic conventions emerged from broad input, not from one company's opinions. The same way JDBC worked because it was simple enough to implement and strict enough to actually abstract.
 
-Payment APIs are not more complicated than database drivers. We have just not agreed on the interface yet. We hope this is a useful starting point for that conversation.
