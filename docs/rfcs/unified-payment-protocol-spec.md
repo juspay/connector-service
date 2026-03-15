@@ -55,52 +55,52 @@ UPP is structured as a set of gRPC services that collectively manage the full pa
 ┌──────────────────────────────────────────────────────────────────────┐
 │                        Unified Payment Protocol                      │
 │                                                                      │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────┐  │
-│  │  Payment     │  │  Refund      │  │  Dispute                   │  │
-│  │  Service     │  │  Service     │  │  Service                   │  │
-│  ├─────────────┤  ├──────────────┤  ├────────────────────────────┤  │
-│  │ Authorize   │  │ Get          │  │ SubmitEvidence             │  │
-│  │ Capture     │  │ HandleEvent  │  │ Get                        │  │
-│  │ Void        │  │              │  │ Defend                     │  │
-│  │ Reverse     │  │              │  │ Accept                     │  │
-│  │ Get         │  │              │  │ HandleEvent                │  │
-│  │ Refund      │  │              │  │                            │  │
-│  │ CreateOrder │  │              │  │                            │  │
-│  │ IncrAuth    │  │              │  │                            │  │
-│  │ SetupRecur  │  │              │  │                            │  │
-│  │ VerifyRedir │  │              │  │                            │  │
-│  │ HandleEvent │  │              │  │                            │  │
-│  └─────────────┘  └──────────────┘  └────────────────────────────┘  │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────┐   │
+│  │  Payment    │  │  Refund      │  │  Dispute                   │   │
+│  │  Service    │  │  Service     │  │  Service                   │   │
+│  ├─────────────┤  ├──────────────┤  ├────────────────────────────┤   │
+│  │ Authorize   │  │ Get          │  │ SubmitEvidence             │   │
+│  │ Capture     │  │ HandleEvent  │  │ Get                        │   │
+│  │ Void        │  │              │  │ Defend                     │   │
+│  │ Reverse     │  │              │  │ Accept                     │   │
+│  │ Get         │  │              │  │ HandleEvent                │   │
+│  │ Refund      │  │              │  │                            │   │
+│  │ CreateOrder │  │              │  │                            │   │
+│  │ IncrAuth    │  │              │  │                            │   │
+│  │ SetupRecur  │  │              │  │                            │   │
+│  │ VerifyRedir │  │              │  │                            │   │
+│  │ HandleEvent │  │              │  │                            │   │
+│  └─────────────┘  └──────────────┘  └────────────────────────────┘   │
 │                                                                      │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────┐  │
-│  │  Recurring   │  │  Payment     │  │  Merchant                  │  │
-│  │  Payment     │  │  Method      │  │  Authentication            │  │
-│  │  Service     │  │  Auth Svc    │  │  Service                   │  │
-│  ├─────────────┤  ├──────────────┤  ├────────────────────────────┤  │
-│  │ Charge      │  │ PreAuth      │  │ CreateAccessToken          │  │
-│  │ Revoke      │  │ Authenticate │  │ CreateSessionToken         │  │
-│  │             │  │ PostAuth     │  │ CreateSdkSessionToken      │  │
-│  └─────────────┘  └──────────────┘  └────────────────────────────┘  │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────┐   │
+│  │  Recurring  │  │  Payment     │  │  Merchant                  │   │
+│  │  Payment    │  │  Method      │  │  Authentication            │   │
+│  │  Service    │  │  Auth Svc    │  │  Service                   │   │
+│  ├─────────────┤  ├──────────────┤  ├────────────────────────────┤   │
+│  │ Charge      │  │ PreAuth      │  │ CreateAccessToken          │   │
+│  │ Revoke      │  │ Authenticate │  │ CreateSessionToken         │   │
+│  │             │  │ PostAuth     │  │ CreateSdkSessionToken      │   │
+│  └─────────────┘  └──────────────┘  └────────────────────────────┘   │
 │                                                                      │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────┐  │
-│  │  Customer    │  │  PayMethod   │  │  Composite Payment         │  │
-│  │  Service     │  │  Service     │  │  Service                   │  │
-│  ├─────────────┤  ├──────────────┤  ├────────────────────────────┤  │
-│  │ Create      │  │ Tokenize     │  │ CompositeAuthorize         │  │
-│  │             │  │              │  │ CompositeGet               │  │
-│  └─────────────┘  └──────────────┘  └────────────────────────────┘  │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────────┐   │
+│  │  Customer   │  │  PayMethod   │  │  Composite Payment         │   │
+│  │  Service    │  │  Service     │  │  Service                   │   │
+│  ├─────────────┤  ├──────────────┤  ├────────────────────────────┤   │
+│  │ Create      │  │ Tokenize     │  │ CompositeAuthorize         │   │
+│  │             │  │              │  │ CompositeGet               │   │
+│  └─────────────┘  └──────────────┘  └────────────────────────────┘   │
 │                                                                      │
-│  ┌─────────────┐  ┌──────────────┐                                  │
-│  │  Event       │  │  Health      │                                  │
-│  │  Service     │  │  Service     │                                  │
-│  ├─────────────┤  ├──────────────┤                                  │
-│  │ HandleEvent │  │ Check        │                                  │
-│  └─────────────┘  └──────────────┘                                  │
+│  ┌─────────────┐   ┌──────────────┐                                  │
+│  │  Event      │   │  Health      │                                  │
+│  │  Service    │   │  Service     │                                  │
+│  ├─────────────┤   ├──────────────┤                                  │
+│  │ HandleEvent │   │ Check        │                                  │
+│  └─────────────┘   └──────────────┘                                  │
 └──────────────────────────────────────────────────────────────────────┘
                               │
                     ┌─────────┴──────────┐
-                    │  Connector Layer    │
-                    │  (110+ connectors)  │
+                    │  Connector Layer   │
+                    │  (110+ connectors) │
                     └────────────────────┘
 ```
 
@@ -572,54 +572,54 @@ Payments follow a state machine with 26 distinct states:
 
 ```
                           ┌──────────────────┐
-                          │     STARTED       │
+                          │     STARTED      │
                           └────────┬─────────┘
                                    │
                     ┌──────────────┼───────────────┐
                     ▼              ▼               ▼
           ┌─────────────┐  ┌────────────┐  ┌──────────────┐
-          │ PM_AWAITED   │  │CONFIRMATION│  │  DDC_PENDING  │
-          │              │  │  _AWAITED  │  │              │
-          └──────┬───────┘  └─────┬──────┘  └──────┬───────┘
-                 │                │                 │
-                 └────────┬───────┘                 │
-                          ▼                         │
-                 ┌────────────────┐                 │
-                 │ AUTH_PENDING    │◄────────────────┘
+          │ PM_AWAITED  │  │CONFIRMATION│  │  DDC_PENDING │
+          │             │  │  _AWAITED  │  │              │
+          └──────┬──────┘  └─────┬──────┘  └──────┬───────┘
+                 │               │                │
+                 └────────┬──────┘                │
+                          ▼                       │
+                 ┌────────────────┐               │
+                 │ AUTH_PENDING   │◄─────────────┘
                  └───────┬────────┘
                     ┌────┴────┐
                     ▼         ▼
-           ┌───────────┐ ┌──────────┐
+           ┌────────────┐ ┌──────────┐
            │AUTH_SUCCESS│ │AUTH_FAIL │
-           └─────┬─────┘ └──────────┘
+           └─────┬──────┘ └──────────┘
                  │
                  ▼
-            ┌──────────┐
+            ┌───────────┐
             │AUTHORIZING│
             └─────┬─────┘
             ┌─────┴──────────────────────┐
             ▼                            ▼
      ┌────────────┐              ┌──────────────┐
-     │ AUTHORIZED  │              │ AUTH_FAILED   │
+     │ AUTHORIZED │              │ AUTH_FAILED  │
      └──┬───┬───┬─┘              └──────────────┘
         │   │   │
    ┌────┘   │   └─────────┐
    ▼        ▼             ▼
-┌──────┐ ┌───────┐  ┌──────────┐
-│CAPTURE│ │ VOID  │  │ INCR_AUTH │
+┌───────┐ ┌───────┐  ┌──────────┐
+│CAPTURE│ │ VOID  │  │ INCR_AUTH│
 │_INIT  │ │_INIT  │  │          │
-└──┬───┘ └──┬────┘  └──────────┘
-   │        │
-   ▼        ▼
-┌──────┐ ┌──────┐
+└──┬────┘ └──┬────┘  └──────────┘
+   │         │
+   ▼         ▼
+┌───────┐ ┌──────┐
 │CHARGED│ │VOIDED│
-└──┬───┘ └──────┘
+└──┬────┘ └──────┘
    │
    ├──────────────┐
    ▼              ▼
 ┌──────────┐  ┌──────────────┐
-│PARTIAL_   │  │AUTO_REFUNDED │
-│CHARGED    │  │              │
+│PARTIAL_  │  │AUTO_REFUNDED │
+│CHARGED   │  │              │
 └──────────┘  └──────────────┘
 ```
 
