@@ -1,0 +1,67 @@
+{
+  "connector": "bankofamerica",
+  "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "Card": {
+        "status": "error",
+        "error": "Invalid Configuration: connector_account_details.api_secret"
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "error",
+        "error": "Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "get": {
+      "default": {
+        "status": "error",
+        "error": "Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "error",
+        "error": "Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "error",
+        "error": "Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "error",
+        "required_fields": [
+          "Amount",
+          "Cancellation Reason"
+        ],
+        "error": "Invalid Configuration: connector_account_details.api_secret"
+      }
+    }
+  }
+}

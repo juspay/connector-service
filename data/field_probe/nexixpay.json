@@ -1,0 +1,224 @@
+{
+  "connector": "nexixpay",
+  "flows": {
+    "authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "authorize": {
+      "Card": {
+        "status": "supported",
+        "required_fields": [
+          "authentication_data"
+        ],
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "shipping_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            },
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "THREE_DS",
+          "authentication_data": {
+            "eci": "05",
+            "cavv": "AAAAAA==",
+            "threeds_server_transaction_id": "probe_3ds_txn_id",
+            "message_version": "2.1.0",
+            "ds_transaction_id": "probe_ds_txn_id",
+            "acs_transaction_id": "probe_acs_txn_id",
+            "connector_transaction_id": "probe_connector_txn_id"
+          },
+          "return_url": "https://example.com/return",
+          "webhook_url": "https://example.com/webhook",
+          "complete_authorize_url": "https://example.com/complete",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/orders/3steps/payment",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": "{\"operationId\":\"probe_connector_txn_id\",\"order\":{\"orderId\":\"probe_txn_001\",\"amount\":\"1000\",\"currency\":\"USD\",\"customerInfo\":{\"cardHolderName\":\"John Doe\",\"billingAddress\":{\"name\":\"John Doe\",\"street\":\"123 Main St\",\"city\":\"Seattle\",\"postCode\":\"98101\",\"country\":\"USA\"},\"shippingAddress\":null}},\"card\":{\"pan\":\"4111111111111111\",\"expiryDate\":\"0330\",\"cvv\":\"737\"},\"captureType\":\"IMPLICIT\",\"threeDSAuthData\":{\"authenticationValue\":\"AAAAAA==\"},\"recurrence\":{\"action\":\"NO_RECURRING\"}}"
+        }
+      },
+      "SamsungPay": {
+        "status": "error",
+        "error": "Payment method data construction failed"
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_capture_id": "probe_capture_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount_to_capture": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/operations/probe_connector_txn_001/captures",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "idempotency-key": "HS_probe00000000000000000",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": "{\"amount\":\"1000\",\"currency\":\"USD\"}"
+        }
+      }
+    },
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/operations/probe_connector_txn_001",
+          "method": "Get",
+          "headers": {
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": null
+        }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Address is required"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request"
+        },
+        "sample": {
+          "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/operations/probe_connector_txn_001/refunds",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "idempotency-key": "HS_probe00000000000000000",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": "{\"amount\":\"1000\",\"currency\":\"USD\",\"description\":\"customer_request\"}"
+        }
+      }
+    },
+    "void": {
+      "default": {
+        "status": "supported",
+        "required_fields": [
+          "amount for void operation"
+        ],
+        "proto_request": {
+          "merchant_void_id": "probe_void_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://xpaysandbox.nexigroup.com/api/phoenix-0.0/psp/api/v1/operations/probe_connector_txn_001/refunds",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "correlation-id": "00000000-0000-0000-0000-000000000000",
+            "idempotency-key": "HS_probe00000000000000000",
+            "via": "HyperSwitch",
+            "x-api-key": "probe_key"
+          },
+          "body": "{\"amount\":\"1000\",\"currency\":\"USD\"}"
+        }
+      }
+    }
+  }
+}
