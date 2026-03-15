@@ -23,15 +23,13 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
     PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
-    PaymentMethodAuthenticationServicePreAuthenticateResponse,
-    PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse,
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-    PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
-    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse,
-    PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest,
-    PaymentServiceReverseRequest, PaymentServiceReverseResponse,
-    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,
+    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
+    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
     RequestConfig,
 };
@@ -259,35 +257,143 @@ impl ConnectorClient {
 
     // ── Payment flows (generated via impl_flow_method!) ──────────────────────
 
-    impl_flow_method!(capture, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, capture_req_handler, capture_res_handler);
-    impl_flow_method!(refund, PaymentServiceRefundRequest, RefundResponse, refund_req_handler, refund_res_handler);
-    impl_flow_method!(void, PaymentServiceVoidRequest, PaymentServiceVoidResponse, void_req_handler, void_res_handler);
-    impl_flow_method!(get, PaymentServiceGetRequest, PaymentServiceGetResponse, get_req_handler, get_res_handler);
-    impl_flow_method!(setup_recurring, PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse, setup_recurring_req_handler, setup_recurring_res_handler);
-    impl_flow_method!(reverse, PaymentServiceReverseRequest, PaymentServiceReverseResponse, reverse_req_handler, reverse_res_handler);
-    impl_flow_method!(create_order, PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, create_order_req_handler, create_order_res_handler);
+    impl_flow_method!(
+        capture,
+        PaymentServiceCaptureRequest,
+        PaymentServiceCaptureResponse,
+        capture_req_handler,
+        capture_res_handler
+    );
+    impl_flow_method!(
+        refund,
+        PaymentServiceRefundRequest,
+        RefundResponse,
+        refund_req_handler,
+        refund_res_handler
+    );
+    impl_flow_method!(
+        void,
+        PaymentServiceVoidRequest,
+        PaymentServiceVoidResponse,
+        void_req_handler,
+        void_res_handler
+    );
+    impl_flow_method!(
+        get,
+        PaymentServiceGetRequest,
+        PaymentServiceGetResponse,
+        get_req_handler,
+        get_res_handler
+    );
+    impl_flow_method!(
+        setup_recurring,
+        PaymentServiceSetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse,
+        setup_recurring_req_handler,
+        setup_recurring_res_handler
+    );
+    impl_flow_method!(
+        reverse,
+        PaymentServiceReverseRequest,
+        PaymentServiceReverseResponse,
+        reverse_req_handler,
+        reverse_res_handler
+    );
+    impl_flow_method!(
+        create_order,
+        PaymentServiceCreateOrderRequest,
+        PaymentServiceCreateOrderResponse,
+        create_order_req_handler,
+        create_order_res_handler
+    );
 
     // ── Recurring / tokenization ──────────────────────────────────────────────
     // Note: the probe data uses "recurring_charge" as the flow key; the FFI handler is "charge".
-    impl_flow_method!(recurring_charge, RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, charge_req_handler, charge_res_handler);
-    impl_flow_method!(tokenize, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse, tokenize_req_handler, tokenize_res_handler);
+    impl_flow_method!(
+        recurring_charge,
+        RecurringPaymentServiceChargeRequest,
+        RecurringPaymentServiceChargeResponse,
+        charge_req_handler,
+        charge_res_handler
+    );
+    impl_flow_method!(
+        tokenize,
+        PaymentMethodServiceTokenizeRequest,
+        PaymentMethodServiceTokenizeResponse,
+        tokenize_req_handler,
+        tokenize_res_handler
+    );
 
     // ── Customer management ───────────────────────────────────────────────────
     // Note: the probe data uses "create_customer" as the flow key; the FFI handler is "create".
-    impl_flow_method!(create_customer, CustomerServiceCreateRequest, CustomerServiceCreateResponse, create_req_handler, create_res_handler);
+    impl_flow_method!(
+        create_customer,
+        CustomerServiceCreateRequest,
+        CustomerServiceCreateResponse,
+        create_req_handler,
+        create_res_handler
+    );
 
     // ── Dispute flows ─────────────────────────────────────────────────────────
     // Note: probe data keys are "dispute_accept", "dispute_defend", "dispute_submit_evidence".
-    impl_flow_method!(dispute_accept, DisputeServiceAcceptRequest, DisputeServiceAcceptResponse, accept_req_handler, accept_res_handler);
-    impl_flow_method!(dispute_defend, DisputeServiceDefendRequest, DisputeServiceDefendResponse, defend_req_handler, defend_res_handler);
-    impl_flow_method!(dispute_submit_evidence, DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse, submit_evidence_req_handler, submit_evidence_res_handler);
+    impl_flow_method!(
+        dispute_accept,
+        DisputeServiceAcceptRequest,
+        DisputeServiceAcceptResponse,
+        accept_req_handler,
+        accept_res_handler
+    );
+    impl_flow_method!(
+        dispute_defend,
+        DisputeServiceDefendRequest,
+        DisputeServiceDefendResponse,
+        defend_req_handler,
+        defend_res_handler
+    );
+    impl_flow_method!(
+        dispute_submit_evidence,
+        DisputeServiceSubmitEvidenceRequest,
+        DisputeServiceSubmitEvidenceResponse,
+        submit_evidence_req_handler,
+        submit_evidence_res_handler
+    );
 
     // ── Authentication flows ──────────────────────────────────────────────────
-    impl_flow_method!(create_access_token, MerchantAuthenticationServiceCreateAccessTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse, create_access_token_req_handler, create_access_token_res_handler);
-    impl_flow_method!(create_session_token, MerchantAuthenticationServiceCreateSessionTokenRequest, MerchantAuthenticationServiceCreateSessionTokenResponse, create_session_token_req_handler, create_session_token_res_handler);
-    impl_flow_method!(pre_authenticate, PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse, pre_authenticate_req_handler, pre_authenticate_res_handler);
-    impl_flow_method!(authenticate, PaymentMethodAuthenticationServiceAuthenticateRequest, PaymentMethodAuthenticationServiceAuthenticateResponse, authenticate_req_handler, authenticate_res_handler);
-    impl_flow_method!(post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, post_authenticate_req_handler, post_authenticate_res_handler);
+    impl_flow_method!(
+        create_access_token,
+        MerchantAuthenticationServiceCreateAccessTokenRequest,
+        MerchantAuthenticationServiceCreateAccessTokenResponse,
+        create_access_token_req_handler,
+        create_access_token_res_handler
+    );
+    impl_flow_method!(
+        create_session_token,
+        MerchantAuthenticationServiceCreateSessionTokenRequest,
+        MerchantAuthenticationServiceCreateSessionTokenResponse,
+        create_session_token_req_handler,
+        create_session_token_res_handler
+    );
+    impl_flow_method!(
+        pre_authenticate,
+        PaymentMethodAuthenticationServicePreAuthenticateRequest,
+        PaymentMethodAuthenticationServicePreAuthenticateResponse,
+        pre_authenticate_req_handler,
+        pre_authenticate_res_handler
+    );
+    impl_flow_method!(
+        authenticate,
+        PaymentMethodAuthenticationServiceAuthenticateRequest,
+        PaymentMethodAuthenticationServiceAuthenticateResponse,
+        authenticate_req_handler,
+        authenticate_res_handler
+    );
+    impl_flow_method!(
+        post_authenticate,
+        PaymentMethodAuthenticationServicePostAuthenticateRequest,
+        PaymentMethodAuthenticationServicePostAuthenticateResponse,
+        post_authenticate_req_handler,
+        post_authenticate_res_handler
+    );
 }
 
 /// Internal helper to build the context-heavy FfiRequestData from raw inputs.
