@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.NUVEI,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.nuvei.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     nuvei=payment_pb2.NuveiConfig(api_key=...),
+# ))
 
 ```
 
@@ -112,7 +113,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L30) · [Rust](../../examples/nuvei/rust/nuvei.rs#L25)
+**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L75) · [Rust](../../examples/nuvei/rust/nuvei.rs#L71)
 
 #### PaymentService.Get
 
@@ -123,7 +124,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L60) · [Rust](../../examples/nuvei/rust/nuvei.rs#L49)
+**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L98) · [Rust](../../examples/nuvei/rust/nuvei.rs#L88)
 
 #### PaymentService.Refund
 
@@ -134,7 +135,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L74) · [Rust](../../examples/nuvei/rust/nuvei.rs#L61)
+**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L106) · [Rust](../../examples/nuvei/rust/nuvei.rs#L94)
 
 #### PaymentService.Void
 
@@ -145,7 +146,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L93) · [Rust](../../examples/nuvei/rust/nuvei.rs#L76)
+**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L116) · [Rust](../../examples/nuvei/rust/nuvei.rs#L100)
 
 ### Authentication
 
@@ -158,4 +159,4 @@ Create session token for payment processing. Maintains session state across mult
 | **Request** | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateSessionTokenResponse` |
 
-**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt) · [Rust](../../examples/nuvei/rust/nuvei.rs#L38)
+**Examples:** [Python](../../examples/nuvei/python/nuvei.py) · [JavaScript](../../examples/nuvei/javascript/nuvei.js) · [Kotlin](../../examples/nuvei/kotlin/nuvei.kt#L85) · [Rust](../../examples/nuvei/rust/nuvei.rs#L77)

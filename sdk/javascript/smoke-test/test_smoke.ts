@@ -18,7 +18,7 @@ import { PaymentClient, types } from "hs-playlib";
 import * as fs from "fs";
 import * as path from "path";
 
-const { ConnectorConfig, Environment, Connector, RequestError, ResponseError } = types;
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, RequestError, ResponseError } = types;
 
 // ── ANSI color helpers ──────────────────────────────────────────────────────
 const _NO_COLOR = !process.stdout.isTTY || !!process.env["NO_COLOR"];
@@ -96,21 +96,17 @@ function hasValidCredentials(authConfig: AuthConfig): boolean {
 }
 
 function buildConnectorConfig(connectorKey: string, authConfig: AuthConfig): any {
-    const connectorEnum = (Connector as any)[connectorKey.toUpperCase()];
-    if (!connectorEnum) throw new Error(`Unknown connector: ${connectorKey}`);
-
-    const authFields: Record<string, any> = {};
+    const connectorFields: Record<string, any> = {};
     for (const [key, value] of Object.entries(authConfig)) {
         if (key !== "_comment" && key !== "metadata") {
             const camelKey = key.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
-            authFields[camelKey] = value;
+            connectorFields[camelKey] = value;
         }
     }
 
     return ConnectorConfig.create({
-        connector: connectorEnum,
-        environment: Environment.SANDBOX,
-        auth: { [connectorKey.toLowerCase()]: authFields },
+        connectorConfig: ConnectorSpecificConfig.create({ [connectorKey.toLowerCase()]: connectorFields }),
+        options: SdkOptions.create({ environment: Environment.SANDBOX }),
     });
 }
 
@@ -185,8 +181,13 @@ async function testConnectorScenarios(
             console.log(_green("✓ ok") + _grey(` — ${summary}`));
             result.scenarios[scenarioKey] = { passed: true, result: response };
         } catch (e: any) {
-            if (e instanceof (RequestError as any) || e instanceof (ResponseError as any) ||
-                e?.constructor?.name === "RequestError" || e?.constructor?.name === "ResponseError") {
+            const isConnectorError =
+                e instanceof (RequestError as any) || e instanceof (ResponseError as any) ||
+                e?.constructor?.name === "RequestError" || e?.constructor?.name === "ResponseError" ||
+                // FFI-level panics (e.g. HandlerError, InvalidWalletToken) surface as a plain
+                // Error with a "Rust panic: ..." message — treat them as connector errors.
+                (typeof e?.message === "string" && e.message.startsWith("Rust panic:"));
+            if (isConnectorError) {
                 const msg = e.errorMessage || e.message || String(e);
                 const code = e.errorCode;
                 const detail = code ? `${code}: ${msg}` : msg;

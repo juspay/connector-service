@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.PAYTM,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.paytm.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     paytm=payment_pb2.PaytmConfig(api_key=...),
+# ))
 
 ```
 
@@ -109,7 +110,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L40) · [Rust](../../examples/paytm/rust/paytm.rs#L36)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L50) · [Rust](../../examples/paytm/rust/paytm.rs#L47)
 
 ### Authentication
 
@@ -122,4 +123,4 @@ Create session token for payment processing. Maintains session state across mult
 | **Request** | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateSessionTokenResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt) · [Rust](../../examples/paytm/rust/paytm.rs#L25)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L37) · [Rust](../../examples/paytm/rust/paytm.rs#L36)

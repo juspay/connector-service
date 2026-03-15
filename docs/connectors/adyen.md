@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.ADYEN,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.adyen.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     adyen=payment_pb2.AdyenConfig(api_key=...),
+# ))
 
 ```
 
@@ -107,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L24) · [JavaScript](../../examples/adyen/javascript/adyen.js#L22) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L42) · [Rust](../../examples/adyen/rust/adyen.rs#L26)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L120) · [JavaScript](../../examples/adyen/javascript/adyen.js#L111) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L143) · [Rust](../../examples/adyen/rust/adyen.rs#L130)
 
 ### Card Payment (Automatic Capture)
 
@@ -121,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L128) · [JavaScript](../../examples/adyen/javascript/adyen.js#L121) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L137) · [Rust](../../examples/adyen/rust/adyen.rs#L123)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L145) · [JavaScript](../../examples/adyen/javascript/adyen.js#L137) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L165) · [Rust](../../examples/adyen/rust/adyen.rs#L152)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -135,7 +136,7 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L216) · [JavaScript](../../examples/adyen/javascript/adyen.js#L206) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L219) · [Rust](../../examples/adyen/rust/adyen.rs#L206)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L164) · [JavaScript](../../examples/adyen/javascript/adyen.js#L156) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L181) · [Rust](../../examples/adyen/rust/adyen.rs#L167)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -149,13 +150,13 @@ Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L311) · [JavaScript](../../examples/adyen/javascript/adyen.js#L298) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L308) · [Rust](../../examples/adyen/rust/adyen.rs#L296)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L259) · [JavaScript](../../examples/adyen/javascript/adyen.js#L248) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L270) · [Rust](../../examples/adyen/rust/adyen.rs#L257)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L396) · [JavaScript](../../examples/adyen/javascript/adyen.js#L380) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L387) · [Rust](../../examples/adyen/rust/adyen.rs#L376)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L344) · [JavaScript](../../examples/adyen/javascript/adyen.js#L330) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L349) · [Rust](../../examples/adyen/rust/adyen.rs#L337)
 
 ### Recurring / Mandate Payments
 
@@ -168,13 +169,13 @@ Store a payment mandate with SetupRecurring, then charge it repeatedly with Recu
 | `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
 | `FAILED` | Setup failed — customer must re-enter payment details |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L502) · [JavaScript](../../examples/adyen/javascript/adyen.js#L481) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L484) · [Rust](../../examples/adyen/rust/adyen.rs#L475)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L381) · [JavaScript](../../examples/adyen/javascript/adyen.js#L365) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L371) · [Rust](../../examples/adyen/rust/adyen.rs#L359)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L600) · [JavaScript](../../examples/adyen/javascript/adyen.js#L570) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L575) · [Rust](../../examples/adyen/rust/adyen.rs#L563)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L479) · [JavaScript](../../examples/adyen/javascript/adyen.js#L454) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L462) · [Rust](../../examples/adyen/rust/adyen.rs#L447)
 
 ## API Reference
 
@@ -354,7 +355,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L697) · [JavaScript](../../examples/adyen/javascript/adyen.js#L660) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L662) · [Rust](../../examples/adyen/rust/adyen.rs#L651)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L501) · [JavaScript](../../examples/adyen/javascript/adyen.js#L475) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L480) · [Rust](../../examples/adyen/rust/adyen.rs#L464)
 
 #### PaymentService.Capture
 
@@ -365,7 +366,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L782) · [JavaScript](../../examples/adyen/javascript/adyen.js#L742) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L740) · [Rust](../../examples/adyen/rust/adyen.rs#L730)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L510) · [JavaScript](../../examples/adyen/javascript/adyen.js#L484) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L492) · [Rust](../../examples/adyen/rust/adyen.rs#L475)
 
 #### PaymentService.Refund
 
@@ -376,7 +377,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py) · [JavaScript](../../examples/adyen/javascript/adyen.js) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L824) · [Rust](../../examples/adyen/rust/adyen.rs#L800)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L344) · [JavaScript](../../examples/adyen/javascript/adyen.js#L330) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L569) · [Rust](../../examples/adyen/rust/adyen.rs#L538)
 
 #### PaymentService.SetupRecurring
 
@@ -387,7 +388,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L891) · [JavaScript](../../examples/adyen/javascript/adyen.js#L828) · [Kotlin](../../examples/adyen/kotlin/adyen.kt) · [Rust](../../examples/adyen/rust/adyen.rs#L815)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L605) · [JavaScript](../../examples/adyen/javascript/adyen.js#L560) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L579) · [Rust](../../examples/adyen/rust/adyen.rs#L544)
 
 #### PaymentService.Void
 
@@ -398,7 +399,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L968) · [JavaScript](../../examples/adyen/javascript/adyen.js) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L912) · [Rust](../../examples/adyen/rust/adyen.rs#L884)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L682) · [JavaScript](../../examples/adyen/javascript/adyen.js#L630) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L648) · [Rust](../../examples/adyen/rust/adyen.rs#L613)
 
 ### Mandates
 
@@ -411,7 +412,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L858) · [JavaScript](../../examples/adyen/javascript/adyen.js#L799) · [Kotlin](../../examples/adyen/kotlin/adyen.kt) · [Rust](../../examples/adyen/rust/adyen.rs#L775)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L572) · [JavaScript](../../examples/adyen/javascript/adyen.js#L531) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L540) · [Rust](../../examples/adyen/rust/adyen.rs#L513)
 
 ### Disputes
 
@@ -424,7 +425,7 @@ Concede dispute and accepts chargeback loss. Acknowledges liability and stops di
 | **Request** | `DisputeServiceAcceptRequest` |
 | **Response** | `DisputeServiceAcceptResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L805) · [JavaScript](../../examples/adyen/javascript/adyen.js#L761) · [Kotlin](../../examples/adyen/kotlin/adyen.kt) · [Rust](../../examples/adyen/rust/adyen.rs#L743)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L519) · [JavaScript](../../examples/adyen/javascript/adyen.js#L493) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L502) · [Rust](../../examples/adyen/rust/adyen.rs#L481)
 
 #### DisputeService.Defend
 
@@ -435,7 +436,7 @@ Submit defense with reason code for dispute. Presents formal argument against cu
 | **Request** | `DisputeServiceDefendRequest` |
 | **Response** | `DisputeServiceDefendResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L822) · [JavaScript](../../examples/adyen/javascript/adyen.js#L773) · [Kotlin](../../examples/adyen/kotlin/adyen.kt) · [Rust](../../examples/adyen/rust/adyen.rs#L753)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L536) · [JavaScript](../../examples/adyen/javascript/adyen.js#L505) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L514) · [Rust](../../examples/adyen/rust/adyen.rs#L491)
 
 #### DisputeService.SubmitEvidence
 
@@ -446,4 +447,4 @@ Upload evidence to dispute customer chargeback. Provides documentation like rece
 | **Request** | `DisputeServiceSubmitEvidenceRequest` |
 | **Response** | `DisputeServiceSubmitEvidenceResponse` |
 
-**Examples:** [Python](../../examples/adyen/python/adyen.py#L840) · [JavaScript](../../examples/adyen/javascript/adyen.js#L786) · [Kotlin](../../examples/adyen/kotlin/adyen.kt) · [Rust](../../examples/adyen/rust/adyen.rs#L764)
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L554) · [JavaScript](../../examples/adyen/javascript/adyen.js#L518) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L527) · [Rust](../../examples/adyen/rust/adyen.rs#L502)

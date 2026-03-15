@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.NEXINETS,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.nexinets.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     nexinets=payment_pb2.NexinetsConfig(api_key=...),
+# ))
 
 ```
 
@@ -107,7 +108,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L22) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L22) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L31) · [Rust](../../examples/nexinets/rust/nexinets.rs#L26)
+**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L108) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L103) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L124) · [Rust](../../examples/nexinets/rust/nexinets.rs#L122)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -121,19 +122,19 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L110) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L107) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L113) · [Rust](../../examples/nexinets/rust/nexinets.rs#L109)
+**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L127) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L122) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L140) · [Rust](../../examples/nexinets/rust/nexinets.rs#L137)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L202) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L196) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L199) · [Rust](../../examples/nexinets/rust/nexinets.rs#L198)
+**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L219) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L211) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L226) · [Rust](../../examples/nexinets/rust/nexinets.rs#L226)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L308) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L297) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L296) · [Rust](../../examples/nexinets/rust/nexinets.rs#L297)
+**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L256) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L246) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L248) · [Rust](../../examples/nexinets/rust/nexinets.rs#L248)
 
 ## API Reference
 
@@ -217,7 +218,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L408) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L390) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L386) · [Rust](../../examples/nexinets/rust/nexinets.rs#L388)
+**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L278) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L267) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L266) · [Rust](../../examples/nexinets/rust/nexinets.rs#L265)
 
 #### PaymentService.Get
 
@@ -228,7 +229,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L493) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L472) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L464) · [Rust](../../examples/nexinets/rust/nexinets.rs#L467)
+**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L287) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L276) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L278) · [Rust](../../examples/nexinets/rust/nexinets.rs#L276)
 
 #### PaymentService.Refund
 
@@ -239,4 +240,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nexinets/python/nexinets.py) · [JavaScript](../../examples/nexinets/javascript/nexinets.js) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L478) · [Rust](../../examples/nexinets/rust/nexinets.rs#L479)
+**Examples:** [Python](../../examples/nexinets/python/nexinets.py#L219) · [JavaScript](../../examples/nexinets/javascript/nexinets.js#L211) · [Kotlin](../../examples/nexinets/kotlin/nexinets.kt#L286) · [Rust](../../examples/nexinets/rust/nexinets.rs#L282)

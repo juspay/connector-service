@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.PAYME,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.payme.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     payme=payment_pb2.PaymeConfig(api_key=...),
+# ))
 
 ```
 
@@ -112,7 +113,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L29) · [Rust](../../examples/payme/rust/payme.rs#L25)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L74) · [Rust](../../examples/payme/rust/payme.rs#L71)
 
 #### PaymentService.CreateOrder
 
@@ -123,7 +124,7 @@ Initialize an order in the payment processor system. Sets up payment context bef
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt) · [Rust](../../examples/payme/rust/payme.rs#L38)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L84) · [Rust](../../examples/payme/rust/payme.rs#L77)
 
 #### PaymentService.Get
 
@@ -134,7 +135,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L60) · [Rust](../../examples/payme/rust/payme.rs#L50)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L98) · [Rust](../../examples/payme/rust/payme.rs#L89)
 
 #### PaymentService.Refund
 
@@ -145,7 +146,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L74) · [Rust](../../examples/payme/rust/payme.rs#L62)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L106) · [Rust](../../examples/payme/rust/payme.rs#L95)
 
 #### PaymentService.Void
 
@@ -156,4 +157,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L93) · [Rust](../../examples/payme/rust/payme.rs#L77)
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L116) · [Rust](../../examples/payme/rust/payme.rs#L101)

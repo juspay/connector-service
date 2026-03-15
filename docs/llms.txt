@@ -113,9 +113,9 @@ examples_python: examples/bluesnap/python/bluesnap.py
 ## Braintree
 connector_id: braintree
 doc: docs/connectors/braintree.md
-scenarios: checkout_card, checkout_autocapture, refund, void_payment, get_payment, tokenize
+scenarios: checkout_card, checkout_autocapture, void_payment, get_payment, tokenize
 payment_methods: Card
-flows: authorize, capture, get, refund, tokenize, void
+flows: authorize, capture, get, tokenize, void
 examples_python: examples/braintree/python/braintree.py
 
 ## Calida
@@ -297,10 +297,10 @@ examples_python: none
 ## Jpmorgan
 connector_id: jpmorgan
 doc: docs/connectors/jpmorgan.md
-scenarios: checkout_card, checkout_autocapture, checkout_bank, refund, void_payment, get_payment
-payment_methods: Ach, Card
-flows: authorize, capture, create_access_token, get, refund, void
-examples_python: examples/jpmorgan/python/jpmorgan.py
+scenarios: none
+payment_methods: none
+flows: capture, create_access_token, get, void
+examples_python: none
 
 ## Loonio
 connector_id: loonio
@@ -417,10 +417,10 @@ examples_python: examples/paypal/python/paypal.py
 ## Paysafe
 connector_id: paysafe
 doc: docs/connectors/paysafe.md
-scenarios: checkout_card, checkout_autocapture, checkout_wallet, checkout_bank, refund, void_payment, get_payment
-payment_methods: Ach, Affirm, Afterpay, ApplePay, Bacs, Becs, Blik, Card, GooglePay, Ideal, Klarna, PaypalRedirect, Sepa, UpiCollect
-flows: authorize, capture, get, refund, void
-examples_python: examples/paysafe/python/paysafe.py
+scenarios: none
+payment_methods: none
+flows: capture, get, refund, void
+examples_python: none
 
 ## Paytm
 connector_id: paytm
@@ -593,10 +593,10 @@ examples_python: examples/wellsfargo/python/wellsfargo.py
 ## Worldpay
 connector_id: worldpay
 doc: docs/connectors/worldpay.md
-scenarios: checkout_card, checkout_autocapture, checkout_wallet, refund, void_payment, get_payment
-payment_methods: ApplePay, Card, GooglePay
-flows: authorize, capture, get, recurring_charge, refund, void
-examples_python: examples/worldpay/python/worldpay.py
+scenarios: none
+payment_methods: none
+flows: capture, get, refund, void
+examples_python: none
 
 ## Worldpayvantiv
 connector_id: worldpayvantiv

@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.MOLLIE,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.mollie.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     mollie=payment_pb2.MollieConfig(api_key=...),
+# ))
 
 ```
 
@@ -107,25 +108,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L22) · [JavaScript](../../examples/mollie/javascript/mollie.js#L22) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L32) · [Rust](../../examples/mollie/rust/mollie.rs#L26)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L118) · [JavaScript](../../examples/mollie/javascript/mollie.js#L111) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L133) · [Rust](../../examples/mollie/rust/mollie.rs#L130)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L111) · [JavaScript](../../examples/mollie/javascript/mollie.js#L108) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L115) · [Rust](../../examples/mollie/rust/mollie.rs#L110)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L137) · [JavaScript](../../examples/mollie/javascript/mollie.js#L130) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L149) · [Rust](../../examples/mollie/rust/mollie.rs#L145)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L218) · [JavaScript](../../examples/mollie/javascript/mollie.js#L210) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L213) · [Rust](../../examples/mollie/rust/mollie.rs#L210)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L174) · [JavaScript](../../examples/mollie/javascript/mollie.js#L165) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L171) · [Rust](../../examples/mollie/rust/mollie.rs#L167)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L316) · [JavaScript](../../examples/mollie/javascript/mollie.js#L302) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L302) · [Rust](../../examples/mollie/rust/mollie.rs#L300)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L196) · [JavaScript](../../examples/mollie/javascript/mollie.js#L187) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L190) · [Rust](../../examples/mollie/rust/mollie.rs#L185)
 
 ## API Reference
 
@@ -170,7 +171,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L417) · [JavaScript](../../examples/mollie/javascript/mollie.js#L396) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L393) · [Rust](../../examples/mollie/rust/mollie.rs#L392)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L218) · [JavaScript](../../examples/mollie/javascript/mollie.js#L208) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L208) · [Rust](../../examples/mollie/rust/mollie.rs#L202)
 
 #### PaymentService.Get
 
@@ -181,7 +182,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L503) · [JavaScript](../../examples/mollie/javascript/mollie.js#L479) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L472) · [Rust](../../examples/mollie/rust/mollie.rs#L472)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L227) · [JavaScript](../../examples/mollie/javascript/mollie.js#L217) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L220) · [Rust](../../examples/mollie/rust/mollie.rs#L213)
 
 #### PaymentService.Refund
 
@@ -192,7 +193,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py) · [JavaScript](../../examples/mollie/javascript/mollie.js) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L486) · [Rust](../../examples/mollie/rust/mollie.rs#L484)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L137) · [JavaScript](../../examples/mollie/javascript/mollie.js#L130) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L228) · [Rust](../../examples/mollie/rust/mollie.rs#L219)
 
 #### PaymentService.Void
 
@@ -203,4 +204,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/mollie/python/mollie.py#L522) · [JavaScript](../../examples/mollie/javascript/mollie.js) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L505) · [Rust](../../examples/mollie/rust/mollie.rs#L499)
+**Examples:** [Python](../../examples/mollie/python/mollie.py#L236) · [JavaScript](../../examples/mollie/javascript/mollie.js#L226) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L238) · [Rust](../../examples/mollie/rust/mollie.rs#L225)

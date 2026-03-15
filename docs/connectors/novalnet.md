@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.NOVALNET,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.novalnet.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     novalnet=payment_pb2.NovalnetConfig(api_key=...),
+# ))
 
 ```
 
@@ -107,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L22) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L22) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L33) · [Rust](../../examples/novalnet/rust/novalnet.rs#L26)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L130) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L121) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L144) · [Rust](../../examples/novalnet/rust/novalnet.rs#L140)
 
 ### Card Payment (Automatic Capture)
 
@@ -121,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L126) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L121) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L128) · [Rust](../../examples/novalnet/rust/novalnet.rs#L123)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L155) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L147) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L166) · [Rust](../../examples/novalnet/rust/novalnet.rs#L162)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -135,7 +136,7 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L214) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L206) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L210) · [Rust](../../examples/novalnet/rust/novalnet.rs#L206)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L174) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L166) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L182) · [Rust](../../examples/novalnet/rust/novalnet.rs#L177)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -149,25 +150,25 @@ Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L309) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L298) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L299) · [Rust](../../examples/novalnet/rust/novalnet.rs#L296)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L269) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L258) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L271) · [Rust](../../examples/novalnet/rust/novalnet.rs#L267)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L394) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L380) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L378) · [Rust](../../examples/novalnet/rust/novalnet.rs#L376)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L354) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L340) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L350) · [Rust](../../examples/novalnet/rust/novalnet.rs#L347)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L500) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L481) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L475) · [Rust](../../examples/novalnet/rust/novalnet.rs#L475)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L391) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L375) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L372) · [Rust](../../examples/novalnet/rust/novalnet.rs#L369)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L597) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L572) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L563) · [Rust](../../examples/novalnet/rust/novalnet.rs#L564)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L413) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L397) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L391) · [Rust](../../examples/novalnet/rust/novalnet.rs#L387)
 
 ## API Reference
 
@@ -290,7 +291,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L697) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L665) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L653) · [Rust](../../examples/novalnet/rust/novalnet.rs#L655)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L435) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L418) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L409) · [Rust](../../examples/novalnet/rust/novalnet.rs#L404)
 
 #### PaymentService.Capture
 
@@ -301,7 +302,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L782) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L747) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L731) · [Rust](../../examples/novalnet/rust/novalnet.rs#L734)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L444) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L427) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L421) · [Rust](../../examples/novalnet/rust/novalnet.rs#L415)
 
 #### PaymentService.Get
 
@@ -312,7 +313,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L805) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L766) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L748) · [Rust](../../examples/novalnet/rust/novalnet.rs#L747)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L453) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L436) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L431) · [Rust](../../examples/novalnet/rust/novalnet.rs#L421)
 
 #### PaymentService.Refund
 
@@ -323,7 +324,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py) · [JavaScript](../../examples/novalnet/javascript/novalnet.js) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L762) · [Rust](../../examples/novalnet/rust/novalnet.rs#L759)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L354) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L340) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L439) · [Rust](../../examples/novalnet/rust/novalnet.rs#L427)
 
 #### PaymentService.Void
 
@@ -334,4 +335,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L824) · [JavaScript](../../examples/novalnet/javascript/novalnet.js) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L781) · [Rust](../../examples/novalnet/rust/novalnet.rs#L774)
+**Examples:** [Python](../../examples/novalnet/python/novalnet.py#L462) · [JavaScript](../../examples/novalnet/javascript/novalnet.js#L445) · [Kotlin](../../examples/novalnet/kotlin/novalnet.kt#L449) · [Rust](../../examples/novalnet/rust/novalnet.rs#L433)

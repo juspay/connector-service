@@ -28,23 +28,12 @@ import payments.Currency
 import payments.FutureUsage
 import payments.PaymentMethodType
 import payments.ConnectorConfig
-import payments.Connector
+import payments.SdkOptions
 import payments.Environment
 
-val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
-    .setConnector(Connector.STRIPE)
-    .setEnvironment(Environment.SANDBOX)
-    // .setAuth(...) — set your connector auth here
-    .build()
 
-
-// Scenario: Card Payment (Authorize + Capture)
-// Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
-fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
-    val paymentClient = PaymentClient(config)
-
-    // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().apply {
+private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAuthorizeRequest {
+    return PaymentServiceAuthorizeRequest.newBuilder().apply {
         merchantTransactionId = "probe_txn_001"  // Identification
         amountBuilder.apply {  // The amount for the payment
             minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
@@ -59,7 +48,7 @@ fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig)
                 cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
             }
         }
-        captureMethod = CaptureMethod.MANUAL  // Method for capturing the payment
+        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
         customerBuilder.apply {  // Customer Information
             name = "John Doe"  // Customer's full name
             emailBuilder.value = "test@example.com"  // Customer's email address
@@ -110,7 +99,63 @@ fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig)
             acceptLanguage = "en-US,en;q=0.9"
             ipAddress = "1.2.3.4"  // Device Information
         }
-    }.build())
+    }.build()
+}
+
+private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServiceCaptureRequest {
+    return PaymentServiceCaptureRequest.newBuilder().apply {
+        merchantCaptureId = "probe_capture_001"  // Identification
+        connectorTransactionId = connectorTransactionIdStr
+        amountToCaptureBuilder.apply {  // Capture Details
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    }.build()
+}
+
+private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
+    return PaymentServiceGetRequest.newBuilder().apply {
+        connectorTransactionId = connectorTransactionIdStr
+        amountBuilder.apply {  // Amount Information
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    }.build()
+}
+
+private fun buildRefundRequest(connectorTransactionIdStr: String): PaymentServiceRefundRequest {
+    return PaymentServiceRefundRequest.newBuilder().apply {
+        merchantRefundId = "probe_refund_001"  // Identification
+        connectorTransactionId = connectorTransactionIdStr
+        paymentAmount = 1000L  // Amount Information
+        refundAmountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        reason = "customer_request"  // Reason for the refund
+    }.build()
+}
+
+private fun buildVoidRequest(connectorTransactionIdStr: String): PaymentServiceVoidRequest {
+    return PaymentServiceVoidRequest.newBuilder().apply {
+        merchantVoidId = "probe_void_001"  // Identification
+        connectorTransactionId = connectorTransactionIdStr
+    }.build()
+}
+
+val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
+    .setOptions(SdkOptions.newBuilder().setEnvironment(Environment.SANDBOX).build())
+    // .setConnectorConfig(...) — set your connector config here
+    .build()
+
+
+// Scenario: Card Payment (Authorize + Capture)
+// Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val paymentClient = PaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
 
     when (authorizeResponse.status.name) {
         "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
@@ -118,14 +163,7 @@ fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig)
     }
 
     // Step 2: Capture — settle the reserved funds
-    val captureResponse = paymentClient.capture(PaymentServiceCaptureRequest.newBuilder().apply {
-        merchantCaptureId = "probe_capture_001"  // Identification
-        amountToCaptureBuilder.apply {  // Capture Details
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize
-    }.build())
+    val captureResponse = paymentClient.capture(buildCaptureRequest(authorizeResponse.connectorTransactionId ?: ""))
 
     if (captureResponse.status.name == "FAILED")
         throw RuntimeException("Capture failed: ${captureResponse.error.unifiedDetails.message}")
@@ -139,73 +177,7 @@ fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig = _default
     val paymentClient = PaymentClient(config)
 
     // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        paymentMethodBuilder.apply {  // Payment method to be used
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
-                cardExpMonthBuilder.value = "03"
-                cardExpYearBuilder.value = "2030"
-                cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
-            }
-        }
-        captureMethod = CaptureMethod.AUTOMATIC  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
-        addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-            billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-        }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
-    }.build())
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("AUTOMATIC"))
 
     when (authorizeResponse.status.name) {
         "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
@@ -389,73 +361,7 @@ fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<
     val paymentClient = PaymentClient(config)
 
     // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        paymentMethodBuilder.apply {  // Payment method to be used
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
-                cardExpMonthBuilder.value = "03"
-                cardExpYearBuilder.value = "2030"
-                cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
-            }
-        }
-        captureMethod = CaptureMethod.AUTOMATIC  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
-        addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-            billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-        }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
-    }.build())
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("AUTOMATIC"))
 
     when (authorizeResponse.status.name) {
         "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
@@ -463,16 +369,7 @@ fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<
     }
 
     // Step 2: Refund — return funds to the customer
-    val refundResponse = paymentClient.refund(PaymentServiceRefundRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification
-        paymentAmount = 1000L  // Amount Information
-        refundAmountBuilder.apply {
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        reason = "customer_request"  // Reason for the refund
-        connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize
-    }.build())
+    val refundResponse = paymentClient.refund(buildRefundRequest(authorizeResponse.connectorTransactionId ?: ""))
 
     if (refundResponse.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${refundResponse.error.unifiedDetails.message}")
@@ -577,73 +474,7 @@ fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig):
     val paymentClient = PaymentClient(config)
 
     // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        paymentMethodBuilder.apply {  // Payment method to be used
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
-                cardExpMonthBuilder.value = "03"
-                cardExpYearBuilder.value = "2030"
-                cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
-            }
-        }
-        captureMethod = CaptureMethod.MANUAL  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
-        addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-            billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-        }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
-    }.build())
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
 
     when (authorizeResponse.status.name) {
         "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
@@ -651,10 +482,7 @@ fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig):
     }
 
     // Step 2: Void — release reserved funds (cancel authorization)
-    val voidResponse = paymentClient.void(PaymentServiceVoidRequest.newBuilder().apply {
-        merchantVoidId = "probe_void_001"  // Identification
-        connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize
-    }.build())
+    val voidResponse = paymentClient.void(buildVoidRequest(authorizeResponse.connectorTransactionId ?: ""))
 
     return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
 }
@@ -665,73 +493,7 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     val paymentClient = PaymentClient(config)
 
     // Step 1: Authorize — reserve funds on the payment method
-    val authorizeResponse = paymentClient.authorize(PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        paymentMethodBuilder.apply {  // Payment method to be used
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
-                cardExpMonthBuilder.value = "03"
-                cardExpYearBuilder.value = "2030"
-                cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
-            }
-        }
-        captureMethod = CaptureMethod.MANUAL  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
-        addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-            billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-        }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
-    }.build())
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
 
     when (authorizeResponse.status.name) {
         "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
@@ -739,13 +501,7 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     }
 
     // Step 2: Get — retrieve current payment status from the connector
-    val getResponse = paymentClient.get(PaymentServiceGetRequest.newBuilder().apply {
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        connectorTransactionId = authorizeResponse.connectorTransactionId  // from Authorize
-    }.build())
+    val getResponse = paymentClient.get(buildGetRequest(authorizeResponse.connectorTransactionId ?: ""))
 
     return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId)
 }
@@ -828,73 +584,7 @@ fun processTokenize(txnId: String, config: ConnectorConfig = _defaultConfig): Ma
 // Flow: PaymentService.Authorize (Card)
 fun authorize(txnId: String) {
     val client = PaymentClient(_defaultConfig)
-    val request = PaymentServiceAuthorizeRequest.newBuilder().apply {
-        merchantTransactionId = "probe_txn_001"  // Identification
-        amountBuilder.apply {  // The amount for the payment
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        paymentMethodBuilder.apply {  // Payment method to be used
-            cardBuilder.apply {  // Generic card payment
-                cardNumberBuilder.value = "4111111111111111"  // Card Identification
-                cardExpMonthBuilder.value = "03"
-                cardExpYearBuilder.value = "2030"
-                cardCvcBuilder.value = "737"
-                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
-            }
-        }
-        captureMethod = CaptureMethod.AUTOMATIC  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
-        addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-            billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
-        }
-        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
-    }.build()
+    val request = buildAuthorizeRequest("AUTOMATIC")
     val response = client.authorize(request)
     when (response.status.name) {
         "FAILED"  -> throw RuntimeException("Authorize failed: ${response.error.unifiedDetails.message}")
@@ -906,14 +596,7 @@ fun authorize(txnId: String) {
 // Flow: PaymentService.Capture
 fun capture(txnId: String) {
     val client = PaymentClient(_defaultConfig)
-    val request = PaymentServiceCaptureRequest.newBuilder().apply {
-        merchantCaptureId = "probe_capture_001"  // Identification
-        connectorTransactionId = "probe_connector_txn_001"
-        amountToCaptureBuilder.apply {  // Capture Details
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    }.build()
+    val request = buildCaptureRequest("probe_connector_txn_001")
     val response = client.capture(request)
     if (response.status.name == "FAILED")
         throw RuntimeException("Capture failed: ${response.error.unifiedDetails.message}")
@@ -921,7 +604,7 @@ fun capture(txnId: String) {
 }
 
 // Flow: CustomerService.Create
-fun create(txnId: String) {
+fun createCustomer(txnId: String) {
     val client = CustomerClient(_defaultConfig)
     val request = CustomerServiceCreateRequest.newBuilder().apply {
         customerName = "John Doe"  // Name of the customer
@@ -949,19 +632,13 @@ fun create(txnId: String) {
 // Flow: PaymentService.Get
 fun get(txnId: String) {
     val client = PaymentClient(_defaultConfig)
-    val request = PaymentServiceGetRequest.newBuilder().apply {
-        connectorTransactionId = "probe_connector_txn_001"
-        amountBuilder.apply {  // Amount Information
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    }.build()
+    val request = buildGetRequest("probe_connector_txn_001")
     val response = client.get(request)
     println("Status: ${response.status.name}")
 }
 
 // Flow: RecurringPaymentService.Charge
-fun charge(txnId: String) {
+fun recurringCharge(txnId: String) {
     val client = RecurringPaymentClient(_defaultConfig)
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
         connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
@@ -992,16 +669,7 @@ fun charge(txnId: String) {
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
-    val request = PaymentServiceRefundRequest.newBuilder().apply {
-        merchantRefundId = "probe_refund_001"  // Identification
-        connectorTransactionId = "probe_connector_txn_001"
-        paymentAmount = 1000L  // Amount Information
-        refundAmountBuilder.apply {
-            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
-            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-        reason = "customer_request"  // Reason for the refund
-    }.build()
+    val request = buildRefundRequest("probe_connector_txn_001")
     val response = client.refund(request)
     if (response.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${response.error.unifiedDetails.message}")
@@ -1009,7 +677,7 @@ fun refund(txnId: String) {
 }
 
 // Flow: PaymentService.SetupRecurring
-fun setup_recurring(txnId: String) {
+fun setupRecurring(txnId: String) {
     val client = PaymentClient(_defaultConfig)
     val request = PaymentServiceSetupRecurringRequest.newBuilder().apply {
         merchantRecurringPaymentId = "probe_mandate_001"  // Identification
@@ -1123,10 +791,7 @@ fun tokenize(txnId: String) {
 // Flow: PaymentService.Void
 fun void(txnId: String) {
     val client = PaymentClient(_defaultConfig)
-    val request = PaymentServiceVoidRequest.newBuilder().apply {
-        merchantVoidId = "probe_void_001"  // Identification
-        connectorTransactionId = "probe_connector_txn_001"
-    }.build()
+    val request = buildVoidRequest("probe_connector_txn_001")
     val response = client.void(request)
     if (response.status.name == "FAILED")
         throw RuntimeException("Void failed: ${response.error.unifiedDetails.message}")
@@ -1150,13 +815,13 @@ fun main(args: Array<String>) {
         "processTokenize" -> processTokenize(txnId)
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
-        "create" -> create(txnId)
+        "createCustomer" -> createCustomer(txnId)
         "get" -> get(txnId)
-        "charge" -> charge(txnId)
+        "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
-        "setup_recurring" -> setup_recurring(txnId)
+        "setupRecurring" -> setupRecurring(txnId)
         "tokenize" -> tokenize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, authorize, capture, create, get, charge, refund, setup_recurring, tokenize, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, tokenize, void")
     }
 }

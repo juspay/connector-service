@@ -47,10 +47,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 try:
     from payments import (
         ConnectorConfig,
+        ConnectorSpecificConfig,
+        SdkOptions,
         Environment,
         RequestError,
         ResponseError,
     )
+    from payments.generated.connector_service_ffi import UniffiError
 except ImportError as e:
     print(f"Error importing payments package: {e}")
     print("Make sure the wheel is installed: pip install dist/hyperswitch_payments-*.whl")
@@ -96,25 +99,35 @@ def has_valid_credentials(auth_config: Dict[str, Any]) -> bool:
 
 def _build_connector_config(connector_key: str, auth_config: Dict[str, Any]) -> ConnectorConfig:
     """Build a ConnectorConfig from a connector name and creds.json auth block."""
-    connector_enum = getattr(Connector, connector_key.upper(), None)
-    if connector_enum is None:
-        raise ValueError(f"Unknown connector: {connector_key}")
+    import payments.generated.payment_pb2 as _payment_pb2
+    import payments.generated.payment_methods_pb2 as _payment_methods_pb2
 
-    config = ConnectorConfig(
-        environment=Environment.SANDBOX,
-        connector=connector_enum,
-    )
+    # Find the connector-specific config class (e.g., StripeConfig for "stripe")
+    config_class = None
+    target = connector_key.lower() + "config"
+    for name in dir(_payment_pb2):
+        if name.lower() == target:
+            config_class = getattr(_payment_pb2, name)
+            break
 
-    # Auth structure: config.auth.<connector>.<field>.value = <credential_value>
-    auth_obj = getattr(config.auth, connector_key.lower(), None)
-    if auth_obj:
+    if config_class is None:
+        connector_specific = ConnectorSpecificConfig()
+    else:
+        valid_fields = {f.name for f in config_class.DESCRIPTOR.fields}
+        kwargs: Dict[str, Any] = {}
         for key, value in auth_config.items():
-            if key not in ("_comment", "metadata") and isinstance(value, dict) and "value" in value:
-                field_obj = getattr(auth_obj, key, None)
-                if field_obj and hasattr(field_obj, "value"):
-                    field_obj.value = value["value"]
+            if key in ("_comment", "metadata") or key not in valid_fields:
+                continue
+            if isinstance(value, dict) and "value" in value:
+                kwargs[key] = _payment_methods_pb2.SecretString(value=str(value["value"]))
+            elif isinstance(value, str):
+                kwargs[key] = value
+        connector_specific = ConnectorSpecificConfig(**{connector_key.lower(): config_class(**kwargs)})
 
-    return config
+    return ConnectorConfig(
+        connector_config=connector_specific,
+        options=SdkOptions(environment=Environment.SANDBOX),
+    )
 
 
 # Canonical scenario order for consolidated-file discovery
@@ -202,11 +215,11 @@ async def test_connector_scenarios(
             response = await process_fn(txn_id, config=config)
             print(_green(f"    [{scenario_key}] OK") + f" — {response}", flush=True)
             result["scenarios"][scenario_key] = {"passed": True, "result": response}
-        except (RequestError, ResponseError) as e:
+        except (RequestError, ResponseError, UniffiError) as e:
             # Connector rejected our test data — SDK round-trip succeeded.
-            # RequestError/ResponseError both mean the FFI layer completed a full
-            # request/response cycle; the connector just returned an error for our
-            # probe credentials or test tokens (e.g. InvalidWalletToken, auth failure).
+            # RequestError/ResponseError: FFI completed a full cycle, connector returned error.
+            # UniffiError (e.g. HandlerError): FFI-level connector rejection before HTTP
+            # (e.g. InvalidWalletToken — bad probe token rejected during request building).
             msg = getattr(e, 'error_message', None) or str(e)
             code = getattr(e, 'error_code', None)
             detail = f"{code}: {msg}" if code else msg

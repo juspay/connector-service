@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.CASHFREE,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.cashfree.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     cashfree=payment_pb2.CashfreeConfig(api_key=...),
+# ))
 
 ```
 
@@ -127,4 +128,4 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/cashfree/python/cashfree.py) · [JavaScript](../../examples/cashfree/javascript/cashfree.js) · [Kotlin](../../examples/cashfree/kotlin/cashfree.kt#L28) · [Rust](../../examples/cashfree/rust/cashfree.rs#L25)
+**Examples:** [Python](../../examples/cashfree/python/cashfree.py) · [JavaScript](../../examples/cashfree/javascript/cashfree.js) · [Kotlin](../../examples/cashfree/kotlin/cashfree.kt#L95) · [Rust](../../examples/cashfree/rust/cashfree.rs#L95)

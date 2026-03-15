@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.VOLT,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.volt.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     volt=payment_pb2.VoltConfig(api_key=...),
+# ))
 
 ```
 
@@ -110,7 +111,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L38) · [Rust](../../examples/volt/rust/volt.rs#L33)
+**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L75) · [Rust](../../examples/volt/rust/volt.rs#L71)
 
 #### PaymentService.Refund
 
@@ -121,7 +122,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L59) · [Rust](../../examples/volt/rust/volt.rs#L52)
+**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L83) · [Rust](../../examples/volt/rust/volt.rs#L77)
 
 ### Authentication
 
@@ -134,4 +135,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt) · [Rust](../../examples/volt/rust/volt.rs#L25)
+**Examples:** [Python](../../examples/volt/python/volt.py) · [JavaScript](../../examples/volt/javascript/volt.js) · [Kotlin](../../examples/volt/kotlin/volt.kt#L65) · [Rust](../../examples/volt/rust/volt.rs#L63)

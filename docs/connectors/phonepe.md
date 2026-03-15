@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.PHONEPE,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.phonepe.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     phonepe=payment_pb2.PhonepeConfig(api_key=...),
+# ))
 
 ```
 
@@ -128,7 +129,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L29) · [Rust](../../examples/phonepe/rust/phonepe.rs#L25)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L106) · [Rust](../../examples/phonepe/rust/phonepe.rs#L105)
 
 #### PaymentService.Get
 
@@ -139,4 +140,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L103) · [Rust](../../examples/phonepe/rust/phonepe.rs#L100)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L118) · [Rust](../../examples/phonepe/rust/phonepe.rs#L116)

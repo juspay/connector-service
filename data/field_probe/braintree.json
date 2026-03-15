@@ -159,28 +159,8 @@
     },
     "refund": {
       "default": {
-        "status": "supported",
-        "proto_request": {
-          "merchant_refund_id": "probe_refund_001",
-          "connector_transaction_id": "probe_connector_txn_001",
-          "payment_amount": 1000,
-          "refund_amount": {
-            "minor_amount": 1000,
-            "currency": "USD"
-          },
-          "reason": "customer_request"
-        },
-        "sample": {
-          "url": "https://payments.sandbox.braintree-api.com/graphql",
-          "method": "Post",
-          "headers": {
-            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
-            "braintree-version": "2019-01-01",
-            "content-type": "application/json",
-            "via": "HyperSwitch"
-          },
-          "body": "{\"query\":\"mutation refundTransaction($input:  RefundTransactionInput!) { refundTransaction(input: $input) {clientMutationId refund { id legacyId amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\",\"refund\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"orderId\":\"probe_refund_001\"}}}}"
-        }
+        "status": "error",
+        "error": "Invalid Configuration: merchant_account_id"
       }
     },
     "tokenize": {

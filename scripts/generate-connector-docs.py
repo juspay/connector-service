@@ -385,6 +385,9 @@ def _flow_search(sdk: str, flow_key: str) -> str:
     tmpl = _FLOW_FUNC_SEARCH[sdk]
     camel = sdk_snippets._to_camel(flow_key)  # type: ignore[attr-defined]
     camel = camel[0].lower() + camel[1:]
+    # JS reserved words are renamed with a "Payment" suffix in the generated file
+    if sdk == "javascript" and flow_key in sdk_snippets.JS_RESERVED:  # type: ignore[attr-defined]
+        camel = f"{flow_key}Payment"
     return tmpl.format(key=flow_key, camel=camel)
 
 
@@ -733,14 +736,17 @@ def generate_connector_doc(
             )
             if has_payload:
                 fl = flow_line_numbers.get(f, {})
+                sl = scenario_line_numbers.get(f, {})  # fallback: scenario covers this flow
                 base_py = f"../../examples/{connector_name}/python/{connector_name}.py"
                 base_js = f"../../examples/{connector_name}/javascript/{connector_name}.js"
                 base_kt = f"../../examples/{connector_name}/kotlin/{connector_name}.kt"
                 base_rs = f"../../examples/{connector_name}/rust/{connector_name}.rs"
-                py_path = base_py + (f"#L{fl['python']}"     if fl.get("python")     else "")
-                js_path = base_js + (f"#L{fl['javascript']}" if fl.get("javascript") else "")
-                kt_path = base_kt + (f"#L{fl['kotlin']}"     if fl.get("kotlin")     else "")
-                rs_path = base_rs + (f"#L{fl['rust']}"       if fl.get("rust")       else "")
+                py_line = fl.get("python")     or sl.get("python")
+                js_line = fl.get("javascript") or sl.get("javascript")
+                py_path = base_py + (f"#L{py_line}" if py_line else "")
+                js_path = base_js + (f"#L{js_line}" if js_line else "")
+                kt_path = base_kt + (f"#L{fl['kotlin']}" if fl.get("kotlin") else "")
+                rs_path = base_rs + (f"#L{fl['rust']}"   if fl.get("rust")   else "")
                 a(f"**Examples:** [Python]({py_path}) · [JavaScript]({js_path}) · [Kotlin]({kt_path}) · [Rust]({rs_path})")
                 a("")
 
@@ -1205,28 +1211,28 @@ def generate_rust_build_auth(proto_dir: Path, out_file: Path) -> None:
     proto_text = _re.sub(r"//[^\n]*", "", proto_text)
     proto_text = _re.sub(r"/\*.*?\*/", "", proto_text, flags=_re.DOTALL)
 
-    # Find ConnectorAuth oneof body
-    ca_m = _re.search(
-        r"message\s+ConnectorAuth\s*\{.*?oneof\s+auth_type\s*\{(.*?)\}\s*\}",
+    # Find ConnectorSpecificConfig oneof body
+    csc_m = _re.search(
+        r"message\s+ConnectorSpecificConfig\s*\{.*?oneof\s+config\s*\{(.*?)\}\s*\}",
         proto_text, _re.DOTALL,
     )
-    if not ca_m:
-        print("  WARNING: ConnectorAuth oneof not found, skipping build_auth.rs")
+    if not csc_m:
+        print("  WARNING: ConnectorSpecificConfig oneof not found, skipping build_auth.rs")
         return
 
-    oneof_body = ca_m.group(1)
-    # Extract: TypeName field_name = num;
-    auth_variants = _re.findall(r"(\w+Auth)\s+(\w+)\s*=\s*\d+\s*;", oneof_body)
+    oneof_body = csc_m.group(1)
+    # Extract: TypeName field_name = num;  (e.g. AdyenConfig adyen = 1;)
+    config_variants = _re.findall(r"(\w+Config)\s+(\w+)\s*=\s*\d+\s*;", oneof_body)
 
-    # Parse each *Auth message for its fields
-    auth_type_fields: dict[str, list[tuple[str, bool, str]]] = {}
-    for auth_type_name, _ in auth_variants:
+    # Parse each *Config message for its fields
+    config_type_fields: dict[str, list[tuple[str, bool, str]]] = {}
+    for config_type_name, _ in config_variants:
         msg_m = _re.search(
-            rf"message\s+{_re.escape(auth_type_name)}\s*\{{(.*?)\}}",
+            rf"message\s+{_re.escape(config_type_name)}\s*\{{(.*?)\}}",
             proto_text, _re.DOTALL,
         )
         if not msg_m:
-            auth_type_fields[auth_type_name] = []
+            config_type_fields[config_type_name] = []
             continue
         body = msg_m.group(1)
         fields = []
@@ -1244,16 +1250,16 @@ def generate_rust_build_auth(proto_dir: Path, out_file: Path) -> None:
                         "syntax", "import", "package"}
                 if ftype not in skip and fname not in skip:
                     fields.append((fname, is_opt, ftype))
-        auth_type_fields[auth_type_name] = fields
+        config_type_fields[config_type_name] = fields
 
     # Build the Rust file
     lines: list[str] = [
         "// AUTO-GENERATED — do not edit manually.",
         "// Regenerate: python3 scripts/generate-connector-docs.py --all",
         "//",
-        "// Maps connector name (from creds.json) to ConnectorAuth proto type.",
+        "// Maps connector name (from creds.json) to ConnectorSpecificConfig proto type.",
         "",
-        "use grpc_api_types::payments::{connector_auth, ConnectorAuth, *};",
+        "use grpc_api_types::payments::{connector_specific_config, ConnectorSpecificConfig, *};",
         "use hyperswitch_masking::Secret;",
         "",
         "fn get_val(",
@@ -1271,33 +1277,49 @@ def generate_rust_build_auth(proto_dir: Path, out_file: Path) -> None:
         "    }",
         "}",
         "",
-        "fn get_opt(",
+        "fn get_opt_secret(",
         "    creds: &serde_json::Map<String, serde_json::Value>,",
         "    key: &str,",
         ") -> Option<Secret<String>> {",
         "    get_val(creds, key).ok().map(Secret::new)",
         "}",
         "",
-        "pub fn build_connector_auth(",
+        "pub fn build_connector_config(",
         "    connector: &str,",
         "    creds: &serde_json::Map<String, serde_json::Value>,",
-        ") -> Result<ConnectorAuth, String> {",
+        ") -> Result<ConnectorSpecificConfig, String> {",
         "    #[allow(clippy::match_single_binding)]",
         "    match connector {",
     ]
 
-    for auth_type_name, field_name in auth_variants:
-        fields = auth_type_fields.get(auth_type_name, [])
-        variant = field_name.capitalize()  # prost oneof variant = first-char-upper of field name
+    for config_type_name, field_name in config_variants:
+        fields = config_type_fields.get(config_type_name, [])
+        # prost oneof variant = field_name with first char uppercased
+        variant = field_name[0].upper() + field_name[1:]
 
         field_lines: list[str] = []
         for fname, is_opt, ftype in fields:
-            if ftype in ("SecretString",):
+            # Skip base_url and other non-secret string fields (they're optional overrides)
+            if ftype == "string":
+                # base_url, dispute_base_url etc. — skip for creds building
+                continue
+            if ftype == "SecretString":
                 if is_opt:
-                    field_lines.append(f'            {fname}: get_opt(creds, "{fname}"),')
+                    field_lines.append(f'            {fname}: get_opt_secret(creds, "{fname}"),')
                 else:
                     field_lines.append(f'            {fname}: Some(Secret::new(get_val(creds, "{fname}")?)),')
-            elif ftype in ("string", "uint32", "int32", "bool", "bytes"):
+            elif ftype == "bool":
+                if is_opt:
+                    field_lines.append(
+                        f'            {fname}: creds.get("{fname}")'
+                        f'.and_then(|v| v.as_bool()),'
+                    )
+                else:
+                    field_lines.append(
+                        f'            {fname}: creds.get("{fname}")'
+                        f'.and_then(|v| v.as_bool()).unwrap_or(false),'
+                    )
+            elif ftype in ("uint32", "int32", "bytes"):
                 if is_opt:
                     field_lines.append(
                         f'            {fname}: creds.get("{fname}")'
@@ -1311,9 +1333,9 @@ def generate_rust_build_auth(proto_dir: Path, out_file: Path) -> None:
                 field_lines.append(f'            // {fname}: ..., // complex type: {ftype}')
 
         lines.append(f'        "{field_name}" => {{')
-        lines.append(f"            Ok(ConnectorAuth {{")
-        lines.append(f"                auth_type: Some(connector_auth::AuthType::{variant}(")
-        lines.append(f"                    {auth_type_name} {{")
+        lines.append(f"            Ok(ConnectorSpecificConfig {{")
+        lines.append(f"                config: Some(connector_specific_config::Config::{variant}(")
+        lines.append(f"                    {config_type_name} {{")
         lines.extend(field_lines)
         lines.append(f"                        ..Default::default()")
         lines.append(f"                    }},")

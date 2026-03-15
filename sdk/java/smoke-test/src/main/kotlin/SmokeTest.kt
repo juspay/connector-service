@@ -18,7 +18,8 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import payments.ConnectorConfig
-import payments.Connector
+import payments.ConnectorSpecificConfig
+import payments.SdkOptions
 import payments.Environment
 import java.io.File
 import java.lang.reflect.InvocationTargetException
@@ -101,37 +102,41 @@ fun hasValidCredentials(authConfig: AuthConfig): Boolean {
 }
 
 fun buildConnectorConfig(connectorName: String, authConfig: AuthConfig): ConnectorConfig {
-    val connectorEnum = Connector.valueOf(connectorName.uppercase())
-    val configBuilder = ConnectorConfig.newBuilder()
-        .setConnector(connectorEnum)
-        .setEnvironment(Environment.SANDBOX)
+    val connectorSpecificBuilder = ConnectorSpecificConfig.newBuilder()
 
-    val authConfigBuilder = configBuilder.authBuilder
-    val connectorAuthBuilderMethod = try {
-        authConfigBuilder.javaClass.getMethod("get${connectorName.lowercase().replaceFirstChar { it.uppercase() }}Builder")
+    // Find the per-connector builder method (e.g., getStripeBuilder, getAdyenBuilder)
+    val connectorBuilderMethod = try {
+        connectorSpecificBuilder.javaClass.getMethod("get${connectorName.lowercase().replaceFirstChar { it.uppercase() }}Builder")
     } catch (e: NoSuchMethodException) { null }
 
-    if (connectorAuthBuilderMethod != null) {
-        val connectorAuthBuilder = connectorAuthBuilderMethod.invoke(authConfigBuilder)
+    if (connectorBuilderMethod != null) {
+        val connectorBuilder = connectorBuilderMethod.invoke(connectorSpecificBuilder)
         for ((key, value) in authConfig) {
             if (key == "_comment" || key == "metadata") continue
             val camelKey = key.split("_").mapIndexed { i, part ->
                 if (i == 0) part else part.replaceFirstChar { it.uppercase() }
             }.joinToString("")
             val fieldBuilderMethod = try {
-                connectorAuthBuilder?.javaClass?.getMethod("get${camelKey.replaceFirstChar { it.uppercase() }}Builder")
+                connectorBuilder?.javaClass?.getMethod("get${camelKey.replaceFirstChar { it.uppercase() }}Builder")
             } catch (e: NoSuchMethodException) { null }
             if (fieldBuilderMethod != null && value is Map<*, *> && value.containsKey("value")) {
                 val fieldValue = value["value"] as? String
                 if (fieldValue != null) {
-                    val fieldBuilder = fieldBuilderMethod.invoke(connectorAuthBuilder)
+                    val fieldBuilder = fieldBuilderMethod.invoke(connectorBuilder)
                     fieldBuilder?.javaClass?.getMethod("setValue", String::class.java)?.invoke(fieldBuilder, fieldValue)
                 }
             }
         }
     }
 
-    return configBuilder.build()
+    val sdkOptions = SdkOptions.newBuilder()
+        .setEnvironment(Environment.SANDBOX)
+        .build()
+
+    return ConnectorConfig.newBuilder()
+        .setConnectorConfig(connectorSpecificBuilder.build())
+        .setOptions(sdkOptions)
+        .build()
 }
 
 // ── Reflection-based scenario discovery ─────────────────────────────────────

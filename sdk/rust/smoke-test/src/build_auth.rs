@@ -1,9 +1,9 @@
 // AUTO-GENERATED — do not edit manually.
 // Regenerate: python3 scripts/generate-connector-docs.py --all
 //
-// Maps connector name (from creds.json) to ConnectorAuth proto type.
+// Maps connector name (from creds.json) to ConnectorSpecificConfig proto type.
 
-use grpc_api_types::payments::{connector_auth, ConnectorAuth, *};
+use grpc_api_types::payments::{connector_specific_config, ConnectorSpecificConfig, *};
 use hyperswitch_masking::Secret;
 
 fn get_val(
@@ -21,35 +21,35 @@ fn get_val(
     }
 }
 
-fn get_opt(
+fn get_opt_secret(
     creds: &serde_json::Map<String, serde_json::Value>,
     key: &str,
 ) -> Option<Secret<String>> {
     get_val(creds, key).ok().map(Secret::new)
 }
 
-pub fn build_connector_auth(
+pub fn build_connector_config(
     connector: &str,
     creds: &serde_json::Map<String, serde_json::Value>,
-) -> Result<ConnectorAuth, String> {
+) -> Result<ConnectorSpecificConfig, String> {
     #[allow(clippy::match_single_binding)]
     match connector {
         "adyen" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Adyen(
-                    AdyenAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Adyen(
+                    AdyenConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             merchant_account: Some(Secret::new(get_val(creds, "merchant_account")?)),
-            review_key: get_opt(creds, "review_key"),
+            review_key: get_opt_secret(creds, "review_key"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "airwallex" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Airwallex(
-                    AirwallexAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Airwallex(
+                    AirwallexConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             client_id: Some(Secret::new(get_val(creds, "client_id")?)),
                         ..Default::default()
@@ -58,9 +58,9 @@ pub fn build_connector_auth(
             })
         }
         "bambora" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Bambora(
-                    BamboraAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Bambora(
+                    BamboraConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
@@ -69,9 +69,9 @@ pub fn build_connector_auth(
             })
         }
         "bankofamerica" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Bankofamerica(
-                    BankOfAmericaAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Bankofamerica(
+                    BankOfAmericaConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             merchant_account: Some(Secret::new(get_val(creds, "merchant_account")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
@@ -81,9 +81,9 @@ pub fn build_connector_auth(
             })
         }
         "billwerk" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Billwerk(
-                    BillwerkAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Billwerk(
+                    BillwerkConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             public_api_key: Some(Secret::new(get_val(creds, "public_api_key")?)),
                         ..Default::default()
@@ -92,9 +92,9 @@ pub fn build_connector_auth(
             })
         }
         "bluesnap" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Bluesnap(
-                    BluesnapAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Bluesnap(
+                    BluesnapConfig {
             username: Some(Secret::new(get_val(creds, "username")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
                         ..Default::default()
@@ -103,29 +103,30 @@ pub fn build_connector_auth(
             })
         }
         "braintree" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Braintree(
-                    BraintreeAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Braintree(
+                    BraintreeConfig {
             public_key: Some(Secret::new(get_val(creds, "public_key")?)),
             private_key: Some(Secret::new(get_val(creds, "private_key")?)),
+            merchant_account_id: get_opt_secret(creds, "merchant_account_id"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "cashtocode" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Cashtocode(
-                    CashtocodeAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Cashtocode(
+                    CashtocodeConfig {
                         ..Default::default()
                     },
                 )),
             })
         }
         "cryptopay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Cryptopay(
-                    CryptopayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Cryptopay(
+                    CryptopayConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
                         ..Default::default()
@@ -134,21 +135,23 @@ pub fn build_connector_auth(
             })
         }
         "cybersource" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Cybersource(
-                    CybersourceAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Cybersource(
+                    CybersourceConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             merchant_account: Some(Secret::new(get_val(creds, "merchant_account")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
+            disable_avs: creds.get("disable_avs").and_then(|v| v.as_bool()),
+            disable_cvn: creds.get("disable_cvn").and_then(|v| v.as_bool()),
                         ..Default::default()
                     },
                 )),
             })
         }
         "datatrans" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Datatrans(
-                    DatatransAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Datatrans(
+                    DatatransConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
                         ..Default::default()
@@ -157,9 +160,9 @@ pub fn build_connector_auth(
             })
         }
         "dlocal" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Dlocal(
-                    DlocalAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Dlocal(
+                    DlocalConfig {
             x_login: Some(Secret::new(get_val(creds, "x_login")?)),
             x_trans_key: Some(Secret::new(get_val(creds, "x_trans_key")?)),
             secret: Some(Secret::new(get_val(creds, "secret")?)),
@@ -169,9 +172,9 @@ pub fn build_connector_auth(
             })
         }
         "elavon" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Elavon(
-                    ElavonAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Elavon(
+                    ElavonConfig {
             ssl_merchant_id: Some(Secret::new(get_val(creds, "ssl_merchant_id")?)),
             ssl_user_id: Some(Secret::new(get_val(creds, "ssl_user_id")?)),
             ssl_pin: Some(Secret::new(get_val(creds, "ssl_pin")?)),
@@ -181,21 +184,22 @@ pub fn build_connector_auth(
             })
         }
         "fiserv" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Fiserv(
-                    FiservAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Fiserv(
+                    FiservConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             merchant_account: Some(Secret::new(get_val(creds, "merchant_account")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
+            terminal_id: get_opt_secret(creds, "terminal_id"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "fiservemea" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Fiservemea(
-                    FiservemeaAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Fiservemea(
+                    FiservemeaConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
                         ..Default::default()
@@ -204,9 +208,9 @@ pub fn build_connector_auth(
             })
         }
         "forte" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Forte(
-                    ForteAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Forte(
+                    ForteConfig {
             api_access_id: Some(Secret::new(get_val(creds, "api_access_id")?)),
             organization_id: Some(Secret::new(get_val(creds, "organization_id")?)),
             location_id: Some(Secret::new(get_val(creds, "location_id")?)),
@@ -217,9 +221,9 @@ pub fn build_connector_auth(
             })
         }
         "getnet" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Getnet(
-                    GetnetAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Getnet(
+                    GetnetConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
             seller_id: Some(Secret::new(get_val(creds, "seller_id")?)),
@@ -229,9 +233,9 @@ pub fn build_connector_auth(
             })
         }
         "globalpay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Globalpay(
-                    GlobalpayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Globalpay(
+                    GlobalpayConfig {
             app_id: Some(Secret::new(get_val(creds, "app_id")?)),
             app_key: Some(Secret::new(get_val(creds, "app_key")?)),
                         ..Default::default()
@@ -240,9 +244,9 @@ pub fn build_connector_auth(
             })
         }
         "hipay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Hipay(
-                    HipayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Hipay(
+                    HipayConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
                         ..Default::default()
@@ -251,9 +255,9 @@ pub fn build_connector_auth(
             })
         }
         "helcim" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Helcim(
-                    HelcimAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Helcim(
+                    HelcimConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -261,9 +265,9 @@ pub fn build_connector_auth(
             })
         }
         "iatapay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Iatapay(
-                    IatapayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Iatapay(
+                    IatapayConfig {
             client_id: Some(Secret::new(get_val(creds, "client_id")?)),
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             client_secret: Some(Secret::new(get_val(creds, "client_secret")?)),
@@ -273,20 +277,24 @@ pub fn build_connector_auth(
             })
         }
         "jpmorgan" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Jpmorgan(
-                    JpmorganAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Jpmorgan(
+                    JpmorganConfig {
             client_id: Some(Secret::new(get_val(creds, "client_id")?)),
             client_secret: Some(Secret::new(get_val(creds, "client_secret")?)),
+            company_name: get_opt_secret(creds, "company_name"),
+            product_name: get_opt_secret(creds, "product_name"),
+            merchant_purchase_description: get_opt_secret(creds, "merchant_purchase_description"),
+            statement_descriptor: get_opt_secret(creds, "statement_descriptor"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "mifinity" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Mifinity(
-                    MifinityAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Mifinity(
+                    MifinityConfig {
             key: Some(Secret::new(get_val(creds, "key")?)),
                         ..Default::default()
                     },
@@ -294,20 +302,20 @@ pub fn build_connector_auth(
             })
         }
         "mollie" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Mollie(
-                    MollieAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Mollie(
+                    MollieConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
-            profile_token: get_opt(creds, "profile_token"),
+            profile_token: get_opt_secret(creds, "profile_token"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "multisafepay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Multisafepay(
-                    MultisafepayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Multisafepay(
+                    MultisafepayConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -315,9 +323,9 @@ pub fn build_connector_auth(
             })
         }
         "nexinets" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Nexinets(
-                    NexinetsAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Nexinets(
+                    NexinetsConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
@@ -326,9 +334,9 @@ pub fn build_connector_auth(
             })
         }
         "nexixpay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Nexixpay(
-                    NexixpayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Nexixpay(
+                    NexixpayConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -336,20 +344,20 @@ pub fn build_connector_auth(
             })
         }
         "nmi" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Nmi(
-                    NmiAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Nmi(
+                    NmiConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
-            public_key: get_opt(creds, "public_key"),
+            public_key: get_opt_secret(creds, "public_key"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "noon" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Noon(
-                    NoonAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Noon(
+                    NoonConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             application_identifier: Some(Secret::new(get_val(creds, "application_identifier")?)),
             business_identifier: Some(Secret::new(get_val(creds, "business_identifier")?)),
@@ -359,9 +367,9 @@ pub fn build_connector_auth(
             })
         }
         "novalnet" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Novalnet(
-                    NovalnetAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Novalnet(
+                    NovalnetConfig {
             product_activation_key: Some(Secret::new(get_val(creds, "product_activation_key")?)),
             payment_access_key: Some(Secret::new(get_val(creds, "payment_access_key")?)),
             tariff_id: Some(Secret::new(get_val(creds, "tariff_id")?)),
@@ -371,9 +379,9 @@ pub fn build_connector_auth(
             })
         }
         "nuvei" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Nuvei(
-                    NuveiAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Nuvei(
+                    NuveiConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             merchant_site_id: Some(Secret::new(get_val(creds, "merchant_site_id")?)),
             merchant_secret: Some(Secret::new(get_val(creds, "merchant_secret")?)),
@@ -383,9 +391,9 @@ pub fn build_connector_auth(
             })
         }
         "paybox" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Paybox(
-                    PayboxAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Paybox(
+                    PayboxConfig {
             site: Some(Secret::new(get_val(creds, "site")?)),
             rank: Some(Secret::new(get_val(creds, "rank")?)),
             key: Some(Secret::new(get_val(creds, "key")?)),
@@ -396,20 +404,20 @@ pub fn build_connector_auth(
             })
         }
         "payme" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Payme(
-                    PaymeAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Payme(
+                    PaymeConfig {
             seller_payme_id: Some(Secret::new(get_val(creds, "seller_payme_id")?)),
-            payme_client_key: get_opt(creds, "payme_client_key"),
+            payme_client_key: get_opt_secret(creds, "payme_client_key"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "payu" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Payu(
-                    PayuAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Payu(
+                    PayuConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
                         ..Default::default()
@@ -418,9 +426,9 @@ pub fn build_connector_auth(
             })
         }
         "powertranz" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Powertranz(
-                    PowertranzAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Powertranz(
+                    PowertranzConfig {
             power_tranz_id: Some(Secret::new(get_val(creds, "power_tranz_id")?)),
             power_tranz_password: Some(Secret::new(get_val(creds, "power_tranz_password")?)),
                         ..Default::default()
@@ -429,9 +437,9 @@ pub fn build_connector_auth(
             })
         }
         "rapyd" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Rapyd(
-                    RapydAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Rapyd(
+                    RapydConfig {
             access_key: Some(Secret::new(get_val(creds, "access_key")?)),
             secret_key: Some(Secret::new(get_val(creds, "secret_key")?)),
                         ..Default::default()
@@ -440,9 +448,9 @@ pub fn build_connector_auth(
             })
         }
         "redsys" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Redsys(
-                    RedsysAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Redsys(
+                    RedsysConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             terminal_id: Some(Secret::new(get_val(creds, "terminal_id")?)),
             sha256_pwd: Some(Secret::new(get_val(creds, "sha256_pwd")?)),
@@ -452,9 +460,9 @@ pub fn build_connector_auth(
             })
         }
         "shift4" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Shift4(
-                    Shift4Auth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Shift4(
+                    Shift4Config {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -462,9 +470,9 @@ pub fn build_connector_auth(
             })
         }
         "stax" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Stax(
-                    StaxAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Stax(
+                    StaxConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -472,9 +480,9 @@ pub fn build_connector_auth(
             })
         }
         "stripe" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Stripe(
-                    StripeAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Stripe(
+                    StripeConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -482,9 +490,9 @@ pub fn build_connector_auth(
             })
         }
         "trustpay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Trustpay(
-                    TrustpayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Trustpay(
+                    TrustpayConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             project_id: Some(Secret::new(get_val(creds, "project_id")?)),
             secret_key: Some(Secret::new(get_val(creds, "secret_key")?)),
@@ -494,9 +502,9 @@ pub fn build_connector_auth(
             })
         }
         "tsys" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Tsys(
-                    TsysAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Tsys(
+                    TsysConfig {
             device_id: Some(Secret::new(get_val(creds, "device_id")?)),
             transaction_key: Some(Secret::new(get_val(creds, "transaction_key")?)),
             developer_id: Some(Secret::new(get_val(creds, "developer_id")?)),
@@ -506,9 +514,9 @@ pub fn build_connector_auth(
             })
         }
         "volt" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Volt(
-                    VoltAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Volt(
+                    VoltConfig {
             username: Some(Secret::new(get_val(creds, "username")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
             client_id: Some(Secret::new(get_val(creds, "client_id")?)),
@@ -519,9 +527,9 @@ pub fn build_connector_auth(
             })
         }
         "wellsfargo" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Wellsfargo(
-                    WellsfargoAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Wellsfargo(
+                    WellsfargoConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             merchant_account: Some(Secret::new(get_val(creds, "merchant_account")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
@@ -531,21 +539,22 @@ pub fn build_connector_auth(
             })
         }
         "worldpay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Worldpay(
-                    WorldpayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Worldpay(
+                    WorldpayConfig {
             username: Some(Secret::new(get_val(creds, "username")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
             entity_id: Some(Secret::new(get_val(creds, "entity_id")?)),
+            merchant_name: get_opt_secret(creds, "merchant_name"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "worldpayvantiv" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Worldpayvantiv(
-                    WorldpayvantivAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Worldpayvantiv(
+                    WorldpayvantivConfig {
             user: Some(Secret::new(get_val(creds, "user")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
@@ -555,9 +564,9 @@ pub fn build_connector_auth(
             })
         }
         "xendit" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Xendit(
-                    XenditAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Xendit(
+                    XenditConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -565,9 +574,9 @@ pub fn build_connector_auth(
             })
         }
         "phonepe" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Phonepe(
-                    PhonepeAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Phonepe(
+                    PhonepeConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             salt_key: Some(Secret::new(get_val(creds, "salt_key")?)),
             salt_index: Some(Secret::new(get_val(creds, "salt_index")?)),
@@ -577,9 +586,9 @@ pub fn build_connector_auth(
             })
         }
         "cashfree" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Cashfree(
-                    CashfreeAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Cashfree(
+                    CashfreeConfig {
             app_id: Some(Secret::new(get_val(creds, "app_id")?)),
             secret_key: Some(Secret::new(get_val(creds, "secret_key")?)),
                         ..Default::default()
@@ -588,22 +597,22 @@ pub fn build_connector_auth(
             })
         }
         "paytm" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Paytm(
-                    PaytmAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Paytm(
+                    PaytmConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             merchant_key: Some(Secret::new(get_val(creds, "merchant_key")?)),
             website: Some(Secret::new(get_val(creds, "website")?)),
-            client_id: get_opt(creds, "client_id"),
+            client_id: get_opt_secret(creds, "client_id"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "calida" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Calida(
-                    CalidaAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Calida(
+                    CalidaConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -611,18 +620,18 @@ pub fn build_connector_auth(
             })
         }
         "payload" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Payload(
-                    PayloadAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Payload(
+                    PayloadConfig {
                         ..Default::default()
                     },
                 )),
             })
         }
         "authipay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Authipay(
-                    AuthipayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Authipay(
+                    AuthipayConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
                         ..Default::default()
@@ -631,9 +640,9 @@ pub fn build_connector_auth(
             })
         }
         "silverflow" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Silverflow(
-                    SilverflowAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Silverflow(
+                    SilverflowConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
             merchant_acceptor_key: Some(Secret::new(get_val(creds, "merchant_acceptor_key")?)),
@@ -643,9 +652,9 @@ pub fn build_connector_auth(
             })
         }
         "celero" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Celero(
-                    CeleroAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Celero(
+                    CeleroConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -653,9 +662,9 @@ pub fn build_connector_auth(
             })
         }
         "trustpayments" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Trustpayments(
-                    TrustpaymentsAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Trustpayments(
+                    TrustpaymentsConfig {
             username: Some(Secret::new(get_val(creds, "username")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
             site_reference: Some(Secret::new(get_val(creds, "site_reference")?)),
@@ -665,20 +674,21 @@ pub fn build_connector_auth(
             })
         }
         "paysafe" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Paysafe(
-                    PaysafeAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Paysafe(
+                    PaysafeConfig {
             username: Some(Secret::new(get_val(creds, "username")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
+            // account_id: ..., // complex type: PaysafePaymentMethodDetails
                         ..Default::default()
                     },
                 )),
             })
         }
         "barclaycard" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Barclaycard(
-                    BarclaycardAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Barclaycard(
+                    BarclaycardConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
             merchant_account: Some(Secret::new(get_val(creds, "merchant_account")?)),
             api_secret: Some(Secret::new(get_val(creds, "api_secret")?)),
@@ -688,9 +698,9 @@ pub fn build_connector_auth(
             })
         }
         "worldpayxml" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Worldpayxml(
-                    WorldpayxmlAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Worldpayxml(
+                    WorldpayxmlConfig {
             api_username: Some(Secret::new(get_val(creds, "api_username")?)),
             api_password: Some(Secret::new(get_val(creds, "api_password")?)),
             merchant_code: Some(Secret::new(get_val(creds, "merchant_code")?)),
@@ -700,20 +710,20 @@ pub fn build_connector_auth(
             })
         }
         "revolut" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Revolut(
-                    RevolutAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Revolut(
+                    RevolutConfig {
             secret_api_key: Some(Secret::new(get_val(creds, "secret_api_key")?)),
-            signing_secret: get_opt(creds, "signing_secret"),
+            signing_secret: get_opt_secret(creds, "signing_secret"),
                         ..Default::default()
                     },
                 )),
             })
         }
         "loonio" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Loonio(
-                    LoonioAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Loonio(
+                    LoonioConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             merchant_token: Some(Secret::new(get_val(creds, "merchant_token")?)),
                         ..Default::default()
@@ -722,9 +732,9 @@ pub fn build_connector_auth(
             })
         }
         "gigadat" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Gigadat(
-                    GigadatAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Gigadat(
+                    GigadatConfig {
             campaign_id: Some(Secret::new(get_val(creds, "campaign_id")?)),
             access_token: Some(Secret::new(get_val(creds, "access_token")?)),
             security_token: Some(Secret::new(get_val(creds, "security_token")?)),
@@ -734,9 +744,9 @@ pub fn build_connector_auth(
             })
         }
         "hyperpg" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Hyperpg(
-                    HyperpgAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Hyperpg(
+                    HyperpgConfig {
             username: Some(Secret::new(get_val(creds, "username")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
@@ -746,9 +756,9 @@ pub fn build_connector_auth(
             })
         }
         "zift" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Zift(
-                    ZiftAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Zift(
+                    ZiftConfig {
             user_name: Some(Secret::new(get_val(creds, "user_name")?)),
             password: Some(Secret::new(get_val(creds, "password")?)),
             account_id: Some(Secret::new(get_val(creds, "account_id")?)),
@@ -758,9 +768,9 @@ pub fn build_connector_auth(
             })
         }
         "screenstream" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Screenstream(
-                    ScreenstreamAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Screenstream(
+                    ScreenstreamConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -768,9 +778,9 @@ pub fn build_connector_auth(
             })
         }
         "ebanx" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Ebanx(
-                    EbanxAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Ebanx(
+                    EbanxConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -778,9 +788,9 @@ pub fn build_connector_auth(
             })
         }
         "fiuu" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Fiuu(
-                    FiuuAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Fiuu(
+                    FiuuConfig {
             merchant_id: Some(Secret::new(get_val(creds, "merchant_id")?)),
             verify_key: Some(Secret::new(get_val(creds, "verify_key")?)),
             secret_key: Some(Secret::new(get_val(creds, "secret_key")?)),
@@ -790,9 +800,9 @@ pub fn build_connector_auth(
             })
         }
         "globepay" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Globepay(
-                    GlobepayAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Globepay(
+                    GlobepayConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -800,9 +810,9 @@ pub fn build_connector_auth(
             })
         }
         "coinbase" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Coinbase(
-                    CoinbaseAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Coinbase(
+                    CoinbaseConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -810,9 +820,9 @@ pub fn build_connector_auth(
             })
         }
         "coingate" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Coingate(
-                    CoingateAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Coingate(
+                    CoingateConfig {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -820,9 +830,9 @@ pub fn build_connector_auth(
             })
         }
         "revolv3" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Revolv3(
-                    Revolv3Auth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Revolv3(
+                    Revolv3Config {
             api_key: Some(Secret::new(get_val(creds, "api_key")?)),
                         ..Default::default()
                     },
@@ -830,9 +840,9 @@ pub fn build_connector_auth(
             })
         }
         "authorizedotnet" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Authorizedotnet(
-                    AuthorizedotnetAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Authorizedotnet(
+                    AuthorizedotnetConfig {
             name: Some(Secret::new(get_val(creds, "name")?)),
             transaction_key: Some(Secret::new(get_val(creds, "transaction_key")?)),
                         ..Default::default()
@@ -841,12 +851,12 @@ pub fn build_connector_auth(
             })
         }
         "paypal" => {
-            Ok(ConnectorAuth {
-                auth_type: Some(connector_auth::AuthType::Paypal(
-                    PaypalAuth {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Paypal(
+                    PaypalConfig {
             client_id: Some(Secret::new(get_val(creds, "client_id")?)),
             client_secret: Some(Secret::new(get_val(creds, "client_secret")?)),
-            payer_id: get_opt(creds, "payer_id"),
+            payer_id: get_opt_secret(creds, "payer_id"),
                         ..Default::default()
                     },
                 )),

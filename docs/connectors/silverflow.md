@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.SILVERFLOW,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.silverflow.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     silverflow=payment_pb2.SilverflowConfig(api_key=...),
+# ))
 
 ```
 
@@ -107,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L22) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L22) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L33) · [Rust](../../examples/silverflow/rust/silverflow.rs#L26)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L130) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L121) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L144) · [Rust](../../examples/silverflow/rust/silverflow.rs#L140)
 
 ### Card Payment (Automatic Capture)
 
@@ -121,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L126) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L121) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L128) · [Rust](../../examples/silverflow/rust/silverflow.rs#L123)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L155) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L147) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L166) · [Rust](../../examples/silverflow/rust/silverflow.rs#L162)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L214) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L206) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L210) · [Rust](../../examples/silverflow/rust/silverflow.rs#L206)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L174) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L166) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L182) · [Rust](../../examples/silverflow/rust/silverflow.rs#L177)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L320) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L307) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L307) · [Rust](../../examples/silverflow/rust/silverflow.rs#L305)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L211) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L201) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L204) · [Rust](../../examples/silverflow/rust/silverflow.rs#L199)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L417) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L398) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L395) · [Rust](../../examples/silverflow/rust/silverflow.rs#L394)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L233) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L223) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L223) · [Rust](../../examples/silverflow/rust/silverflow.rs#L217)
 
 ## API Reference
 
@@ -185,7 +186,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L517) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L491) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L485) · [Rust](../../examples/silverflow/rust/silverflow.rs#L485)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L255) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L244) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L241) · [Rust](../../examples/silverflow/rust/silverflow.rs#L234)
 
 #### PaymentService.Capture
 
@@ -196,7 +197,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L602) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L573) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L563) · [Rust](../../examples/silverflow/rust/silverflow.rs#L564)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L264) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L253) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L253) · [Rust](../../examples/silverflow/rust/silverflow.rs#L245)
 
 #### PaymentService.Get
 
@@ -207,7 +208,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L625) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L592) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L580) · [Rust](../../examples/silverflow/rust/silverflow.rs#L577)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L273) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L262) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L263) · [Rust](../../examples/silverflow/rust/silverflow.rs#L251)
 
 #### PaymentService.Refund
 
@@ -218,7 +219,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py) · [JavaScript](../../examples/silverflow/javascript/silverflow.js) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L594) · [Rust](../../examples/silverflow/rust/silverflow.rs#L589)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L174) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L166) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L271) · [Rust](../../examples/silverflow/rust/silverflow.rs#L257)
 
 #### PaymentService.Void
 
@@ -229,4 +230,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L644) · [JavaScript](../../examples/silverflow/javascript/silverflow.js) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L613) · [Rust](../../examples/silverflow/rust/silverflow.rs#L604)
+**Examples:** [Python](../../examples/silverflow/python/silverflow.py#L282) · [JavaScript](../../examples/silverflow/javascript/silverflow.js#L271) · [Kotlin](../../examples/silverflow/kotlin/silverflow.kt#L281) · [Rust](../../examples/silverflow/rust/silverflow.rs#L263)

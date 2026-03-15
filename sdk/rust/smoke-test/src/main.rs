@@ -21,7 +21,7 @@ mod connectors {
     include!(concat!(env!("OUT_DIR"), "/connectors.rs"));
 }
 
-use grpc_api_types::payments::{Connector, ConnectorConfig, Environment};
+use grpc_api_types::payments::{ConnectorConfig, Environment, SdkOptions};
 use hyperswitch_payments_client::ConnectorClient;
 use std::error::Error;
 
@@ -84,20 +84,12 @@ fn build_config(
     connector_name: &str,
     creds: &serde_json::Map<String, serde_json::Value>,
 ) -> Result<ConnectorConfig, String> {
-    let connector_str = connector_name.to_uppercase();
-    let connector_enum =
-        Connector::from_str_name(&connector_str).unwrap_or(Connector::Unspecified) as i32;
-
-    if connector_enum == Connector::Unspecified as i32 {
-        return Err(format!("unknown connector: {connector_name}"));
-    }
-
-    let auth = build_auth::build_connector_auth(connector_name, creds)?;
-
+    let connector_config = build_auth::build_connector_config(connector_name, creds)?;
     Ok(ConnectorConfig {
-        connector: connector_enum,
-        environment: Environment::Sandbox as i32,
-        auth: Some(auth),
+        connector_config: Some(connector_config),
+        options: Some(SdkOptions {
+            environment: Environment::Sandbox as i32,
+        }),
     })
 }
 

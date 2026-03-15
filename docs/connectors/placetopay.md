@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.PLACETOPAY,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.placetopay.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     placetopay=payment_pb2.PlacetopayConfig(api_key=...),
+# ))
 
 ```
 
@@ -107,7 +108,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L22) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L22) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L29) · [Rust](../../examples/placetopay/rust/placetopay.rs#L26)
+**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L97) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L94) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L100) · [Rust](../../examples/placetopay/rust/placetopay.rs#L100)
 
 ## API Reference
 
@@ -149,4 +150,4 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L111) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L107) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L111) · [Rust](../../examples/placetopay/rust/placetopay.rs#L109)
+**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L116) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L112) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L115) · [Rust](../../examples/placetopay/rust/placetopay.rs#L114)

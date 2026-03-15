@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.GIGADAT,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.gigadat.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     gigadat=payment_pb2.GigadatConfig(api_key=...),
+# ))
 
 ```
 
@@ -109,7 +110,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L26) · [Rust](../../examples/gigadat/rust/gigadat.rs#L25)
+**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L49) · [Rust](../../examples/gigadat/rust/gigadat.rs#L49)
 
 #### PaymentService.Refund
 
@@ -120,4 +121,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L40) · [Rust](../../examples/gigadat/rust/gigadat.rs#L37)
+**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L57) · [Rust](../../examples/gigadat/rust/gigadat.rs#L55)

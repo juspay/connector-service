@@ -7,23 +7,19 @@
 'use strict';
 
 const { PaymentClient, RecurringPaymentClient, CustomerClient, PaymentMethodClient } = require('hs-playlib');
-const { ConnectorConfig, Environment, Connector } = require('hs-playlib').types;
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
 const _defaultConfig = ConnectorConfig.create({
-    connector: Connector.STRIPE,
-    environment: Environment.SANDBOX,
+    options: SdkOptions.create({ environment: Environment.SANDBOX }),
 });
 // Standalone credentials (field names depend on connector auth type):
-// _defaultConfig.auth = { stripe: { apiKey: { value: 'YOUR_API_KEY' } } };
+// _defaultConfig.connectorConfig = ConnectorSpecificConfig.create({
+//     stripe: { apiKey: { value: 'YOUR_API_KEY' } }
+// });
 
 
-// Card Payment (Authorize + Capture)
-// Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
-async function processCheckoutCard(merchantTransactionId, config = _defaultConfig) {
-    const paymentClient = new PaymentClient(config);
-
-    // Step 1: Authorize — reserve funds on the payment method
-    const authorizeResponse = await paymentClient.authorize({
+function _buildAuthorizeRequest(captureMethod) {
+    return {
         "merchantTransactionId": "probe_txn_001",  // Identification
         "amount": {  // The amount for the payment
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
@@ -38,7 +34,7 @@ async function processCheckoutCard(merchantTransactionId, config = _defaultConfi
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "captureMethod": "MANUAL",  // Method for capturing the payment
+        "captureMethod": captureMethod,  // Method for capturing the payment
         "customer": {  // Customer Information
             "name": "John Doe",  // Customer's full name
             "email": {"value": "test@example.com"},  // Customer's email address
@@ -89,7 +85,44 @@ async function processCheckoutCard(merchantTransactionId, config = _defaultConfi
             "acceptLanguage": "en-US,en;q=0.9",
             "ipAddress": "1.2.3.4"  // Device Information
         }
-    });
+    };
+}
+
+function _buildCaptureRequest(connectorTransactionId) {
+    return {
+        "merchantCaptureId": "probe_capture_001",  // Identification
+        "connectorTransactionId": connectorTransactionId,
+        "amountToCapture": {  // Capture Details
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    };
+}
+
+function _buildGetRequest(connectorTransactionId) {
+    return {
+        "connectorTransactionId": connectorTransactionId,
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    };
+}
+
+function _buildVoidRequest(connectorTransactionId) {
+    return {
+        "merchantVoidId": "probe_void_001",  // Identification
+        "connectorTransactionId": connectorTransactionId
+    };
+}
+
+// Card Payment (Authorize + Capture)
+// Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+async function processCheckoutCard(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    // Step 1: Authorize — reserve funds on the payment method
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('MANUAL'));
 
     if (authorizeResponse.status === 'FAILED') {
         throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
@@ -100,14 +133,7 @@ async function processCheckoutCard(merchantTransactionId, config = _defaultConfi
     }
 
     // Step 2: Capture — settle the reserved funds
-    const captureResponse = await paymentClient.capture({
-        "merchantCaptureId": "probe_capture_001",  // Identification
-        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
-        "amountToCapture": {  // Capture Details
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    });
+    const captureResponse = await paymentClient.capture(_buildCaptureRequest(authorizeResponse.connectorTransactionId));
 
     if (captureResponse.status === 'FAILED') {
         throw new Error(`Capture failed: ${captureResponse.error?.message}`);
@@ -122,73 +148,7 @@ async function processCheckoutAutocapture(merchantTransactionId, config = _defau
     const paymentClient = new PaymentClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
-    const authorizeResponse = await paymentClient.authorize({
-        "merchantTransactionId": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Payment method to be used
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
-            }
-        },
-        "captureMethod": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
-        "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
-            "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            }
-        },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
-    });
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('AUTOMATIC'));
 
     if (authorizeResponse.status === 'FAILED') {
         throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
@@ -381,73 +341,7 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
-    const authorizeResponse = await paymentClient.authorize({
-        "merchantTransactionId": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Payment method to be used
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
-            }
-        },
-        "captureMethod": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
-        "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
-            "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            }
-        },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
-    });
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('AUTOMATIC'));
 
     if (authorizeResponse.status === 'FAILED') {
         throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
@@ -571,73 +465,7 @@ async function processVoidPayment(merchantTransactionId, config = _defaultConfig
     const paymentClient = new PaymentClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
-    const authorizeResponse = await paymentClient.authorize({
-        "merchantTransactionId": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Payment method to be used
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
-            }
-        },
-        "captureMethod": "MANUAL",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
-        "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
-            "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            }
-        },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
-    });
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('MANUAL'));
 
     if (authorizeResponse.status === 'FAILED') {
         throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
@@ -648,10 +476,7 @@ async function processVoidPayment(merchantTransactionId, config = _defaultConfig
     }
 
     // Step 2: Void — release reserved funds (cancel authorization)
-    const voidResponse = await paymentClient.void({
-        "merchantVoidId": "probe_void_001",  // Identification
-        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
-    });
+    const voidResponse = await paymentClient.void(_buildVoidRequest(authorizeResponse.connectorTransactionId));
 
     return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId };
 }
@@ -662,73 +487,7 @@ async function processGetPayment(merchantTransactionId, config = _defaultConfig)
     const paymentClient = new PaymentClient(config);
 
     // Step 1: Authorize — reserve funds on the payment method
-    const authorizeResponse = await paymentClient.authorize({
-        "merchantTransactionId": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Payment method to be used
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
-            }
-        },
-        "captureMethod": "MANUAL",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
-        "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
-            "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            }
-        },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
-    });
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('MANUAL'));
 
     if (authorizeResponse.status === 'FAILED') {
         throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
@@ -739,13 +498,7 @@ async function processGetPayment(merchantTransactionId, config = _defaultConfig)
     }
 
     // Step 2: Get — retrieve current payment status from the connector
-    const getResponse = await paymentClient.get({
-        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
-        "amount": {  // Amount Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    });
+    const getResponse = await paymentClient.get(_buildGetRequest(authorizeResponse.connectorTransactionId));
 
     return { status: getResponse.status, transactionId: getResponse.connectorTransactionId };
 }
@@ -827,115 +580,27 @@ async function processTokenize(merchantTransactionId, config = _defaultConfig) {
 
 // Flow: PaymentService.Authorize (Card)
 async function authorize(merchantTransactionId, config = _defaultConfig) {
-    // Step 1: Authorize — reserve funds on the payment method
-    const authorizeResponse = await paymentClient.authorize({
-        "merchantTransactionId": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Payment method to be used
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
-            }
-        },
-        "captureMethod": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
-        "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
-            "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            }
-        },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
-    });
+    const paymentClient = new PaymentClient(config);
 
-    if (authorizeResponse.status === 'FAILED') {
-        throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
-    }
-    if (authorizeResponse.status === 'PENDING') {
-        // Awaiting async confirmation — handle via webhook
-        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
-    }
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('AUTOMATIC'));
 
     return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
 }
 
 // Flow: PaymentService.Capture
 async function capture(merchantTransactionId, config = _defaultConfig) {
-    // Step 1: Capture — settle the reserved funds
-    const captureResponse = await paymentClient.capture({
-        "merchantCaptureId": "probe_capture_001",  // Identification
-        "connectorTransactionId": "probe_connector_txn_001",
-        "amountToCapture": {  // Capture Details
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    });
+    const paymentClient = new PaymentClient(config);
 
-    if (captureResponse.status === 'FAILED') {
-        throw new Error(`Capture failed: ${captureResponse.error?.message}`);
-    }
+    const captureResponse = await paymentClient.capture(_buildCaptureRequest('probe_connector_txn_001'));
 
     return { status: captureResponse.status };
 }
 
 // Flow: PaymentService.Get
 async function get(merchantTransactionId, config = _defaultConfig) {
-    // Step 1: Get — retrieve current payment status from the connector
-    const getResponse = await paymentClient.get({
-        "connectorTransactionId": "probe_connector_txn_001",
-        "amount": {  // Amount Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        }
-    });
+    const paymentClient = new PaymentClient(config);
+
+    const getResponse = await paymentClient.get(_buildGetRequest('probe_connector_txn_001'));
 
     return { status: getResponse.status };
 }
@@ -1041,11 +706,9 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
 
 // Flow: PaymentService.Void
 async function voidPayment(merchantTransactionId, config = _defaultConfig) {
-    // Step 1: Void — release reserved funds (cancel authorization)
-    const voidResponse = await paymentClient.void({
-        "merchantVoidId": "probe_void_001",  // Identification
-        "connectorTransactionId": "probe_connector_txn_001"
-    });
+    const paymentClient = new PaymentClient(config);
+
+    const voidResponse = await paymentClient.void(_buildVoidRequest('probe_connector_txn_001'));
 
     return { status: voidResponse.status };
 }

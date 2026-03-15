@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.TRUSTPAYMENTS,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.trustpayments.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     trustpayments=payment_pb2.TrustpaymentsConfig(api_key=...),
+# ))
 
 ```
 
@@ -107,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L22) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L22) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L33) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L26)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L130) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L121) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L144) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L140)
 
 ### Card Payment (Automatic Capture)
 
@@ -121,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L126) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L121) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L128) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L123)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L155) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L147) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L166) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L162)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L214) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L206) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L210) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L206)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L174) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L166) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L182) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L177)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L320) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L307) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L307) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L305)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L211) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L201) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L204) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L199)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L417) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L398) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L395) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L394)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L233) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L223) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L223) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L217)
 
 ## API Reference
 
@@ -185,7 +186,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L517) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L491) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L485) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L485)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L255) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L244) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L241) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L234)
 
 #### PaymentService.Capture
 
@@ -196,7 +197,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L602) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L573) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L563) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L564)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L264) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L253) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L253) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L245)
 
 #### PaymentService.Get
 
@@ -207,7 +208,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L625) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L592) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L580) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L577)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L273) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L262) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L263) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L251)
 
 #### PaymentService.Refund
 
@@ -218,7 +219,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L594) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L589)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L174) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L166) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L271) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L257)
 
 #### PaymentService.Void
 
@@ -229,4 +230,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L644) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L613) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L604)
+**Examples:** [Python](../../examples/trustpayments/python/trustpayments.py#L282) · [JavaScript](../../examples/trustpayments/javascript/trustpayments.js#L271) · [Kotlin](../../examples/trustpayments/kotlin/trustpayments.kt#L281) · [Rust](../../examples/trustpayments/rust/trustpayments.rs#L263)

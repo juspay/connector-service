@@ -1,0 +1,239 @@
+// This file is auto-generated. Do not edit manually.
+// Replace YOUR_API_KEY and placeholder values with real data.
+// Regenerate: python3 scripts/generate-connector-docs.py zift
+//
+// Zift — all integration scenarios and flows in one file.
+// Run a scenario:  node zift.js checkout_card
+'use strict';
+
+const { PaymentClient } = require('hs-playlib');
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
+
+const _defaultConfig = ConnectorConfig.create({
+    options: SdkOptions.create({ environment: Environment.SANDBOX }),
+});
+// Standalone credentials (field names depend on connector auth type):
+// _defaultConfig.connectorConfig = ConnectorSpecificConfig.create({
+//     zift: { apiKey: { value: 'YOUR_API_KEY' } }
+// });
+
+
+function _buildAuthorizeRequest(captureMethod) {
+    return {
+        "merchantTransactionId": "probe_txn_001",  // Identification
+        "amount": {  // The amount for the payment
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {  // Payment method to be used
+            "card": {  // Generic card payment
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+            }
+        },
+        "captureMethod": captureMethod,  // Method for capturing the payment
+        "customer": {  // Customer Information
+            "name": "John Doe",  // Customer's full name
+            "email": {"value": "test@example.com"},  // Customer's email address
+            "id": "cust_probe_123",  // Internal customer ID
+            "phoneNumber": "4155552671",  // Customer's phone number
+            "phoneCountryCode": "+1"  // Customer's phone country code
+        },
+        "address": {  // Address Information
+            "shippingAddress": {
+                "firstName": {"value": "John"},  // Personal Information
+                "lastName": {"value": "Doe"},
+                "line1": {"value": "123 Main St"},  // Address Details
+                "city": {"value": "Seattle"},
+                "state": {"value": "WA"},
+                "zipCode": {"value": "98101"},
+                "countryAlpha2Code": "US",
+                "email": {"value": "test@example.com"},  // Contact Information
+                "phoneNumber": {"value": "4155552671"},
+                "phoneCountryCode": "+1"
+            },
+            "billingAddress": {
+                "firstName": {"value": "John"},  // Personal Information
+                "lastName": {"value": "Doe"},
+                "line1": {"value": "123 Main St"},  // Address Details
+                "city": {"value": "Seattle"},
+                "state": {"value": "WA"},
+                "zipCode": {"value": "98101"},
+                "countryAlpha2Code": "US",
+                "email": {"value": "test@example.com"},  // Contact Information
+                "phoneNumber": {"value": "4155552671"},
+                "phoneCountryCode": "+1"
+            }
+        },
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
+        "webhookUrl": "https://example.com/webhook",
+        "completeAuthorizeUrl": "https://example.com/complete",
+        "browserInfo": {
+            "colorDepth": 24,  // Display Information
+            "screenHeight": 900,
+            "screenWidth": 1440,
+            "javaEnabled": false,  // Browser Settings
+            "javaScriptEnabled": true,
+            "language": "en-US",
+            "timeZoneOffsetMinutes": -480,
+            "acceptHeader": "application/json",  // Browser Headers
+            "userAgent": "Mozilla/5.0 (probe-bot)",
+            "acceptLanguage": "en-US,en;q=0.9",
+            "ipAddress": "1.2.3.4"  // Device Information
+        }
+    };
+}
+
+// Card Payment (Automatic Capture)
+// Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+async function processCheckoutAutocapture(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    // Step 1: Authorize — reserve funds on the payment method
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('AUTOMATIC'));
+
+    if (authorizeResponse.status === 'FAILED') {
+        throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
+    }
+    if (authorizeResponse.status === 'PENDING') {
+        // Awaiting async confirmation — handle via webhook
+        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
+    }
+
+    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+}
+
+// Refund a Payment
+// Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+async function processRefund(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    // Step 1: Authorize — reserve funds on the payment method
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('AUTOMATIC'));
+
+    if (authorizeResponse.status === 'FAILED') {
+        throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
+    }
+    if (authorizeResponse.status === 'PENDING') {
+        // Awaiting async confirmation — handle via webhook
+        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
+    }
+
+    // Step 2: Refund — return funds to the customer
+    const refundResponse = await paymentClient.refund({
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
+        "paymentAmount": 1000,  // Amount Information
+        "refundAmount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "reason": "customer_request"  // Reason for the refund
+    });
+
+    if (refundResponse.status === 'FAILED') {
+        throw new Error(`Refund failed: ${refundResponse.error?.message}`);
+    }
+
+    return { status: refundResponse.status };
+}
+
+// Flow: PaymentService.Authorize (Card)
+async function authorize(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('AUTOMATIC'));
+
+    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+}
+
+// Flow: PaymentService.SetupRecurring
+async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
+    // Step 1: Setup Recurring — store the payment mandate
+    const setupResponse = await paymentClient.setupRecurring({
+        "merchantRecurringPaymentId": "probe_mandate_001",  // Identification
+        "amount": {  // Mandate Details
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {
+            "card": {  // Generic card payment
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+            }
+        },
+        "customer": {
+            "name": "John Doe",  // Customer's full name
+            "email": {"value": "test@example.com"},  // Customer's email address
+            "id": "cust_probe_123",  // Internal customer ID
+            "phoneNumber": "4155552671",  // Customer's phone number
+            "phoneCountryCode": "+1"  // Customer's phone country code
+        },
+        "address": {  // Address Information
+            "billingAddress": {
+                "firstName": {"value": "John"},  // Personal Information
+                "lastName": {"value": "Doe"},
+                "line1": {"value": "123 Main St"},  // Address Details
+                "city": {"value": "Seattle"},
+                "state": {"value": "WA"},
+                "zipCode": {"value": "98101"},
+                "countryAlpha2Code": "US",
+                "email": {"value": "test@example.com"},  // Contact Information
+                "phoneNumber": {"value": "4155552671"},
+                "phoneCountryCode": "+1"
+            }
+        },
+        "authType": "NO_THREE_DS",  // Type of authentication to be used
+        "enrolledFor3Ds": false,  // Indicates if the customer is enrolled for 3D Secure
+        "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup
+        "setupFutureUsage": "OFF_SESSION",  // Indicates future usage intention
+        "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested
+        "customerAcceptance": {  // Details of customer acceptance
+            "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
+            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        },
+        "browserInfo": {  // Information about the customer's browser
+            "colorDepth": 24,  // Display Information
+            "screenHeight": 900,
+            "screenWidth": 1440,
+            "javaEnabled": false,  // Browser Settings
+            "javaScriptEnabled": true,
+            "language": "en-US",
+            "timeZoneOffsetMinutes": -480,
+            "acceptHeader": "application/json",  // Browser Headers
+            "userAgent": "Mozilla/5.0 (probe-bot)",
+            "acceptLanguage": "en-US,en;q=0.9",
+            "ipAddress": "1.2.3.4"  // Device Information
+        }
+    });
+
+    if (setupResponse.status === 'FAILED') {
+        throw new Error(`Recurring setup failed: ${setupResponse.error?.message}`);
+    }
+
+    return { status: setupResponse.status, mandateId: setupResponse.connectorTransactionId };
+}
+
+
+module.exports = { processCheckoutAutocapture, processRefund, authorize, setupRecurring };
+
+if (require.main === module) {
+    const scenario = process.argv[2] || 'checkout_autocapture';
+    const key = 'process' + scenario.replace(/_([a-z])/g, (_, l) => l.toUpperCase()).replace(/^(.)/, c => c.toUpperCase());
+    const fn = module.exports[key];
+    if (!fn) {
+        const available = Object.keys(module.exports).map(k =>
+            k.replace(/^process/, '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '')
+        );
+        console.error(`Unknown scenario: ${scenario}. Available: ${available.join(', ')}`);
+        process.exit(1);
+    }
+    fn('order_001').catch(console.error);
+}

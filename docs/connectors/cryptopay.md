@@ -21,11 +21,12 @@ Use this config for all flows in this connector. Replace `YOUR_API_KEY` with you
 from payments.generated import sdk_config_pb2, payment_pb2
 
 config = sdk_config_pb2.ConnectorConfig(
-    connector=payment_pb2.Connector.CRYPTOPAY,
-    environment=sdk_config_pb2.Environment.SANDBOX,
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
 )
 # Set credentials before running (field names depend on connector auth type):
-# config.auth.cryptopay.api_key.value = "YOUR_API_KEY"
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     cryptopay=payment_pb2.CryptopayConfig(api_key=...),
+# ))
 
 ```
 
@@ -108,4 +109,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/cryptopay/python/cryptopay.py) · [JavaScript](../../examples/cryptopay/javascript/cryptopay.js) · [Kotlin](../../examples/cryptopay/kotlin/cryptopay.kt#L25) · [Rust](../../examples/cryptopay/rust/cryptopay.rs#L25)
+**Examples:** [Python](../../examples/cryptopay/python/cryptopay.py) · [JavaScript](../../examples/cryptopay/javascript/cryptopay.js) · [Kotlin](../../examples/cryptopay/kotlin/cryptopay.kt#L35) · [Rust](../../examples/cryptopay/rust/cryptopay.rs#L36)
