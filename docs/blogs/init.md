@@ -3,7 +3,7 @@
 If you have ever integrated a payment processor, you know the drill. You read through a PDF that was last updated in 2019, figure out what combination of API keys goes in which header, discover that "decline code 51" means something subtly different on this processor than the last one you dealt with, and then do it all over again when your business decides to add a second processor.
 
 We have been living in this world for years building Hyperswitch, an open-source payment orchestrator. At some point we had integrations for 50+ connectors. The integrations worked well — but they were locked inside our orchestrator, not usable by anyone who just needed to talk to Stripe or Adyen without adopting an entire platform.
-
+We always felt the Payment APIs are not more complicated than database drivers. It it just that the industry has not arrived at a standard (and it never will!!) for payments. Hence, we decided to build an open interface for Developer and AI agents to use, rather than recreate it every time.```
 This post is about how we did that: unbundling those integrations into a standalone library called the **Connector Service**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
 
 ---
