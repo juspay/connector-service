@@ -1,0 +1,564 @@
+[
+  {
+    "pr": 571,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 19,
+    "file_types": [
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(ffi): auto generate client code for each flow from .proto directly",
+    "time_ms": 1681
+  },
+  {
+    "pr": 573,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 40,
+    "file_types": [
+      "OTHER",
+      "OTHER_RUST",
+      "SDK",
+      "EXTERNAL_SERVICES",
+      "GRPC_TEST",
+      "CONFIG",
+      "GRPC_SERVICE"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "refactor(compilation): eliminate diesel from FFI dep tree and centralise workspace deps",
+    "time_ms": 1810
+  },
+  {
+    "pr": 575,
+    "score": 75,
+    "status": "PASS WITH WARNINGS",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 5,
+    "suggestions": 0,
+    "files": 18,
+    "file_types": [
+      "OTHER_RUST",
+      "INTERFACES",
+      "COMPOSITE_SERVICE",
+      "GRPC_ROUTER",
+      "CONNECTOR",
+      "PROTO",
+      "GRPC_HANDLER",
+      "GRPC_SERVICE"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "CS-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "chore: Added Composite Get Flow",
+    "time_ms": 1433
+  },
+  {
+    "pr": 576,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(payment_methods): Add ACH (eCheck) support to Forte connector",
+    "time_ms": 1119
+  },
+  {
+    "pr": 579,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 17,
+    "file_types": [
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: improve generation with proto parsing and refactor makefile",
+    "time_ms": 1510
+  },
+  {
+    "pr": 580,
+    "score": null,
+    "status": null,
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": "RuntimeError: Failed to fetch PR diff: could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of lines (20000) (https://api.github.com/repos/juspay/connector-service/pulls/580)\nPullRequest.diff too_large",
+    "title": "chore: Scenario Based Test framework for UCS",
+    "time_ms": 1472
+  },
+  {
+    "pr": 583,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 14,
+    "file_types": [
+      "FFI",
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor(ffi): automate FFI flow registrations and fix SDK codegen",
+    "time_ms": 1493
+  },
+  {
+    "pr": 589,
+    "score": 29,
+    "status": "BLOCKED (Critical)",
+    "findings": 12,
+    "criticals": 1,
+    "warnings": 10,
+    "suggestions": 1,
+    "files": 37,
+    "file_types": [
+      "CONNECTOR_TYPES",
+      "OTHER_RUST",
+      "DOMAIN_TYPES",
+      "FFI",
+      "SDK",
+      "PROTO",
+      "CONFIG"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "SE-003",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat: proto changes for sdk configs overridable vs non overridable",
+    "time_ms": 1594
+  },
+  {
+    "pr": 590,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 13,
+    "file_types": [
+      "CONNECTOR_TYPES",
+      "OTHER_RUST",
+      "DOMAIN_TYPES",
+      "FFI",
+      "SDK",
+      "COMMON_UTILS"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor: simplify header handling by making them optional and inferring connector from `x-connector-auth` header",
+    "time_ms": 1363
+  },
+  {
+    "pr": 592,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 19,
+    "file_types": [
+      "CI",
+      "DOCUMENTATION",
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: make release build manual and add sdk test to PR check",
+    "time_ms": 1497
+  },
+  {
+    "pr": 595,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 32,
+    "file_types": [
+      "FFI",
+      "OTHER_RUST",
+      "DOMAIN_TYPES",
+      "SDK",
+      "GRPC_SERVICE",
+      "PROTO",
+      "CONFIG",
+      "OTHER"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "refactor(client): per-service SDK clients from services.proto boundaries",
+    "time_ms": 1716
+  },
+  {
+    "pr": 596,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "DOCUMENTATION",
+      "GRPC_SERVER",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(clippy): fix clippy error",
+    "time_ms": 1442
+  },
+  {
+    "pr": 600,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 11,
+    "file_types": [
+      "CI",
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: creds and multi-connector smoke test",
+    "time_ms": 1481
+  },
+  {
+    "pr": 602,
+    "score": 78,
+    "status": "PASS WITH WARNINGS",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 7,
+    "files": 12,
+    "file_types": [
+      "OTHER_RUST",
+      "DOMAIN_TYPES",
+      "TRANSFORMER",
+      "CONNECTOR",
+      "GRPC_SERVICE",
+      "CONFIG",
+      "OTHER"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "CP-002",
+      "SE-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [Truelayer] Implement webhooks for payments and refunds",
+    "time_ms": 1494
+  },
+  {
+    "pr": 603,
+    "score": 29,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 0,
+    "warnings": 14,
+    "suggestions": 1,
+    "files": 28,
+    "file_types": [
+      "FFI",
+      "OTHER_RUST",
+      "PROTO",
+      "SDK"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "PT-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(proto): Change the proto package name",
+    "time_ms": 1457
+  },
+  {
+    "pr": 604,
+    "score": 39,
+    "status": "BLOCKED (Critical)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 1,
+    "files": 46,
+    "file_types": [
+      "OTHER_RUST",
+      "DOMAIN_TYPES",
+      "SDK",
+      "COMPOSITE_SERVICE",
+      "DOCUMENTATION",
+      "GRPC_TEST",
+      "PROTO",
+      "GRPC_SERVICE"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "refactor(proto): refactor id_type to string",
+    "time_ms": 1956
+  },
+  {
+    "pr": 606,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: fix java tests to match latest generation spec",
+    "time_ms": 1003
+  },
+  {
+    "pr": 610,
+    "score": 83,
+    "status": "PASS (Good)",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 2,
+    "files": 28,
+    "file_types": [
+      "CONNECTOR_TYPES",
+      "FFI",
+      "DOMAIN_TYPES",
+      "INTERFACES",
+      "OTHER_RUST",
+      "SDK",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "PROTO"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "CP-002",
+      "PQ-002",
+      "TS-007"
+    ],
+    "error": null,
+    "title": "chore(error): add request and response error proto for ffi implementation",
+    "time_ms": 1642
+  },
+  {
+    "pr": 618,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "GRPC_SERVER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(framework): Added all available services in app.rs",
+    "time_ms": 1006
+  },
+  {
+    "pr": 623,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci(docs): Update workflow to use CONNECTOR_SERVICE_DOCS_CI secret",
+    "time_ms": 1060
+  },
+  {
+    "pr": 625,
+    "score": null,
+    "status": null,
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": "RuntimeError: Failed to fetch PR diff: could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of lines (20000) (https://api.github.com/repos/juspay/connector-service/pulls/625)\nPullRequest.diff too_large",
+    "title": "feat(docs): add automated connector docs",
+    "time_ms": 1008
+  },
+  {
+    "pr": 627,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 84,
+    "criticals": 6,
+    "warnings": 40,
+    "suggestions": 38,
+    "files": 222,
+    "file_types": [
+      "CONNECTOR_TYPES",
+      "OTHER_RUST",
+      "DOMAIN_TYPES",
+      "FFI",
+      "GRPC_SERVER",
+      "INTERFACES",
+      "SDK",
+      "TRANSFORMER",
+      "CONNECTOR_TEST",
+      "DOCUMENTATION",
+      "COMMON_UTILS",
+      "CONNECTOR",
+      "PROTO",
+      "GRPC_SERVICE"
+    ],
+    "rules_fired": [
+      "CP-009",
+      "DR-001",
+      "DR-003",
+      "PT-003",
+      "CP-002",
+      "DR-002",
+      "CP-005",
+      "PQ-002",
+      "EH-002",
+      "CP-001",
+      "SE-001",
+      "DR-004"
+    ],
+    "error": null,
+    "title": "feat(domain): unify ConnectorSpecificAuth \u2192 ConnectorSpecificConfig",
+    "time_ms": 1771
+  },
+  {
+    "pr": 628,
+    "score": null,
+    "status": null,
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": "RuntimeError: Failed to fetch PR diff: could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of lines (20000) (https://api.github.com/repos/juspay/connector-service/pulls/628)\nPullRequest.diff too_large",
+    "title": "chore(remove): remove unused code",
+    "time_ms": 994
+  },
+  {
+    "pr": 642,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: launch blog for review",
+    "time_ms": 1005
+  },
+  {
+    "pr": 645,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 15,
+    "file_types": [
+      "CI",
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [
+      "PQ-001"
+    ],
+    "error": null,
+    "title": "refactor(generate.py): Refactor code generation to use Jinja2 templates",
+    "time_ms": 1419
+  },
+  {
+    "pr": 646,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: Add Unified Payment Protocol (UPP) specification RFC",
+    "time_ms": 1130
+  }
+]

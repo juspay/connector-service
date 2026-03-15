@@ -1,0 +1,12 @@
+# PR Review Tool Configuration
+# See cmds.md for full documentation.
+
+fail_under = 60
+max_file_count = 25
+
+[ignore]
+patterns = []
+
+# Rule overrides
+[rules.TE-001]
+enabled = false    # "New connectors must have test files" — not applicable

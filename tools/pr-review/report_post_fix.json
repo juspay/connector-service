@@ -1,0 +1,193 @@
+[
+  {
+    "pr": 610,
+    "score": 93,
+    "status": "PASS (Good)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 2,
+    "files": 28,
+    "file_types": [
+      "FFI",
+      "CONNECTOR_TYPES",
+      "OTHER_RUST",
+      "CONNECTOR",
+      "SDK",
+      "INTERFACES",
+      "DOMAIN_TYPES",
+      "GRPC_TEST",
+      "PROTO"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "TS-007",
+      "EH-004"
+    ],
+    "error": null,
+    "title": "chore(error): add request and response error proto for ffi implementation",
+    "time_ms": 1322,
+    "skipped": false
+  },
+  {
+    "pr": 618,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "GRPC_SERVER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(framework): Added all available services in app.rs",
+    "time_ms": 1088,
+    "skipped": false
+  },
+  {
+    "pr": 623,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci(docs): Update workflow to use CONNECTOR_SERVICE_DOCS_CI secret",
+    "time_ms": 1023,
+    "skipped": false
+  },
+  {
+    "pr": 625,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(docs): add automated connector docs",
+    "time_ms": 1005,
+    "skipped": true
+  },
+  {
+    "pr": 627,
+    "score": 79,
+    "status": "PASS WITH WARNINGS",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 4,
+    "suggestions": 1,
+    "files": 222,
+    "file_types": [
+      "FFI",
+      "CONNECTOR_TYPES",
+      "OTHER_RUST",
+      "GRPC_SERVER",
+      "CONNECTOR",
+      "SDK",
+      "INTERFACES",
+      "CONNECTOR_TEST",
+      "GRPC_SERVICE",
+      "COMMON_UTILS",
+      "DOCUMENTATION",
+      "TRANSFORMER",
+      "DOMAIN_TYPES",
+      "PROTO"
+    ],
+    "rules_fired": [
+      "EH-002",
+      "CP-005",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat(domain): unify ConnectorSpecificAuth \u2192 ConnectorSpecificConfig",
+    "time_ms": 2283,
+    "skipped": false
+  },
+  {
+    "pr": 628,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore(remove): remove unused code",
+    "time_ms": 1013,
+    "skipped": true
+  },
+  {
+    "pr": 642,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: launch blog for review",
+    "time_ms": 1206,
+    "skipped": false
+  },
+  {
+    "pr": 645,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 15,
+    "file_types": [
+      "SDK",
+      "OTHER",
+      "CI"
+    ],
+    "rules_fired": [
+      "PQ-001"
+    ],
+    "error": null,
+    "title": "refactor(generate.py): Refactor code generation to use Jinja2 templates",
+    "time_ms": 1277,
+    "skipped": false
+  },
+  {
+    "pr": 646,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: Add Unified Payment Protocol (UPP) specification RFC",
+    "time_ms": 1500,
+    "skipped": false
+  }
+]

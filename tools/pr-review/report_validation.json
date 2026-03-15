@@ -1,0 +1,4644 @@
+[
+  {
+    "pr": 340,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 42,
+    "criticals": 2,
+    "warnings": 19,
+    "suggestions": 21,
+    "files": 44,
+    "file_types": [
+      "GRPC_SERVER",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR_TEST",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-001",
+      "PQ-002",
+      "CP-002",
+      "DR-003",
+      "DR-002",
+      "EH-004",
+      "CP-005",
+      "EH-001",
+      "DR-004",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix: Checkout Diff check fixes",
+    "time_ms": 1798,
+    "skipped": false
+  },
+  {
+    "pr": 341,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore: add trigger to push image to ghcr when tag is created",
+    "time_ms": 1037,
+    "skipped": false
+  },
+  {
+    "pr": 342,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(bluesnap): address `merchantTransactionId` being `IRRELEVANT_ATTEMPT_ID` instead of actual `attempt_id`",
+    "time_ms": 1168,
+    "skipped": false
+  },
+  {
+    "pr": 344,
+    "score": 7,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 2,
+    "warnings": 10,
+    "suggestions": 3,
+    "files": 10,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "TS-004",
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): Trustpay Refund & RSync flow",
+    "time_ms": 1729,
+    "skipped": false
+  },
+  {
+    "pr": 345,
+    "score": 47,
+    "status": "BLOCKED (Poor)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 3,
+    "files": 10,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix: adyen prod diff check parity",
+    "time_ms": 1351,
+    "skipped": false
+  },
+  {
+    "pr": 346,
+    "score": 45,
+    "status": "BLOCKED (Poor)",
+    "findings": 11,
+    "criticals": 0,
+    "warnings": 11,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR_TYPES",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003",
+      "CP-005"
+    ],
+    "error": null,
+    "title": "fix(connector): [paysafe] make payment method token calls work for authorizeonly flow",
+    "time_ms": 1060,
+    "skipped": false
+  },
+  {
+    "pr": 347,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 9,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004"
+    ],
+    "error": null,
+    "title": "feat(connector): [TSYS] Connector Integration",
+    "time_ms": 1515,
+    "skipped": false
+  },
+  {
+    "pr": 349,
+    "score": 74,
+    "status": "PASS WITH WARNINGS",
+    "findings": 3,
+    "criticals": 1,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat: paypal refund rsync flow",
+    "time_ms": 1031,
+    "skipped": false
+  },
+  {
+    "pr": 350,
+    "score": 22,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 1,
+    "warnings": 11,
+    "suggestions": 3,
+    "files": 5,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-002",
+      "EH-004",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat: Paypal Threeds flow Added",
+    "time_ms": 1084,
+    "skipped": false
+  },
+  {
+    "pr": 351,
+    "score": 36,
+    "status": "BLOCKED (Critical)",
+    "findings": 16,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 4,
+    "files": 10,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-004",
+      "PT-003",
+      "EH-002",
+      "EH-004"
+    ],
+    "error": null,
+    "title": "feat(connector): [MOLLIE] Connector Integration",
+    "time_ms": 1388,
+    "skipped": false
+  },
+  {
+    "pr": 352,
+    "score": 98,
+    "status": "PASS (Excellent)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 2,
+    "files": 11,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "CONNECTOR_MODULE",
+      "COMMON_ENUMS",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004"
+    ],
+    "error": null,
+    "title": "feat(connector): [BAMBORA] Connector Integration",
+    "time_ms": 1977,
+    "skipped": false
+  },
+  {
+    "pr": 353,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: fixed metadata to accept all values in Authorize flow",
+    "time_ms": 1202,
+    "skipped": false
+  },
+  {
+    "pr": 354,
+    "score": 30,
+    "status": "BLOCKED (Critical)",
+    "findings": 14,
+    "criticals": 0,
+    "warnings": 14,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "DR-004",
+      "PT-003",
+      "DR-001"
+    ],
+    "error": null,
+    "title": "feat(connector): Nexinets void flow & PSync, Capture, Refund, RSyns diff check fix",
+    "time_ms": 1029,
+    "skipped": false
+  },
+  {
+    "pr": 355,
+    "score": 14,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 1,
+    "warnings": 13,
+    "suggestions": 1,
+    "files": 5,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-002",
+      "EH-001",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat: setupmandate and repeat payment flow for paypal",
+    "time_ms": 1337,
+    "skipped": false
+  },
+  {
+    "pr": 356,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: adyen brand name lower case to match hyperswitch diff",
+    "time_ms": 1116,
+    "skipped": false
+  },
+  {
+    "pr": 357,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 5,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: Diff check fixes for Xendit Authorize flow",
+    "time_ms": 1372,
+    "skipped": false
+  },
+  {
+    "pr": 358,
+    "score": 82,
+    "status": "PASS (Good)",
+    "findings": 6,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 3,
+    "files": 11,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-004",
+      "DR-003",
+      "CP-005",
+      "EH-004"
+    ],
+    "error": null,
+    "title": "feat(connector): jpmorgan",
+    "time_ms": 1445,
+    "skipped": false
+  },
+  {
+    "pr": 359,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat: Enable clippy for connector integration crate",
+    "time_ms": 1103,
+    "skipped": true
+  },
+  {
+    "pr": 360,
+    "score": 50,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "PROTO"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix: removed extra ; in payments.proto file",
+    "time_ms": 1041,
+    "skipped": false
+  },
+  {
+    "pr": 361,
+    "score": 29,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 0,
+    "warnings": 14,
+    "suggestions": 1,
+    "files": 12,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "SE-002",
+      "DR-003",
+      "EH-002",
+      "EH-004",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): [WORLDPAYXML] Connector Integration",
+    "time_ms": 1405,
+    "skipped": false
+  },
+  {
+    "pr": 362,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 50,
+    "criticals": 1,
+    "warnings": 40,
+    "suggestions": 9,
+    "files": 18,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-001",
+      "PT-003",
+      "DR-002",
+      "PT-001",
+      "PT-004",
+      "DR-004",
+      "PT-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): Refactored Volt connector and Refund & RSync flow implementation",
+    "time_ms": 1610,
+    "skipped": false
+  },
+  {
+    "pr": 363,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: status handling to use router_data.status during error case 2xx",
+    "time_ms": 1083,
+    "skipped": false
+  },
+  {
+    "pr": 364,
+    "score": 74,
+    "status": "PASS WITH WARNINGS",
+    "findings": 6,
+    "criticals": 0,
+    "warnings": 5,
+    "suggestions": 1,
+    "files": 9,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "EH-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [PAYME] Connector Integration",
+    "time_ms": 1491,
+    "skipped": false
+  },
+  {
+    "pr": 365,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 13,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat: Add granular Claude rules for connector integration",
+    "time_ms": 1103,
+    "skipped": false
+  },
+  {
+    "pr": 366,
+    "score": 47,
+    "status": "BLOCKED (Poor)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 3,
+    "files": 23,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "CONNECTOR_TEST",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): [Checkout] Added Setupmandate & Repeatpayment flows for Checkout",
+    "time_ms": 1476,
+    "skipped": false
+  },
+  {
+    "pr": 367,
+    "score": 41,
+    "status": "BLOCKED (Poor)",
+    "findings": 15,
+    "criticals": 0,
+    "warnings": 11,
+    "suggestions": 4,
+    "files": 18,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix: Correct mapping of metadata",
+    "time_ms": 1250,
+    "skipped": false
+  },
+  {
+    "pr": 368,
+    "score": 90,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 0,
+    "files": 6,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat: added upi_source for cc/cl",
+    "time_ms": 1054,
+    "skipped": false
+  },
+  {
+    "pr": 369,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(connector): [bluesnap] pass `connector_request_ref_id` instead of `payment_id`",
+    "time_ms": 1093,
+    "skipped": false
+  },
+  {
+    "pr": 371,
+    "score": 39,
+    "status": "BLOCKED (Critical)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 1,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): [Stripe] Add Banktransfer, BNPL, BankRedirect PMs for stripe",
+    "time_ms": 1297,
+    "skipped": false
+  },
+  {
+    "pr": 372,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: Removed the authorization_indicator_type field from Authdotnet Req",
+    "time_ms": 1060,
+    "skipped": false
+  },
+  {
+    "pr": 374,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: Capture, Void, Refund Request",
+    "time_ms": 974,
+    "skipped": false
+  },
+  {
+    "pr": 375,
+    "score": 25,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 0,
+    "warnings": 15,
+    "suggestions": 0,
+    "files": 6,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003",
+      "EH-002",
+      "CP-009"
+    ],
+    "error": null,
+    "title": "fix: [WORLPAYVANTIV] Diff Checks",
+    "time_ms": 1201,
+    "skipped": false
+  },
+  {
+    "pr": 376,
+    "score": 74,
+    "status": "PASS WITH WARNINGS",
+    "findings": 3,
+    "criticals": 1,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix(connector): Paypal Capture & Void flow",
+    "time_ms": 983,
+    "skipped": false
+  },
+  {
+    "pr": 377,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(connector): Fiserv RSync flow Diff fix",
+    "time_ms": 988,
+    "skipped": false
+  },
+  {
+    "pr": 381,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 9,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [GETNETGLOBAL] Connector Integration ",
+    "time_ms": 1532,
+    "skipped": false
+  },
+  {
+    "pr": 382,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 36,
+    "criticals": 1,
+    "warnings": 15,
+    "suggestions": 20,
+    "files": 39,
+    "file_types": [
+      "GRPC_SERVER",
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-001",
+      "PQ-002",
+      "CP-002",
+      "DR-003",
+      "DR-002",
+      "CP-005",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(core): Changed Metadata Type to SecretString",
+    "time_ms": 1241,
+    "skipped": false
+  },
+  {
+    "pr": 383,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(connector): [SHIFT4] Bank-Redirect",
+    "time_ms": 1044,
+    "skipped": false
+  },
+  {
+    "pr": 385,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 23,
+    "file_types": [
+      "GRPC_SERVER",
+      "CONFIG",
+      "OTHER",
+      "COMMON_UTILS",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor: Refactor config override functionality",
+    "time_ms": 1467,
+    "skipped": false
+  },
+  {
+    "pr": 386,
+    "score": 27,
+    "status": "BLOCKED (Critical)",
+    "findings": 14,
+    "criticals": 1,
+    "warnings": 10,
+    "suggestions": 3,
+    "files": 33,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR_TEST",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "PT-003",
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "refactor: made mandatory fields in authorize flow optional",
+    "time_ms": 2620,
+    "skipped": false
+  },
+  {
+    "pr": 387,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 10,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004"
+    ],
+    "error": null,
+    "title": "feat(connector): [PAYBOX] Connector Integration",
+    "time_ms": 1148,
+    "skipped": false
+  },
+  {
+    "pr": 388,
+    "score": 68,
+    "status": "PASS WITH WARNINGS",
+    "findings": 5,
+    "criticals": 1,
+    "warnings": 2,
+    "suggestions": 2,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): [AIRWALLEX] Bank-Redirect",
+    "time_ms": 1163,
+    "skipped": false
+  },
+  {
+    "pr": 389,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 35,
+    "criticals": 3,
+    "warnings": 22,
+    "suggestions": 10,
+    "files": 92,
+    "file_types": [
+      "INTERFACES",
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "CP-002",
+      "DR-003",
+      "CP-001",
+      "DR-002",
+      "CP-005",
+      "CP-006",
+      "PT-002",
+      "PT-003",
+      "CP-009",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(core): Add support for NetworkTokenWithNTI and NetworkMandateId in RepeatPayment",
+    "time_ms": 1740,
+    "skipped": false
+  },
+  {
+    "pr": 390,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "EH-004"
+    ],
+    "error": null,
+    "title": "fix: Diff check fixes for Dlocal",
+    "time_ms": 1080,
+    "skipped": false
+  },
+  {
+    "pr": 391,
+    "score": 80,
+    "status": "PASS (Good)",
+    "findings": 1,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): revolut pay fix",
+    "time_ms": 1139,
+    "skipped": false
+  },
+  {
+    "pr": 393,
+    "score": 80,
+    "status": "PASS (Good)",
+    "findings": 1,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): [GLOBALPAY] Bank-Redirect",
+    "time_ms": 1549,
+    "skipped": false
+  },
+  {
+    "pr": 394,
+    "score": 50,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 0,
+    "files": 11,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR_TEST",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): Refactor Calida",
+    "time_ms": 1248,
+    "skipped": false
+  },
+  {
+    "pr": 395,
+    "score": 34,
+    "status": "BLOCKED (Critical)",
+    "findings": 14,
+    "criticals": 0,
+    "warnings": 13,
+    "suggestions": 1,
+    "files": 22,
+    "file_types": [
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "CP-001",
+      "PT-003",
+      "EH-004"
+    ],
+    "error": null,
+    "title": "feat(core): add connector_order_reference_id for Psync",
+    "time_ms": 1239,
+    "skipped": false
+  },
+  {
+    "pr": 396,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: hotfix branch and tag creation workflow",
+    "time_ms": 1083,
+    "skipped": false
+  },
+  {
+    "pr": 397,
+    "score": 79,
+    "status": "PASS WITH WARNINGS",
+    "findings": 2,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): [PAYPAL] Bank-Redirect",
+    "time_ms": 1540,
+    "skipped": false
+  },
+  {
+    "pr": 398,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: fix bug in Generate changelog step of hotfix tag creation workflow",
+    "time_ms": 1016,
+    "skipped": false
+  },
+  {
+    "pr": 399,
+    "score": 49,
+    "status": "BLOCKED (Poor)",
+    "findings": 11,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 1,
+    "files": 6,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): Braintree RepeatPayment Flow",
+    "time_ms": 1328,
+    "skipped": false
+  },
+  {
+    "pr": 400,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat: adyen bankredirect payment method",
+    "time_ms": 1288,
+    "skipped": false
+  },
+  {
+    "pr": 401,
+    "score": 27,
+    "status": "BLOCKED (Critical)",
+    "findings": 17,
+    "criticals": 0,
+    "warnings": 14,
+    "suggestions": 3,
+    "files": 11,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003",
+      "EH-004",
+      "EH-002",
+      "DR-004",
+      "PT-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [LOONIO] Connector Integration ",
+    "time_ms": 2035,
+    "skipped": false
+  },
+  {
+    "pr": 402,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CONNECTOR"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: adyen url on non test mode for authorize,void,etc",
+    "time_ms": 1124,
+    "skipped": false
+  },
+  {
+    "pr": 403,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: hotfix branch pr check workflow",
+    "time_ms": 1087,
+    "skipped": false
+  },
+  {
+    "pr": 405,
+    "score": 32,
+    "status": "BLOCKED (Critical)",
+    "findings": 20,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 8,
+    "files": 16,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "CONNECTOR_TYPES",
+      "CONNECTOR_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-004",
+      "PT-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat: repeatpayment, nti flow for adyen",
+    "time_ms": 1451,
+    "skipped": false
+  },
+  {
+    "pr": 406,
+    "score": 37,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 3,
+    "files": 14,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "GRPC_TEST",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): Trustpay Bank Transfer & Bank Redirect Payment Method",
+    "time_ms": 1151,
+    "skipped": false
+  },
+  {
+    "pr": 408,
+    "score": 32,
+    "status": "BLOCKED (Critical)",
+    "findings": 20,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 8,
+    "files": 11,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "PT-003",
+      "EH-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [GIGADAT] Connector Integration",
+    "time_ms": 1741,
+    "skipped": false
+  },
+  {
+    "pr": 410,
+    "score": 7,
+    "status": "BLOCKED (Critical)",
+    "findings": 21,
+    "criticals": 0,
+    "warnings": 18,
+    "suggestions": 3,
+    "files": 79,
+    "file_types": [
+      "GRPC_SERVER",
+      "INTERFACES",
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_UTILS",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "CP-002",
+      "CP-001",
+      "DR-002",
+      "EH-004",
+      "PT-003",
+      "CP-009"
+    ],
+    "error": null,
+    "title": "feat(framework): Added IncrementalAuthorization Flow support",
+    "time_ms": 1869,
+    "skipped": false
+  },
+  {
+    "pr": 411,
+    "score": 90,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "PROTO"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix: Remove unused field",
+    "time_ms": 936,
+    "skipped": false
+  },
+  {
+    "pr": 412,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "OTHER",
+      "GRPC_TEST",
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: remove the parallel execution of test in Run test",
+    "time_ms": 1085,
+    "skipped": false
+  },
+  {
+    "pr": 413,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: Resolved RouterData diffs in Prod for Authorizedotnet ",
+    "time_ms": 1008,
+    "skipped": false
+  },
+  {
+    "pr": 414,
+    "score": 92,
+    "status": "PASS (Good)",
+    "findings": 4,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 3,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [Fiuu] Added RepeatPayment flow",
+    "time_ms": 1062,
+    "skipped": false
+  },
+  {
+    "pr": 415,
+    "score": 98,
+    "status": "PASS (Excellent)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 2,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: Added Capture Method in Cybersource Repeat Payment Response",
+    "time_ms": 1270,
+    "skipped": false
+  },
+  {
+    "pr": 416,
+    "score": 50,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix: CavvAlgorithm in proto missing field",
+    "time_ms": 1275,
+    "skipped": false
+  },
+  {
+    "pr": 417,
+    "score": 50,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "GRPC_SERVER",
+      "GRPC_SERVICE",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat: added  Network-level error details in proto",
+    "time_ms": 1266,
+    "skipped": false
+  },
+  {
+    "pr": 418,
+    "score": 96,
+    "status": "PASS (Excellent)",
+    "findings": 4,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 4,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix(connector): fix Razorpay metadata to accept all values",
+    "time_ms": 1002,
+    "skipped": false
+  },
+  {
+    "pr": 419,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [ADYEN] card redirect Integration ",
+    "time_ms": 1156,
+    "skipped": false
+  },
+  {
+    "pr": 420,
+    "score": 83,
+    "status": "PASS (Good)",
+    "findings": 9,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 7,
+    "files": 7,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003",
+      "TS-009"
+    ],
+    "error": null,
+    "title": "feat: add bank transfer support in adyen",
+    "time_ms": 1262,
+    "skipped": false
+  },
+  {
+    "pr": 421,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [Adyen] Implement Bank debits ",
+    "time_ms": 1167,
+    "skipped": false
+  },
+  {
+    "pr": 422,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR_TYPES",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: RepeatPayment Merchant configured Currency Handling",
+    "time_ms": 963,
+    "skipped": false
+  },
+  {
+    "pr": 423,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: adyen shoppername to none for bankredirect, repeatpayment",
+    "time_ms": 964,
+    "skipped": false
+  },
+  {
+    "pr": 424,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: RouterData diff fix for Novalnet & Cashtocode",
+    "time_ms": 955,
+    "skipped": false
+  },
+  {
+    "pr": 425,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: RouterData diff fix for Novalnet & Cashtocode",
+    "time_ms": 937,
+    "skipped": false
+  },
+  {
+    "pr": 426,
+    "score": 48,
+    "status": "BLOCKED (Poor)",
+    "findings": 12,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 2,
+    "files": 8,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "CONNECTOR_TYPES",
+      "CONNECTOR_TEST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): Refactored Cybersource Mandate Payments",
+    "time_ms": 1161,
+    "skipped": false
+  },
+  {
+    "pr": 427,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "CP-002"
+    ],
+    "error": null,
+    "title": "fix: RouterData diff fix for Fiuu PSync",
+    "time_ms": 932,
+    "skipped": false
+  },
+  {
+    "pr": 428,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "CP-002"
+    ],
+    "error": null,
+    "title": "fix: RouterData diff fix for Fiuu PSync",
+    "time_ms": 1074,
+    "skipped": false
+  },
+  {
+    "pr": 429,
+    "score": 44,
+    "status": "BLOCKED (Poor)",
+    "findings": 16,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 6,
+    "files": 10,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "PT-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [Hyperpg] Integrate Card flows",
+    "time_ms": 1435,
+    "skipped": false
+  },
+  {
+    "pr": 431,
+    "score": 87,
+    "status": "PASS (Good)",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 3,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat: adyen gift card",
+    "time_ms": 1200,
+    "skipped": false
+  },
+  {
+    "pr": 432,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [NovalNet] Implement Bank Debits",
+    "time_ms": 1194,
+    "skipped": false
+  },
+  {
+    "pr": 433,
+    "score": 47,
+    "status": "BLOCKED (Poor)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 3,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "PT-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): Braintree Card 3DS PaymentMethod",
+    "time_ms": 1157,
+    "skipped": false
+  },
+  {
+    "pr": 434,
+    "score": 26,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 1,
+    "warnings": 10,
+    "suggestions": 4,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix: diff fix for adyen and paypal repeat payments",
+    "time_ms": 1083,
+    "skipped": false
+  },
+  {
+    "pr": 435,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "CONFIG",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "CP-002"
+    ],
+    "error": null,
+    "title": "fix: Add secondary base url for Fiuu",
+    "time_ms": 1103,
+    "skipped": false
+  },
+  {
+    "pr": 436,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "CONFIG",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "CP-002"
+    ],
+    "error": null,
+    "title": "fix: Add secondary base url for Fiuu",
+    "time_ms": 1128,
+    "skipped": false
+  },
+  {
+    "pr": 437,
+    "score": 39,
+    "status": "BLOCKED (Critical)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 1,
+    "files": 9,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): Phonepe upi cc/cl response handling",
+    "time_ms": 1276,
+    "skipped": false
+  },
+  {
+    "pr": 438,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "OTHER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore: proto code owners",
+    "time_ms": 1277,
+    "skipped": false
+  },
+  {
+    "pr": 439,
+    "score": 76,
+    "status": "PASS WITH WARNINGS",
+    "findings": 5,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 4,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix: diff fix for adyen and paypal repeat payments",
+    "time_ms": 1445,
+    "skipped": false
+  },
+  {
+    "pr": 440,
+    "score": 66,
+    "status": "PASS WITH WARNINGS",
+    "findings": 11,
+    "criticals": 1,
+    "warnings": 1,
+    "suggestions": 9,
+    "files": 19,
+    "file_types": [
+      "GRPC_SERVER",
+      "INTERFACES",
+      "GRPC_SERVICE",
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "EXTERNAL_SERVICES",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "EH-004",
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat: Webhook support for paypal",
+    "time_ms": 1447,
+    "skipped": false
+  },
+  {
+    "pr": 444,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "EXTERNAL_SERVICES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat: disable gzip decompression in test mode",
+    "time_ms": 1152,
+    "skipped": false
+  },
+  {
+    "pr": 446,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "OTHER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: add missing dependencies to dockerfile",
+    "time_ms": 1057,
+    "skipped": false
+  },
+  {
+    "pr": 447,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "OTHER_RUST"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor(connector): add url safe base64 decoding support",
+    "time_ms": 1145,
+    "skipped": false
+  },
+  {
+    "pr": 449,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(framework): Added VerifyRedirectResponse flow",
+    "time_ms": 1105,
+    "skipped": true
+  },
+  {
+    "pr": 450,
+    "score": 50,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat: Noon repeateverything flow implementation",
+    "time_ms": 1182,
+    "skipped": false
+  },
+  {
+    "pr": 451,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "GRPC_SERVICE",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor: use proper error mapping instead of hardcoded connector_errors for Authorize",
+    "time_ms": 940,
+    "skipped": false
+  },
+  {
+    "pr": 452,
+    "score": 77,
+    "status": "PASS WITH WARNINGS",
+    "findings": 4,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 5,
+    "file_types": [
+      "TRANSFORMER",
+      "DOMAIN_TYPES",
+      "COMMON_ENUMS"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix: [CYBERSOURCE] PSYNC DIFF FIX",
+    "time_ms": 1078,
+    "skipped": false
+  },
+  {
+    "pr": 453,
+    "score": 79,
+    "status": "PASS WITH WARNINGS",
+    "findings": 2,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix: Paypal missing redirect_uri logic in form_fields for 3DS flow",
+    "time_ms": 1124,
+    "skipped": false
+  },
+  {
+    "pr": 454,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore: Populate connector response field in error response",
+    "time_ms": 974,
+    "skipped": false
+  },
+  {
+    "pr": 456,
+    "score": 50,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 0,
+    "files": 11,
+    "file_types": [
+      "GRPC_TEST",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(framework): Added redirection_data field in PSync response and test_mode field in PSync request",
+    "time_ms": 1319,
+    "skipped": false
+  },
+  {
+    "pr": 457,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 5,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): razorpay - added pay mode handling in upi sync response ",
+    "time_ms": 1089,
+    "skipped": false
+  },
+  {
+    "pr": 459,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix: Trustpay refund fix",
+    "time_ms": 1019,
+    "skipped": false
+  },
+  {
+    "pr": 460,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 7,
+    "file_types": [
+      "COMMON_UTILS",
+      "EXTERNAL_SERVICES",
+      "GRPC_SERVICE",
+      "GRPC_SERVER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore: Added Resource ID, Service Name, and Service Type for UCS Events",
+    "time_ms": 1155,
+    "skipped": false
+  },
+  {
+    "pr": 461,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PQ-001"
+    ],
+    "error": null,
+    "title": "FIX: wellsfargo-diff-fix",
+    "time_ms": 1085,
+    "skipped": false
+  },
+  {
+    "pr": 462,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CONNECTOR"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: Adyen webhook fix",
+    "time_ms": 1135,
+    "skipped": false
+  },
+  {
+    "pr": 463,
+    "score": 47,
+    "status": "BLOCKED (Poor)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 3,
+    "files": 6,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix(connector): Request diff fix for Stripe & Cybersource",
+    "time_ms": 1273,
+    "skipped": false
+  },
+  {
+    "pr": 464,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(connector): map `Ds_State` to status in Redsys PSync when `Ds_Response` is absent",
+    "time_ms": 1147,
+    "skipped": false
+  },
+  {
+    "pr": 465,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CONNECTOR"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(payload): do not pass `content-type` header in sync calls",
+    "time_ms": 1160,
+    "skipped": false
+  },
+  {
+    "pr": 466,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix(connector): Rapyd amount type in request",
+    "time_ms": 1025,
+    "skipped": false
+  },
+  {
+    "pr": 467,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: added missing proto to domain conversion of merchant_account_metadata for setupmandate",
+    "time_ms": 939,
+    "skipped": false
+  },
+  {
+    "pr": 468,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "OTHER_RUST",
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor(connector): [redsys] skip serializing fields that are `none` and sort fields in alphabetical order",
+    "time_ms": 1384,
+    "skipped": false
+  },
+  {
+    "pr": 469,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "chore: [Auth.net] Response field made optional",
+    "time_ms": 1059,
+    "skipped": false
+  },
+  {
+    "pr": 470,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "EH-001"
+    ],
+    "error": null,
+    "title": "fix(connector): [NOVALNET] Populating connector transaction id during 2xx failures",
+    "time_ms": 1214,
+    "skipped": false
+  },
+  {
+    "pr": 472,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: Handled metadata Parsing Err Gracefully in Core",
+    "time_ms": 1058,
+    "skipped": false
+  },
+  {
+    "pr": 473,
+    "score": 87,
+    "status": "PASS (Good)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 13,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR",
+      "OTHER_RUST"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): implement incoming webhooks for trustpay",
+    "time_ms": 1050,
+    "skipped": false
+  },
+  {
+    "pr": 476,
+    "score": 49,
+    "status": "BLOCKED (Poor)",
+    "findings": 11,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 1,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR_TYPES",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix(connector): [NEXIXPAY] DIFF FIX",
+    "time_ms": 1267,
+    "skipped": false
+  },
+  {
+    "pr": 477,
+    "score": 79,
+    "status": "PASS WITH WARNINGS",
+    "findings": 2,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix: PAYPAL Authorize 2xx error handling and connector_metadata diff in psync",
+    "time_ms": 1503,
+    "skipped": false
+  },
+  {
+    "pr": 479,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "OTHER_RUST",
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore: updated the creds file",
+    "time_ms": 1404,
+    "skipped": false
+  },
+  {
+    "pr": 480,
+    "score": 24,
+    "status": "BLOCKED (Critical)",
+    "findings": 13,
+    "criticals": 1,
+    "warnings": 11,
+    "suggestions": 1,
+    "files": 11,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "PT-003",
+      "CP-009",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): Zift Connector Integration",
+    "time_ms": 1685,
+    "skipped": false
+  },
+  {
+    "pr": 482,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "fix(connector): [Fiuu] Fixed payment status being sent as Pending for Fiuu when the connector response is FiuuPaymentsResponse::Error",
+    "time_ms": 956,
+    "skipped": false
+  },
+  {
+    "pr": 483,
+    "score": 90,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(framework): Added missing CardNetwork Types",
+    "time_ms": 1025,
+    "skipped": false
+  },
+  {
+    "pr": 489,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: revert \"Handled metadata Parsing Err Gracefully in Core\"",
+    "time_ms": 1250,
+    "skipped": false
+  },
+  {
+    "pr": 490,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 23,
+    "criticals": 3,
+    "warnings": 14,
+    "suggestions": 6,
+    "files": 15,
+    "file_types": [
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-003",
+      "DR-002",
+      "CP-005",
+      "DR-004",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(framework): Changed access_token type from String to SecretString in proto and connector_types",
+    "time_ms": 1908,
+    "skipped": false
+  },
+  {
+    "pr": 491,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "COMMON_UTILS"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor: event publisher to log processed event even when publisher is disabled",
+    "time_ms": 1157,
+    "skipped": false
+  },
+  {
+    "pr": 493,
+    "score": 90,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix(payment_method): blik and sofort bank redirect payment method type defaulting to card",
+    "time_ms": 1510,
+    "skipped": false
+  },
+  {
+    "pr": 496,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): added Adyen paylater paymentmethod",
+    "time_ms": 1030,
+    "skipped": false
+  },
+  {
+    "pr": 497,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "chore: adding failure status to customer create response",
+    "time_ms": 910,
+    "skipped": false
+  },
+  {
+    "pr": 498,
+    "score": 36,
+    "status": "BLOCKED (Critical)",
+    "findings": 20,
+    "criticals": 0,
+    "warnings": 11,
+    "suggestions": 9,
+    "files": 10,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "PT-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(payment_method_data): [adyen] Auth code in payment response",
+    "time_ms": 1173,
+    "skipped": false
+  },
+  {
+    "pr": 499,
+    "score": 22,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 1,
+    "warnings": 11,
+    "suggestions": 3,
+    "files": 11,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "DR-002",
+      "EH-004",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "fix(connector): Paypal Router Data Fix in Authorize and RepeatPayment Flow",
+    "time_ms": 1362,
+    "skipped": false
+  },
+  {
+    "pr": 500,
+    "score": 82,
+    "status": "PASS (Good)",
+    "findings": 6,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 3,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003",
+      "PQ-001"
+    ],
+    "error": null,
+    "title": "Feat(connector): adyen voucher paymentmethod added",
+    "time_ms": 1231,
+    "skipped": false
+  },
+  {
+    "pr": 501,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(connector): Gigadat Macro Implementation",
+    "time_ms": 1286,
+    "skipped": false
+  },
+  {
+    "pr": 502,
+    "score": 54,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 9,
+    "suggestions": 1,
+    "files": 78,
+    "file_types": [
+      "GRPC_SERVER",
+      "INTERFACES",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "CP-001",
+      "CP-009",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat(framework): Introduce BodyDecoding trait",
+    "time_ms": 1531,
+    "skipped": false
+  },
+  {
+    "pr": 503,
+    "score": 5,
+    "status": "BLOCKED (Critical)",
+    "findings": 24,
+    "criticals": 1,
+    "warnings": 13,
+    "suggestions": 10,
+    "files": 13,
+    "file_types": [
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "OTHER",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "CONNECTOR_TEST",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-001",
+      "CP-001",
+      "DR-002",
+      "DR-004",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): [trustpay] introduce wallet support - apple pay and google pay",
+    "time_ms": 1078,
+    "skipped": false
+  },
+  {
+    "pr": 504,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: Populate connector response for Repeat Everything Flow's Err response",
+    "time_ms": 1116,
+    "skipped": false
+  },
+  {
+    "pr": 505,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "DR-004"
+    ],
+    "error": null,
+    "title": "fix(connector): Mifinity 5xx Error Handling",
+    "time_ms": 1159,
+    "skipped": false
+  },
+  {
+    "pr": 507,
+    "score": 90,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 0,
+    "files": 6,
+    "file_types": [
+      "OTHER_RUST",
+      "TRANSFORMER",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-001"
+    ],
+    "error": null,
+    "title": "refactor(connector): [PHONEPE] add Phonepe specific headers and target_app for upi request",
+    "time_ms": 1153,
+    "skipped": false
+  },
+  {
+    "pr": 508,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 3,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "EH-004"
+    ],
+    "error": null,
+    "title": "fix(connector): Fixed Volt Default Response and PSync Response Handling",
+    "time_ms": 1273,
+    "skipped": false
+  },
+  {
+    "pr": 509,
+    "score": 97,
+    "status": "PASS (Excellent)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 3,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [Adyen] Add Apple pay and Google pay Decrypt for Adyen",
+    "time_ms": 1067,
+    "skipped": false
+  },
+  {
+    "pr": 510,
+    "score": 48,
+    "status": "BLOCKED (Poor)",
+    "findings": 12,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 2,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "fix: incremental_authorization_allowed and cybersource repeatpayment diff fix",
+    "time_ms": 1078,
+    "skipped": false
+  },
+  {
+    "pr": 511,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(connector): Noon RSync Url & Default Status",
+    "time_ms": 1163,
+    "skipped": false
+  },
+  {
+    "pr": 512,
+    "score": 90,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 0,
+    "files": 7,
+    "file_types": [
+      "COMPOSITE_SERVICE",
+      "OTHER_RUST",
+      "PROTO",
+      "CONFIG"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "chore: Added Crate for Composite Flows",
+    "time_ms": 1026,
+    "skipped": false
+  },
+  {
+    "pr": 513,
+    "score": 45,
+    "status": "BLOCKED (Poor)",
+    "findings": 11,
+    "criticals": 0,
+    "warnings": 11,
+    "suggestions": 0,
+    "files": 6,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-004",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): Added ConnectorResponse for Connector Loonio",
+    "time_ms": 1233,
+    "skipped": false
+  },
+  {
+    "pr": 514,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "OTHER",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix: redirect response removed",
+    "time_ms": 1115,
+    "skipped": false
+  },
+  {
+    "pr": 515,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat: FFI implementation",
+    "time_ms": 1412,
+    "skipped": true
+  },
+  {
+    "pr": 516,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "OTHER_RUST",
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(redsys): correct XML element ordering in SOAP sync requests to comply with DTD validation",
+    "time_ms": 1250,
+    "skipped": false
+  },
+  {
+    "pr": 517,
+    "score": 85,
+    "status": "PASS (Good)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 0,
+    "files": 15,
+    "file_types": [
+      "GRPC_SERVER",
+      "GRPC_ROUTER",
+      "CI",
+      "CONFIG",
+      "COMPOSITE_SERVICE",
+      "PROTO",
+      "GRPC_HANDLER",
+      "OTHER_RUST"
+    ],
+    "rules_fired": [
+      "PT-003",
+      "CS-002"
+    ],
+    "error": null,
+    "title": "chore: Added Composite Authorize Flow ",
+    "time_ms": 1225,
+    "skipped": false
+  },
+  {
+    "pr": 519,
+    "score": 40,
+    "status": "BLOCKED (Poor)",
+    "findings": 16,
+    "criticals": 0,
+    "warnings": 11,
+    "suggestions": 5,
+    "files": 14,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "EH-004",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): [Truelayer] Integrate OpenBankingUK flows",
+    "time_ms": 1256,
+    "skipped": false
+  },
+  {
+    "pr": 520,
+    "score": 46,
+    "status": "BLOCKED (Poor)",
+    "findings": 14,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 4,
+    "files": 11,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): [revolv3] add no-threeds card payments",
+    "time_ms": 1472,
+    "skipped": false
+  },
+  {
+    "pr": 523,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: update connector creds",
+    "time_ms": 1490,
+    "skipped": false
+  },
+  {
+    "pr": 524,
+    "score": 59,
+    "status": "BLOCKED (Poor)",
+    "findings": 3,
+    "criticals": 2,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 40,
+    "file_types": [
+      "FFI",
+      "CONFIG",
+      "OTHER",
+      "SDK",
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [
+      "SE-003",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat: uniffi working implementation for JS/Java/Python",
+    "time_ms": 1472,
+    "skipped": false
+  },
+  {
+    "pr": 526,
+    "score": 18,
+    "status": "BLOCKED (Critical)",
+    "findings": 22,
+    "criticals": 0,
+    "warnings": 15,
+    "suggestions": 7,
+    "files": 19,
+    "file_types": [
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "DR-002",
+      "CP-005",
+      "PT-002",
+      "DR-004",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "chore: Refactored the wallet Payment Method",
+    "time_ms": 1691,
+    "skipped": false
+  },
+  {
+    "pr": 529,
+    "score": 27,
+    "status": "BLOCKED (Critical)",
+    "findings": 17,
+    "criticals": 0,
+    "warnings": 14,
+    "suggestions": 3,
+    "files": 50,
+    "file_types": [
+      "FFI",
+      "GRPC_SERVER",
+      "GRPC_ROUTER",
+      "GRPC_SERVICE",
+      "COMPOSITE_SERVICE",
+      "TRANSFORMER",
+      "OTHER",
+      "SDK",
+      "PROTO",
+      "DOCUMENTATION",
+      "COMMON_UTILS",
+      "GRPC_HANDLER",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "DR-002",
+      "CS-002",
+      "DR-004",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "refactor(proto): Standardize ID management, data types, and API contracts",
+    "time_ms": 2230,
+    "skipped": false
+  },
+  {
+    "pr": 531,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 13,
+    "file_types": [
+      "SDK",
+      "OTHER",
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(ci): set up GitHub release workflow with multi-platform builds",
+    "time_ms": 1471,
+    "skipped": false
+  },
+  {
+    "pr": 535,
+    "score": 50,
+    "status": "BLOCKED (Poor)",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 10,
+    "suggestions": 0,
+    "files": 8,
+    "file_types": [
+      "GRPC_SERVICE",
+      "PROTO",
+      "GRPC_HANDLER",
+      "GRPC_TEST",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "docs(refactor): Add documentation and rename mandate RPCs to AutoDebit",
+    "time_ms": 1218,
+    "skipped": false
+  },
+  {
+    "pr": 536,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 74,
+    "file_types": [
+      "FFI",
+      "GRPC_SERVER",
+      "GRPC_SERVICE",
+      "CONFIG",
+      "OTHER",
+      "SDK",
+      "GRPC_HANDLER",
+      "GRPC_TEST",
+      "OTHER_RUST"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "fix: addressing comments of pr #515",
+    "time_ms": 1407,
+    "skipped": false
+  },
+  {
+    "pr": 538,
+    "score": 64,
+    "status": "PASS WITH WARNINGS",
+    "findings": 9,
+    "criticals": 1,
+    "warnings": 2,
+    "suggestions": 6,
+    "files": 9,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "CONNECTOR_TYPES",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(core): Added Missing BankTransfer, BankDebit & BankRedirect Payment Method Types",
+    "time_ms": 1113,
+    "skipped": false
+  },
+  {
+    "pr": 545,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-005"
+    ],
+    "error": null,
+    "title": "feat: ach bankdebit integration for nmi",
+    "time_ms": 1161,
+    "skipped": false
+  },
+  {
+    "pr": 546,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(connector): [Checkout] Implement googlepay and applepay decrypt flow and card ntid flow",
+    "time_ms": 1281,
+    "skipped": false
+  },
+  {
+    "pr": 547,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat: ach bankdebit integration for checkout",
+    "time_ms": 993,
+    "skipped": false
+  },
+  {
+    "pr": 548,
+    "score": 45,
+    "status": "BLOCKED (Poor)",
+    "findings": 11,
+    "criticals": 0,
+    "warnings": 11,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat: [STAX] ACH BankDebit ",
+    "time_ms": 1103,
+    "skipped": false
+  },
+  {
+    "pr": 549,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-003",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat: [AUTHORIZEDOTNET] ACH BankDebit",
+    "time_ms": 1532,
+    "skipped": false
+  },
+  {
+    "pr": 551,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat: ach bankdebit integration for nuvei",
+    "time_ms": 1023,
+    "skipped": false
+  },
+  {
+    "pr": 552,
+    "score": 98,
+    "status": "PASS (Excellent)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 2,
+    "files": 4,
+    "file_types": [
+      "OTHER_RUST",
+      "TRANSFORMER",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "SE-005"
+    ],
+    "error": null,
+    "title": "feat: ach bankdebit integration for bluesnap",
+    "time_ms": 1041,
+    "skipped": false
+  },
+  {
+    "pr": 553,
+    "score": 85,
+    "status": "PASS (Good)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "OTHER_RUST",
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-004",
+      "DR-003",
+      "CP-005"
+    ],
+    "error": null,
+    "title": "feat: ach bankdebit integration for jpmorgan",
+    "time_ms": 1113,
+    "skipped": false
+  },
+  {
+    "pr": 554,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(connector): [revolv3] add recurring support for non-3ds card payments",
+    "time_ms": 1427,
+    "skipped": false
+  },
+  {
+    "pr": 555,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 84,
+    "criticals": 6,
+    "warnings": 40,
+    "suggestions": 38,
+    "files": 156,
+    "file_types": [
+      "GRPC_SERVER",
+      "INTERFACES",
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "OTHER",
+      "PROTO",
+      "DOCUMENTATION",
+      "COMMON_UTILS",
+      "CONNECTOR",
+      "CONNECTOR_TEST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-001",
+      "PQ-002",
+      "CP-002",
+      "DR-003",
+      "CP-001",
+      "DR-002",
+      "CP-005",
+      "PT-002",
+      "DR-004",
+      "PT-003",
+      "CP-009",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat: typed ConnectorSpecificAuth with header-based auth resolution via X-Connector-Auth",
+    "time_ms": 2418,
+    "skipped": false
+  },
+  {
+    "pr": 556,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 2,
+    "file_types": [
+      "OTHER_RUST",
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "CP-005"
+    ],
+    "error": null,
+    "title": "feat: [PAYSAFE] ACH BankDebit",
+    "time_ms": 1391,
+    "skipped": false
+  },
+  {
+    "pr": 557,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 30,
+    "file_types": [
+      "FFI",
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "SDK",
+      "PROTO",
+      "COMMON_UTILS",
+      "EXTERNAL_SERVICES"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat: http client for all lang FFI",
+    "time_ms": 1456,
+    "skipped": false
+  },
+  {
+    "pr": 558,
+    "score": 88,
+    "status": "PASS (Good)",
+    "findings": 4,
+    "criticals": 0,
+    "warnings": 2,
+    "suggestions": 2,
+    "files": 4,
+    "file_types": [
+      "TRANSFORMER",
+      "PROTO",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "DR-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(payment_methods): add support for Samsung Pay",
+    "time_ms": 1190,
+    "skipped": false
+  },
+  {
+    "pr": 559,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 28,
+    "file_types": [
+      "SDK",
+      "OTHER",
+      "CI",
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat: artifact packaging.",
+    "time_ms": 1288,
+    "skipped": false
+  },
+  {
+    "pr": 560,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "OTHER_RUST"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore(connector): add warning comment about dtd validation to redsys soap api",
+    "time_ms": 1411,
+    "skipped": false
+  },
+  {
+    "pr": 563,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat: [NOVALNET] ACH BankDebit",
+    "time_ms": 1086,
+    "skipped": false
+  },
+  {
+    "pr": 564,
+    "score": 28,
+    "status": "BLOCKED (Critical)",
+    "findings": 16,
+    "criticals": 0,
+    "warnings": 14,
+    "suggestions": 2,
+    "files": 12,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR_MODULE",
+      "CONNECTOR_TYPES",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-007",
+      "EH-004",
+      "PT-003",
+      "EH-002"
+    ],
+    "error": null,
+    "title": "feat: [FINIX] CARDS NO3DS , ACH BankDebit",
+    "time_ms": 1216,
+    "skipped": false
+  },
+  {
+    "pr": 565,
+    "score": 40,
+    "status": "BLOCKED (Poor)",
+    "findings": 12,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 0,
+    "files": 20,
+    "file_types": [
+      "COMPOSITE_SERVICE",
+      "TRANSFORMER",
+      "PROTO",
+      "COMMON_ENUMS",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR_TEST",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003"
+    ],
+    "error": null,
+    "title": "feat(connector): [Checkout] Add l2_l3 data support in checkout",
+    "time_ms": 1579,
+    "skipped": false
+  },
+  {
+    "pr": 566,
+    "score": 74,
+    "status": "PASS WITH WARNINGS",
+    "findings": 7,
+    "criticals": 1,
+    "warnings": 0,
+    "suggestions": 6,
+    "files": 9,
+    "file_types": [
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "COMMON_UTILS",
+      "OTHER_RUST",
+      "EXTERNAL_SERVICES"
+    ],
+    "rules_fired": [
+      "TS-004",
+      "DR-002"
+    ],
+    "error": null,
+    "title": "feat: helper for multi form data as bytes to support with ffi lang ag\u2026",
+    "time_ms": 1419,
+    "skipped": false
+  },
+  {
+    "pr": 569,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 20,
+    "file_types": [
+      "FFI",
+      "GRPC_SERVER",
+      "CONFIG",
+      "OTHER",
+      "OTHER_RUST"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor: extract shared interface logic into ucs_interface_common crate",
+    "time_ms": 1264,
+    "skipped": false
+  },
+  {
+    "pr": 570,
+    "score": 29,
+    "status": "BLOCKED (Critical)",
+    "findings": 12,
+    "criticals": 1,
+    "warnings": 10,
+    "suggestions": 1,
+    "files": 5,
+    "file_types": [
+      "GRPC_SERVER",
+      "TRANSFORMER",
+      "PROTO",
+      "CONNECTOR",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "PT-003",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): [Revolut] Rename RevolutAuth \"api_key\" field and add \"signing_secret\" for webhook source verification",
+    "time_ms": 1180,
+    "skipped": false
+  },
+  {
+    "pr": 571,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 19,
+    "file_types": [
+      "SDK",
+      "OTHER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(ffi): auto generate client code for each flow from .proto directly",
+    "time_ms": 1568,
+    "skipped": false
+  },
+  {
+    "pr": 573,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 40,
+    "file_types": [
+      "GRPC_SERVICE",
+      "CONFIG",
+      "OTHER",
+      "SDK",
+      "GRPC_TEST",
+      "OTHER_RUST",
+      "EXTERNAL_SERVICES"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "refactor(compilation): eliminate diesel from FFI dep tree and centralise workspace deps",
+    "time_ms": 1062,
+    "skipped": false
+  },
+  {
+    "pr": 575,
+    "score": 75,
+    "status": "PASS WITH WARNINGS",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 5,
+    "suggestions": 0,
+    "files": 18,
+    "file_types": [
+      "GRPC_ROUTER",
+      "INTERFACES",
+      "GRPC_SERVICE",
+      "COMPOSITE_SERVICE",
+      "PROTO",
+      "GRPC_HANDLER",
+      "CONNECTOR",
+      "OTHER_RUST"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "CS-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "chore: Added Composite Get Flow",
+    "time_ms": 1277,
+    "skipped": false
+  },
+  {
+    "pr": 576,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "TRANSFORMER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(payment_methods): Add ACH (eCheck) support to Forte connector",
+    "time_ms": 998,
+    "skipped": false
+  },
+  {
+    "pr": 579,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 17,
+    "file_types": [
+      "SDK",
+      "OTHER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: improve generation with proto parsing and refactor makefile",
+    "time_ms": 1995,
+    "skipped": false
+  },
+  {
+    "pr": 580,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore: Scenario Based Test framework for UCS",
+    "time_ms": 1254,
+    "skipped": true
+  },
+  {
+    "pr": 583,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 14,
+    "file_types": [
+      "FFI",
+      "SDK",
+      "OTHER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor(ffi): automate FFI flow registrations and fix SDK codegen",
+    "time_ms": 1261,
+    "skipped": false
+  },
+  {
+    "pr": 589,
+    "score": 29,
+    "status": "BLOCKED (Critical)",
+    "findings": 12,
+    "criticals": 1,
+    "warnings": 10,
+    "suggestions": 1,
+    "files": 37,
+    "file_types": [
+      "FFI",
+      "CONFIG",
+      "SDK",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003",
+      "SE-003",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat: proto changes for sdk configs overridable vs non overridable",
+    "time_ms": 1630,
+    "skipped": false
+  },
+  {
+    "pr": 590,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 13,
+    "file_types": [
+      "FFI",
+      "SDK",
+      "COMMON_UTILS",
+      "CONNECTOR_TYPES",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "refactor: simplify header handling by making them optional and inferring connector from `x-connector-auth` header",
+    "time_ms": 1299,
+    "skipped": false
+  },
+  {
+    "pr": 592,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 19,
+    "file_types": [
+      "SDK",
+      "OTHER",
+      "CI",
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: make release build manual and add sdk test to PR check",
+    "time_ms": 1632,
+    "skipped": false
+  },
+  {
+    "pr": 595,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 32,
+    "file_types": [
+      "FFI",
+      "GRPC_SERVICE",
+      "CONFIG",
+      "OTHER",
+      "SDK",
+      "PROTO",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "refactor(client): per-service SDK clients from services.proto boundaries",
+    "time_ms": 1568,
+    "skipped": false
+  },
+  {
+    "pr": 596,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 4,
+    "file_types": [
+      "GRPC_SERVER",
+      "OTHER_RUST",
+      "DOCUMENTATION",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "fix(clippy): fix clippy error",
+    "time_ms": 1133,
+    "skipped": false
+  },
+  {
+    "pr": 600,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 11,
+    "file_types": [
+      "SDK",
+      "OTHER",
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: creds and multi-connector smoke test",
+    "time_ms": 1542,
+    "skipped": false
+  },
+  {
+    "pr": 602,
+    "score": 78,
+    "status": "PASS WITH WARNINGS",
+    "findings": 10,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 7,
+    "files": 12,
+    "file_types": [
+      "GRPC_SERVICE",
+      "CONFIG",
+      "TRANSFORMER",
+      "OTHER",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "EH-004",
+      "SE-002"
+    ],
+    "error": null,
+    "title": "feat(connector): [Truelayer] Implement webhooks for payments and refunds",
+    "time_ms": 1514,
+    "skipped": false
+  },
+  {
+    "pr": 603,
+    "score": 29,
+    "status": "BLOCKED (Critical)",
+    "findings": 15,
+    "criticals": 0,
+    "warnings": 14,
+    "suggestions": 1,
+    "files": 28,
+    "file_types": [
+      "FFI",
+      "OTHER_RUST",
+      "SDK",
+      "PROTO"
+    ],
+    "rules_fired": [
+      "PT-002",
+      "PT-003",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat(proto): Change the proto package name",
+    "time_ms": 1520,
+    "skipped": false
+  },
+  {
+    "pr": 604,
+    "score": 39,
+    "status": "BLOCKED (Critical)",
+    "findings": 13,
+    "criticals": 0,
+    "warnings": 12,
+    "suggestions": 1,
+    "files": 46,
+    "file_types": [
+      "GRPC_SERVICE",
+      "COMPOSITE_SERVICE",
+      "SDK",
+      "PROTO",
+      "DOCUMENTATION",
+      "GRPC_TEST",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "PT-003",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "refactor(proto): refactor id_type to string",
+    "time_ms": 2493,
+    "skipped": false
+  },
+  {
+    "pr": 606,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "SDK",
+      "OTHER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: fix java tests to match latest generation spec",
+    "time_ms": 1231,
+    "skipped": false
+  },
+  {
+    "pr": 610,
+    "score": 83,
+    "status": "PASS (Good)",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 3,
+    "suggestions": 2,
+    "files": 28,
+    "file_types": [
+      "FFI",
+      "INTERFACES",
+      "SDK",
+      "PROTO",
+      "CONNECTOR_TYPES",
+      "GRPC_TEST",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "CP-002",
+      "TS-007",
+      "EH-004",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "chore(error): add request and response error proto for ffi implementation",
+    "time_ms": 1377,
+    "skipped": false
+  },
+  {
+    "pr": 618,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "GRPC_SERVER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(framework): Added all available services in app.rs",
+    "time_ms": 1066,
+    "skipped": false
+  },
+  {
+    "pr": 623,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci(docs): Update workflow to use CONNECTOR_SERVICE_DOCS_CI secret",
+    "time_ms": 1020,
+    "skipped": false
+  },
+  {
+    "pr": 625,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(docs): add automated connector docs",
+    "time_ms": 1416,
+    "skipped": true
+  },
+  {
+    "pr": 627,
+    "score": 0,
+    "status": "BLOCKED (Critical)",
+    "findings": 84,
+    "criticals": 6,
+    "warnings": 40,
+    "suggestions": 38,
+    "files": 222,
+    "file_types": [
+      "FFI",
+      "GRPC_SERVER",
+      "INTERFACES",
+      "GRPC_SERVICE",
+      "TRANSFORMER",
+      "SDK",
+      "PROTO",
+      "DOCUMENTATION",
+      "COMMON_UTILS",
+      "CONNECTOR_TYPES",
+      "CONNECTOR_TEST",
+      "CONNECTOR",
+      "OTHER_RUST",
+      "DOMAIN_TYPES"
+    ],
+    "rules_fired": [
+      "DR-001",
+      "PQ-002",
+      "CP-002",
+      "DR-003",
+      "CP-001",
+      "DR-002",
+      "CP-005",
+      "EH-002",
+      "DR-004",
+      "PT-003",
+      "CP-009",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(domain): unify ConnectorSpecificAuth \u2192 ConnectorSpecificConfig",
+    "time_ms": 2531,
+    "skipped": false
+  },
+  {
+    "pr": 628,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore(remove): remove unused code",
+    "time_ms": 1051,
+    "skipped": true
+  },
+  {
+    "pr": 642,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: launch blog for review",
+    "time_ms": 1670,
+    "skipped": false
+  },
+  {
+    "pr": 645,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 15,
+    "file_types": [
+      "SDK",
+      "OTHER",
+      "CI"
+    ],
+    "rules_fired": [
+      "PQ-001"
+    ],
+    "error": null,
+    "title": "refactor(generate.py): Refactor code generation to use Jinja2 templates",
+    "time_ms": 2043,
+    "skipped": false
+  },
+  {
+    "pr": 646,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: Add Unified Payment Protocol (UPP) specification RFC",
+    "time_ms": 1045,
+    "skipped": false
+  }
+]

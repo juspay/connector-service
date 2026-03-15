@@ -1,0 +1,350 @@
+[
+  {
+    "pr": 600,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 11,
+    "file_types": [
+      "OTHER",
+      "CI",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: creds and multi-connector smoke test",
+    "time_ms": 1367,
+    "skipped": false
+  },
+  {
+    "pr": 602,
+    "score": 38,
+    "status": "BLOCKED (Critical)",
+    "findings": 12,
+    "criticals": 2,
+    "warnings": 3,
+    "suggestions": 7,
+    "files": 12,
+    "file_types": [
+      "TRANSFORMER",
+      "CONNECTOR",
+      "OTHER",
+      "CONFIG",
+      "GRPC_SERVICE",
+      "DOMAIN_TYPES",
+      "OTHER_RUST"
+    ],
+    "rules_fired": [
+      "EH-004",
+      "CP-002",
+      "SE-002",
+      "SE-001"
+    ],
+    "error": null,
+    "title": "feat(connector): [Truelayer] Implement webhooks for payments and refunds",
+    "time_ms": 1159,
+    "skipped": false
+  },
+  {
+    "pr": 603,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 28,
+    "file_types": [
+      "PROTO",
+      "SDK",
+      "OTHER_RUST",
+      "FFI"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat(proto): Change the proto package name",
+    "time_ms": 1348,
+    "skipped": false
+  },
+  {
+    "pr": 604,
+    "score": 94,
+    "status": "PASS (Good)",
+    "findings": 2,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 1,
+    "files": 46,
+    "file_types": [
+      "GRPC_TEST",
+      "GRPC_SERVICE",
+      "DOMAIN_TYPES",
+      "SDK",
+      "COMPOSITE_SERVICE",
+      "PROTO",
+      "OTHER_RUST",
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [
+      "PQ-002",
+      "PT-003"
+    ],
+    "error": null,
+    "title": "refactor(proto): refactor id_type to string",
+    "time_ms": 2003,
+    "skipped": false
+  },
+  {
+    "pr": 606,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 3,
+    "file_types": [
+      "OTHER",
+      "SDK"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci: fix java tests to match latest generation spec",
+    "time_ms": 1083,
+    "skipped": false
+  },
+  {
+    "pr": 610,
+    "score": 93,
+    "status": "PASS (Good)",
+    "findings": 3,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 2,
+    "files": 28,
+    "file_types": [
+      "INTERFACES",
+      "GRPC_TEST",
+      "OTHER_RUST",
+      "FFI",
+      "CONNECTOR_TYPES",
+      "DOMAIN_TYPES",
+      "SDK",
+      "PROTO",
+      "CONNECTOR"
+    ],
+    "rules_fired": [
+      "TS-007",
+      "EH-004",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "chore(error): add request and response error proto for ffi implementation",
+    "time_ms": 1707,
+    "skipped": false
+  },
+  {
+    "pr": 618,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "GRPC_SERVER"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(framework): Added all available services in app.rs",
+    "time_ms": 1017,
+    "skipped": false
+  },
+  {
+    "pr": 623,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "CI"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "ci(docs): Update workflow to use CONNECTOR_SERVICE_DOCS_CI secret",
+    "time_ms": 1015,
+    "skipped": false
+  },
+  {
+    "pr": 625,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "feat(docs): add automated connector docs",
+    "time_ms": 1031,
+    "skipped": true
+  },
+  {
+    "pr": 627,
+    "score": 79,
+    "status": "PASS WITH WARNINGS",
+    "findings": 5,
+    "criticals": 0,
+    "warnings": 4,
+    "suggestions": 1,
+    "files": 222,
+    "file_types": [
+      "TRANSFORMER",
+      "INTERFACES",
+      "OTHER_RUST",
+      "COMMON_UTILS",
+      "GRPC_SERVICE",
+      "FFI",
+      "CONNECTOR_TYPES",
+      "DOMAIN_TYPES",
+      "SDK",
+      "GRPC_SERVER",
+      "CONNECTOR_TEST",
+      "PROTO",
+      "CONNECTOR",
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [
+      "EH-002",
+      "CP-005",
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "feat(domain): unify ConnectorSpecificAuth \u2192 ConnectorSpecificConfig",
+    "time_ms": 2708,
+    "skipped": false
+  },
+  {
+    "pr": 628,
+    "score": -1,
+    "status": "SKIPPED (diff too large)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 0,
+    "file_types": [],
+    "rules_fired": [],
+    "error": null,
+    "title": "chore(remove): remove unused code",
+    "time_ms": 975,
+    "skipped": true
+  },
+  {
+    "pr": 633,
+    "score": 99,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 1,
+    "files": 29,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [
+      "PQ-002"
+    ],
+    "error": null,
+    "title": "docs: Update API reference documentation and navigation",
+    "time_ms": 1137,
+    "skipped": false
+  },
+  {
+    "pr": 640,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: Update SDK javascript README",
+    "time_ms": 1059,
+    "skipped": false
+  },
+  {
+    "pr": 642,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: launch blog for review",
+    "time_ms": 1335,
+    "skipped": false
+  },
+  {
+    "pr": 645,
+    "score": 95,
+    "status": "PASS (Excellent)",
+    "findings": 1,
+    "criticals": 0,
+    "warnings": 1,
+    "suggestions": 0,
+    "files": 15,
+    "file_types": [
+      "OTHER",
+      "CI",
+      "SDK"
+    ],
+    "rules_fired": [
+      "PQ-001"
+    ],
+    "error": null,
+    "title": "refactor(generate.py): Refactor code generation to use Jinja2 templates",
+    "time_ms": 1248,
+    "skipped": false
+  },
+  {
+    "pr": 646,
+    "score": 100,
+    "status": "PASS (Excellent)",
+    "findings": 0,
+    "criticals": 0,
+    "warnings": 0,
+    "suggestions": 0,
+    "files": 1,
+    "file_types": [
+      "DOCUMENTATION"
+    ],
+    "rules_fired": [],
+    "error": null,
+    "title": "docs: Add Unified Payment Protocol (UPP) specification RFC",
+    "time_ms": 1507,
+    "skipped": false
+  }
+]
