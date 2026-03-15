@@ -383,7 +383,7 @@ struct ProbeManifest {
     connectors: Vec<String>,
     /// Proto message schemas: field comments and nested message types.
     /// Key is the message name (e.g. "PaymentServiceAuthorizeRequest").
-    message_schemas: HashMap<String, MessageSchema>,
+    message_schemas: BTreeMap<String, MessageSchema>,
     /// Schema version for future compatibility
     schema_version: String,
 }

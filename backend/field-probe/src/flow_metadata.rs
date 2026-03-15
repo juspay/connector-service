@@ -7,7 +7,7 @@
 //! NO HARDCODED DATA - All metadata is parsed from services.proto at runtime.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
 /// Flow metadata extracted from services.proto
@@ -320,11 +320,11 @@ fn clean_description(desc: &str) -> String {
 pub struct MessageSchema {
     /// Proto doc comments keyed by field name.
     /// e.g. {"minor_amount": "Amount in minor units (e.g., 1000 = $10.00)"}
-    pub comments: HashMap<String, String>,
+    pub comments: BTreeMap<String, String>,
     /// Field name → declared message type, for non-scalar fields only.
     /// Used by the doc generator to recurse into nested JSON objects.
     /// e.g. {"amount": "Money", "payment_method": "PaymentMethod"}
-    pub field_types: HashMap<String, String>,
+    pub field_types: BTreeMap<String, String>,
 }
 
 /// Proto scalar / wrapper types that serialize as JSON scalars.
@@ -356,7 +356,7 @@ const SCALAR_TYPES: &[&str] = &[
 ///
 /// Searches for the proto directory using the same strategy as
 /// `parse_services_proto` (repo-relative path first, then CARGO_MANIFEST_DIR).
-pub fn parse_message_schemas() -> HashMap<String, MessageSchema> {
+pub fn parse_message_schemas() -> BTreeMap<String, MessageSchema> {
     let proto_dirs = [
         "backend/grpc-api-types/proto",
         concat!(env!("CARGO_MANIFEST_DIR"), "/../grpc-api-types/proto"),
@@ -376,10 +376,10 @@ pub fn parse_message_schemas() -> HashMap<String, MessageSchema> {
     }
 
     eprintln!("WARNING: Could not find proto directory for message schema extraction");
-    HashMap::new()
+    BTreeMap::new()
 }
 
-fn parse_proto_dir(dir: &Path) -> HashMap<String, MessageSchema> {
+fn parse_proto_dir(dir: &Path) -> BTreeMap<String, MessageSchema> {
     // Parse these files; order doesn't matter since types are merged into one map.
     let files = [
         "payment.proto",
@@ -388,7 +388,7 @@ fn parse_proto_dir(dir: &Path) -> HashMap<String, MessageSchema> {
         "sdk_config.proto",
     ];
 
-    let mut all: HashMap<String, MessageSchema> = HashMap::new();
+    let mut all: BTreeMap<String, MessageSchema> = BTreeMap::new();
     for file in &files {
         let path = dir.join(file);
         if let Ok(content) = std::fs::read_to_string(&path) {
@@ -400,8 +400,8 @@ fn parse_proto_dir(dir: &Path) -> HashMap<String, MessageSchema> {
 
 /// Line-by-line state-machine parser: extracts `{MessageName → MessageSchema}`
 /// from a single proto file's content.
-fn parse_proto_messages(content: &str) -> HashMap<String, MessageSchema> {
-    let mut schemas: HashMap<String, MessageSchema> = HashMap::new();
+fn parse_proto_messages(content: &str) -> BTreeMap<String, MessageSchema> {
+    let mut schemas: BTreeMap<String, MessageSchema> = BTreeMap::new();
 
     // Each entry: "message" | "oneof" | "enum"
     let mut context_stack: Vec<&'static str> = Vec::new();
