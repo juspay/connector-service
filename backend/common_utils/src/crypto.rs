@@ -681,37 +681,6 @@ impl EncodeMessage for TripleDesEde3CBC {
     }
 }
 
-/// RSA encryption using PKCS#1 v1.5 padding
-/// Used for encrypting sensitive data with an RSA public key
-#[derive(Debug)]
-pub struct RsaPkcs1v15;
-
-impl RsaPkcs1v15 {
-    /// Encrypts plaintext using RSA public key with PKCS#1 v1.5 padding.
-    pub fn encrypt(
-        public_key_der: &[u8],
-        plaintext: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
-        use openssl::rsa::{Padding, Rsa};
-
-        let rsa = Rsa::public_key_from_der(public_key_der)
-            .change_context(errors::CryptoError::EncodingFailed)
-            .attach_printable("Failed to parse RSA public key from DER format")?;
-
-        let rsa_size = usize::try_from(rsa.size())
-            .change_context(errors::CryptoError::EncodingFailed)
-            .attach_printable("RSA key size does not fit in usize")?;
-        let mut encrypted = vec![0u8; rsa_size];
-        let encrypted_len = rsa
-            .public_encrypt(plaintext, &mut encrypted, Padding::PKCS1)
-            .change_context(errors::CryptoError::EncodingFailed)
-            .attach_printable("RSA PKCS#1 v1.5 encryption failed")?;
-
-        encrypted.truncate(encrypted_len);
-        Ok(encrypted)
-    }
-}
-
 /// RSA encryption using OAEP padding with SHA-256
 /// Provides stronger security than PKCS#1 v1.5
 /// This matches the Web Crypto API's RSA-OAEP with SHA-256 hash algorithm
