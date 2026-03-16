@@ -17,6 +17,18 @@ import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 
+/**
+ * Exception raised when req_transformer fails.
+ * Wraps RequestErrorProto and provides access to proto fields.
+ */
+class RequestError(val proto: SdkConfig.RequestError) : Exception(proto.errorMessage)
+
+/**
+ * Exception raised when res_transformer fails.
+ * Wraps ResponseErrorProto and provides access to proto fields.
+ */
+class ResponseError(val proto: SdkConfig.ResponseError) : Exception(proto.errorMessage)
+
 open class ConnectorClient(
     val config: ConnectorConfig,
     val defaults: RequestConfig = RequestConfig.getDefaultInstance(),
@@ -60,6 +72,44 @@ open class ConnectorClient(
     }
 
     /**
+     * Parse FFI req_transformer bytes using FfiResult proto with enum-based type checking.
+     *
+     * @param resultBytes Raw bytes returned by the req_transformer FFI call
+     * @return FfiConnectorHttpRequest on success (HTTP_REQUEST type)
+     * @throws RequestError if result type is REQUEST_ERROR
+     * @throws ResponseError if result type is RESPONSE_ERROR
+     * @throws IllegalStateException if result type is unknown
+     */
+    private fun checkReqError(resultBytes: ByteArray): FfiConnectorHttpRequest {
+        val result = FfiResult.parseFrom(resultBytes)
+        return when (result.type) {
+            FfiResult.Type.HTTP_REQUEST -> result.httpRequest
+            FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.requestError)
+            FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.responseError)
+            else -> throw IllegalStateException("Unknown result type: ${result.type}")
+        }
+    }
+
+    /**
+     * Parse FFI res_transformer bytes using FfiResult proto with enum-based type checking.
+     *
+     * @param resultBytes Raw bytes returned by the res_transformer FFI call
+     * @return FfiConnectorHttpResponse on success (HTTP_RESPONSE type)
+     * @throws ResponseError if result type is RESPONSE_ERROR
+     * @throws RequestError if result type is REQUEST_ERROR
+     * @throws IllegalStateException if result type is unknown
+     */
+    private fun checkResError(resultBytes: ByteArray): FfiConnectorHttpResponse {
+        val result = FfiResult.parseFrom(resultBytes)
+        return when (result.type) {
+            FfiResult.Type.HTTP_RESPONSE -> result.httpResponse
+            FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.responseError)
+            FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.requestError)
+            else -> throw IllegalStateException("Unknown result type: ${result.type}")
+        }
+    }
+
+    /**
      * Execute a full round-trip for any payment flow.
      *
      * @param flow Flow name matching the FFI transformer prefix (e.g. "authorize").
@@ -86,7 +136,7 @@ open class ConnectorClient(
 
         // 2. Build connector HTTP request via FFI
         val connectorRequestBytes = reqTransformer(requestBytes, optionsBytes)
-        val connectorRequest = FfiConnectorHttpRequest.parseFrom(connectorRequestBytes)
+        val connectorRequest = checkReqError(connectorRequestBytes)
 
         val httpRequest = HttpRequest(
             url = connectorRequest.url,
@@ -112,8 +162,8 @@ open class ConnectorClient(
             requestBytes,
             optionsBytes,
         )
-
-        return responseParser.parseFrom(resultBytes)
+        val httpResponse = checkResError(resultBytes)
+        return responseParser.parseFrom(httpResponse.body)
     }
 
     /**
@@ -139,6 +189,7 @@ open class ConnectorClient(
         val optionsBytes = ffiOptions.toByteArray()
 
         val resultBytes = transformer(requestBytes, optionsBytes)
-        return responseParser.parseFrom(resultBytes)
+        val httpResponse = checkResError(resultBytes)
+        return responseParser.parseFrom(httpResponse.body)
     }
 }
