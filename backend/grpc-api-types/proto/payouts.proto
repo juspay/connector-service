@@ -82,7 +82,7 @@ message AchBankTransferPayout {
 }
 
 message BacsBankTransferPayout {
-  optional string bank_name = 1;
+  optional BankNames bank_name = 1;
   optional CountryAlpha2 bank_country_code = 2;
   optional string bank_city = 3;
   optional SecretString bank_account_number = 4;
@@ -90,7 +90,7 @@ message BacsBankTransferPayout {
 }
 
 message SepaBankTransferPayout {
-  optional string bank_name = 1;
+  optional BankNames bank_name = 1;
   optional CountryAlpha2 bank_country_code = 2;
   optional string bank_city = 3;
   SecretString iban = 4;
@@ -99,7 +99,7 @@ message SepaBankTransferPayout {
 
 
 message PixBankTransferPayout {
-  optional string bank_name = 1;
+  optional BankNames bank_name = 1;
   optional string bank_branch = 2;
   SecretString bank_account_number = 3;
   SecretString pix_key = 4;
