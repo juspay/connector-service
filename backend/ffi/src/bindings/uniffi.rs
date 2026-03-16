@@ -10,17 +10,20 @@ mod uniffi_bindings_inner {
     use bytes::Bytes;
     use common_utils::request::Request;
     use domain_types::connector_types::ConnectorEnum;
-    use domain_types::errors::{ConnectorError, ReportInto};
+    use domain_types::errors::{ApplicationErrorResponse, ConnectorError};
     use domain_types::router_data::ConnectorSpecificConfig;
     use domain_types::router_response_types::Response;
     use domain_types::utils::ForeignTryFrom;
     use error_stack::Report;
+    use grpc_api_types::payments::EventServiceHandleRequest;
     use grpc_api_types::payments::{
-        Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, RequestError,
-        ResponseError, FfiResult, ffi_result,
+        ffi_result, Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions,
+        FfiResult, PaymentStatus, RequestError, ResponseError,
     };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
+    use std::collections::HashMap;
+    use ucs_env::error::ErrorSwitch;
 
     // ── Shared helpers ────────────────────────────────────────────────────────
 
@@ -34,7 +37,7 @@ mod uniffi_bindings_inner {
             .connector_config
             .as_ref()
             .ok_or_else(|| RequestError {
-                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                status: PaymentStatus::Pending.into(),
                 error_message: Some("Missing connector_config".to_string()),
                 error_code: None,
                 status_code: Some(400),
@@ -42,20 +45,21 @@ mod uniffi_bindings_inner {
 
         // 2. Infer connector from which oneof variant is set
         let config_variant = proto_config.config.as_ref().ok_or_else(|| RequestError {
-            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            status: PaymentStatus::Pending.into(),
             error_message: Some("Missing connector_config.config".to_string()),
             error_code: None,
             status_code: Some(400),
         })?;
 
-        let connector = ConnectorEnum::foreign_try_from(config_variant.clone()).map_err(|e| {
-            <Report<domain_types::errors::ApplicationErrorResponse> as ReportInto<RequestError>>::
-                report_into(e)
-        })?;
+        let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
+            .map_err(|e: Report<ApplicationErrorResponse>| e.current_context().switch())?;
 
         // 3. Convert proto config to domain ConnectorSpecificConfig
         let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-            .map_err(<Report<ConnectorError> as ReportInto<RequestError>>::report_into)?;
+            .map_err(|e: Report<ConnectorError>| {
+                let app_error: ApplicationErrorResponse = e.current_context().switch();
+                app_error.switch()
+            })?;
 
         Ok(crate::types::FfiMetadataPayload {
             connector,
@@ -72,7 +76,7 @@ mod uniffi_bindings_inner {
             .connector_config
             .as_ref()
             .ok_or_else(|| ResponseError {
-                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                status: PaymentStatus::Pending.into(),
                 error_message: Some("Missing connector_config".to_string()),
                 error_code: None,
                 status_code: Some(400),
@@ -80,20 +84,21 @@ mod uniffi_bindings_inner {
 
         // 2. Infer connector from which oneof variant is set
         let config_variant = proto_config.config.as_ref().ok_or_else(|| ResponseError {
-            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            status: PaymentStatus::Pending.into(),
             error_message: Some("Missing connector_config.config".to_string()),
             error_code: None,
             status_code: Some(400),
         })?;
 
-        let connector = ConnectorEnum::foreign_try_from(config_variant.clone()).map_err(|e| {
-            <Report<domain_types::errors::ApplicationErrorResponse> as ReportInto<ResponseError>>::
-                report_into(e)
-        })?;
+        let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
+            .map_err(|e: Report<ApplicationErrorResponse>| e.current_context().switch())?;
 
         // 3. Convert proto config to domain ConnectorSpecificConfig
         let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-            .map_err(<Report<ConnectorError> as ReportInto<ResponseError>>::report_into)?;
+            .map_err(|e: Report<ConnectorError>| {
+                let app_error: ApplicationErrorResponse = e.current_context().switch();
+                app_error.switch()
+            })?;
 
         Ok(crate::types::FfiMetadataPayload {
             connector,
@@ -110,7 +115,7 @@ mod uniffi_bindings_inner {
             .map(|b| b.get_body_bytes())
             .transpose()
             .map_err(|e| RequestError {
-                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                status: PaymentStatus::Pending.into(),
                 error_message: Some(format!("Body encoding failed: {e}")),
                 error_code: None,
                 status_code: Some(400),
@@ -139,7 +144,7 @@ mod uniffi_bindings_inner {
         let response =
             FfiConnectorHttpResponse::decode(Bytes::from(response_bytes)).map_err(|e| {
                 ResponseError {
-                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    status: PaymentStatus::Pending.into(),
                     error_message: Some(format!("ConnectorHttpResponse decode failed: {e}")),
                     error_code: None,
                     status_code: Some(400),
@@ -164,7 +169,7 @@ mod uniffi_bindings_inner {
             },
             response: Bytes::from(response.body),
             status_code: response.status_code.try_into().map_err(|e| ResponseError {
-                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                status: PaymentStatus::Pending.into(),
                 error_message: Some(format!("Invalid HTTP status code: {e}")),
                 error_code: None,
                 status_code: Some(400),
@@ -176,14 +181,14 @@ mod uniffi_bindings_inner {
     fn parse_ffi_options_for_req(options_bytes: Vec<u8>) -> Result<FfiOptions, RequestError> {
         if options_bytes.is_empty() {
             return Err(RequestError {
-                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                status: PaymentStatus::Pending.into(),
                 error_message: Some("Empty options bytes".to_string()),
                 error_code: None,
                 status_code: Some(400),
             });
         }
         FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| RequestError {
-            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            status: PaymentStatus::Pending.into(),
             error_message: Some(format!("Options decode failed: {e}")),
             error_code: None,
             status_code: Some(400),
@@ -194,14 +199,14 @@ mod uniffi_bindings_inner {
     fn parse_ffi_options_for_res(options_bytes: Vec<u8>) -> Result<FfiOptions, ResponseError> {
         if options_bytes.is_empty() {
             return Err(ResponseError {
-                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                status: PaymentStatus::Pending.into(),
                 error_message: Some("Empty options bytes".to_string()),
                 error_code: None,
                 status_code: Some(400),
             });
         }
         FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| ResponseError {
-            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            status: PaymentStatus::Pending.into(),
             error_message: Some(format!("Options decode failed: {e}")),
             error_code: None,
             status_code: Some(400),
@@ -227,34 +232,39 @@ mod uniffi_bindings_inner {
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-            return FfiResult {
-                r#type: ffi_result::Type::RequestError as i32,
-                payload: Some(ffi_result::Payload::RequestError(
-                    RequestError {
-                        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                return FfiResult {
+                    r#type: ffi_result::Type::RequestError.into(),
+                    payload: Some(ffi_result::Payload::RequestError(RequestError {
+                        status: PaymentStatus::Pending.into(),
                         error_message: Some(format!("Request payload decode failed: {e}")),
                         error_code: None,
                         status_code: Some(400),
-                    }
-                )),
-            }.encode_to_vec();
+                    })),
+                }
+                .encode_to_vec();
             }
         };
 
         let ffi_options = match parse_ffi_options_for_req(options_bytes) {
             Ok(o) => o,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::RequestError as i32,
-                payload: Some(ffi_result::Payload::RequestError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::RequestError.into(),
+                    payload: Some(ffi_result::Payload::RequestError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let ffi_metadata = match parse_metadata_for_req(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::RequestError as i32,
-                payload: Some(ffi_result::Payload::RequestError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::RequestError.into(),
+                    payload: Some(ffi_result::Payload::RequestError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let request = crate::types::FfiRequestData {
@@ -267,42 +277,54 @@ mod uniffi_bindings_inner {
 
         let result = match handler(request, environment) {
             Ok(r) => r,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::RequestError as i32,
-                payload: Some(ffi_result::Payload::RequestError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::RequestError.into(),
+                    payload: Some(ffi_result::Payload::RequestError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let connector_request = match result {
             Some(r) => r,
             None => {
                 return FfiResult {
-                    r#type: ffi_result::Type::RequestError as i32,
-                    payload: Some(ffi_result::Payload::RequestError(
-                        RequestError {
-                            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                            error_message: Some("Request encoding failed".to_string()),
-                            error_code: None,
-                            status_code: Some(400),
-                        }
-                    )),
-                }.encode_to_vec();
+                    r#type: ffi_result::Type::RequestError.into(),
+                    payload: Some(ffi_result::Payload::RequestError(RequestError {
+                        status: PaymentStatus::Pending.into(),
+                        error_message: Some("Request encoding failed".to_string()),
+                        error_code: None,
+                        status_code: Some(400),
+                    })),
+                }
+                .encode_to_vec();
             }
         };
 
         match build_ffi_request_bytes(&connector_request) {
-            Ok(bytes) => {
-                let http_request = FfiConnectorHttpRequest::decode(Bytes::from(bytes))
-                    .expect("valid FfiConnectorHttpRequest");
-                FfiResult {
-                    r#type: ffi_result::Type::HttpRequest as i32,
+            Ok(bytes) => match FfiConnectorHttpRequest::decode(Bytes::from(bytes)) {
+                Ok(http_request) => FfiResult {
+                    r#type: ffi_result::Type::HttpRequest.into(),
                     payload: Some(ffi_result::Payload::HttpRequest(http_request)),
-                }.encode_to_vec()
-            }
+                }
+                .encode_to_vec(),
+                Err(e) => FfiResult {
+                    r#type: ffi_result::Type::RequestError.into(),
+                    payload: Some(ffi_result::Payload::RequestError(RequestError {
+                        status: PaymentStatus::Pending.into(),
+                        error_message: Some(format!("Request re-decode failed: {e}")),
+                        error_code: None,
+                        status_code: Some(500),
+                    })),
+                }
+                .encode_to_vec(),
+            },
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::RequestError as i32,
+                r#type: ffi_result::Type::RequestError.into(),
                 payload: Some(ffi_result::Payload::RequestError(e)),
-            }.encode_to_vec(),
+            }
+            .encode_to_vec(),
         }
     }
 
@@ -325,43 +347,51 @@ mod uniffi_bindings_inner {
     {
         let domain_response = match build_domain_response(response_bytes) {
             Ok(r) => r,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::ResponseError as i32,
-                payload: Some(ffi_result::Payload::ResponseError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ResponseError.into(),
+                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError as i32,
-                    payload: Some(ffi_result::Payload::ResponseError(
-                        ResponseError {
-                            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                            error_message: Some(format!("Request payload decode failed: {e}")),
-                            error_code: None,
-                            status_code: Some(400),
-                        }
-                    )),
-                }.encode_to_vec();
+                    r#type: ffi_result::Type::ResponseError.into(),
+                    payload: Some(ffi_result::Payload::ResponseError(ResponseError {
+                        status: PaymentStatus::Pending.into(),
+                        error_message: Some(format!("Request payload decode failed: {e}")),
+                        error_code: None,
+                        status_code: Some(400),
+                    })),
+                }
+                .encode_to_vec();
             }
         };
 
         let ffi_options = match parse_ffi_options_for_res(options_bytes) {
             Ok(o) => o,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::ResponseError as i32,
-                payload: Some(ffi_result::Payload::ResponseError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ResponseError.into(),
+                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let ffi_metadata = match parse_metadata_for_res(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::ResponseError as i32,
-                payload: Some(ffi_result::Payload::ResponseError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ResponseError.into(),
+                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let request = crate::types::FfiRequestData {
@@ -372,19 +402,41 @@ mod uniffi_bindings_inner {
 
         let environment = Some(ffi_options.environment());
 
+        // Extract headers from domain_response before passing to handler
+        let response_headers: HashMap<String, String> = domain_response
+            .headers
+            .as_ref()
+            .map(|h| {
+                h.iter()
+                    .filter_map(|(k, v)| {
+                        let key = k.to_string();
+                        let value = v.to_str().ok()?.to_string();
+                        Some((key, value))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
         match handler(request, domain_response, environment) {
             Ok(proto_response) => {
-                let http_response = FfiConnectorHttpResponse::decode(Bytes::from(proto_response.encode_to_vec()))
-                    .expect("valid FfiConnectorHttpResponse");
+                // Serialize the protobuf response and wrap it in FfiConnectorHttpResponse
+                let response_bytes = proto_response.encode_to_vec();
+                let http_response = FfiConnectorHttpResponse {
+                    status_code: 200,
+                    headers: response_headers,
+                    body: response_bytes,
+                };
                 FfiResult {
-                    r#type: ffi_result::Type::HttpResponse as i32,
+                    r#type: ffi_result::Type::HttpResponse.into(),
                     payload: Some(ffi_result::Payload::HttpResponse(http_response)),
-                }.encode_to_vec()
+                }
+                .encode_to_vec()
             }
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::ResponseError as i32,
+                r#type: ffi_result::Type::ResponseError.into(),
                 payload: Some(ffi_result::Payload::ResponseError(e)),
-            }.encode_to_vec(),
+            }
+            .encode_to_vec(),
         }
     }
 
@@ -447,39 +499,44 @@ mod uniffi_bindings_inner {
     pub fn handle_event_transformer(request_bytes: Vec<u8>, options_bytes: Vec<u8>) -> Vec<u8> {
         use prost::Message as _;
 
-        let payload = match grpc_api_types::payments::EventServiceHandleRequest::decode(
-            Bytes::from(request_bytes),
-        ) {
+        let payload = match EventServiceHandleRequest::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError as i32,
-                    payload: Some(ffi_result::Payload::ResponseError(
-                        ResponseError {
-                            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                            error_message: Some(format!("EventServiceHandleRequest decode failed: {e}")),
-                            error_code: None,
-                            status_code: Some(400),
-                        }
-                    )),
-                }.encode_to_vec();
+                    r#type: ffi_result::Type::ResponseError.into(),
+                    payload: Some(ffi_result::Payload::ResponseError(ResponseError {
+                        status: PaymentStatus::Pending.into(),
+                        error_message: Some(format!(
+                            "EventServiceHandleRequest decode failed: {e}"
+                        )),
+                        error_code: None,
+                        status_code: Some(400),
+                    })),
+                }
+                .encode_to_vec();
             }
         };
 
         let ffi_options = match parse_ffi_options_for_res(options_bytes) {
             Ok(o) => o,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::ResponseError as i32,
-                payload: Some(ffi_result::Payload::ResponseError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ResponseError.into(),
+                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let ffi_metadata = match parse_metadata_for_res(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return FfiResult {
-                r#type: ffi_result::Type::ResponseError as i32,
-                payload: Some(ffi_result::Payload::ResponseError(e)),
-            }.encode_to_vec(),
+            Err(e) => {
+                return FfiResult {
+                    r#type: ffi_result::Type::ResponseError.into(),
+                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                }
+                .encode_to_vec()
+            }
         };
 
         let request = crate::types::FfiRequestData {
@@ -492,17 +549,25 @@ mod uniffi_bindings_inner {
 
         match crate::handlers::payments::handle_event_handler(request, environment) {
             Ok(response) => {
-                let http_response = FfiConnectorHttpResponse::decode(Bytes::from(response.encode_to_vec()))
-                    .expect("valid FfiConnectorHttpResponse");
+                // Serialize the protobuf response and wrap it in FfiConnectorHttpResponse
+                // Note: handle_event doesn't have connector response headers (webhook processing)
+                let response_bytes = response.encode_to_vec();
+                let http_response = FfiConnectorHttpResponse {
+                    status_code: 200,
+                    headers: HashMap::new(),
+                    body: response_bytes,
+                };
                 FfiResult {
-                    r#type: ffi_result::Type::HttpResponse as i32,
+                    r#type: ffi_result::Type::HttpResponse.into(),
                     payload: Some(ffi_result::Payload::HttpResponse(http_response)),
-                }.encode_to_vec()
+                }
+                .encode_to_vec()
             }
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::ResponseError as i32,
+                r#type: ffi_result::Type::ResponseError.into(),
                 payload: Some(ffi_result::Payload::ResponseError(e)),
-            }.encode_to_vec(),
+            }
+            .encode_to_vec(),
         }
     }
 }
