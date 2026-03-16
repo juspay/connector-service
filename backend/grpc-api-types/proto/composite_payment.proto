@@ -159,7 +159,7 @@ message CompositeGetResponse {
 // Request message for composite pre-authenticate flow.
 message CompositePreauthenticateRequest {
   // Payment Identification
-  Identifier merchant_order_id = 1;
+  optional string merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;
@@ -204,7 +204,7 @@ message CompositePreauthenticateResponse {
 // Request message for composite authenticate flow.
 message CompositeAuthenticateRequest {
   // Payment Identification
-  Identifier merchant_order_id = 1;
+  optional string merchant_order_id = 1;
 
   // Amount Information
   Money amount = 2;

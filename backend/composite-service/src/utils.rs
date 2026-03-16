@@ -74,7 +74,6 @@ pub fn get_authentication_data(
     auth_data_from_request: Option<AuthenticationData>,
     pre_authenticate_response: Option<&PaymentMethodAuthenticationServicePreAuthenticateResponse>,
 ) -> Option<AuthenticationData> {
-    println!("auth_data_from_request: {auth_data_from_request:?}");
     auth_data_from_request.or_else(|| {
         pre_authenticate_response.and_then(|response| response.authentication_data.clone())
     })
