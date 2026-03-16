@@ -98,7 +98,9 @@ pub fn parse_metadata_for_res(
 }
 
 /// Helper to convert internal Request to Protobuf FfiConnectorHttpRequest bytes.
-pub fn build_ffi_request_bytes(request: &common_utils::request::Request) -> Result<Vec<u8>, RequestError> {
+pub fn build_ffi_request_bytes(
+    request: &common_utils::request::Request,
+) -> Result<Vec<u8>, RequestError> {
     let mut headers = request.get_headers_map();
     let (body, boundary) = request
         .body
@@ -132,15 +134,14 @@ pub fn build_ffi_request_bytes(request: &common_utils::request::Request) -> Resu
 
 /// Helper to convert Protobuf FfiConnectorHttpResponse bytes to internal Response.
 pub fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, ResponseError> {
-    let response =
-        FfiConnectorHttpResponse::decode(Bytes::from(response_bytes)).map_err(|e| {
-            ResponseError {
-                status: PaymentStatus::Pending.into(),
-                error_message: Some(format!("ConnectorHttpResponse decode failed: {e}")),
-                error_code: None,
-                status_code: Some(400),
-            }
-        })?;
+    let response = FfiConnectorHttpResponse::decode(Bytes::from(response_bytes)).map_err(|e| {
+        ResponseError {
+            status: PaymentStatus::Pending.into(),
+            error_message: Some(format!("ConnectorHttpResponse decode failed: {e}")),
+            error_code: None,
+            status_code: Some(400),
+        }
+    })?;
 
     let mut header_map = HeaderMap::new();
     for (key, value) in &response.headers {
