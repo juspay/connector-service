@@ -8,11 +8,11 @@ use common_utils::{
     FloatMajorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, CreateAccessToken, PSync, Refund, Void},
+    connector_flow::{Authorize, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -673,6 +673,118 @@ impl
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: txn.transaction_id.clone(),
+                refund_status,
+                status_code: item.http_code,
+            }),
+            resource_common_data: RefundFlowData {
+                status: refund_status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// =============================================================================
+// RSYNC FLOW (Refund Sync)
+// =============================================================================
+
+/// Request body for `POST /payments/v1/transaction-inquiry` for refund sync.
+/// Uses the same structure as PSync - queries by connector's transaction ID.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubRSyncRequest {
+    pub merchant_details: FiservcommercehubPSyncMerchantDetails,
+    pub reference_transaction_details: FiservcommercehubReferenceTransactionDetails,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::FiservcommercehubRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for FiservcommercehubRSyncRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::FiservcommercehubRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let auth = FiservcommercehubAuthType::try_from(&router_data.connector_auth_type)?;
+        // Use connector_refund_id which is the connector's refund transaction ID
+        Ok(Self {
+            merchant_details: FiservcommercehubPSyncMerchantDetails {
+                merchant_id: auth.merchant_id.clone(),
+            },
+            reference_transaction_details: FiservcommercehubReferenceTransactionDetails {
+                reference_transaction_id: router_data.request.connector_refund_id.clone(),
+            },
+        })
+    }
+}
+
+/// Gateway response for RSync - contains refund transaction state and processing details.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubRSyncGatewayResponse {
+    pub transaction_state: FiservcommercehubTransactionState,
+    pub transaction_processing_details: Option<FiservcommercehubRSyncTxnDetails>,
+}
+
+/// Transaction processing details in RSync response.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubRSyncTxnDetails {
+    pub transaction_id: String,
+    pub order_id: Option<String>,
+}
+
+/// Item in the RSync response array.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubRSyncItem {
+    pub gateway_response: FiservcommercehubRSyncGatewayResponse,
+}
+
+/// The transaction-inquiry endpoint returns an array of transaction objects.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FiservcommercehubRSyncResponse(pub Vec<FiservcommercehubRSyncItem>);
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            FiservcommercehubRSyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            FiservcommercehubRSyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let rsync_item = item.response.0.into_iter().next().ok_or_else(|| {
+            error_stack::report!(errors::ConnectorError::ResponseDeserializationFailed)
+        })?;
+        let refund_status = RefundStatus::from(&rsync_item.gateway_response.transaction_state);
+        // Get transaction_id from gateway_response.transaction_processing_details
+        // Fall back to connector_refund_id from the request if not present
+        let connector_refund_id = rsync_item
+            .gateway_response
+            .transaction_processing_details
+            .map(|d| d.transaction_id)
+            .unwrap_or_else(|| item.router_data.request.connector_refund_id.clone());
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id,
                 refund_status,
                 status_code: item.http_code,
             }),

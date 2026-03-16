@@ -44,7 +44,8 @@ use transformers as fiservcommercehub;
 use transformers::{
     FiservcommercehubAccessTokenRequest, FiservcommercehubAccessTokenResponse,
     FiservcommercehubAuthorizeRequest, FiservcommercehubAuthorizeResponse,
-    FiservcommercehubPSyncRequest, FiservcommercehubPSyncResponse, FiservcommercehubRefundRequest,
+    FiservcommercehubPSyncRequest, FiservcommercehubPSyncResponse, FiservcommercehubRSyncRequest,
+    FiservcommercehubRSyncResponse, FiservcommercehubRefundRequest,
     FiservcommercehubRefundResponse, FiservcommercehubVoidRequest, FiservcommercehubVoidResponse,
 };
 
@@ -98,6 +99,12 @@ macros::create_all_prerequisites!(
             request_body: FiservcommercehubVoidRequest,
             response_body: FiservcommercehubVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: FiservcommercehubRSyncRequest,
+            response_body: FiservcommercehubRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [
@@ -385,6 +392,62 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
         where
             Self: ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        {
+            let auth =
+                fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_auth_type)
+                    .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            let api_key = auth.api_key.clone().expose();
+            let client_request_id =
+                fiservcommercehub::FiservcommercehubAuthType::generate_client_request_id();
+            let timestamp =
+                fiservcommercehub::FiservcommercehubAuthType::generate_timestamp();
+
+            let temp_request_body = self.get_request_body(req)?;
+            let request_body_str = match temp_request_body {
+                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+                None => String::new(),
+                _ => return Err(errors::ConnectorError::RequestEncodingFailed)?,
+            };
+
+            let authorization = auth.generate_hmac_signature(
+                &api_key,
+                &client_request_id,
+                &timestamp,
+                &request_body_str,
+            )?;
+
+            Ok(vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.common_get_content_type().to_string().into(),
+                ),
+                (
+                    headers::API_KEY.to_string(),
+                    Secret::new(api_key).into_masked(),
+                ),
+                (headers::TIMESTAMP.to_string(), timestamp.into()),
+                (
+                    headers::CLIENT_REQUEST_ID.to_string(),
+                    client_request_id.into(),
+                ),
+                (
+                    headers::AUTHORIZATION.to_string(),
+                    authorization.into_masked(),
+                ),
+                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".into()),
+                (headers::ACCEPT_LANGUAGE.to_string(), "en".into()),
+            ])
+        }
+
+        /// Builds the HMAC-authenticated headers for the RSync (refund transaction-inquiry) endpoint.
+        pub fn build_rsync_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         {
             let auth =
                 fiservcommercehub::FiservcommercehubAuthType::try_from(&req.connector_auth_type)
@@ -983,11 +1046,40 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Fiservcommercehub<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiservcommercehub,
+    curl_request: Json(FiservcommercehubRSyncRequest),
+    curl_response: FiservcommercehubRSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_rsync_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = req
+                .resource_common_data
+                .connectors
+                .fiservcommercehub
+                .base_url
+                .clone();
+            Ok(format!("{base_url}payments/v1/transaction-inquiry"))
+        }
+    }
+);
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
