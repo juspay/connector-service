@@ -4,7 +4,7 @@
 ---
 title: Authenticate
 description: Execute 3DS challenge or frictionless verification to authenticate customer via bank
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -37,7 +37,7 @@ The `Authenticate` RPC executes the 3D Secure authentication step. For frictionl
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_order_id` | Identifier | Yes | Your unique order reference |
+| `merchant_order_id` | string | Yes | Your unique order reference |
 | `amount` | Money | Yes | Transaction amount |
 | `payment_method` | PaymentMethod | Yes | Card details |
 | `customer` | Customer | No | Customer information |
@@ -52,14 +52,14 @@ The `Authenticate` RPC executes the 3D Secure authentication step. For frictionl
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_transaction_id` | Identifier | Connector's authentication transaction ID |
+| `connector_transaction_id` | string | Connector's authentication transaction ID |
 | `status` | PaymentStatus | Current status: AUTHENTICATED, FAILED, PENDING |
 | `error` | ErrorInfo | Error details if authentication failed |
 | `status_code` | uint32 | HTTP-style status code |
 | `response_headers` | map<string,string> | Connector-specific response headers |
 | `redirection_data` | RedirectForm | Challenge URL if additional step needed |
 | `network_transaction_id` | string | Card network transaction reference |
-| `merchant_order_id` | Identifier | Your order reference (echoed back) |
+| `merchant_order_id` | string | Your order reference (echoed back) |
 | `authentication_data` | AuthenticationData | 3DS authentication results |
 | `state` | ConnectorState | State to pass to next step |
 | `raw_connector_response` | SecretString | Raw response for debugging |
@@ -70,18 +70,18 @@ The `Authenticate` RPC executes the 3D Secure authentication step. For frictionl
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_order_id": {"id": "order_001"},
+    "merchant_order_id": "order_001",
     "amount": {
       "minor_amount": 10000,
       "currency": "USD"
     },
     "payment_method": {
       "card": {
-        "card_number": {"value": "4242424242424242"},
-        "expiry_month": {"value": "12"},
-        "expiry_year": {"value": "2027"}
+        "card_number": "4242424242424242",
+        "expiry_month": "12",
+        "expiry_year": "2027"
       }
     },
     "address": {
@@ -94,14 +94,14 @@ grpcurl -H "x-connector: stripe" \
     "return_url": "https://your-app.com/3ds/return"
   }' \
   localhost:8080 \
-  ucs.v2.PaymentMethodAuthenticationService/Authenticate
+  types.PaymentMethodAuthenticationService/Authenticate
 ```
 
 ### Response
 
 ```json
 {
-  "connector_transaction_id": {"id": "pi_3Oxxx..."},
+  "connector_transaction_id": "pi_3Oxxx...",
   "status": "AUTHENTICATED",
   "authentication_data": {
     "eci": "05",

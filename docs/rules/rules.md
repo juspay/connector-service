@@ -109,16 +109,46 @@ approved: {true|false}
 **Format:**
 ```bash
 grpcurl -H "x-connector: {connector}" \
-  -H "x-connector-auth: {\"{Connector}\":{\"api_key\":\"$API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"{Connector}\":{\"api_key\":\"$API_KEY\"}}}" \
 ```
 
 **Stripe Example:**
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
 ```
 
-### C4.2: Test Data
+### C4.2: Service/Operation URL Format
+
+**Requirement:** Use `types.{ServiceName}/{OperationName}` format for the gRPC method URL.
+
+**Format:**
+```bash
+grpcurl ... localhost:8080 types.{ServiceName}/{OperationName}
+```
+
+**Examples:**
+```bash
+# PaymentService operations
+types.PaymentService/Authorize
+types.PaymentService/Capture
+types.PaymentService/Get
+types.PaymentService/Void
+
+# RecurringPaymentService operations
+types.RecurringPaymentService/Charge
+types.RecurringPaymentService/Revoke
+
+# PaymentMethodService operations
+types.PaymentMethodService/Tokenize
+
+# EventService operations
+types.EventService/HandleEvent
+```
+
+**Rationale:** The proto package is declared as `package types` in the service definitions, so the fully-qualified method name uses the `types` prefix. This ensures consistency with the generated proto code and gRPC reflection.
+
+### C4.3: Test Data
 
 **Card Numbers:**
 - Success: `4242424242424242` (Visa)

@@ -1,9 +1,12 @@
-.PHONY: install-deps generate-bindings generate-proto generate-all \
+.PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
         generate-flows pack-archive install test-package dist clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
+
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
 
 # Include common SDK build configuration
 include $(SDK_ROOT)/../common.mk
@@ -30,6 +33,14 @@ install-deps:
 	@command -v cargo >/dev/null 2>&1 || \
 		(echo "Error: cargo not found. Install Rust via rustup." && exit 1)
 	@echo "All required tools present."
+
+# ---------------------------------------------------------------------------
+# install-codegen-deps
+# Ensures jinja2 etc. are installed before generate-flows (used by CI and local).
+# Delegates to sdk/Makefile install-deps (idempotent, skips if present).
+# ---------------------------------------------------------------------------
+install-codegen-deps:
+	@$(MAKE) -C $(REPO_ROOT)/sdk install-deps
 
 # ---------------------------------------------------------------------------
 # generate-bindings
@@ -83,14 +94,15 @@ generate-proto:
 # stubs. Proto is generated first since the Kotlin code may reference those
 # types at compile time.
 # ---------------------------------------------------------------------------
-generate-all: generate-proto generate-bindings
+generate-all: generate-proto generate-bindings generate-flows
 
 # ---------------------------------------------------------------------------
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
 # codegen script. Assumes descriptor is already generated.
+# Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows:
+generate-flows: install-codegen-deps
 	@echo "Generating Kotlin flow methods..."
 	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang kotlin
 	@echo "Kotlin flow methods generated."
@@ -126,7 +138,13 @@ install: pack-archive
 # ---------------------------------------------------------------------------
 test-package: generate-all install
 	@echo "Running smoke test..."
-	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --info
+	@# Copy credentials file if it exists
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json $(SDK_ROOT)/smoke-test/; \
+	else \
+		echo "  Note: creds.json not found, test will use placeholder credentials"; \
+	fi
+	@cd $(SDK_ROOT)/smoke-test && $(SDK_ROOT)/gradlew run --args="--connectors $(CONNECTORS)"
 	@echo "Package test passed."
 
 # ---------------------------------------------------------------------------

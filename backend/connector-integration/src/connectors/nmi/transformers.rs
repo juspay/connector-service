@@ -12,7 +12,7 @@ use domain_types::{
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 
@@ -30,14 +30,15 @@ pub struct NmiAuthType {
     pub public_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for NmiAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for NmiAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nmi {
+            ConnectorSpecificConfig::Nmi {
                 api_key,
                 public_key,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 public_key: public_key.to_owned(),
@@ -238,7 +239,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Extract payment method data
         // Handle ACH Bank Debit separately to access billing info for account holder name fallback
@@ -477,7 +478,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // PSync uses attempt_id as order_id (NOT connector_transaction_id)
         // The connector_transaction_id contains the attempt_id for sync operations
@@ -603,7 +604,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Get the original transaction ID from connector_transaction_id
         let transactionid = router_data
@@ -709,7 +710,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Get the original payment transaction ID
         let transactionid = router_data.request.connector_transaction_id.clone();
@@ -800,7 +801,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // RSync uses connector_refund_id as order_id (per tech spec section 3.6)
         let order_id = router_data.request.connector_refund_id.clone();
@@ -897,7 +898,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
         // Get the original payment transaction ID
         let transactionid = router_data.request.connector_transaction_id.clone();

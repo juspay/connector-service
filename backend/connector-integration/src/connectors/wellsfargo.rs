@@ -418,7 +418,7 @@ macros::create_all_prerequisites!(
             FlowData: FlowDataBase,
         {
             let date = OffsetDateTime::now_utc();
-            let auth = transformers::WellsfargoAuthType::try_from(&req.connector_auth_type)?;
+            let auth = transformers::WellsfargoAuthType::try_from(&req.connector_config)?;
             let merchant_account = auth.merchant_account.clone().expose();
 
             let base_url = &req.resource_common_data.get_connectors().wellsfargo.base_url;

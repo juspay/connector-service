@@ -4,7 +4,7 @@
 ---
 title: Get
 description: Retrieve current payment status from the payment processor - synchronize payment state between systems
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/payment.proto
 auto_generated: false
 reviewed_by: engineering
@@ -41,7 +41,7 @@ The `Get` RPC retrieves the current payment status from the payment processor. T
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `connector_transaction_id` | Identifier | No | The connector's transaction ID from the original authorization |
+| `connector_transaction_id` | string | Yes | The connector's transaction ID from the original authorization |
 | `encoded_data` | string | No | Encoded data for retrieving payment status |
 | `capture_method` | CaptureMethod | No | Method for capturing. Values: MANUAL, AUTOMATIC |
 | `handle_response` | bytes | No | Raw response bytes from connector for state reconstruction |
@@ -59,7 +59,7 @@ The `Get` RPC retrieves the current payment status from the payment processor. T
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_transaction_id` | Identifier | Connector's transaction ID |
+| `connector_transaction_id` | string | Connector's transaction ID |
 | `status` | PaymentStatus | Current status. Values: STARTED, AUTHORIZED, CAPTURED, FAILED, VOIDED, CHARGED |
 | `error` | ErrorInfo | Error details if status is FAILED |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
@@ -93,22 +93,20 @@ The `Get` RPC retrieves the current payment status from the payment processor. T
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "connector_transaction_id": "pi_3Oxxx...",
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/Get
+  types.PaymentService/Get
 ```
 
 ### Response
 
 ```json
 {
-  "connector_transaction_id": {
-    "id": "pi_3Oxxx..."
-  },
+  "connector_transaction_id": "pi_3Oxxx...",
   "status": "AUTHORIZED",
   "status_code": 200,
   "amount": {

@@ -4,7 +4,7 @@
 ---
 title: CreateSdkSessionToken
 description: Initialize wallet payment sessions for Apple Pay, Google Pay, and other SDK-based payments
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -39,7 +39,7 @@ The `CreateSdkSessionToken` RPC initializes wallet payment sessions for Apple Pa
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_sdk_session_id` | Identifier | Yes | Your unique SDK session reference |
+| `merchant_sdk_session_id` | string | Yes | Your unique SDK session reference |
 | `amount` | Money | Yes | Payment amount |
 | `order_tax_amount` | int64 | No | Tax amount in minor units |
 | `shipping_cost` | int64 | No | Shipping cost in minor units |
@@ -65,9 +65,9 @@ The `CreateSdkSessionToken` RPC initializes wallet payment sessions for Apple Pa
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_sdk_session_id": {"id": "sdk_session_001"},
+    "merchant_sdk_session_id": "sdk_session_001",
     "amount": {
       "minor_amount": 10000,
       "currency": "USD"
@@ -76,11 +76,11 @@ grpcurl -H "x-connector: stripe" \
     "country_alpha2_code": "US",
     "customer": {
       "name": "John Doe",
-      "email": {"value": "john@example.com"}
+      "email": "john@example.com"
     }
   }' \
   localhost:8080 \
-  ucs.v2.MerchantAuthenticationService/CreateSdkSessionToken
+  types.MerchantAuthenticationService/CreateSdkSessionToken
 ```
 
 ### Response

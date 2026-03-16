@@ -16,6 +16,9 @@ SDK_ROOT     := $(MAKEFILE_DIR)
 REPO_ROOT    := $(shell cd $(MAKEFILE_DIR).. && pwd)
 include $(MAKEFILE_DIR)/common.mk
 
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
+
 # Target platforms (for cross-compilation)
 TARGET_MACOS_x86_64 := x86_64-apple-darwin
 TARGET_MACOS_AARCH64 := aarch64-apple-darwin
@@ -54,6 +57,10 @@ install-deps: ## Install Python dependencies (skipped in Nix shell)
 			(echo "  → Installing mypy-protobuf..." && \
 			 pip3 install mypy-protobuf --quiet 2>/dev/null || \
 			 pip3 install mypy-protobuf --user --quiet); \
+		python3 -c "import jinja2" 2>/dev/null || \
+			(echo "  → Installing jinja2..." && \
+			 pip3 install jinja2 --quiet 2>/dev/null || \
+			 pip3 install jinja2 --user --quiet); \
 	fi
 	@echo "All required tools present."
 
@@ -182,13 +189,13 @@ generate: install-deps generate-descriptor generate-rust generate-python generat
 test: test-python test-javascript test-java ## Run all SDK smoke tests
 
 test-python: build-ffi-lib ## Build FFI → Run Python smoke test
-	@$(MAKE) -C $(REPO_ROOT)/sdk/python test-package
+	@$(MAKE) -C $(REPO_ROOT)/sdk/python test-package CONNECTORS=$(CONNECTORS)
 
 test-javascript: build-ffi-lib ## Build FFI → Run JavaScript smoke test
-	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-package
+	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript test-package CONNECTORS=$(CONNECTORS)
 
 test-java: build-ffi-lib ## Build FFI → Run Java smoke test
-	@$(MAKE) -C $(REPO_ROOT)/sdk/java test-package
+	@$(MAKE) -C $(REPO_ROOT)/sdk/java test-package CONNECTORS=$(CONNECTORS)
 
 # ---------------------------------------------------------------------------
 # Distribution targets - delegate to SDK-specific dist

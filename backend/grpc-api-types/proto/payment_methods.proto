@@ -62,6 +62,7 @@ message PaymentMethod {
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
     PazeWallet paze = 23;                               // Paze
+    SamsungWallet samsung_pay = 24;                     //Samsung
     
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
@@ -450,22 +451,13 @@ message SamsungWallet {
     // Whether this is a recurring payment
     optional bool recurring_payment = 2;
     
-    // Card brand
-    enum CardBrand {
-      CARD_BRAND_UNSPECIFIED = 0;
-      VISA = 1;
-      MASTERCARD = 2;
-      AMEX = 3;
-      DISCOVER = 4;
-      JCB = 5;
-    }
-    CardBrand card_brand = 3;
+    CardNetwork card_brand = 3;
     
     // Last four digits of DPAN (Device Primary Account Number)
-    optional string dpan_last_four_digits = 4;
+    optional SecretString dpan_last_four_digits = 4;
     
     // Last four digits of card
-    string card_last_four_digits = 5;
+    SecretString card_last_four_digits = 5;
     
     // 3DS token data
     message TokenData {
@@ -476,7 +468,7 @@ message SamsungWallet {
       string version = 2;
       
       // Token data
-      string data = 3;
+      SecretString data = 3;
     }
     TokenData token_data = 6;
   }

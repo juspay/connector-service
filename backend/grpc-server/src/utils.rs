@@ -275,11 +275,12 @@ macro_rules! implement_connector_operation {
                     extensions: _, // unused in macro
                 } = request;
 
-                let (connector, request_id, connector_auth_details) = (
-                    metadata_payload.connector,
-                    metadata_payload.request_id,
-                    metadata_payload.connector_auth_type,
-                );
+            let (connector, request_id, connector_config) = (
+                metadata_payload.connector,
+                metadata_payload.request_id,
+                metadata_payload.connector_config,
+            );
+
 
                 // Get connector data
                 let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> =
@@ -294,27 +295,33 @@ macro_rules! implement_connector_operation {
                     $response_data_type,
                 > = connector_data.connector.get_connector_integration_v2();
 
-                // Create connector request data
-                let specific_request_data = $request_data_constructor(payload.clone()).into_grpc_status()?;
+            // Create connector request data
+            let specific_request_data = $request_data_constructor(payload.clone())
+                .into_grpc_status()?;
 
-                // Create common request data
-                let common_flow_data =
-                    $common_flow_data_constructor((payload.clone(), config.connectors.clone(), &masked_metadata))
-                        .into_grpc_status()?;
+            let connectors = $crate::utils::connectors_with_connector_config_overrides(
+                &connector_config,
+                &config,
+            )
+            .into_grpc_status()?;
 
-                // Create router data
-                let router_data = domain_types::router_data_v2::RouterDataV2::<
-                    $flow_marker,
-                    $resource_common_data_type,
-                    $request_data_type,
-                    $response_data_type,
-                > {
-                    flow: std::marker::PhantomData,
-                    resource_common_data: common_flow_data,
-                    connector_auth_type: connector_auth_details,
-                    request: specific_request_data,
-                    response: Err(domain_types::router_data::ErrorResponse::default()),
-                };
+            // Create common request data
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), connectors, &masked_metadata))
+                .into_grpc_status()?;
+
+            // Create router data
+            let router_data = domain_types::router_data_v2::RouterDataV2::<
+                $flow_marker,
+                $resource_common_data_type,
+                $request_data_type,
+                $response_data_type,
+            > {
+                flow: std::marker::PhantomData,
+                resource_common_data: common_flow_data,
+                connector_config,
+                request: specific_request_data,
+                response: Err(domain_types::router_data::ErrorResponse::default()),
+            };
 
                 // Calculate flow name for dynamic flow-specific configurations
                 let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();

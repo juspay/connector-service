@@ -4,7 +4,7 @@
 ---
 title: Handle
 description: Process webhook notifications from connectors and translate into standardized responses
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -40,7 +40,7 @@ The `Handle` RPC processes raw webhook payloads from payment processors. It veri
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_event_id` | Identifier | Yes | Your unique event reference for idempotency |
+| `merchant_event_id` | string | Yes | Your unique event reference for idempotency |
 | `request_details` | RequestDetails | Yes | HTTP request details including headers, body, URL |
 | `webhook_secrets` | WebhookSecrets | No | Secrets for verifying webhook signatures |
 | `state` | ConnectorState | No | State from previous webhook processing |
@@ -67,7 +67,7 @@ The `Handle` RPC processes raw webhook payloads from payment processors. It veri
 | `event_type` | WebhookEventType | Type of event: PAYMENT_INTENT_SUCCESS, CHARGE_REFUNDED, DISPUTE_CREATED, etc. |
 | `event_response` | EventResponse | Event content with payment/refund/dispute details |
 | `source_verified` | bool | Whether webhook signature was verified |
-| `merchant_event_id` | Identifier | Your event reference (echoed back) |
+| `merchant_event_id` | string | Your event reference (echoed back) |
 | `event_status` | WebhookEventStatus | Processing status: COMPLETE, INCOMPLETE |
 
 ### EventResponse Content
@@ -86,9 +86,9 @@ The `event_response` contains one of the following based on `event_type`:
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_event_id": {"id": "evt_webhook_001"},
+    "merchant_event_id": "evt_webhook_001",
     "request_details": {
       "method": "POST",
       "url": "https://your-app.com/webhooks/stripe",
@@ -99,11 +99,11 @@ grpcurl -H "x-connector: stripe" \
       "body": "ewogICJpZCI6ICJldF8xT..."
     },
     "webhook_secrets": {
-      "secret": {"value": "whsec_your_webhook_secret"}
+      "secret": "whsec_your_webhook_secret"
     }
   }' \
   localhost:8080 \
-  ucs.v2.EventService/Handle
+  types.EventService/Handle
 ```
 
 ### Response
@@ -113,7 +113,7 @@ grpcurl -H "x-connector: stripe" \
   "event_type": "PAYMENT_INTENT_SUCCESS",
   "event_response": {
     "payments_response": {
-      "connector_transaction_id": {"id": "pi_3Oxxx..."},
+      "connector_transaction_id": "pi_3Oxxx...",
       "status": "CAPTURED",
       "status_code": 200
     }

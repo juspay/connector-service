@@ -15,7 +15,7 @@ use domain_types::{
         BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
@@ -251,13 +251,14 @@ pub struct MerchantAuthentication {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for MerchantAuthentication {
+impl TryFrom<&ConnectorSpecificConfig> for MerchantAuthentication {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Authorizedotnet {
+            ConnectorSpecificConfig::Authorizedotnet {
                 name,
                 transaction_key,
+                ..
             } => Ok(Self {
                 name: name.clone(),
                 transaction_key: transaction_key.clone(),
@@ -544,7 +545,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
@@ -840,7 +841,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
@@ -1084,7 +1085,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let create_transaction_request_payload = CreateCaptureTransactionRequest {
             merchant_authentication,
@@ -1131,13 +1132,14 @@ pub struct AuthorizedotnetAuthType {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for AuthorizedotnetAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for AuthorizedotnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Authorizedotnet {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Authorizedotnet {
             name,
             transaction_key,
+            ..
         } = auth_type
         {
             Ok(Self {
@@ -1205,7 +1207,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&router_data.connector_config)?;
 
         let create_transaction_void_request = CreateTransactionVoidRequest {
             merchant_authentication,
@@ -1268,7 +1270,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
+            MerchantAuthentication::try_from(&item.router_data.connector_config)?;
 
         let payload = Self {
             get_transaction_details_request: TransactionDetails {
@@ -1309,7 +1311,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
+            MerchantAuthentication::try_from(&item.router_data.connector_config)?;
 
         let payload = Self {
             get_transaction_details_request: TransactionDetails {
@@ -1396,17 +1398,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         // Extract payment details from metadata using unified helper
         let connector_metadata_secret = item
             .router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .clone()
             .ok_or_else(|| {
                 error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                    field_name: "connector_metadata"
+                    field_name: "connector_feature_data"
                 })
             })?;
         let payment = get_refund_credit_card_payment(&Some(connector_metadata_secret))?;
@@ -2680,7 +2682,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let validation_mode = match item.router_data.resource_common_data.test_mode {
             Some(true) | None => ValidationMode::TestMode,
@@ -3123,7 +3125,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         // Build ship_to_list from shipping address if available
         let ship_to_list = item

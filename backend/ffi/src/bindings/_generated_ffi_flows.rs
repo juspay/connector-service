@@ -3,6 +3,9 @@
 
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest,
+    DisputeServiceAcceptRequest,
+    DisputeServiceDefendRequest,
+    DisputeServiceSubmitEvidenceRequest,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
@@ -21,6 +24,7 @@ use grpc_api_types::payments::{
 };
 use grpc_api_types::payouts::PayoutServiceCreateRequest;
 use crate::handlers::payments::{
+    accept_req_handler, accept_res_handler,
     authenticate_req_handler, authenticate_res_handler,
     authorize_req_handler, authorize_res_handler,
     capture_req_handler, capture_res_handler,
@@ -29,17 +33,21 @@ use crate::handlers::payments::{
     create_access_token_req_handler, create_access_token_res_handler,
     create_order_req_handler, create_order_res_handler,
     create_session_token_req_handler, create_session_token_res_handler,
+    defend_req_handler, defend_res_handler,
     get_req_handler, get_res_handler,
     post_authenticate_req_handler, post_authenticate_res_handler,
     pre_authenticate_req_handler, pre_authenticate_res_handler,
     refund_req_handler, refund_res_handler,
     reverse_req_handler, reverse_res_handler,
     setup_recurring_req_handler, setup_recurring_res_handler,
+    submit_evidence_req_handler, submit_evidence_res_handler,
     tokenize_req_handler, tokenize_res_handler,
     void_req_handler, void_res_handler,
     create_payout_req_handler, create_payout_res_handler,
 };
 
+// accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
+define_ffi_flow!(accept, DisputeServiceAcceptRequest, accept_req_handler, accept_res_handler);
 // authenticate: PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
 define_ffi_flow!(authenticate, PaymentMethodAuthenticationServiceAuthenticateRequest, authenticate_req_handler, authenticate_res_handler);
 // authorize: PaymentService.Authorize — Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
@@ -56,6 +64,8 @@ define_ffi_flow!(create_access_token, MerchantAuthenticationServiceCreateAccessT
 define_ffi_flow!(create_order, PaymentServiceCreateOrderRequest, create_order_req_handler, create_order_res_handler);
 // create_session_token: MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.
 define_ffi_flow!(create_session_token, MerchantAuthenticationServiceCreateSessionTokenRequest, create_session_token_req_handler, create_session_token_res_handler);
+// defend: DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation.
+define_ffi_flow!(defend, DisputeServiceDefendRequest, defend_req_handler, defend_res_handler);
 // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 define_ffi_flow!(get, PaymentServiceGetRequest, get_req_handler, get_res_handler);
 // post_authenticate: PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
@@ -68,6 +78,8 @@ define_ffi_flow!(refund, PaymentServiceRefundRequest, refund_req_handler, refund
 define_ffi_flow!(reverse, PaymentServiceReverseRequest, reverse_req_handler, reverse_res_handler);
 // setup_recurring: PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
 define_ffi_flow!(setup_recurring, PaymentServiceSetupRecurringRequest, setup_recurring_req_handler, setup_recurring_res_handler);
+// submit_evidence: DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims.
+define_ffi_flow!(submit_evidence, DisputeServiceSubmitEvidenceRequest, submit_evidence_req_handler, submit_evidence_res_handler);
 // tokenize: PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
 define_ffi_flow!(tokenize, PaymentMethodServiceTokenizeRequest, tokenize_req_handler, tokenize_res_handler);
 // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.

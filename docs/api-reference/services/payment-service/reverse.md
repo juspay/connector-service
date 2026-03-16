@@ -4,7 +4,7 @@
 ---
 title: Reverse
 description: Reverse a captured payment before settlement - recover funds after capture but before bank settlement
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -42,8 +42,8 @@ The `Reverse` RPC cancels a captured payment before the funds have been settled 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_reverse_id` | Identifier | Yes | Your unique identifier for this reverse operation |
-| `connector_transaction_id` | Identifier | Yes | The connector's transaction ID from the original authorization |
+| `merchant_reverse_id` | string | Yes | Your unique identifier for this reverse operation |
+| `connector_transaction_id` | string | Yes | The connector's transaction ID from the original authorization |
 | `cancellation_reason` | string | No | Reason for reversing the captured payment |
 | `all_keys_required` | bool | No | Whether all key fields must match for reverse to succeed |
 | `browser_info` | BrowserInformation | No | Browser details for 3DS verification |
@@ -54,12 +54,12 @@ The `Reverse` RPC cancels a captured payment before the funds have been settled 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_transaction_id` | Identifier | Connector's transaction ID |
+| `connector_transaction_id` | string | Connector's transaction ID |
 | `status` | PaymentStatus | Current status of the payment |
 | `error` | ErrorInfo | Error details if reverse failed |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
 | `response_headers` | map<string, string> | Connector-specific response headers |
-| `merchant_reverse_id` | Identifier | Your reverse reference (echoed back) |
+| `merchant_reverse_id` | string | Your reverse reference (echoed back) |
 
 ## Example
 
@@ -67,29 +67,25 @@ The `Reverse` RPC cancels a captured payment before the funds have been settled 
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_reverse_id": {"id": "reverse_001"},
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "merchant_reverse_id": "reverse_001",
+    "connector_transaction_id": "pi_3Oxxx...",
     "cancellation_reason": "Duplicate charge detected",
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/Reverse
+  types.PaymentService/Reverse
 ```
 
 ### Response
 
 ```json
 {
-  "connector_transaction_id": {
-    "id": "pi_3Oxxx..."
-  },
+  "connector_transaction_id": "pi_3Oxxx...",
   "status": "VOIDED",
   "status_code": 200,
-  "merchant_reverse_id": {
-    "id": "reverse_001"
-  }
+  "merchant_reverse_id": "reverse_001"
 }
 ```
 

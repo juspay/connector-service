@@ -18,7 +18,7 @@ use domain_types::{
     errors::{self},
     payment_address::PaymentAddress,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorSpecificAuth, ErrorResponse, PaymentMethodToken},
+    router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
@@ -39,14 +39,15 @@ pub struct ElavonAuthType {
     pub(super) ssl_pin: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for ElavonAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for ElavonAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Elavon {
+            ConnectorSpecificConfig::Elavon {
                 ssl_merchant_id,
                 ssl_user_id,
                 ssl_pin,
+                ..
             } => Ok(Self {
                 ssl_merchant_id: ssl_merchant_id.clone(),
                 ssl_user_id: ssl_user_id.clone(),
@@ -170,7 +171,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Card(ref card) => {
                 let router_data = item.router_data.clone();
                 let request_data = &router_data.request;
-                let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
+                let auth_type = ElavonAuthType::try_from(&router_data.connector_config)?;
 
                 let transaction_type = match request_data.capture_method {
                     Some(HyperswitchCaptureMethod::Manual) => TransactionType::CcAuthOnly,
@@ -867,7 +868,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
         router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let request_data = &router_data.request;
-        let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth_type = ElavonAuthType::try_from(&router_data.connector_config)?;
 
         let connector_txn_id = match &request_data.connector_transaction_id {
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
@@ -918,7 +919,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth_type = ElavonAuthType::try_from(&router_data.connector_config)?;
 
         let previous_connector_txn_id = match &router_data.request.connector_transaction_id {
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
@@ -1092,7 +1093,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let request_data = &router_data.request;
-        let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth_type = ElavonAuthType::try_from(&router_data.connector_config)?;
 
         // Convert amount for refund
         let amount_converter = StringMajorUnitForConnector;
@@ -1242,7 +1243,7 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
     fn try_from(
         router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth_type = ElavonAuthType::try_from(&router_data.connector_config)?;
         let connector_refund_id = router_data.request.connector_refund_id.clone();
 
         Ok(Self {

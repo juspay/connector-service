@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -33,15 +33,16 @@ pub struct WorldpayxmlAuthType {
     pub merchant_code: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for WorldpayxmlAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for WorldpayxmlAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Worldpayxml {
+            ConnectorSpecificConfig::Worldpayxml {
                 api_username,
                 api_password,
                 merchant_code,
+                ..
             } => Ok(Self {
                 api_username: api_username.to_owned(),
                 api_password: api_password.to_owned(),
@@ -165,7 +166,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_config)?;
 
         // Determine if manual capture
         let is_manual_capture = router_data.request.capture_method == Some(CaptureMethod::Manual)
@@ -299,7 +300,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_config)?;
 
         // Extract connector_transaction_id from request
         let connector_transaction_id = router_data
@@ -357,7 +358,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_config)?;
 
         // Extract connector_transaction_id from request
         let connector_transaction_id = router_data.request.connector_transaction_id.clone();
@@ -393,7 +394,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_config)?;
 
         // Extract connector_transaction_id from request
         let connector_transaction_id = router_data.request.connector_transaction_id.clone();
@@ -447,7 +448,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_config)?;
 
         // Extract connector_transaction_id from request
         let connector_transaction_id = router_data
@@ -486,7 +487,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = WorldpayxmlAuthType::try_from(&router_data.connector_config)?;
 
         // Extract connector_refund_id from request
         // This could be either the connector_refund_id OR the original connector_transaction_id

@@ -4,7 +4,7 @@
 ---
 title: VerifyRedirectResponse
 description: Validate redirect-based payment responses - confirms authenticity of redirect-based payment completions to prevent fraud and tampering
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -42,7 +42,7 @@ The `VerifyRedirectResponse` RPC validates the authenticity of payment responses
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_order_id` | Identifier | Yes | Your unique order identifier for this verification |
+| `merchant_order_id` | string | Yes | Your unique order identifier for this verification |
 | `request_details` | RequestDetails | Yes | Details of the redirect request including headers, body, and query parameters |
 | `redirect_response_secrets` | RedirectResponseSecrets | No | Secrets for validating the redirect response |
 
@@ -51,9 +51,9 @@ The `VerifyRedirectResponse` RPC validates the authenticity of payment responses
 | Field | Type | Description |
 |-------|------|-------------|
 | `source_verified` | bool | Whether the redirect source is verified as authentic |
-| `connector_transaction_id` | Identifier | Connector's transaction ID if verification successful |
+| `connector_transaction_id` | string | Connector's transaction ID if verification successful |
 | `response_amount` | Money | Amount from the verified response |
-| `merchant_order_id` | Identifier | Your order reference (echoed back) |
+| `merchant_order_id` | string | Your order reference (echoed back) |
 | `status` | PaymentStatus | Current status of the payment after verification |
 | `error` | ErrorInfo | Error details if verification failed |
 | `raw_connector_response` | SecretString | Raw API response from connector for debugging |
@@ -64,9 +64,9 @@ The `VerifyRedirectResponse` RPC validates the authenticity of payment responses
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_order_id": {"id": "order_001"},
+    "merchant_order_id": "order_001",
     "request_details": {
       "headers": [
         {"key": "Content-Type", "value": "application/x-www-form-urlencoded"}
@@ -79,7 +79,7 @@ grpcurl -H "x-connector: stripe" \
     }
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/VerifyRedirectResponse
+  types.PaymentService/VerifyRedirectResponse
 ```
 
 ### Response
@@ -87,16 +87,12 @@ grpcurl -H "x-connector: stripe" \
 ```json
 {
   "source_verified": true,
-  "connector_transaction_id": {
-    "id": "pi_3Oxxx..."
-  },
+  "connector_transaction_id": "pi_3Oxxx...",
   "response_amount": {
     "minor_amount": 1000,
     "currency": "USD"
   },
-  "merchant_order_id": {
-    "id": "order_001"
-  },
+  "merchant_order_id": "order_001",
   "status": "AUTHORIZED"
 }
 ```

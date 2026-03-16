@@ -4,7 +4,7 @@
 ---
 title: IncrementalAuthorization
 description: Increase authorized amount if still in authorized state - allows adding charges for hospitality, tips, or incremental services
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -42,8 +42,8 @@ The `IncrementalAuthorization` RPC increases the authorized amount on an existin
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_authorization_id` | Identifier | Yes | Your unique identifier for this incremental authorization |
-| `connector_transaction_id` | Identifier | Yes | The connector's transaction ID from the original authorization |
+| `merchant_authorization_id` | string | Yes | Your unique identifier for this incremental authorization |
+| `connector_transaction_id` | string | Yes | The connector's transaction ID from the original authorization |
 | `amount` | Money | Yes | New total amount to be authorized (in minor currency units) |
 | `reason` | string | No | Reason for increasing the authorized amount |
 | `connector_feature_data` | SecretString | No | Connector-specific metadata for the transaction |
@@ -66,10 +66,10 @@ The `IncrementalAuthorization` RPC increases the authorized amount on an existin
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_authorization_id": {"id": "incr_auth_001"},
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "merchant_authorization_id": "incr_auth_001",
+    "connector_transaction_id": "pi_3Oxxx...",
     "amount": {
       "minor_amount": 1500,
       "currency": "USD"
@@ -77,7 +77,7 @@ grpcurl -H "x-connector: stripe" \
     "reason": "Room service charges added"
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/IncrementalAuthorization
+  types.PaymentService/IncrementalAuthorization
 ```
 
 ### Response

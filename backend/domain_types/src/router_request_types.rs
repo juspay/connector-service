@@ -164,28 +164,20 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             exemption_indicator,
             network_params,
         } = value;
-        let threeds_server_transaction_id =
-            utils::extract_optional_connector_request_reference_id(&threeds_server_transaction_id);
-        let message_version = message_version
-            .map(|message_version| {
-                SemanticVersion::from_str(&message_version).change_context(
-                    errors::ApplicationErrorResponse::BadRequest(errors::ApiError {
-                        sub_code: "INVALID_SEMANTIC_VERSION_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message:
-                            "Invalid semantic version format. Expected format: 'major.minor.patch' (e.g., '2.1.0')"
-                                .to_string(),
-                        error_object: Some(serde_json::json!({
-                            "field": "message_version",
-                            "provided_value": message_version,
-                            "expected_format": "major.minor.patch",
-                            "examples": ["1.0.0", "2.1.0", "2.2.0"],
-                            "validation_rule": "Must be in format X.Y.Z where X, Y, Z are non-negative integers"
-                        })),
-                    }),
-                )
-            })
-            .transpose()?;
+        let message_version = message_version.map(|message_version|{
+            SemanticVersion::from_str(&message_version).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
+                sub_code: "INVALID_SEMANTIC_VERSION_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid semantic version format. Expected format: 'major.minor.patch' (e.g., '2.1.0')".to_string(),
+                error_object: Some(serde_json::json!({
+                    "field": "message_version",
+                    "provided_value": message_version,
+                    "expected_format": "major.minor.patch",
+                    "examples": ["1.0.0", "2.1.0", "2.2.0"],
+                    "validation_rule": "Must be in format X.Y.Z where X, Y, Z are non-negative integers"
+                })),
+            }))
+        }).transpose()?;
         let trans_status = trans_status.map(|trans_status|{
             payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
                 sub_code: "INVALID_TRANSACTION_STATUS".to_owned(),
@@ -274,11 +266,7 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
             ucaf_collection_indicator: value.ucaf_collection_indicator,
             eci: value.eci,
             cavv: value.cavv.map(|cavv| cavv.expose()),
-            threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
-                payments::Identifier {
-                    id_type: Some(payments::identifier::IdType::Id(id)),
-                }
-            }),
+            threeds_server_transaction_id: value.threeds_server_transaction_id,
             message_version: value.message_version.map(|v| v.to_string()),
             ds_transaction_id: value.ds_trans_id,
             trans_status: value
@@ -479,6 +467,7 @@ pub struct VerifyWebhookSourceRequestData {
     pub webhook_headers: std::collections::HashMap<String, String>,
     pub webhook_body: Vec<u8>,
     pub merchant_secret: ConnectorWebhookSecrets,
+    pub webhook_uri: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

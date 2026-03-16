@@ -30,7 +30,7 @@ use domain_types::{
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::{VerifyWebhookSourceResponseData, VerifyWebhookStatus},
@@ -275,7 +275,7 @@ impl Customer {
         config: &Arc<Config>,
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: &ConnectorSpecificAuth,
+        connector_config: &ConnectorSpecificConfig,
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
@@ -311,7 +311,7 @@ impl Customer {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details.clone(),
+            connector_config: connector_config.clone(),
             request: connector_customer_request_data,
             response: Err(ErrorResponse::default()),
         };
@@ -405,7 +405,7 @@ impl Customer {
         config: &Arc<Config>,
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         payload: &PaymentServiceSetupRecurringRequest,
         connector_name: &str,
         service_name: &str,
@@ -436,7 +436,7 @@ impl Customer {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_config,
             request: connector_customer_request_data,
             response: Err(ErrorResponse::default()),
         };
@@ -551,7 +551,7 @@ impl CustomerService for Customer {
                         metadata_payload.request_id,
                         metadata_payload.lineage_ids,
                     );
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
 
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -566,10 +566,16 @@ impl CustomerService for Customer {
                         ConnectorCustomerResponse,
                     > = connector_data.connector.get_connector_integration_v2();
 
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -594,7 +600,7 @@ impl CustomerService for Customer {
                     > {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data.clone(),
-                        connector_auth_type: connector_auth_details.clone(),
+                        connector_config: connector_config.clone(),
                         request: connector_customer_request_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
@@ -678,7 +684,7 @@ impl Payments {
         config: &Arc<Config>,
         payload: PaymentServiceAuthorizeRequest,
         connector: ConnectorEnum,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         metadata: &MaskedMetadata,
         metadata_payload: &utils::MetadataPayload,
         service_name: &str,
@@ -697,21 +703,32 @@ impl Payments {
             PaymentsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
+        let connectors =
+            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
+                |err| {
+                    tracing::error!("Failed to resolve connector overrides: {:?}", err);
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some("Failed to resolve connector overrides".to_string()),
+                        Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
+                        None,
+                    )
+                },
+            )?;
+
         // Create common request data
-        let payment_flow_data = PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            config.connectors.clone(),
-            metadata,
-        ))
-        .map_err(|err| {
-            tracing::error!("Failed to process payment flow data: {:?}", err);
-            PaymentAuthorizationError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some("Failed to process payment flow data".to_string()),
-                Some("PAYMENT_FLOW_ERROR".to_string()),
-                None,
-            )
-        })?;
+        let payment_flow_data =
+            PaymentFlowData::foreign_try_from((payload.clone(), connectors, metadata)).map_err(
+                |err| {
+                    tracing::error!("Failed to process payment flow data: {:?}", err);
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some("Failed to process payment flow data".to_string()),
+                        Some("PAYMENT_FLOW_ERROR".to_string()),
+                        None,
+                    )
+                },
+            )?;
 
         // Create connector request data
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
@@ -734,7 +751,7 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details.clone(),
+            connector_config: connector_config.clone(),
             request: payment_authorize_data,
             response: Err(ErrorResponse::default()),
         };
@@ -806,7 +823,7 @@ impl Payments {
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
                     resource_common_data: payment_flow_data,
-                    connector_auth_type: connector_auth_details,
+                    connector_config,
                     request: PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(
                         |err| {
                             tracing::error!(
@@ -872,7 +889,7 @@ impl Payments {
         config: &Arc<Config>,
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
@@ -950,7 +967,7 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_config,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
         };
@@ -1044,7 +1061,7 @@ impl Payments {
         config: &Arc<Config>,
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         event_params: EventParams<'_>,
         payload: &PaymentServiceSetupRecurringRequest,
         connector_name: &str,
@@ -1092,7 +1109,7 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_config,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
         };
@@ -1163,7 +1180,7 @@ impl Payments {
         config: &Arc<Config>,
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         event_params: EventParams<'_>,
         payment_authorize_data: &PaymentsAuthorizeData<T>,
         connector_name: &str,
@@ -1189,7 +1206,7 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_config,
             request: payment_method_tokenization_data,
             response: Err(ErrorResponse::default()),
         };
@@ -1398,60 +1415,56 @@ impl PaymentService for Payments {
                 let payload = request_data.payload;
 
                 let authorize_response = match payload.payment_method.as_ref() {
-                    Some(pm) => match pm.payment_method.as_ref() {
-                        Some(payment_method::PaymentMethod::CardProxy(proxy_card_details)) => {
-                            let token_data = proxy_card_details.to_token_data();
-                            match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
-                                &config,
-                                payload.clone(),
-                                metadata_payload.connector,
-                                metadata_payload.connector_auth_type.clone(),
-                                metadata,
-                                &metadata_payload,
-                                &service_name,
-                                &metadata_payload.request_id,
-                                Some(token_data),
-                            ))
-                            .await
-                            {
-                                Ok(response) => {
-                                    tracing::info!("INJECTOR: Authorization completed successfully with injector");
-                                    response
-                                }
-                                Err(error_response) => {
-                                    tracing::error!(
-                                        "INJECTOR: Authorization failed with injector - error: {:?}",
-                                        error_response
-                                    );
-                                    PaymentServiceAuthorizeResponse::from(error_response)
+                    Some(pm) => {
+                        match pm.payment_method.as_ref() {
+                            Some(payment_method::PaymentMethod::CardProxy(proxy_card_details)) => {
+                                let token_data = proxy_card_details.to_token_data();
+                                match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                                    &config,
+                                    payload.clone(),
+                                    metadata_payload.connector,
+                                    metadata_payload.connector_config.clone(),
+                                    metadata,
+                                    &metadata_payload,
+                                    &service_name,
+                                    &metadata_payload.request_id,
+                                    Some(token_data),
+                                ))
+                                .await
+                                {
+                                    Ok(response) => {
+                                        tracing::info!("INJECTOR: Authorization completed successfully with injector");
+                                        response
+                                    },
+                                    Err(error_response) => {
+                                        tracing::error!("INJECTOR: Authorization failed with injector - error: {:?}", error_response);
+                                        PaymentServiceAuthorizeResponse::from(error_response)
+                                    },
                                 }
                             }
-                        }
-                        _ => {
-                            tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
-                            match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                &config,
-                                payload.clone(),
-                                metadata_payload.connector,
-                                metadata_payload.connector_auth_type.clone(),
-                                metadata,
-                                &metadata_payload,
-                                &service_name,
-                                &metadata_payload.request_id,
-                                None,
-                            ))
-                            .await
-                            {
-                                Ok(response) => {
-                                    tracing::info!("REGULAR: Authorization completed successfully without injector");
-                                    response
-                                }
-                                Err(error_response) => {
-                                    tracing::error!(
-                                        "REGULAR: Authorization failed without injector - error: {:?}",
-                                        error_response
-                                    );
-                                    PaymentServiceAuthorizeResponse::from(error_response)
+                            _ => {
+                                tracing::info!("REGULAR: Processing regular payment authorization (no injector)");
+                                match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                                    &config,
+                                    payload.clone(),
+                                    metadata_payload.connector,
+                                    metadata_payload.connector_config.clone(),
+                                    metadata,
+                                    &metadata_payload,
+                                    &service_name,
+                                    &metadata_payload.request_id,
+                                    None,
+                                ))
+                                .await
+                                {
+                                    Ok(response) => {
+                                        tracing::info!("REGULAR: Authorization completed successfully without injector");
+                                        response
+                                    },
+                                    Err(error_response) => {
+                                        tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
+                                        PaymentServiceAuthorizeResponse::from(error_response)
+                                    },
                                 }
                             }
                         }
@@ -1461,7 +1474,7 @@ impl PaymentService for Payments {
                             &config,
                             payload.clone(),
                             metadata_payload.connector,
-                            metadata_payload.connector_auth_type.clone(),
+                            metadata_payload.connector_config.clone(),
                             metadata,
                             &metadata_payload,
                             &service_name,
@@ -1551,10 +1564,16 @@ impl PaymentService for Payments {
                     let payments_sync_data =
                         PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &metadata_payload.connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .into_grpc_status()?;
@@ -1590,7 +1609,7 @@ impl PaymentService for Payments {
                                 &connector_data,
                                 cached_access_token,
                                 &payment_flow_data,
-                                metadata_payload.connector_auth_type.clone(),
+                                metadata_payload.connector_config.clone(),
                                 &connector.to_string(),
                                 &service_name,
                                 event_params,
@@ -1613,7 +1632,7 @@ impl PaymentService for Payments {
                     > {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data,
-                        connector_auth_type: metadata_payload.connector_auth_type.clone(),
+                        connector_config: metadata_payload.connector_config.clone(),
                         request: payments_sync_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
@@ -1770,9 +1789,15 @@ impl PaymentService for Payments {
                         ConnectorData::get_connector_by_name(&connector);
 
                     // Check if connector supports access tokens
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &metadata_payload.connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
                         request_data.payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| {
@@ -1808,7 +1833,7 @@ impl PaymentService for Payments {
                                 &connector_data,
                                 cached_access_token,
                                 &temp_payment_flow_data,
-                                metadata_payload.connector_auth_type.clone(),
+                                metadata_payload.connector_config.clone(),
                                 &connector.to_string(),
                                 &service_name,
                                 event_params,
@@ -1926,7 +1951,7 @@ impl PaymentService for Payments {
                     let metadata_payload = request_data.extracted_metadata;
                     let connector = metadata_payload.connector;
                     let _request_id = &metadata_payload.request_id;
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
@@ -1958,17 +1983,20 @@ impl PaymentService for Payments {
                             &connector_data,
                             &request_details,
                             webhook_secrets.clone(),
-                            connector_auth_details,
+                            connector_config,
                             &metadata_payload,
                             &service_name_clone,
                         )
                         .await?
-                    } else {
-                        match connector_data.connector.verify_webhook_source(
-                            request_details.clone(),
-                            webhook_secrets.clone(),
-                            Some(connector_auth_details.clone()),
-                        ) {
+                     } else {
+                        match connector_data
+                            .connector
+                            .verify_webhook_source(
+                                request_details.clone(),
+                                webhook_secrets.clone(),
+                                Some(connector_config.clone()),
+                            )
+                        {
                             Ok(result) => result,
                             Err(err) => {
                                 tracing::warn!(
@@ -1981,14 +2009,15 @@ impl PaymentService for Payments {
                         }
                     };
 
-                    let response = connector_integration::webhook_utils::process_webhook_event(
-                        connector_data,
-                        request_details,
-                        webhook_secrets,
-                        Some(connector_auth_details.clone()),
-                        source_verified,
-                    )
-                    .into_grpc_status()?;
+                    let response =
+                        connector_integration::webhook_utils::process_webhook_event(
+                            connector_data,
+                            request_details,
+                            webhook_secrets,
+                            Some(connector_config.clone()),
+                            source_verified,
+                        )
+                        .into_grpc_status()?;
 
                     Ok(tonic::Response::new(response))
                 }
@@ -2204,9 +2233,15 @@ impl PaymentService for Payments {
                         ConnectorData::get_connector_by_name(&connector);
 
                     // Check if connector supports access tokens
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &metadata_payload.connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     let temp_payment_flow_data = PaymentFlowData::foreign_try_from((
                         request_data.payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| {
@@ -2242,7 +2277,7 @@ impl PaymentService for Payments {
                                 &connector_data,
                                 cached_access_token,
                                 &temp_payment_flow_data,
-                                metadata_payload.connector_auth_type.clone(),
+                                metadata_payload.connector_config.clone(),
                                 &connector.to_string(),
                                 &service_name,
                                 event_params,
@@ -2323,7 +2358,7 @@ impl PaymentService for Payments {
                         metadata_payload.request_id,
                         metadata_payload.lineage_ids,
                     );
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
 
                     //get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -2337,10 +2372,16 @@ impl PaymentService for Payments {
                         PaymentsResponseData,
                     > = connector_data.connector.get_connector_integration_v2();
 
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &metadata_payload.connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         config.common.environment,
                         &request_data.masked_metadata,
                     ))
@@ -2359,7 +2400,7 @@ impl PaymentService for Payments {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data,
-                        connector_auth_type: connector_auth_details.clone(),
+                        connector_config: connector_config.clone(),
                         request: setup_mandate_request_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
@@ -2513,7 +2554,7 @@ impl PaymentMethodService for PaymentMethod {
                         metadata_payload.request_id,
                         metadata_payload.lineage_ids,
                     );
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
 
                     // Get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -2528,10 +2569,16 @@ impl PaymentMethodService for PaymentMethod {
                         PaymentMethodTokenResponse,
                     > = connector_data.connector.get_connector_integration_v2();
 
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &metadata_payload.connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     // Create payment flow data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -2559,7 +2606,7 @@ impl PaymentMethodService for PaymentMethod {
                     > {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data.clone(),
-                        connector_auth_type: connector_auth_details.clone(),
+                        connector_config: connector_config.clone(),
                         request: payment_method_token_request_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
@@ -2648,7 +2695,7 @@ impl MerchantAuthentication {
         config: &Arc<Config>,
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         payload: &P,
         connector_name: &str,
         service_name: &str,
@@ -2685,7 +2732,7 @@ impl MerchantAuthentication {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_config,
             request: session_token_request_data,
             response: Err(ErrorResponse::default()),
         };
@@ -2784,14 +2831,14 @@ impl MerchantAuthentication {
         config: &Arc<Config>,
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
     ) -> Result<AccessTokenResponseData, PaymentAuthorizationError>
     where
         AccessTokenRequestData:
-            for<'a> ForeignTryFrom<&'a ConnectorSpecificAuth, Error = ApplicationErrorResponse>,
+            for<'a> ForeignTryFrom<&'a ConnectorSpecificConfig, Error = ApplicationErrorResponse>,
     {
         // Get connector integration for CreateAccessToken flow
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -2804,7 +2851,7 @@ impl MerchantAuthentication {
 
         // Create access token request data - grant type determined by connector
         let access_token_request_data = AccessTokenRequestData::foreign_try_from(
-            &connector_auth_details, // Contains connector-specific auth details
+            &connector_config, // Contains typed connector config
         )
         .map_err(|e| {
             PaymentAuthorizationError::new(
@@ -2824,7 +2871,7 @@ impl MerchantAuthentication {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_config,
             request: access_token_request_data,
             response: Err(ErrorResponse::default()),
         };
@@ -2912,7 +2959,7 @@ impl MerchantAuthentication {
         connector_data: &ConnectorData<T>,
         access_token: Option<&grpc_api_types::payments::AccessToken>,
         payment_flow_data: &PaymentFlowData,
-        connector_auth_details: ConnectorSpecificAuth,
+        connector_config: ConnectorSpecificConfig,
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
@@ -2934,7 +2981,7 @@ impl MerchantAuthentication {
                     config,
                     connector_data.clone(),
                     payment_flow_data,
-                    connector_auth_details.clone(),
+                    connector_config.clone(),
                     connector_name,
                     service_name,
                     event_params,
@@ -3073,16 +3120,22 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         metadata_payload.request_id,
                         metadata_payload.lineage_ids,
                     );
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
 
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
 
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -3103,7 +3156,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         &config,
                         connector_data.clone(),
                         &payment_flow_data,
-                        connector_auth_details.clone(),
+                        connector_config.clone(),
                         &payload,
                         &connector.to_string(),
                         &service_name,
@@ -3186,16 +3239,22 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         metadata_payload.request_id,
                         metadata_payload.lineage_ids,
                     );
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
 
                     // Get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
                     let access_token_create_request = request_data.payload;
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     // Create minimal payment flow data for access token generation
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         access_token_create_request,
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -3217,7 +3276,7 @@ impl MerchantAuthenticationService for MerchantAuthentication {
                         &config,
                         connector_data,
                         &payment_flow_data,
-                        connector_auth_details.clone(),
+                        connector_config.clone(),
                         &connector.to_string(),
                         &service_name,
                         event_params,
@@ -3319,7 +3378,7 @@ impl RecurringPaymentService for RecurringPayments {
                         metadata_payload.request_id,
                         metadata_payload.lineage_ids,
                     );
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
 
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -3334,10 +3393,16 @@ impl RecurringPaymentService for RecurringPayments {
                         PaymentsResponseData,
                     > = connector_data.connector.get_connector_integration_v2();
 
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &metadata_payload.connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
                     // Create payment flow data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        config.connectors.clone(),
+                        connectors,
                         &request_data.masked_metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -3355,7 +3420,7 @@ impl RecurringPaymentService for RecurringPayments {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data,
-                        connector_auth_type: connector_auth_details.clone(),
+                        connector_config: connector_config.clone(),
                         request: repeat_payment_data.clone(),
                         response: Err(ErrorResponse::default()),
                     };
@@ -3643,28 +3708,32 @@ async fn verify_webhook_source_external(
     connector_data: &ConnectorData<DefaultPCIHolder>,
     request_details: &domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: &ConnectorSpecificAuth,
+    connector_config: &ConnectorSpecificConfig,
     metadata_payload: &utils::MetadataPayload,
     service_name: &str,
 ) -> Result<bool, tonic::Status> {
+    let connectors = utils::connectors_with_connector_config_overrides(connector_config, config)
+        .into_grpc_status()?;
+
     let verify_webhook_flow_data = VerifyWebhookSourceFlowData {
-        connectors: config.connectors.clone(),
+        connectors,
         connector_request_reference_id: format!("webhook_verify_{}", metadata_payload.request_id),
         raw_connector_response: None,
         raw_connector_request: None,
         connector_response_headers: None,
     };
 
-    let merchant_secret = webhook_secrets.ok_or_else(|| {
-        tonic::Status::invalid_argument(
-            "webhook_secrets is required for external webhook source verification",
-        )
-    })?;
+    let merchant_secret =
+        webhook_secrets.unwrap_or_else(|| domain_types::connector_types::ConnectorWebhookSecrets {
+            secret: "default_secret".to_string().into_bytes(),
+            additional_secret: None,
+        });
 
     let verify_webhook_request = VerifyWebhookSourceRequestData {
         webhook_headers: request_details.headers.clone(),
         webhook_body: request_details.body.clone(),
         merchant_secret,
+        webhook_uri: request_details.uri.clone(),
     };
 
     let verify_webhook_router_data = RouterDataV2::<
@@ -3675,7 +3744,7 @@ async fn verify_webhook_source_external(
     > {
         flow: std::marker::PhantomData,
         resource_common_data: verify_webhook_flow_data,
-        connector_auth_type: connector_auth_details.clone(),
+        connector_config: connector_config.clone(),
         request: verify_webhook_request,
         response: Err(ErrorResponse::default()),
     };
@@ -3801,11 +3870,7 @@ pub fn generate_mandate_revoke_response(
             status_code: e.status_code.into(),
             response_headers,
             network_transaction_id: None,
-            merchant_revoke_id: e.connector_transaction_id.map(|id| {
-                grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                }
-            }),
+            merchant_revoke_id: e.connector_transaction_id,
             raw_connector_response,
             raw_connector_request,
         }),

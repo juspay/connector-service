@@ -4,7 +4,7 @@
 ---
 title: SubmitEvidence
 description: Upload evidence to dispute customer chargeback with supporting documentation
-created: 2026-03-05
+created: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -41,8 +41,8 @@ The `SubmitEvidence` RPC uploads supporting documentation to contest a chargebac
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_dispute_id` | Identifier | Yes | Your unique dispute reference |
-| `connector_transaction_id` | Identifier | No | Original transaction ID |
+| `merchant_dispute_id` | string | Yes | Your unique dispute reference |
+| `connector_transaction_id` | string | No | Original transaction ID |
 | `dispute_id` | string | Yes | Connector's dispute identifier |
 | `service_date` | int64 | No | Unix timestamp when service was provided |
 | `shipping_date` | int64 | No | Unix timestamp when product was shipped |
@@ -68,7 +68,7 @@ The `SubmitEvidence` RPC uploads supporting documentation to contest a chargebac
 | `error` | ErrorInfo | Error details if submission failed |
 | `status_code` | uint32 | HTTP-style status code |
 | `response_headers` | map<string,string> | Connector-specific response headers |
-| `merchant_dispute_id` | Identifier | Your dispute reference (echoed back) |
+| `merchant_dispute_id` | string | Your dispute reference (echoed back) |
 | `raw_connector_request` | SecretString | Raw API request sent to connector (debugging) |
 
 ## Example
@@ -77,11 +77,11 @@ The `SubmitEvidence` RPC uploads supporting documentation to contest a chargebac
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_dispute_id": {"id": "dispute_001"},
+    "merchant_dispute_id": "dispute_001",
     "dispute_id": "dp_1Oxxx...",
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "connector_transaction_id": "pi_3Oxxx...",
     "shipping_date": 1704067200,
     "service_date": 1704067200,
     "evidence_documents": [
@@ -98,7 +98,7 @@ grpcurl -H "x-connector: stripe" \
     ]
   }' \
   localhost:8080 \
-  ucs.v2.DisputeService/SubmitEvidence
+  types.DisputeService/SubmitEvidence
 ```
 
 ### Response
