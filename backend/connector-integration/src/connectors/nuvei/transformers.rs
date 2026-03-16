@@ -1,4 +1,4 @@
-use common_utils::{pii, types::StringMajorUnit};
+use common_utils::{pii, request::Method, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -13,10 +13,12 @@ use domain_types::{
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use super::NuveiRouterData;
 use crate::types::ResponseRouterData;
@@ -291,6 +293,15 @@ pub struct NuveiPaymentResponse {
     pub client_unique_id: Option<String>,
     pub client_request_id: Option<String>,
     pub internal_request_id: Option<i64>,
+    #[serde(rename = "paymentOption")]
+    pub payment_option: Option<PaymentOption>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentOption {
+    #[serde(rename = "redirectUrl")]
+    pub redirect_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -1061,9 +1072,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or(response.order_id.clone())
             .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
 
+        let redirection_data = response
+            .payment_option
+            .as_ref()
+            .and_then(|po| po.redirect_url.clone())
+            .and_then(|url| Url::parse(&url).ok())
+            .map(|url| Box::new(RedirectForm::from((url, Method::Get))));
+
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-            redirection_data: None,
+            redirection_data,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
