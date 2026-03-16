@@ -67,7 +67,7 @@ use grpc_api_types::payments::{
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use hyperswitch_masking::Secret;
-use injector::{TokenData, VaultConnectors};
+use injector::TokenData;
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     verification::ConnectorSourceVerificationSecrets,
@@ -107,15 +107,10 @@ struct CardTokenData {
 
 trait ToTokenData {
     fn to_token_data(&self) -> TokenData;
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData;
 }
 
 impl ToTokenData for grpc_api_types::payments::CardDetails {
     fn to_token_data(&self) -> TokenData {
-        self.to_token_data_with_vault(VaultConnectors::VGS)
-    }
-
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
         let card_data = CardTokenData {
             card_number: self
                 .card_number
@@ -143,17 +138,12 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
 
         TokenData {
             specific_token_data: SecretSerdeValue::new(card_json),
-            vault_connector,
         }
     }
 }
 
 impl ToTokenData for grpc_api_types::payments::ProxyCardDetails {
     fn to_token_data(&self) -> TokenData {
-        self.to_token_data_with_vault(VaultConnectors::VGS) //?
-    }
-
-    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
         let card_data = CardTokenData {
             card_number: self
                 .card_number
@@ -181,7 +171,6 @@ impl ToTokenData for grpc_api_types::payments::ProxyCardDetails {
 
         TokenData {
             specific_token_data: SecretSerdeValue::new(card_json),
-            vault_connector,
         }
     }
 }

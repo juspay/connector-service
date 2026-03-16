@@ -903,11 +903,11 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 [[package]]
 name = "common_enums"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=solve-injector-masking-cyclic-dependency#51f5c753b0715e27512a3c2b972842e0b66681bb"
+source = "git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3#8f5f5a329e85df009d329fa436ec790b85a46cc3"
 dependencies = [
  "diesel",
  "hyperswitch_masking",
- "router_derive",
+ "router_derive 0.1.0 (git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3)",
  "serde",
  "serde_json",
  "smithy",
@@ -920,7 +920,7 @@ dependencies = [
 [[package]]
 name = "common_utils"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=solve-injector-masking-cyclic-dependency#51f5c753b0715e27512a3c2b972842e0b66681bb"
+source = "git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3#8f5f5a329e85df009d329fa436ec790b85a46cc3"
 dependencies = [
  "ammonia",
  "base64 0.22.1",
@@ -1386,7 +1386,7 @@ dependencies = [
  "hyperswitch_masking",
  "rand 0.8.5",
  "regex",
- "router_derive",
+ "router_derive 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=solve-injector-masking-cyclic-dependency)",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -3291,7 +3291,7 @@ dependencies = [
 [[package]]
 name = "injector"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=solve-injector-masking-cyclic-dependency#51f5c753b0715e27512a3c2b972842e0b66681bb"
+source = "git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3#8f5f5a329e85df009d329fa436ec790b85a46cc3"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -5113,9 +5113,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "router_derive"
+version = "0.1.0"
+source = "git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3#8f5f5a329e85df009d329fa436ec790b85a46cc3"
+dependencies = [
+ "indexmap 2.11.1",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "strum",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "router_env"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=solve-injector-masking-cyclic-dependency#51f5c753b0715e27512a3c2b972842e0b66681bb"
+source = "git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3#8f5f5a329e85df009d329fa436ec790b85a46cc3"
 dependencies = [
  "actix-web",
  "cargo_metadata 0.18.1",
@@ -5720,7 +5733,7 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 [[package]]
 name = "smithy"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=solve-injector-masking-cyclic-dependency#51f5c753b0715e27512a3c2b972842e0b66681bb"
+source = "git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3#8f5f5a329e85df009d329fa436ec790b85a46cc3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5731,7 +5744,7 @@ dependencies = [
 [[package]]
 name = "smithy-core"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=solve-injector-masking-cyclic-dependency#51f5c753b0715e27512a3c2b972842e0b66681bb"
+source = "git+https://github.com/juspay/hyperswitch?rev=8f5f5a329e85df009d329fa436ec790b85a46cc3#8f5f5a329e85df009d329fa436ec790b85a46cc3"
 dependencies = [
  "proc-macro2",
  "serde",
