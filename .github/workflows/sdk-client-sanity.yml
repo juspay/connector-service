@@ -11,12 +11,16 @@ on:
     paths:
       - 'sdk/javascript/src/http_client.ts'
       - 'sdk/javascript/tests/client_sanity_runner.ts'
+      - 'sdk/javascript/tests/cucumber/**'
       - 'sdk/python/src/payments/http_client.py'
       - 'sdk/python/tests/client_sanity_runner.py'
+      - 'sdk/python/tests/cucumber/**'
       - 'sdk/rust/src/http_client.rs'
       - 'sdk/rust/src/bin/client_sanity_runner.rs'
+      - 'sdk/rust/tests/cucumber.rs'
       - 'sdk/java/src/main/kotlin/HttpClient.kt'
       - 'sdk/java/tests/ClientSanityRunner.kt'
+      - 'sdk/java/tests/cucumber/**'
       - 'sdk/tests/client_sanity/**'
       - 'sdk/tests/package.json'
       - 'Makefile'
@@ -26,12 +30,16 @@ on:
     paths:
       - 'sdk/javascript/src/http_client.ts'
       - 'sdk/javascript/tests/client_sanity_runner.ts'
+      - 'sdk/javascript/tests/cucumber/**'
       - 'sdk/python/src/payments/http_client.py'
       - 'sdk/python/tests/client_sanity_runner.py'
+      - 'sdk/python/tests/cucumber/**'
       - 'sdk/rust/src/http_client.rs'
       - 'sdk/rust/src/bin/client_sanity_runner.rs'
+      - 'sdk/rust/tests/cucumber.rs'
       - 'sdk/java/src/main/kotlin/HttpClient.kt'
       - 'sdk/java/tests/ClientSanityRunner.kt'
+      - 'sdk/java/tests/cucumber/**'
       - 'sdk/tests/client_sanity/**'
       - 'sdk/tests/package.json'
       - 'Makefile'
@@ -76,14 +84,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
 
-      - name: Install Node dependencies (SDK JS)
-        run: cd sdk/javascript && npm install && cd ../..
+      - name: Install Node dependencies (SDK JS + Cucumber)
+        run: cd sdk/javascript && npm install && npm install --save-dev @cucumber/cucumber && cd ../..
 
       - name: Install test dependencies (echo, proxy, judge)
         run: cd sdk/tests && npm install --no-save && cd ../..
 
-      - name: Install Python dependencies (SDK)
-        run: pip install -r sdk/python/requirements.txt grpcio-tools protobuf
+      - name: Install Python dependencies (SDK + Cucumber)
+        run: pip install -r sdk/python/requirements.txt grpcio-tools protobuf behave
 
       - name: Build FFI library (UniFFI scaffolding)
         run: make -C sdk/python build-ffi-lib PROFILE=release
@@ -106,10 +114,16 @@ jobs:
         env:
           PROFILE: release
 
-      - name: Run SDK Client Sanity Certification
+      - name: Run SDK Client Sanity Certification (Legacy)
         id: certify
         run: |
           make certify-client-sanity
+        continue-on-error: true
+
+      - name: Run SDK Client Sanity Certification (Cucumber/Gherkin)
+        id: certify-cucumber
+        run: |
+          make certify-client-sanity-cucumber
         continue-on-error: true
 
       - name: Comment PR with report

@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity certify-client-sanity-cucumber field-probe docs docs-check test-ucs
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -70,6 +70,21 @@ certify-client-sanity:
 	@node sdk/tests/client_sanity/generate_golden.js
 	@echo "[CERTIFICATION]: Running client sanity suite..."
 	@node sdk/tests/client_sanity/run_client_certification.js rust python node kotlin
+	@pkill -f "[/]echo_server\\.js"; pkill -f "[/]simple_proxy\\.js" || true
+
+## SDK Certification (Cucumber/Gherkin): Run BDD tests across all supported languages
+certify-client-sanity-cucumber:
+	@echo "Cleaning previous client sanity artifacts..."
+	@rm -rf sdk/tests/client_sanity/artifacts || true
+	@mkdir -p sdk/tests/client_sanity/artifacts
+	@echo "Starting Cucumber BDD Certification..."
+	@pkill -f "[/]echo_server\\.js" || true
+	@pkill -f "[/]simple_proxy\\.js" || true
+	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 2
+	@echo "Generating golden captures from manifest..."
+	@node sdk/tests/client_sanity/generate_golden.js
+	@echo "[CUCUMBER]: Running Gherkin-based client sanity suite..."
+	@node sdk/tests/client_sanity/run_cucumber_certification.js rust python node kotlin
 	@pkill -f "[/]echo_server\\.js"; pkill -f "[/]simple_proxy\\.js" || true
 
 # Format proto files

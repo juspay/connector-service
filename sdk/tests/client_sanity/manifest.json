@@ -3,6 +3,7 @@
   "scenarios": [
     {
       "id": "CASE_01_JSON_UNICODE",
+      "title": "JSON POST preserves Unicode and emoji characters",
       "description": "Standard JSON POST with Unicode/Emojis.",
       "request": {
         "method": "POST",
@@ -14,6 +15,7 @@
     },
     {
       "id": "CASE_02_URL_ENCODING",
+      "title": "GET encodes complex query parameters correctly",
       "description": "GET with complex query encoding.",
       "request": {
         "method": "GET",
@@ -25,6 +27,7 @@
     },
     {
       "id": "CASE_03_FORM_URL_ENCODED",
+      "title": "Form-urlencoded POST sends key-value pairs",
       "description": "Standard Form-URL POST.",
       "request": {
         "method": "POST",
@@ -36,6 +39,7 @@
     },
     {
       "id": "CASE_04_PUT_METHOD",
+      "title": "PUT request delivers a JSON update",
       "description": "PUT method check.",
       "request": {
         "method": "PUT",
@@ -47,6 +51,7 @@
     },
     {
       "id": "CASE_05_PATCH_METHOD",
+      "title": "PATCH request sends a partial JSON payload",
       "description": "PATCH method check.",
       "request": {
         "method": "PATCH",
@@ -58,6 +63,7 @@
     },
     {
       "id": "CASE_06_DELETE_METHOD",
+      "title": "DELETE request returns no body",
       "description": "DELETE method check.",
       "request": {
         "method": "DELETE",
@@ -69,6 +75,7 @@
     },
     {
       "id": "CASE_07_POST_EMPTY_BODY",
+      "title": "POST with an empty body succeeds",
       "description": "POST with no body.",
       "request": {
         "method": "POST",
@@ -80,6 +87,7 @@
     },
     {
       "id": "CASE_08_XML_BODY",
+      "title": "XML body is transmitted verbatim",
       "description": "XML/SOAP Body shipping.",
       "request": {
         "method": "POST",
@@ -91,6 +99,7 @@
     },
     {
       "id": "CASE_09_MULTIPART_FORMDATA",
+      "title": "Multipart form data is framed correctly",
       "description": "Multipart/Form-Data.",
       "request": {
         "method": "POST",
@@ -102,6 +111,7 @@
     },
     {
       "id": "CASE_10_RESPONSE_TIMEOUT",
+      "title": "SDK times out when the server responds too slowly",
       "description": "Slow server (2s). SDK must timeout at 1s via response_timeout_ms.",
       "skip_langs": ["rust", "python"],
       "skip_reason_rust": "reqwest 0.11 has no read/response-phase timeout (read_timeout added in 0.12). response_timeout_ms is not supported; use total_timeout_ms instead.",
@@ -119,6 +129,7 @@
     },
     {
       "id": "CASE_11_SERVER_ERROR_500",
+      "title": "Server returns 500 Internal Server Error",
       "description": "Server returns 500.",
       "request": {
         "method": "POST",
@@ -130,6 +141,7 @@
     },
     {
       "id": "CASE_12_SERVER_ERROR_502",
+      "title": "Server returns 502 Bad Gateway",
       "description": "Server returns 502 Bad Gateway.",
       "request": {
         "method": "GET",
@@ -141,6 +153,7 @@
     },
     {
       "id": "CASE_13_SERVER_ERROR_503",
+      "title": "Server returns 503 Service Unavailable",
       "description": "Server returns 503 Service Unavailable.",
       "request": {
         "method": "GET",
@@ -152,6 +165,7 @@
     },
     {
       "id": "CASE_14_SERVER_ERROR_504",
+      "title": "Server returns 504 Gateway Timeout",
       "description": "Server returns 504 Gateway Timeout.",
       "request": {
         "method": "GET",
@@ -163,6 +177,7 @@
     },
     {
       "id": "CASE_15_BOM_UTF8",
+      "title": "UTF-8 BOM prefix is preserved in body",
       "description": "Body with UTF-8 BOM.",
       "request": {
         "method": "POST",
@@ -174,6 +189,7 @@
     },
     {
       "id": "CASE_16_NO_CONTENT_204",
+      "title": "DELETE returns 204 No Content",
       "description": "204 No Content check.",
       "request": {
         "method": "DELETE",
@@ -185,6 +201,7 @@
     },
     {
       "id": "CASE_17_REDIRECT",
+      "title": "GET receives a 302 redirect with a location header",
       "description": "302 Redirect handling.",
       "request": {
         "method": "GET",
@@ -196,6 +213,7 @@
     },
     {
       "id": "CASE_18_RAW_BYTES",
+      "title": "Binary payload is sent byte-for-byte",
       "description": "Binary Request Payload.",
       "request": {
         "method": "POST",
@@ -207,6 +225,7 @@
     },
     {
       "id": "CASE_19_MULTI_VALUE_HEADERS",
+      "title": "Response contains multiple Set-Cookie values",
       "description": "Multi-value Set-Cookie headers (OPTIONAL: UCS doesn't use cookies, tests HTTP client completeness).",
       "optional": true,
       "skip_reason": "Multi-value header support not critical for stateless UCS. SDKs may not expose all Set-Cookie values.",
@@ -223,6 +242,7 @@
     },
     {
       "id": "CASE_20_POST_WITH_QUERY",
+      "title": "POST combines URL query parameters with a JSON body",
       "description": "POST with URL Query.",
       "request": {
         "method": "POST",
@@ -234,6 +254,7 @@
     },
     {
       "id": "CASE_21_FORM_UNICODE",
+      "title": "Form-urlencoded POST preserves Unicode values",
       "description": "Form-URL Unicode Body.",
       "request": {
         "method": "POST",
@@ -245,6 +266,7 @@
     },
     {
       "id": "CASE_ERR_INVALID_URL",
+      "title": "Invalid URL is rejected before any network call",
       "description": "Invalid URL; SDK must fail before sending (e.g. URL_PARSING_FAILED).",
       "request": {
         "method": "GET",
@@ -256,6 +278,7 @@
     },
     {
       "id": "CASE_ERR_INVALID_PROXY",
+      "title": "Invalid proxy URL is rejected at client creation",
       "description": "Invalid proxy config; SDK must fail (e.g. INVALID_PROXY_CONFIGURATION).",
       "skip_langs": ["python", "kotlin"],
       "skip_reason_python": "httpx accepts malformed proxy URLs at client creation; the error surfaces only at request time as a generic transport failure that cannot be reliably classified as INVALID_PROXY_CONFIGURATION.",
@@ -271,6 +294,7 @@
     },
     {
       "id": "CASE_PROXY_FORWARD",
+      "title": "Request is routed through a forward proxy",
       "description": "Request sent via simple forward proxy (Makefile starts sdk/tests/client_sanity/simple_proxy.js).",
       "skip_langs": ["node"],
       "skip_reason_node": "Node SDK proxy handling to be fixed.",
