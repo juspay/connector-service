@@ -16,8 +16,15 @@ from payments.http_client import execute, HttpRequest, create_client, merge_http
 from payments.generated import sdk_config_pb2
 
 LANG = 'python'
-JUDGE = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', '..', '..', '..', 'tests', 'client_sanity', 'judge_scenario.js'))
+SANITY_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '..', '..', '..', '..', 'tests', 'client_sanity'))
+JUDGE = os.path.join(SANITY_DIR, 'judge_scenario.js')
+MANIFEST_PATH = os.path.join(SANITY_DIR, 'manifest.json')
+
+# Build title → id lookup once at import time.
+with open(MANIFEST_PATH) as f:
+    _manifest = json.load(f)
+TITLE_TO_ID = {s['title']: s['id'] for s in _manifest['scenarios'] if 'title' in s}
 
 
 # ── Given ────────────────────────────────────────────────────────
@@ -60,8 +67,14 @@ def step_proxy(context, url):
 
 # ── When (thin: execute + write actual JSON) ─────────────────────
 
-@when('the request is sent as scenario "{scenario_id}"')
-def step_execute(context, scenario_id):
+@when('the request is sent')
+def step_execute(context):
+    # Resolve scenario ID from the Gherkin scenario title.
+    scenario_title = context.scenario.name
+    scenario_id = TITLE_TO_ID.get(scenario_title)
+    if not scenario_id:
+        raise RuntimeError(f'No manifest entry with title: {scenario_title}')
+
     context.scenario_id = scenario_id
     context.source_id = f'{LANG}_{scenario_id}'
 

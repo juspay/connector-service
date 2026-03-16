@@ -7,9 +7,20 @@ import * as path from 'path';
 
 const LANG = 'node';
 const JUDGE = path.resolve(__dirname, '../../../tests/client_sanity/judge_scenario.js');
+const MANIFEST_PATH = path.resolve(__dirname, '../../../tests/client_sanity/manifest.json');
+
+// Build title → id lookup once at import time.
+const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+const titleToId: Record<string, string> = {};
+for (const s of manifest.scenarios) {
+  if (s.title) titleToId[s.title] = s.id;
+}
 
 Before(function (this: SanityWorld, { pickle }) {
   if (pickle.tags.some(t => t.name === '@skip_node')) return 'skipped';
+  // Resolve scenario ID from the Gherkin scenario title.
+  this.scenarioId = titleToId[pickle.name] || '';
+  this.sourceId = `${LANG}_${this.scenarioId}`;
 });
 
 // ── Given ───────────────────────────────────────────────────────
@@ -41,9 +52,8 @@ Given('the proxy is {string}', function (this: SanityWorld, url: string) {
 
 // ── When (thin: execute + write actual JSON) ────────────────────
 
-When('the request is sent as scenario {string}', async function (this: SanityWorld, scenarioId: string) {
-  this.scenarioId = scenarioId;
-  this.sourceId = `${LANG}_${scenarioId}`;
+When('the request is sent', async function (this: SanityWorld) {
+  if (!this.scenarioId) throw new Error('Could not resolve scenario ID from Gherkin title');
 
   const actualFile = path.join(this.getArtifactsDir(), `actual_${this.sourceId}.json`);
   const captureFile = this.getCaptureFile();
@@ -54,7 +64,7 @@ When('the request is sent as scenario {string}', async function (this: SanityWor
   const request: any = {
     method: this.method,
     url: this.url,
-    headers: { ...this.headers, 'x-source': this.sourceId, 'x-scenario-id': scenarioId },
+    headers: { ...this.headers, 'x-source': this.sourceId, 'x-scenario-id': this.scenarioId },
     body: this.body,
   };
   if (typeof request.body === 'string' && request.body.startsWith('base64:')) {

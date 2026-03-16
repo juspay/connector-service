@@ -37,11 +37,29 @@ class StepDefinitions {
             File(it).parentFile.resolve("judge_scenario.js").absolutePath
         } ?: File("").absoluteFile.parentFile.resolve("tests/client_sanity/judge_scenario.js").absolutePath
 
+    companion object {
+        /** Title → ID lookup built once from the manifest. */
+        private val titleToId: Map<String, String> by lazy {
+            val manifestPath = System.getProperty("artifacts.dir")?.let {
+                File(it).parentFile.resolve("manifest.json").absolutePath
+            } ?: File("").absoluteFile.parentFile.resolve("tests/client_sanity/manifest.json").absolutePath
+            val manifest = JSONObject(File(manifestPath).readText())
+            val scenarios = manifest.getJSONArray("scenarios")
+            (0 until scenarios.length()).associate { i ->
+                val s = scenarios.getJSONObject(i)
+                s.getString("title") to s.getString("id")
+            }
+        }
+    }
+
     @Before
     fun setUp(scenario: Scenario) {
         method = ""; url = ""; headers = mutableMapOf(); body = null
-        proxyUrl = null; responseTimeoutMs = null; scenarioId = ""; sourceId = ""
-        judged = false
+        proxyUrl = null; responseTimeoutMs = null; judged = false
+
+        // Resolve scenario ID from the Gherkin scenario title.
+        scenarioId = titleToId[scenario.name] ?: ""
+        sourceId = "kotlin_$scenarioId"
     }
 
     // ── Given ───────────────────────────────────────────────────
@@ -66,10 +84,9 @@ class StepDefinitions {
 
     // ── When (thin: execute + write actual JSON) ────────────────
 
-    @When("the request is sent as scenario {string}")
-    fun executeRequest(scenarioId: String) {
-        this.scenarioId = scenarioId
-        this.sourceId = "kotlin_$scenarioId"
+    @When("the request is sent")
+    fun executeRequest() {
+        require(scenarioId.isNotEmpty()) { "Could not resolve scenario ID from Gherkin title" }
 
         val actualFile = File(artifactsDir, "actual_$sourceId.json")
         val captureFile = File(artifactsDir, "capture_$sourceId.json")

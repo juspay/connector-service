@@ -12,11 +12,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::LazyLock;
 
 const LANG: &str = "rust";
-
-/// Scenarios from manifest.json that are skipped for Rust.
-const SKIP_SCENARIOS: &[&str] = &["CASE_10_RESPONSE_TIMEOUT"];
 
 fn artifacts_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -33,6 +31,49 @@ fn judge_script() -> PathBuf {
         .join("client_sanity")
         .join("judge_scenario.js")
 }
+
+fn manifest_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("tests")
+        .join("client_sanity")
+        .join("manifest.json")
+}
+
+/// Build title → id lookup once.
+static TITLE_TO_ID: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    let data = fs::read_to_string(manifest_path()).expect("Failed to read manifest.json");
+    let manifest: serde_json::Value = serde_json::from_str(&data).expect("Failed to parse manifest");
+    manifest["scenarios"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|s| {
+            let title = s["title"].as_str()?.to_string();
+            let id = s["id"].as_str()?.to_string();
+            Some((title, id))
+        })
+        .collect()
+});
+
+/// Scenarios from manifest.json that are skipped for Rust.
+static SKIP_IDS: LazyLock<Vec<String>> = LazyLock::new(|| {
+    let data = fs::read_to_string(manifest_path()).expect("Failed to read manifest.json");
+    let manifest: serde_json::Value = serde_json::from_str(&data).expect("Failed to parse manifest");
+    manifest["scenarios"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|s| {
+            let skip_langs = s["skip_langs"].as_array()?;
+            if skip_langs.iter().any(|l| l.as_str() == Some("rust")) {
+                Some(s["id"].as_str()?.to_string())
+            } else {
+                None
+            }
+        })
+        .collect()
+});
 
 #[derive(Debug, Default, World)]
 pub struct SanityWorld {
@@ -103,12 +144,15 @@ async fn set_proxy(w: &mut SanityWorld, url: String) {
 
 // ── When (thin: execute + write actual JSON) ────────────────────
 
-#[when(expr = "the request is sent as scenario {string}")]
-async fn execute_request(w: &mut SanityWorld, scenario_id: String) {
-    w.scenario_id = scenario_id.clone();
-    w.source_id = format!("{}_{}", LANG, scenario_id);
+#[when("the request is sent")]
+async fn execute_request(w: &mut SanityWorld) {
+    // Scenario ID is resolved from the title in the main() scenario hook below.
+    // For now, if it's empty, it means the hook didn't find a match.
+    if w.scenario_id.is_empty() {
+        panic!("Could not resolve scenario ID from Gherkin title");
+    }
 
-    if SKIP_SCENARIOS.contains(&scenario_id.as_str()) {
+    if SKIP_IDS.contains(&w.scenario_id) {
         w.skipped = true;
         return;
     }
@@ -269,6 +313,16 @@ fn main() {
         SanityWorld::cucumber()
             .with_default_cli()
             .features(features_path)
+            .before(move |_feature, _rule, scenario, world| {
+                Box::pin(async move {
+                    let title = &scenario.name;
+                    if let Some(id) = TITLE_TO_ID.get(title.as_str()) {
+                        world.scenario_id = id.clone();
+                        world.source_id = format!("{}_{}", LANG, id);
+                    }
+                    Ok(())
+                })
+            })
             .run_and_exit(),
     );
 }
