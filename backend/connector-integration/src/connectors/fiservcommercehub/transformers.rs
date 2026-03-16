@@ -105,11 +105,8 @@ pub struct FiservcommercehubErrorGatewayResponse {
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubErrorTxnDetails {
     pub api_trace_id: Option<String>,
-    pub client_request_id: Option<String>,
     pub transaction_id: Option<String>,
     pub order_id: Option<String>,
-    pub transaction_timestamp: Option<String>,
-    pub api_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,7 +139,7 @@ pub struct FiservcommercehubAuthorizeRequest {
 
 #[derive(Debug, Serialize)]
 pub struct FiservcommercehubAuthorizeAmount {
-    pub currency: String,
+    pub currency: common_enums::Currency,
     pub total: FloatMajorUnit,
 }
 
@@ -282,7 +279,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .card_holder_name
                     .as_ref()
                     .map(|n| n.peek().clone())
-                    .unwrap_or_default();
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "card_holder_name",
+                    })?;
                 let expiration_month = card.card_exp_month.peek().to_string();
                 let expiration_year = card.card_exp_year.peek().to_string();
 
@@ -318,7 +317,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => {
                 return Err(error_stack::report!(
                     errors::ConnectorError::NotImplemented(
-                        "Only Card payment method is supported for Fiservcommercehub".to_string()
+                        "This payment method is not implemented".to_string(),
                     )
                 ))
             }
@@ -357,7 +356,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let request = Self {
             amount: FiservcommercehubAuthorizeAmount {
-                currency: router_data.request.currency.to_string(),
+                currency: router_data.request.currency,
                 total,
             },
             source,
@@ -406,6 +405,36 @@ impl From<&FiservcommercehubTransactionState> for AttemptStatus {
             | FiservcommercehubTransactionState::Rejected
             | FiservcommercehubTransactionState::Failed => Self::Failure,
             FiservcommercehubTransactionState::Cancelled => Self::Voided,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservcommercehubRefundState {
+    Approved,
+    Captured,
+    Authorized,
+    Pending,
+    Declined,
+    Rejected,
+    Failed,
+    Cancelled,
+}
+
+impl From<&FiservcommercehubRefundState> for RefundStatus {
+    fn from(state: &FiservcommercehubRefundState) -> Self {
+        match state {
+            FiservcommercehubRefundState::Approved | FiservcommercehubRefundState::Captured => {
+                Self::Success
+            }
+            FiservcommercehubRefundState::Authorized | FiservcommercehubRefundState::Pending => {
+                Self::Pending
+            }
+            FiservcommercehubRefundState::Declined
+            | FiservcommercehubRefundState::Rejected
+            | FiservcommercehubRefundState::Failed
+            | FiservcommercehubRefundState::Cancelled => Self::Failure,
         }
     }
 }
@@ -573,21 +602,6 @@ impl TryFrom<ResponseRouterData<FiservcommercehubPSyncResponse, Self>>
 // REFUND FLOW
 // =============================================================================
 
-impl From<&FiservcommercehubTransactionState> for RefundStatus {
-    fn from(state: &FiservcommercehubTransactionState) -> Self {
-        match state {
-            FiservcommercehubTransactionState::Approved
-            | FiservcommercehubTransactionState::Captured => Self::Success,
-            FiservcommercehubTransactionState::Authorized
-            | FiservcommercehubTransactionState::Pending => Self::Pending,
-            FiservcommercehubTransactionState::Declined
-            | FiservcommercehubTransactionState::Rejected
-            | FiservcommercehubTransactionState::Failed
-            | FiservcommercehubTransactionState::Cancelled => Self::Failure,
-        }
-    }
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRefundTransactionDetails {
@@ -629,7 +643,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = FiservcommercehubAuthType::try_from(&router_data.connector_auth_type)?;
         Ok(Self {
             amount: FiservcommercehubAuthorizeAmount {
-                currency: router_data.request.currency.to_string(),
+                currency: router_data.request.currency,
                 total,
             },
             transaction_details: FiservcommercehubRefundTransactionDetails {
@@ -654,7 +668,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRefundResponse {
-    pub gateway_response: FiservcommercehubGatewayResponseBody,
+    pub gateway_response: FiservcommercehubRefundGatewayResponseBody,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubRefundGatewayResponseBody {
+    pub transaction_state: FiservcommercehubRefundState,
+    pub transaction_processing_details: FiservcommercehubTxnDetails,
 }
 
 impl TryFrom<ResponseRouterData<FiservcommercehubRefundResponse, Self>>
@@ -728,7 +749,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRSyncGatewayResponse {
-    pub transaction_state: FiservcommercehubTransactionState,
+    pub transaction_state: FiservcommercehubRefundState,
     pub transaction_processing_details: Option<FiservcommercehubRSyncTxnDetails>,
 }
 
@@ -764,7 +785,7 @@ impl TryFrom<ResponseRouterData<FiservcommercehubRSyncResponse, Self>>
             .gateway_response
             .transaction_processing_details
             .map(|d| d.transaction_id)
-            .unwrap_or_else(|| item.router_data.request.connector_refund_id.clone());
+            .unwrap_or(item.router_data.request.connector_refund_id.clone());
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id,
@@ -817,10 +838,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             (Some(minor_amount), Some(currency)) => {
                 let total =
                     utils::convert_amount(item.connector.amount_converter, minor_amount, currency)?;
-                Some(FiservcommercehubAuthorizeAmount {
-                    currency: currency.to_string(),
-                    total,
-                })
+                Some(FiservcommercehubAuthorizeAmount { currency, total })
             }
             _ => None,
         };
