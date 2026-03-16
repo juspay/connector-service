@@ -70,6 +70,11 @@
             jdk17             # Java Development Kit (matches protobuf-java 4.x needs)
             gradle            # Gradle build tool
 
+            # Ruby runtime and tools
+            ruby_3_3          # Ruby 3.3 runtime
+            bundler           # Ruby dependency manager
+            rubyPackages.ffi  # FFI bindings for Ruby
+
             # Optional: database tools if you're building web apps
             # postgresql
             # sqlite
@@ -88,6 +93,7 @@
             echo \"Python version: \$(python3 --version)\"
             echo \"Java version: \$(java --version | head -1)\"
             echo \"Gradle version: \$(gradle --version | grep Gradle)\"
+            echo \"Ruby version: \$(ruby --version)\"
 
             # Optional: set environment variables
             export RUST_BACKTRACE=1

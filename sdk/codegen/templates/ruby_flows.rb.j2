@@ -1,0 +1,18 @@
+# frozen_string_literal: true
+
+# AUTO-GENERATED — do not edit by hand.
+# Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
+
+module HyperswitchPayments
+  FLOWS = {
+{% for f in flows %}
+    "{{ f.name }}" => { request: "{{ f.request }}", response: "{{ f.response }}" },
+{% endfor %}
+  }.freeze
+
+  SINGLE_FLOWS = {
+{% for f in single_flows %}
+    "{{ f.name }}" => { request: "{{ f.request }}", response: "{{ f.response }}" },
+{% endfor %}
+  }.freeze
+end

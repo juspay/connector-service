@@ -198,6 +198,15 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Install Ruby SDK dependencies
+        run: cd sdk/ruby && bundle install
+
       - uses: Swatinem/rust-cache@v2.7.8
         with:
           cache-on-failure: true

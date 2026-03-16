@@ -1,0 +1,26 @@
+# frozen_string_literal: true
+
+# AUTO-GENERATED — do not edit by hand.
+# Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
+
+require_relative "connector_client"
+
+module HyperswitchPayments
+{% for service in all_services %}
+  class {{ service_to_client_name(service) }} < ConnectorClientBase
+{% for f in groups.get(service, []) %}
+    # {{ f.service }}.{{ f.rpc }} — {{ f.description }}
+    def {{ f.name }}(request, options: nil)
+      execute_flow("{{ f.name }}", request, Payment_pb::{{ f.response }}, options)
+    end
+{% endfor %}
+{% for f in single_groups.get(service, []) %}
+    # {{ f.service }}.{{ f.rpc }} — {{ f.description }}
+    def {{ f.name }}(request, options: nil)
+      execute_direct("{{ f.name }}", request, Payment_pb::{{ f.response }}, options)
+    end
+{% endfor %}
+  end
+
+{% endfor %}
+end

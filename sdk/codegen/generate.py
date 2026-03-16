@@ -360,6 +360,36 @@ def gen_rust_handlers(flows: list[dict]) -> None:
     )
 
 
+def gen_ruby(flows: list[dict], single_flows: list[dict]) -> None:
+    gen_ruby_flows(flows, single_flows)
+    gen_ruby_clients(flows, single_flows)
+
+
+def gen_ruby_flows(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate _generated_flows.rb — flow metadata used by UniffiClient for FFI symbol dispatch."""
+    render(
+        "ruby_flows.rb.j2",
+        SDK_ROOT / "ruby/lib/payments/_generated_flows.rb",
+        flows=flows,
+        single_flows=single_flows,
+    )
+
+
+def gen_ruby_clients(flows: list[dict], single_flows: list[dict]) -> None:
+    """Generate _generated_service_clients.rb — per-service client classes."""
+    groups = group_by_service(flows)
+    single_groups = group_by_service(single_flows)
+    all_services = sorted(set(groups) | set(single_groups))
+
+    render(
+        "ruby_clients.rb.j2",
+        SDK_ROOT / "ruby/lib/payments/_generated_service_clients.rb",
+        all_services=all_services,
+        groups=groups,
+        single_groups=single_groups,
+    )
+
+
 def gen_rust_ffi_flows(flows: list[dict]) -> None:
     """Generate _generated_ffi_flows.rs — included by bindings/uniffi.rs."""
     req_types = sorted({f["request"] for f in flows})
@@ -382,7 +412,7 @@ def main() -> None:
 
     parser.add_argument(
         "--lang",
-        choices=["python", "javascript", "kotlin", "rust", "all"],
+        choices=["python", "javascript", "kotlin", "ruby", "rust", "all"],
         default="all",
         help="Which language/SDK to generate (default: all)"
     )
@@ -419,6 +449,10 @@ def main() -> None:
     if args.lang in ("kotlin", "all"):
         print("Generating Kotlin SDK...")
         gen_kotlin(flows, single_flows)
+
+    if args.lang in ("ruby", "all"):
+        print("Generating Ruby SDK...")
+        gen_ruby(flows, single_flows)
 
     print("\nDone.")
 
