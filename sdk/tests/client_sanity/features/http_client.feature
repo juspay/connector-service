@@ -11,7 +11,10 @@ Feature: HTTP Client Sanity
   Scenario: JSON POST preserves Unicode and emoji characters
     Given a "POST" request to "/sanity/v1"
     And header "Content-Type" is "application/json"
-    And body is '{"merchant": "Juspay 💰", "location": "Café"}'
+    And body is:
+      """
+      {"merchant": "Juspay 💰", "location": "Café"}
+      """
     When the request is sent
     Then the response status should be 200
     And the response body should be '{"status":"ok"}'
@@ -72,7 +75,10 @@ Feature: HTTP Client Sanity
   Scenario: XML body is transmitted verbatim
     Given a "POST" request to "/sanity/v1/soap"
     And header "Content-Type" is "application/xml"
-    And body is '<?xml version="1.0"?><payment><amount>100</amount></payment>'
+    And body is:
+      """
+      <?xml version="1.0"?><payment><amount>100</amount></payment>
+      """
     When the request is sent
     Then the response status should be 200
     And the response body should be '{"status":"ok"}'
