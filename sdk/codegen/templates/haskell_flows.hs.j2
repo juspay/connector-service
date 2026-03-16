@@ -1,0 +1,63 @@
+-- AUTO-GENERATED — do not edit by hand.
+-- Source: services.proto ∩ bindings/uniffi.rs  |  Regenerate: make generate
+
+{-# LANGUAGE OverloadedStrings #-}
+
+-- | Generated flow methods for the Haskell Connector Service SDK.
+--
+-- Each flow method wraps 'ConnectorClient.executeFlow' or
+-- 'ConnectorClient.executeDirect' with the correct flow name.
+-- The protobuf request\/response serialization is handled by the caller
+-- using proto-lens generated types.
+module Payments.Generated.Flows
+  ( -- * Standard flows (req -> HTTP -> res)
+{% for f in flows %}
+    {{ f.name }}
+{% if not loop.last %}
+  ,
+{% endif %}
+{% endfor %}
+{% if single_flows %}
+    -- * Single-step flows (no HTTP round-trip)
+{% for f in single_flows %}
+  , {{ f.name }}
+{% endfor %}
+{% endif %}
+  ) where
+
+import qualified Data.ByteString as BS
+import Payments.ConnectorClient (ConnectorClient, executeFlow, executeDirect)
+
+-- ── Standard flows ──────────────────────────────────────────────────────────
+-- These flows perform a full round-trip: request → connector HTTP → response.
+{% for f in flows %}
+
+-- | {{ f.service }}.{{ f.rpc }} — {{ f.description }}
+--
+-- Request type:  {{ f.request }}
+-- Response type: {{ f.response }}
+{{ f.name }}
+  :: ConnectorClient
+  -> BS.ByteString   -- ^ Protobuf-encoded {{ f.request }}
+  -> IO BS.ByteString -- ^ Protobuf-encoded {{ f.response }}
+{{ f.name }} client requestBytes =
+  executeFlow client "{{ f.name }}" requestBytes
+{% endfor %}
+
+{% if single_flows %}
+-- ── Single-step flows ───────────────────────────────────────────────────────
+-- These flows call the transformer directly (no HTTP round-trip).
+{% for f in single_flows %}
+
+-- | {{ f.service }}.{{ f.rpc }} — {{ f.description }}
+--
+-- Request type:  {{ f.request }}
+-- Response type: {{ f.response }}
+{{ f.name }}
+  :: ConnectorClient
+  -> BS.ByteString   -- ^ Protobuf-encoded {{ f.request }}
+  -> IO BS.ByteString -- ^ Protobuf-encoded {{ f.response }}
+{{ f.name }} client requestBytes =
+  executeDirect client "{{ f.name }}" requestBytes
+{% endfor %}
+{% endif %}

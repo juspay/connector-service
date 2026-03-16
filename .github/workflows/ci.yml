@@ -198,6 +198,12 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Setup Haskell
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.6'
+          cabal-version: '3.10'
+
       - uses: Swatinem/rust-cache@v2.7.8
         with:
           cache-on-failure: true

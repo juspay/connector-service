@@ -70,6 +70,11 @@
             jdk17             # Java Development Kit (matches protobuf-java 4.x needs)
             gradle            # Gradle build tool
 
+            # Haskell runtime and tools
+            ghc                           # Glasgow Haskell Compiler
+            cabal-install                 # Cabal build tool
+            haskellPackages.proto-lens-protoc  # protoc plugin for Haskell proto-lens
+
             # Optional: database tools if you're building web apps
             # postgresql
             # sqlite
@@ -88,6 +93,8 @@
             echo \"Python version: \$(python3 --version)\"
             echo \"Java version: \$(java --version | head -1)\"
             echo \"Gradle version: \$(gradle --version | grep Gradle)\"
+            echo \"GHC version: \$(ghc --version)\"
+            echo \"Cabal version: \$(cabal --version | head -1)\"
 
             # Optional: set environment variables
             export RUST_BACKTRACE=1

@@ -1,0 +1,49 @@
+cabal-version:      3.0
+name:               hyperswitch-payments
+version:            0.1.0
+synopsis:           Haskell SDK for Hyperswitch Connector Service
+description:        Haskell client for the Hyperswitch Connector Service FFI,
+                    using direct C ABI calls to the UniFFI-scaffolded Rust library.
+                    Types are generated from Protocol Buffers.
+license:            MIT
+build-type:         Simple
+extra-source-files: README.md
+
+library
+  exposed-modules:
+    Payments.FfiClient
+    Payments.ConnectorClient
+    Payments.Generated.Flows
+  other-modules:
+    Payments.Internal.RustBuffer
+  hs-source-dirs:   src
+  default-language:  Haskell2010
+  ghc-options:       -Wall -Wcompat
+  build-depends:
+      base              >= 4.14 && < 5
+    , bytestring        >= 0.10
+    , proto-lens         >= 0.7
+    , proto-lens-runtime >= 0.7
+    , http-client        >= 0.7
+    , http-client-tls    >= 0.3
+    , http-types         >= 0.12
+    , text               >= 1.2
+    , aeson              >= 2.0
+    , filepath           >= 1.4
+    , directory           >= 1.3
+    , case-insensitive    >= 1.2
+
+executable smoke-test
+  main-is:          Main.hs
+  hs-source-dirs:   smoke-test
+  default-language:  Haskell2010
+  ghc-options:       -Wall -Wcompat
+  build-depends:
+      base              >= 4.14 && < 5
+    , hyperswitch-payments
+    , bytestring        >= 0.10
+    , proto-lens         >= 0.7
+    , proto-lens-runtime >= 0.7
+    , text               >= 1.2
+    , aeson              >= 2.0
+    , directory           >= 1.3

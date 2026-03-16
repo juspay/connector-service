@@ -1,0 +1,6 @@
+packages: .
+
+-- Allow proto-lens packages from Hackage
+allow-newer:
+  proto-lens:base,
+  proto-lens-runtime:base
