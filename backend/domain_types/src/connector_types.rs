@@ -2705,36 +2705,7 @@ pub trait ConnectorSpecifications {
         None
     }
 
-    /// Check if pre-authentication flow is required
-    fn is_pre_authentication_flow_required(
-        &self,
-        _auth_type: AuthenticationType,
-        _payment_method_data: &Option<
-            PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>,
-        >,
-        _mandate_ids: &Option<MandateIds>,
-    ) -> bool {
-        false
-    }
-
-    /// Check if authentication flow is required
-    fn is_authentication_flow_required(
-        &self,
-        _auth_type: AuthenticationType,
-        _redirect_response: &Option<ContinueRedirectionResponse>,
-    ) -> bool {
-        false
-    }
-
-    /// Check if post-authentication flow is required before authorize
-    fn is_post_authentication_flow_required(
-        &self,
-        _redirect_response: &Option<ContinueRedirectionResponse>,
-    ) -> bool {
-        false
-    }
-
-    /// Check if authenticate should be called after pre-authenticate (no redirect)
+    /// Check if authenticate should be called after pre-authenticate (for no redirect flows)
     fn should_continue_to_authenticate_after_preauth(
         &self,
         _auth_type: AuthenticationType,
@@ -3716,6 +3687,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Payu(_) => Ok(Self::Payu),
             AuthType::Powertranz(_) => Ok(Self::Powertranz),
             AuthType::Rapyd(_) => Ok(Self::Rapyd),
+            AuthType::Razorpay(_) => Ok(Self::Razorpay),
             AuthType::Redsys(_) => Ok(Self::Redsys),
             AuthType::Shift4(_) => Ok(Self::Shift4),
             AuthType::Stax(_) => Ok(Self::Stax),

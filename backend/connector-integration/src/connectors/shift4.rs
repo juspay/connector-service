@@ -685,24 +685,3 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Shift4<T>
 {
 }
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    domain_types::connector_types::ConnectorSpecifications for Shift4<T>
-{
-    /// PreAuth needed for all 3DS card payments
-    fn is_pre_authentication_flow_required(
-        &self,
-        auth_type: common_enums::AuthenticationType,
-        payment_method_data: &Option<
-            domain_types::payment_method_data::PaymentMethodData<
-                domain_types::payment_method_data::DefaultPCIHolder,
-            >,
-        >,
-        _mandate_ids: &Option<domain_types::connector_types::MandateIds>,
-    ) -> bool {
-        auth_type.is_three_ds()
-            && payment_method_data
-                .as_ref()
-                .is_some_and(|pmd| pmd.is_card())
-    }
-}

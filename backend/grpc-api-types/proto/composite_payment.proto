@@ -247,6 +247,6 @@ message CompositeAuthenticateRequest {
 
 // Response message for composite authenticate flow.
 message CompositeAuthenticateResponse {
-  optional PaymentMethodAuthenticationServiceAuthenticateResponse authenticate_response = 1;
-  optional PaymentMethodAuthenticationServicePreAuthenticateResponse pre_authenticate_response = 2;
+  optional PaymentMethodAuthenticationServicePreAuthenticateResponse pre_authenticate_response = 1;
+  optional PaymentMethodAuthenticationServiceAuthenticateResponse authenticate_response = 2;
 }
