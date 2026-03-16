@@ -1,9 +1,10 @@
 use crate::{
     connectors::{hipay::HipayRouterData, macros::GetFormData},
     types::ResponseRouterData,
+    utils::build_form_from_struct,
 };
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::types::StringMajorUnit;
+use common_utils::{request::MultipartData, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -14,7 +15,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificAuth, PaymentMethodToken as PaymentMethodTokenType},
+    router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenType},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -27,14 +28,15 @@ pub struct HipayAuthType {
     pub api_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for HipayAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for HipayAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Hipay {
+            ConnectorSpecificConfig::Hipay {
                 api_key,
                 api_secret,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
@@ -44,33 +46,6 @@ impl TryFrom<&ConnectorSpecificAuth> for HipayAuthType {
             )),
         }
     }
-}
-
-// Helper function to build multipart/form-data from struct
-// Converts a serializable struct into reqwest::multipart::Form
-pub fn build_form_from_struct<T: Serialize>(
-    data: T,
-) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-    let mut form = reqwest::multipart::Form::new();
-    let serialized =
-        serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
-    let serialized_object = serialized
-        .as_object()
-        .ok_or(errors::ParsingError::EncodeError("Expected object"))?;
-    for (key, values) in serialized_object {
-        let value = match values {
-            serde_json::Value::String(s) => s.clone(),
-            serde_json::Value::Number(n) => n.to_string(),
-            serde_json::Value::Bool(b) => b.to_string(),
-            serde_json::Value::Array(_)
-            | serde_json::Value::Object(_)
-            | serde_json::Value::Null => {
-                "".to_string() // Convert to empty string instead of skipping
-            }
-        };
-        form = form.text(key.clone(), value.clone());
-    }
-    Ok(form)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1041,35 +1016,35 @@ impl TryFrom<ResponseRouterData<HipayVoidResponse, Self>>
 
 // GetFormData implementation for HipayTokenRequest
 impl<T: PaymentMethodDataTypes + Serialize> GetFormData for HipayTokenRequest<T> {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 
 // GetFormData implementation for HipayPaymentsRequest
 impl GetFormData for HipayPaymentsRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 
 // GetFormData implementation for HipayCaptureRequest
 impl GetFormData for HipayCaptureRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 
 // GetFormData implementation for HipayVoidRequest
 impl GetFormData for HipayVoidRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 
 // GetFormData implementation for HipayRefundRequest
 impl GetFormData for HipayRefundRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }

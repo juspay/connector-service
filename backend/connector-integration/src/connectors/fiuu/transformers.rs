@@ -8,7 +8,7 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::Encode,
     pii::Email,
-    request::Method,
+    request::{Method, MultipartData},
     types::StringMajorUnit,
 };
 use domain_types::{
@@ -25,7 +25,7 @@ use domain_types::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         RealTimePaymentData, WalletData,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -40,7 +40,10 @@ use url::Url;
 use crate::{
     connectors::{fiuu::FiuuRouterData, macros::GetFormData},
     types::ResponseRouterData,
-    utils::qr_code::{QrCodeInformation, QrImage},
+    utils::{
+        build_form_from_struct,
+        qr_code::{QrCodeInformation, QrImage},
+    },
 };
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
@@ -53,14 +56,15 @@ pub struct FiuuAuthType {
     pub(super) secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for FiuuAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for FiuuAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Fiuu {
+            ConnectorSpecificConfig::Fiuu {
                 merchant_id,
                 verify_key,
                 secret_key,
+                ..
             } => Ok(Self {
                 merchant_id: merchant_id.to_owned(),
                 verify_key: verify_key.to_owned(),
@@ -258,7 +262,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let record_type = FiuuRecordType::T;
         let merchant_id = auth.merchant_id;
         let order_id = item
@@ -503,7 +507,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let txn_currency = item.router_data.request.currency;
         let amount = item
@@ -695,7 +699,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let txn_currency = item.router_data.request.currency;
         let amount = item
@@ -1274,7 +1278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let amount = item
             .connector
@@ -1478,7 +1482,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let txn_id = item
             .router_data
             .request
@@ -1770,7 +1774,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let amount = item
             .connector
@@ -1925,7 +1929,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let txn_id = item.router_data.request.connector_transaction_id.clone();
         let merchant_id = auth.merchant_id.peek().to_string();
         let secret_key = auth.secret_key.peek().to_string();
@@ -2047,7 +2051,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let (txn_id, merchant_id, verify_key) = (
             item.router_data.request.connector_transaction_id.clone(),
             auth.merchant_id.peek().to_string(),
@@ -2339,13 +2343,13 @@ pub enum FiuuPaymentsRequest<
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> GetFormData
     for FiuuPaymentsRequest<T>
 {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
+    fn get_form_data(&self) -> MultipartData {
         match self {
             Self::FiuuPaymentRequest(req) => {
-                build_form_from_struct(req).unwrap_or_else(|_| reqwest::multipart::Form::new())
+                build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new())
             }
             Self::FiuuMandateRequest(req) => {
-                build_form_from_struct(req).unwrap_or_else(|_| reqwest::multipart::Form::new())
+                build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new())
             }
         }
     }
@@ -2353,55 +2357,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> GetFormData
     for FiuuPaymentRequest<T>
 {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuPaymentSyncRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for PaymentCaptureRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuPaymentCancelRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuRefundRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
 }
 impl GetFormData for FiuuRefundSyncRequest {
-    fn get_form_data(&self) -> reqwest::multipart::Form {
-        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
-}
-
-pub fn build_form_from_struct<T: Serialize>(
-    data: T,
-) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-    let mut form = reqwest::multipart::Form::new();
-    let serialized =
-        serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
-    let serialized_object = serialized
-        .as_object()
-        .ok_or(errors::ParsingError::EncodeError("Expected object"))?;
-    for (key, values) in serialized_object {
-        let value = match values {
-            Value::String(s) => s.clone(),
-            Value::Number(n) => n.to_string(),
-            Value::Bool(b) => b.to_string(),
-            Value::Array(_) | Value::Object(_) | Value::Null => "".to_string(),
-        };
-        form = form.text(key.clone(), value.clone());
-    }
-    Ok(form)
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use common_enums::enums;
 use common_utils::{ext_traits::ValueExt, request::Method};
 use domain_types::{
@@ -11,16 +9,16 @@ use domain_types::{
         RepeatPaymentData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
+use crate::connectors::paysafe::PaysafeRouterData;
 use crate::types::ResponseRouterData;
-use crate::{connectors::paysafe::PaysafeRouterData, utils};
 
 pub use super::requests::*;
 pub use super::responses::*;
@@ -33,64 +31,25 @@ type ConnectorError = error_stack::Report<errors::ConnectorError>;
 pub struct PaysafeAuthType {
     pub username: Secret<String>,
     pub password: Secret<String>,
+    pub account_id: Option<PaysafePaymentMethodDetails>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PaysafeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PaysafeAuthType {
     type Error = ConnectorError;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paysafe { username, password } => Ok(Self {
+            ConnectorSpecificConfig::Paysafe {
+                username,
+                password,
+                account_id,
+                ..
+            } => Ok(Self {
                 username: username.clone(),
                 password: password.clone(),
+                account_id: account_id.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
-    }
-}
-
-// Connector Metadata
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct PaysafeConnectorMetadataObject {
-    pub account_id: PaysafePaymentMethodDetails,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct PaysafePaymentMethodDetails {
-    pub card: Option<HashMap<enums::Currency, CardAccountId>>,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct CardAccountId {
-    pub no_three_ds: Option<Secret<String>>,
-    pub three_ds: Option<Secret<String>>,
-}
-
-impl PaysafePaymentMethodDetails {
-    pub fn get_no_three_ds_account_id(
-        &self,
-        currency: enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
-        self.card
-            .as_ref()
-            .and_then(|cards| cards.get(&currency))
-            .and_then(|card| card.no_three_ds.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "Missing no_3ds account_id",
-            })
-    }
-
-    pub fn get_three_ds_account_id(
-        &self,
-        currency: enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
-        self.card
-            .as_ref()
-            .and_then(|cards| cards.get(&currency))
-            .and_then(|card| card.three_ds.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "Missing 3ds account_id",
-            })
     }
 }
 
@@ -205,6 +164,15 @@ impl From<PaysafeRefundStatus> for enums::RefundStatus {
     }
 }
 
+impl From<&enums::BankType> for PaysafeAchAccountType {
+    fn from(bank_type: &enums::BankType) -> Self {
+        match bank_type {
+            enums::BankType::Checking => Self::Checking,
+            enums::BankType::Savings => Self::Savings,
+        }
+    }
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PaysafeRouterData<
@@ -233,52 +201,96 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let metadata: PaysafeConnectorMetadataObject = utils::to_connector_meta_from_secret(
-            item.router_data.request.merchant_account_metadata.clone(),
-        )
-        .change_context(errors::ConnectorError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-        })?;
+        let auth = PaysafeAuthType::try_from(&item.router_data.connector_config)?;
+        let account_id = auth
+            .account_id
+            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                config: "account_id",
+            })?;
 
         let currency = router_data.request.currency;
         let amount = router_data.request.amount;
-        let settle_with_auth = matches!(
-            router_data.request.capture_method,
-            Some(enums::CaptureMethod::Automatic) | None
-        );
 
-        // PaymentMethodToken is for no-3DS flow only
-        let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;
-
-        let payment_method = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(req_card) => {
-                let card = PaysafeCard {
-                    card_num: req_card.card_number.clone(),
-                    card_expiry: PaysafeCardExpiry {
-                        month: req_card.card_exp_month.clone(),
-                        year: req_card.get_expiry_year_4_digit(),
-                    },
-                    cvv: if req_card.card_cvc.peek().is_empty() {
-                        None
-                    } else {
-                        Some(req_card.card_cvc.clone())
-                    },
-                    holder_name: req_card.card_holder_name.clone().or_else(|| {
-                        router_data
-                            .resource_common_data
-                            .get_optional_billing_full_name()
-                    }),
-                };
-                PaysafePaymentMethod::Card { card }
-            }
-            _ => {
-                return Err(errors::ConnectorError::NotSupported {
-                    message: "Only card payment methods are supported for PaymentMethodToken"
-                        .to_string(),
-                    connector: "Paysafe",
+        let (payment_method, payment_type, account_id) =
+            match &router_data.request.payment_method_data {
+                PaymentMethodData::Card(req_card) => {
+                    let card = PaysafeCard {
+                        card_num: req_card.card_number.clone(),
+                        card_expiry: PaysafeCardExpiry {
+                            month: req_card.card_exp_month.clone(),
+                            year: req_card.get_expiry_year_4_digit(),
+                        },
+                        cvv: if req_card.card_cvc.peek().is_empty() {
+                            None
+                        } else {
+                            Some(req_card.card_cvc.clone())
+                        },
+                        holder_name: req_card.card_holder_name.clone().or_else(|| {
+                            router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                        }),
+                    };
+                    let account_id = account_id.get_no_three_ds_account_id(currency)?;
+                    (
+                        PaysafePaymentMethod::Card { card },
+                        PaysafePaymentType::Card,
+                        account_id,
+                    )
                 }
-                .into())
-            }
+                PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_account_holder_name,
+                    bank_type,
+                    ..
+                }) => {
+                    let account_holder_name = bank_account_holder_name
+                        .clone()
+                        .or_else(|| {
+                            router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                        })
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "bank_account_holder_name",
+                        })?;
+                    let account_type = bank_type.as_ref().map(PaysafeAchAccountType::from).ok_or(
+                        errors::ConnectorError::MissingRequiredField {
+                            field_name: "bank_type (ach.accountType)",
+                        },
+                    )?;
+                    let ach = PaysafeAch {
+                        account_holder_name,
+                        account_number: account_number.clone(),
+                        routing_number: routing_number.clone(),
+                        account_type,
+                    };
+                    let account_id = account_id.get_ach_account_id(currency)?;
+                    (
+                        PaysafePaymentMethod::Ach { ach },
+                        PaysafePaymentType::Ach,
+                        account_id,
+                    )
+                }
+                _ => {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message:
+                            "Only card and ACH payment methods are supported for PaymentMethodToken"
+                                .to_string(),
+                        connector: "Paysafe",
+                    }
+                    .into())
+                }
+            };
+
+        // For ACH payments, Paysafe requires settleWithAuth to be true
+        let settle_with_auth = match payment_type {
+            PaysafePaymentType::Ach => true,
+            PaysafePaymentType::Card => matches!(
+                router_data.request.capture_method,
+                Some(enums::CaptureMethod::Automatic) | None
+            ),
         };
 
         let billing_details = create_paysafe_billing_details(&router_data.resource_common_data)?;
@@ -322,7 +334,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             settle_with_auth,
             payment_method,
             currency_code: currency,
-            payment_type: PaysafePaymentType::Card,
+            payment_type,
             transaction_type: TransactionType::Payment,
             return_links,
             account_id,
@@ -392,12 +404,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let amount = router_data.request.minor_amount;
 
-        let metadata: PaysafeConnectorMetadataObject = utils::to_connector_meta_from_secret(
-            item.router_data.request.merchant_account_metadata.clone(),
-        )
-        .change_context(errors::ConnectorError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-        })?;
+        let auth = PaysafeAuthType::try_from(&item.router_data.connector_config)?;
+        let account_id = auth
+            .account_id
+            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                config: "account_id",
+            })?;
 
         let payment_handle_token: Secret<String> = router_data
             .resource_common_data
@@ -409,7 +421,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or_else(|| {
                 router_data
                     .resource_common_data
-                    .connector_meta_data
+                    .connector_feature_data
                     .as_ref()
                     .and_then(|metadata_value| {
                         metadata_value
@@ -430,19 +442,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|browser_info| browser_info.ip_address)
             .map(|ip| Secret::new(ip.to_string()));
 
-        let settle_with_auth = matches!(
-            router_data.request.capture_method,
-            Some(enums::CaptureMethod::Automatic) | None
+        // Determine if this is an ACH payment based on payment_method
+        let is_ach = matches!(
+            router_data.resource_common_data.payment_method,
+            enums::PaymentMethod::BankDebit
         );
 
-        let account_id = Some(if router_data.resource_common_data.is_three_ds() {
-            metadata
-                .account_id
-                .get_three_ds_account_id(router_data.request.currency)?
+        // For ACH payments, Paysafe requires settleWithAuth to be true
+        let settle_with_auth = if is_ach {
+            true
         } else {
-            metadata
-                .account_id
-                .get_no_three_ds_account_id(router_data.request.currency)?
+            matches!(
+                router_data.request.capture_method,
+                Some(enums::CaptureMethod::Automatic) | None
+            )
+        };
+
+        // For ACH, use the ach account_id; for cards, use card account_id
+        let account_id = Some(if is_ach {
+            account_id.get_ach_account_id(router_data.request.currency)?
+        } else if router_data.resource_common_data.is_three_ds() {
+            account_id.get_three_ds_account_id(router_data.request.currency)?
+        } else {
+            account_id.get_no_three_ds_account_id(router_data.request.currency)?
         });
 
         Ok(Self {

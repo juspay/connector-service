@@ -1,7 +1,8 @@
 use base64::Engine;
-use jsonwebtoken as jwt;
+use josekit::jwt;
 
 use common_utils::{
+    consts,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     ext_traits::{OptionExt, ValueExt},
     pii,
@@ -30,7 +31,7 @@ use domain_types::{
         PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificAuth, ErrorResponse,
+        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificConfig, ErrorResponse,
         PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
@@ -1031,7 +1032,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .to_string();
 
         let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
+            &item.router_data.resource_common_data.connector_feature_data,
         )?;
 
         let (action_list, action_token_types, authorization_options) = if item
@@ -1298,7 +1299,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let consumer_authentication_information = item
@@ -1386,7 +1387,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -1498,7 +1499,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -1592,7 +1593,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
         let ucaf_collection_indicator = match apple_pay_wallet_data
             .payment_method
@@ -1701,7 +1702,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -1796,7 +1797,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let ucaf_collection_indicator =
@@ -1890,7 +1891,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -1933,21 +1934,20 @@ fn get_samsung_pay_payment_information<
 fn get_samsung_pay_fluid_data_value(
     samsung_pay_token_data: &payment_method_data::SamsungPayTokenData,
 ) -> Result<SamsungPayFluidDataValue, error_stack::Report<ConnectorError>> {
-    let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.clone().peek())
+    let samsung_pay_header = jwt::decode_header(samsung_pay_token_data.data.peek())
         .change_context(ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to decode samsung pay header")?;
 
-    let samsung_pay_kid_optional = samsung_pay_header.kid;
+    let samsung_pay_kid_optional = samsung_pay_header.claim("kid").and_then(|kid| kid.as_str());
+
+    let public_key_hash = samsung_pay_kid_optional
+        .get_required_value("samsung pay public_key_hash")
+        .change_context(ConnectorError::RequestEncodingFailed)?;
 
     let samsung_pay_fluid_data_value = SamsungPayFluidDataValue {
-        public_key_hash: Secret::new(
-            samsung_pay_kid_optional
-                .get_required_value("samsung pay public_key_hash")
-                .change_context(ConnectorError::RequestEncodingFailed)?
-                .to_string(),
-        ),
+        public_key_hash: Secret::new(public_key_hash.to_string()),
         version: samsung_pay_token_data.version.clone(),
-        data: Secret::new(BASE64_ENGINE.encode(samsung_pay_token_data.data.peek())),
+        data: Secret::new(consts::BASE64_ENGINE.encode(samsung_pay_token_data.data.peek())),
     };
     Ok(samsung_pay_fluid_data_value)
 }
@@ -2034,7 +2034,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .metadata
                                     .clone()
                                     .map(|metadata| metadata.expose()),
-                                item.router_data.request.merchant_order_reference_id.clone(),
+                                item.router_data.request.merchant_order_id.clone(),
                             );
                         let ucaf_collection_indicator = match apple_pay_data
                             .payment_method
@@ -2303,7 +2303,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let is_final = matches!(
@@ -2392,11 +2392,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            value
-                .router_data
-                .request
-                .merchant_order_reference_id
-                .clone(),
+            value.router_data.request.merchant_order_id.clone(),
         );
 
         let currency =
@@ -2453,21 +2449,28 @@ pub struct CybersourceAuthType {
     pub(super) api_key: Secret<String>,
     pub(super) merchant_account: Secret<String>,
     pub(super) api_secret: Secret<String>,
+    pub(super) disable_avs: Option<bool>,
+    pub(super) disable_cvn: Option<bool>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for CybersourceAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for CybersourceAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Cybersource {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Cybersource {
             api_key,
             merchant_account,
             api_secret,
+            disable_avs,
+            disable_cvn,
+            ..
         } = auth_type
         {
             Ok(Self {
                 api_key: api_key.to_owned(),
                 merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
+                disable_avs: *disable_avs,
+                disable_cvn: *disable_cvn,
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?
@@ -4339,7 +4342,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         Ok(Self {
@@ -4419,7 +4422,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let consumer_authentication_information = item
@@ -4507,7 +4510,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .metadata
                 .clone()
                 .map(|metadata| metadata.expose()),
-            item.router_data.request.merchant_order_reference_id.clone(),
+            item.router_data.request.merchant_order_id.clone(),
         );
 
         let consumer_authentication_information = item
@@ -4622,9 +4625,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or("internet")
             .to_string();
 
-        let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item.router_data.request.merchant_account_metadata,
-        )?;
+        let connector_merchant_config =
+            CybersourceAuthType::try_from(&item.router_data.connector_config)?;
 
         let (action_list, action_token_types, authorization_options) = match item
             .router_data
@@ -4633,25 +4635,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone()
         {
             MandateReferenceId::ConnectorMandateId(_) => {
-                let original_amount = item
+                let original_authorized_amount = item
                     .router_data
                     .request
                     .recurring_mandate_payment_data
                     .as_ref()
                     .and_then(|recurring_mandate_payment_data| {
-                        recurring_mandate_payment_data.original_payment_authorized_amount
-                    });
+                        recurring_mandate_payment_data
+                            .original_payment_authorized_amount
+                            .clone()
+                    })
+                    .map(|original_amount| (original_amount.amount, original_amount.currency));
 
-                let original_currency = item
-                    .router_data
-                    .request
-                    .recurring_mandate_payment_data
-                    .as_ref()
-                    .and_then(|recurring_mandate_payment_data| {
-                        recurring_mandate_payment_data.original_payment_authorized_currency
-                    });
-
-                let original_authorized_amount = match original_amount.zip(original_currency) {
+                let original_authorized_amount = match original_authorized_amount {
                     Some((original_amount, original_currency)) => {
                         Some(domain_types::utils::get_amount_as_string(
                             &common_enums::CurrencyUnit::Base,
@@ -4901,7 +4897,7 @@ fn get_commerce_indicator_for_external_authentication(
 
 fn convert_metadata_to_merchant_defined_info(
     metadata: Option<serde_json::Value>,
-    merchant_order_reference_id: Option<String>,
+    merchant_order_id: Option<String>,
 ) -> Option<Vec<utils::MerchantDefinedInformation>> {
     let mut iter = 1;
 
@@ -4921,10 +4917,10 @@ fn convert_metadata_to_merchant_defined_info(
         })
         .unwrap_or_default();
 
-    if let Some(merchant_ref_id) = merchant_order_reference_id {
+    if let Some(merchant_ref_id) = merchant_order_id {
         result.push(utils::MerchantDefinedInformation {
             key: iter,
-            value: format!("merchant_order_reference_id={merchant_ref_id}"),
+            value: format!("merchant_order_id={merchant_ref_id}"),
         });
     }
 

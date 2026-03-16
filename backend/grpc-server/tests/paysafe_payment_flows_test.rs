@@ -47,7 +47,8 @@
 #![allow(clippy::panic)]
 
 use cards::CardNumber;
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 mod common;
 mod utils;
 use std::{
@@ -59,12 +60,12 @@ use std::{
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        payment_method, payment_service_client::PaymentServiceClient,
         refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
-        RefundServiceGetRequest, RefundStatus,
+        Currency, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
+        RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -167,11 +168,8 @@ fn add_paysafe_metadata<T>(request: &mut Request<T>) -> bool {
 
 // Helper function to extract connector transaction ID from response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
-    match &response.transaction_id {
-        Some(id) => match id.id_type.as_ref() {
-            Some(IdType::Id(id)) => id.clone(),
-            _ => panic!("Expected connector transaction ID, got response: {response:#?}"),
-        },
+    match &response.connector_transaction_id {
+        Some(id) => id.clone(),
         None => panic!("Transaction ID is None in response: {response:#?}"),
     }
 }
@@ -210,14 +208,22 @@ fn create_payment_authorize_request(
     .to_string();
 
     PaymentServiceAuthorizeRequest {
-        amount: TEST_AMOUNT,
-        minor_amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://duck.com".to_string()),
-        email: Some(TEST_EMAIL.to_string().into()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: None,
+            id: None,
+            connector_customer_id: None,
+            phone_number: None,
+            phone_country_code: None,
+        }),
         address: Some(grpc_api_types::payments::PaymentAddress {
             billing_address: Some(grpc_api_types::payments::Address {
                 first_name: Some(Secret::new("John".to_string())),
@@ -236,17 +242,15 @@ fn create_payment_authorize_request(
             shipping_address: None,
         }),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!(
-                "paysafe_test_{}_{}",
-                get_timestamp_micros(),
-                uuid::Uuid::new_v4().simple()
-            ))),
-        }),
+        merchant_transaction_id: Some(format!(
+            "paysafe_test_{}_{}",
+            get_timestamp_micros(),
+            uuid::Uuid::new_v4().simple()
+        )),
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
-        merchant_account_metadata: Some(Secret::new(merchant_account_metadata_json)),
+        connector_feature_data: Some(Secret::new(merchant_account_metadata_json)),
         ..Default::default()
     }
 }
@@ -254,18 +258,16 @@ fn create_payment_authorize_request(
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
-        request_ref_id: None,
+        connector_transaction_id: transaction_id.to_string(),
         capture_method: None,
         handle_response: None,
-        amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         state: None,
         metadata: None,
-        merchant_account_metadata: None,
-        connector_metadata: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         encoded_data: None,
         sync_type: None,
@@ -278,19 +280,17 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
+        connector_transaction_id: transaction_id.to_string(),
+        amount_to_capture: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
         }),
-        amount_to_capture: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!(
-                "paysafe_capture_{}_{}",
-                get_timestamp_micros(),
-                uuid::Uuid::new_v4().simple()
-            ))),
-        }),
+        merchant_capture_id: Some(format!(
+            "paysafe_capture_{}_{}",
+            get_timestamp_micros(),
+            uuid::Uuid::new_v4().simple()
+        )),
         ..Default::default()
     }
 }
@@ -298,21 +298,18 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        refund_id: format!("refund_{}", get_timestamp_micros()),
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
-        currency: i32::from(Currency::Usd),
+        merchant_refund_id: Some(format!("refund_{}", get_timestamp_micros())),
+        connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,
-        refund_amount: TEST_AMOUNT,
-        minor_payment_amount: TEST_AMOUNT,
-        minor_refund_amount: TEST_AMOUNT,
+        refund_amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         reason: None,
         webhook_url: None,
         browser_info: None,
         merchant_account_id: Some("paysafe_test".to_string()),
         capture_method: None,
-        request_ref_id: None,
         ..Default::default()
     }
 }
@@ -325,19 +322,15 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
     let refund_metadata_json = serde_json::to_string(&refund_metadata_map).unwrap();
 
     RefundServiceGetRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp_micros()))),
-        }),
+        merchant_refund_id: Some(format!("rsync_ref_{}", get_timestamp_micros())),
         browser_info: None,
         test_mode: Some(true),
         refund_metadata: Some(Secret::new(refund_metadata_json)),
-        merchant_account_metadata: Default::default(),
         state: None,
+        connector_feature_data: None,
         payment_method_type: None,
     }
 }
@@ -345,17 +338,15 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
 // Helper function to create a payment void request
 fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp_micros()))),
-        }),
+        merchant_void_id: Some(format!("void_ref_{}", get_timestamp_micros())),
         all_keys_required: None,
         browser_info: None,
-        amount: Some(TEST_AMOUNT),
-        currency: Some(i32::from(Currency::Usd)),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         ..Default::default()
     }
 }
@@ -604,7 +595,7 @@ async fn test_refund_sync() {
                 .expect("Refund failed");
 
             let refund_response_inner: RefundResponse = refund_response.into_inner();
-            let refund_id = &refund_response_inner.refund_id;
+            let refund_id = &refund_response_inner.connector_refund_id;
 
             // Sync the refund
             let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);

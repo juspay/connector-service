@@ -37,7 +37,7 @@ mod tests {
             connector_types::{PaymentFlowData, PaymentsAuthorizeData},
             payment_address::{Address, PaymentAddress, PhoneDetails},
             payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
             router_response_types::Response,
@@ -82,7 +82,7 @@ mod tests {
                         None,
                     ),
                     auth_type: AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
@@ -111,10 +111,12 @@ mod tests {
                     raw_connector_request: None,
                     connector_response: None,
                     recurring_mandate_payment_data: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Razorpay {
+                connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
                     api_secret: Some("dummy_key1".to_string().into()),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -183,7 +185,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -194,7 +196,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
                     enable_partial_authorization: None,
                     locale: None,
                     continue_redirection_url: None,
@@ -270,7 +272,7 @@ mod tests {
                     return_url: None,
                     address: PaymentAddress::new(None, None, None, None),
                     auth_type: AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_authorized: None,
@@ -300,10 +302,12 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     minor_amount_capturable: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Razorpay {
+                connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
                     api_secret: Some("dummy_key1".to_string().into()),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -349,7 +353,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -360,7 +364,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
                     enable_partial_authorization: None,
                     locale: None,
                     continue_redirection_url: None,
@@ -410,7 +414,7 @@ mod tests {
                     return_url: None,
                     address: PaymentAddress::new(None, None, None, None),
                     auth_type: AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_authorized: None,
@@ -440,10 +444,12 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     minor_amount_capturable: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Razorpay {
+                connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
                     api_secret: Some("dummy_key1".to_string().into()),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -488,7 +494,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -499,7 +505,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
@@ -539,7 +545,7 @@ mod tests {
             use domain_types::{
                 connector_types::PaymentFlowData,
                 payment_address::PaymentAddress,
-                router_data::{ConnectorSpecificAuth, ErrorResponse},
+                router_data::{ConnectorSpecificConfig, ErrorResponse},
                 router_data_v2::RouterDataV2,
                 types::{ConnectorParams, Connectors},
             };
@@ -572,7 +578,7 @@ mod tests {
                         None,
                     ),
                     auth_type: AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_authorized: None,
@@ -602,10 +608,12 @@ mod tests {
                     recurring_mandate_payment_data: None,
                     order_details: None,
                     minor_amount_capturable: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Razorpay {
+                connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
                     api_secret: Some("dummy_key1".to_string().into()),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -673,7 +681,7 @@ mod tests {
                     request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -684,7 +692,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
                     billing_descriptor: None,
                     enable_partial_authorization: None,
                     locale: None,
@@ -871,7 +879,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentFlowData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -905,7 +913,7 @@ mod tests {
                     None,
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
-                connector_meta_data: None,
+                connector_feature_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_authorized: None,
@@ -935,10 +943,12 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 minor_amount_capturable: None,
+                l2_l3_data: None,
             },
-            connector_auth_type: ConnectorSpecificAuth::Razorpay {
+            connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
                 api_secret: Some("dummy_key1".to_string().into()),
+                base_url: None,
             },
             request: PaymentsAuthorizeData {
                 payment_channel: None,
@@ -1001,7 +1011,7 @@ mod tests {
                 request_incremental_authorization: Some(false),
                 metadata: None,
                 minor_amount: MinorUnit::new(1000),
-                merchant_order_reference_id: None,
+                merchant_order_id: None,
                 shipping_cost: None,
                 integrity_object: None,
                 merchant_account_id: None,
@@ -1013,7 +1023,7 @@ mod tests {
                 request_extended_authorization: None,
                 setup_mandate_details: None,
                 enable_overcapture: None,
-                merchant_account_metadata: None,
+                connector_feature_data: None,
                 billing_descriptor: None,
                 enable_partial_authorization: None,
                 locale: None,
@@ -1067,7 +1077,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentFlowData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1101,7 +1111,7 @@ mod tests {
                     None,
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
-                connector_meta_data: None,
+                connector_feature_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_authorized: None,
@@ -1131,10 +1141,12 @@ mod tests {
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
+                l2_l3_data: None,
             },
-            connector_auth_type: ConnectorSpecificAuth::Razorpay {
+            connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
                 api_secret: Some("dummy_key1".to_string().into()),
+                base_url: None,
             },
             request: PaymentsAuthorizeData {
                 payment_channel: None,
@@ -1197,7 +1209,7 @@ mod tests {
                 request_incremental_authorization: Some(false),
                 metadata: None,
                 minor_amount: MinorUnit::new(1000),
-                merchant_order_reference_id: None,
+                merchant_order_id: None,
                 shipping_cost: None,
                 integrity_object: None,
                 merchant_account_id: None,
@@ -1209,7 +1221,7 @@ mod tests {
                 request_extended_authorization: None,
                 setup_mandate_details: None,
                 enable_overcapture: None,
-                merchant_account_metadata: None,
+                connector_feature_data: None,
                 billing_descriptor: None,
                 enable_partial_authorization: None,
                 locale: None,
@@ -1251,7 +1263,7 @@ mod tests {
         use domain_types::{
             payment_address::{Address, PhoneDetails},
             payment_method_data::DefaultPCIHolder,
-            router_data::ConnectorSpecificAuth,
+            router_data::ConnectorSpecificConfig,
             types::{ConnectorParams, Connectors},
         };
         use interfaces::connector_types::BoxedConnector;
@@ -1266,7 +1278,7 @@ mod tests {
             use domain_types::{
                 connector_types::PaymentCreateOrderData,
                 payment_address::PaymentAddress,
-                router_data::{ConnectorSpecificAuth, ErrorResponse},
+                router_data::{ConnectorSpecificConfig, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
             use serde_json::{to_value, Value};
@@ -1299,7 +1311,7 @@ mod tests {
                         None,
                     ),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
@@ -1329,10 +1341,12 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Razorpay {
+                connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
                     api_secret: Some("dummy_key1".to_string().into()),
+                    base_url: None,
                 },
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(1000),
@@ -1395,7 +1409,7 @@ mod tests {
             use domain_types::{
                 connector_types::PaymentCreateOrderData,
                 payment_address::PaymentAddress,
-                router_data::{ConnectorSpecificAuth, ErrorResponse},
+                router_data::{ConnectorSpecificConfig, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
 
@@ -1415,7 +1429,7 @@ mod tests {
                     return_url: None,
                     address: PaymentAddress::default(),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
@@ -1445,10 +1459,12 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Razorpay {
+                connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "dummy_api_key".to_string().into(),
                     api_secret: Some("dummy_key1".to_string().into()),
+                    base_url: None,
                 },
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(0),
@@ -1534,7 +1550,7 @@ mod tests {
                     return_url: None,
                     address: PaymentAddress::new(None, None, None, None),
                     auth_type: AuthenticationType::NoThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
                     minor_amount_capturable: None,
@@ -1564,10 +1580,12 @@ mod tests {
                     connector_response: None,
                     recurring_mandate_payment_data: None,
                     order_details: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorSpecificAuth::Razorpay {
+                connector_config: ConnectorSpecificConfig::Razorpay {
                     api_key: "invalid_key".to_string().into(),
                     api_secret: Some("invalid_key1".to_string().into()),
+                    base_url: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -1613,7 +1631,7 @@ mod tests {
                     metadata: None,
                     integrity_object: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -1624,7 +1642,7 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
                     enable_partial_authorization: None,
                     locale: None,
                     continue_redirection_url: None,
@@ -1662,7 +1680,7 @@ mod tests {
         use domain_types::{
             connector_types::{PaymentCreateOrderData, PaymentFlowData},
             payment_address::PaymentAddress,
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1695,7 +1713,7 @@ mod tests {
                     None,
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
-                connector_meta_data: None,
+                connector_feature_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_authorized: None,
@@ -1725,10 +1743,12 @@ mod tests {
                 recurring_mandate_payment_data: None,
                 order_details: None,
                 minor_amount_capturable: None,
+                l2_l3_data: None,
             },
-            connector_auth_type: ConnectorSpecificAuth::Razorpay {
+            connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
                 api_secret: Some("dummy_key1".to_string().into()),
+                base_url: None,
             },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
@@ -1789,7 +1809,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentCreateOrderData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1823,7 +1843,7 @@ mod tests {
                     None,
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
-                connector_meta_data: None,
+                connector_feature_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_capturable: None,
@@ -1853,10 +1873,12 @@ mod tests {
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
+                l2_l3_data: None,
             },
-            connector_auth_type: ConnectorSpecificAuth::Razorpay {
+            connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
                 api_secret: Some("dummy_key1".to_string().into()),
+                base_url: None,
             },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
@@ -1906,7 +1928,7 @@ mod tests {
         use domain_types::{
             connector_types::PaymentCreateOrderData,
             payment_address::PaymentAddress,
-            router_data::{ConnectorSpecificAuth, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -1940,7 +1962,7 @@ mod tests {
                     None,
                 ),
                 auth_type: AuthenticationType::NoThreeDs,
-                connector_meta_data: None,
+                connector_feature_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
                 minor_amount_capturable: None,
@@ -1970,10 +1992,12 @@ mod tests {
                 connector_response: None,
                 recurring_mandate_payment_data: None,
                 order_details: None,
+                l2_l3_data: None,
             },
-            connector_auth_type: ConnectorSpecificAuth::Razorpay {
+            connector_config: ConnectorSpecificConfig::Razorpay {
                 api_key: "dummy_api_key".to_string().into(),
                 api_secret: Some("dummy_key1".to_string().into()),
+                base_url: None,
             },
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),

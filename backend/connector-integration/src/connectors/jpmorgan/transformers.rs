@@ -8,8 +8,8 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -26,18 +26,31 @@ type Error = error_stack::Report<errors::ConnectorError>;
 pub struct JpmorganAuthType {
     pub client_id: Secret<String>,
     pub client_secret: Secret<String>,
+    pub company_name: Option<Secret<String>>,
+    pub product_name: Option<Secret<String>>,
+    pub merchant_purchase_description: Option<Secret<String>>,
+    pub statement_descriptor: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for JpmorganAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for JpmorganAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Jpmorgan {
+            ConnectorSpecificConfig::Jpmorgan {
                 client_id,
                 client_secret,
+                company_name,
+                product_name,
+                merchant_purchase_description,
+                statement_descriptor,
+                ..
             } => Ok(Self {
                 client_id: client_id.clone(),
                 client_secret: client_secret.clone(),
+                company_name: company_name.clone(),
+                product_name: product_name.clone(),
+                merchant_purchase_description: merchant_purchase_description.clone(),
+                statement_descriptor: statement_descriptor.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -49,6 +62,8 @@ impl TryFrom<&ConnectorSpecificAuth> for JpmorganAuthType {
 pub struct JpmorganConnectorMetadataObject {
     pub company_name: Secret<String>,
     pub product_name: Secret<String>,
+    pub merchant_purchase_description: Secret<String>,
+    pub statement_descriptor: Secret<String>,
 }
 
 impl TryFrom<&Option<SecretSerdeValue>> for JpmorganConnectorMetadataObject {
@@ -127,6 +142,33 @@ fn map_capture_method(
     }
 }
 
+/// Extract first name and last name from account holder name or billing info
+fn extract_account_holder_names<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
+    _bank_account_holder_name: &Option<Secret<String>>,
+) -> Result<(Secret<String>, Secret<String>), error_stack::Report<errors::ConnectorError>> {
+    // Use billing address first_name and last_name directly (like Forte connector)
+    let first_name = router_data
+        .resource_common_data
+        .get_billing_first_name()
+        .ok()
+        .unwrap_or_else(|| Secret::new("".to_string()));
+
+    let last_name = router_data
+        .resource_common_data
+        .get_optional_billing_last_name()
+        .unwrap_or_else(|| first_name.clone());
+
+    Ok((first_name, last_name))
+}
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
@@ -167,16 +209,31 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Card(card_data) => {
                 let capture_method = map_capture_method(router_data.request.capture_method)?;
 
-                let connector_metadata = JpmorganConnectorMetadataObject::try_from(
-                    &router_data.request.merchant_account_metadata.clone(),
-                )?;
+                let auth = JpmorganAuthType::try_from(&router_data.connector_config)?;
 
-                let merchant = requests::JpmorganMerchant {
-                    merchant_software: requests::JpmorganMerchantSoftware {
-                        company_name: connector_metadata.company_name,
-                        product_name: connector_metadata.product_name,
-                    },
-                };
+                let merchant =
+                    requests::JpmorganMerchant {
+                        merchant_software: requests::JpmorganMerchantSoftware {
+                            company_name: auth.company_name.clone().ok_or(
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "company_name",
+                                },
+                            )?,
+                            product_name: auth.product_name.clone().ok_or(
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "product_name",
+                                },
+                            )?,
+                        },
+                        soft_merchant: requests::JpmorganSoftMerchant {
+                            merchant_purchase_description: auth
+                                .merchant_purchase_description
+                                .clone()
+                                .ok_or(errors::ConnectorError::MissingRequiredField {
+                                    field_name: "merchant_purchase_description",
+                                })?,
+                        },
+                    };
 
                 let expiry = requests::Expiry {
                     month: Secret::new(
@@ -200,11 +257,106 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     expiry,
                 };
 
-                let payment_method_type = requests::JpmorganPaymentMethodType { card };
+                let payment_method_type = requests::JpmorganPaymentMethodType {
+                    card: Some(card),
+                    ach: None,
+                };
 
                 let amount = JpmorganAmountConvertor::convert(
                     router_data.request.minor_amount,
                     router_data.request.currency,
+                )?;
+
+                // Card payments don't use account_holder or statement_descriptor
+                // Using placeholder values to satisfy mandatory fields
+                let account_holder = requests::JpmorganAccountHolder {
+                    first_name: Secret::new("NA".to_string()),
+                    last_name: Secret::new("NA".to_string()),
+                };
+                let statement_descriptor = Secret::new("Statement Descriptor".to_string());
+
+                Ok(Self {
+                    capture_method,
+                    currency: router_data.request.currency,
+                    amount,
+                    merchant,
+                    payment_method_type,
+                    account_holder,
+                    statement_descriptor,
+                })
+            }
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_account_holder_name,
+                bank_type,
+                ..
+            }) => {
+                let capture_method = map_capture_method(router_data.request.capture_method)?;
+
+                let auth = JpmorganAuthType::try_from(&router_data.connector_config)?;
+
+                let merchant =
+                    requests::JpmorganMerchant {
+                        merchant_software: requests::JpmorganMerchantSoftware {
+                            company_name: auth.company_name.clone().ok_or(
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "company_name",
+                                },
+                            )?,
+                            product_name: auth.product_name.clone().ok_or(
+                                errors::ConnectorError::MissingRequiredField {
+                                    field_name: "product_name",
+                                },
+                            )?,
+                        },
+                        soft_merchant: requests::JpmorganSoftMerchant {
+                            merchant_purchase_description: auth
+                                .merchant_purchase_description
+                                .clone()
+                                .ok_or(errors::ConnectorError::MissingRequiredField {
+                                    field_name: "merchant_purchase_description",
+                                })?,
+                        },
+                    };
+
+                // Extract first name and last name from account holder name or billing info
+                let (first_name, last_name) =
+                    extract_account_holder_names(router_data, bank_account_holder_name)?;
+
+                let account_holder = requests::JpmorganAccountHolder {
+                    first_name,
+                    last_name,
+                };
+
+                // Determine account type based on bank_type field, default to Checking
+                let account_type = if let Some(common_enums::BankType::Savings) = bank_type {
+                    requests::JpmorganAchAccountType::Savings
+                } else {
+                    requests::JpmorganAchAccountType::Checking
+                };
+
+                let ach = requests::JpmorganAch {
+                    account_number: account_number.clone(),
+                    financial_institution_routing_number: routing_number.clone(),
+                    account_type,
+                };
+
+                let payment_method_type = requests::JpmorganPaymentMethodType {
+                    card: None,
+                    ach: Some(ach),
+                };
+
+                let amount = JpmorganAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
+
+                // Get statement_descriptor from connector config
+                let statement_descriptor = auth.statement_descriptor.clone().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "statement_descriptor",
+                    },
                 )?;
 
                 Ok(Self {
@@ -213,8 +365,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     amount,
                     merchant,
                     payment_method_type,
+                    account_holder,
+                    statement_descriptor,
                 })
             }
+            PaymentMethodData::BankDebit(_) => Err(errors::ConnectorError::NotImplemented(
+                "Only ACH Bank Debit is supported".to_string(),
+            )
+            .into()),
             _ => Err(errors::ConnectorError::NotImplemented(
                 "Payment method not supported".to_string(),
             )
@@ -288,14 +446,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_metadata = JpmorganConnectorMetadataObject::try_from(
-            &item.router_data.request.merchant_account_metadata.clone(),
-        )?;
+        let auth = JpmorganAuthType::try_from(&item.router_data.connector_config)?;
 
         let merchant = requests::JpmorganMerchantRefund {
             merchant_software: requests::JpmorganMerchantSoftware {
-                company_name: connector_metadata.company_name,
-                product_name: connector_metadata.product_name,
+                company_name: auth.company_name.ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "company_name",
+                    },
+                )?,
+                product_name: auth.product_name.ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "product_name",
+                    },
+                )?,
             },
         };
 

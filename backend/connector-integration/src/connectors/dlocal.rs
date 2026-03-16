@@ -259,7 +259,7 @@ macros::create_all_prerequisites!(
         {
             let date = date_time::date_as_yyyymmddthhmmssmmmz()
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-            let auth = dlocal::DlocalAuthType::try_from(&req.connector_auth_type)?;
+            let auth = dlocal::DlocalAuthType::try_from(&req.connector_config)?;
 
             let sign_req: String = match self.get_request_body(req)? {
                 Some(dlocal_req) => format!(

@@ -18,7 +18,7 @@ use domain_types::{
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{
-        ConnectorSpecificAuth, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
+        ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
     },
     router_data_v2::RouterDataV2,
 };
@@ -173,7 +173,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(ccard) => {
-                let connector_auth = &item.router_data.connector_auth_type;
+                let connector_auth = &item.router_data.connector_config;
                 let auth_type = BillwerkAuthType::try_from(connector_auth)?;
                 Ok(Self {
                     number: ccard.card_number.clone(),
@@ -380,13 +380,14 @@ impl From<BillwerkPaymentState> for common_enums::AttemptStatus {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for BillwerkAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for BillwerkAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Billwerk {
+            ConnectorSpecificConfig::Billwerk {
                 api_key,
                 public_api_key,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 public_api_key: public_api_key.to_owned(),

@@ -13,9 +13,11 @@ use domain_types::{
         ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
+    payment_method_data::{
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
         ErrorResponse,
     },
     router_data_v2::RouterDataV2,
@@ -77,6 +79,48 @@ pub struct WalletSource {
     pub billing_address: Option<CheckoutAddress>,
 }
 
+/// Constants for ACH payment type
+const ACH_PAYMENT_TYPE: &str = "ach";
+const ACH_COUNTRY_US: &str = "US";
+
+/// Checkout.com ACH account holder type (mapped from common_enums::BankHolderType)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CheckoutAchHolderType {
+    Individual,
+    Corporate,
+}
+
+impl From<common_enums::BankHolderType> for CheckoutAchHolderType {
+    fn from(holder_type: common_enums::BankHolderType) -> Self {
+        match holder_type {
+            common_enums::BankHolderType::Business => Self::Corporate,
+            common_enums::BankHolderType::Personal => Self::Individual,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct AchBankDebitSource {
+    #[serde(rename = "type")]
+    pub source_type: String,
+    #[serde(rename = "account_type")]
+    pub account_type: common_enums::BankType,
+    pub country: String,
+    pub account_number: Secret<String>,
+    #[serde(rename = "bank_code")]
+    pub routing_number: Secret<String>,
+    pub account_holder: Option<AchAccountHolder>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AchAccountHolder {
+    #[serde(rename = "type")]
+    pub holder_type: CheckoutAchHolderType,
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+}
+
 #[derive(Debug, Serialize)]
 pub struct MandateSource {
     #[serde(rename = "type")]
@@ -109,6 +153,7 @@ pub enum PaymentSource<
     ApplePayPredecrypt(Box<ApplePayPredecrypt>),
     MandatePayment(MandateSource),
     GooglePayPredecrypt(Box<GooglePayPredecrypt>),
+    AchBankDebit(AchBankDebitSource),
 }
 
 #[derive(Debug, Serialize)]
@@ -246,6 +291,11 @@ pub struct PaymentsRequest<
     pub previous_payment_id: Option<String>,
     pub store_for_future_use: Option<bool>,
     pub billing_descriptor: Option<CheckoutBillingDescriptor>,
+    // Level 2/3 data fields
+    pub customer: Option<CheckoutCustomer>,
+    pub processing: Option<CheckoutProcessing>,
+    pub shipping: Option<CheckoutShipping>,
+    pub items: Option<Vec<CheckoutLineItem>>,
     pub partial_authorization: Option<CheckoutPartialAuthorization>,
     pub payment_ip: Option<Secret<String, common_utils::pii::IpAddress>>,
 }
@@ -287,13 +337,14 @@ pub struct CheckoutThreeDS {
     challenge_indicator: CheckoutChallengeIndicator,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for CheckoutAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for CheckoutAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Checkout {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Checkout {
             api_key,
             api_secret,
             processing_channel_id,
+            ..
         } = auth_type
         {
             Ok(Self {
@@ -530,6 +581,61 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     utils::get_unimplemented_payment_method_error_message("checkout"),
                 )),
             },
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_account_holder_name,
+                card_holder_name,
+                bank_holder_type,
+                bank_type,
+                ..
+            }) => {
+                // Get account holder name from bank_account_holder_name, card_holder_name, or billing details
+                let holder_name = bank_account_holder_name.or(card_holder_name).or_else(|| {
+                    item.router_data
+                        .resource_common_data
+                        .get_billing_full_name()
+                        .ok()
+                });
+
+                // Map bank_holder_type to Checkout's expected format
+                let holder_type: CheckoutAchHolderType = bank_holder_type
+                    .map(Into::into)
+                    .unwrap_or(CheckoutAchHolderType::Individual);
+
+                // Only include account_holder when a name is available to avoid
+                // sending null first_name/last_name which causes ACH validation errors
+                let account_holder = match holder_name {
+                    Some(name) => {
+                        let (first_name, last_name) = split_account_holder_name(Some(name));
+                        Some(AchAccountHolder {
+                            holder_type,
+                            first_name,
+                            last_name,
+                        })
+                    }
+                    None => None,
+                };
+
+                // Use bank_type from input or default to Savings
+                let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
+
+                let payment_source = PaymentSource::AchBankDebit(AchBankDebitSource {
+                    source_type: ACH_PAYMENT_TYPE.to_string(),
+                    account_type,
+                    country: ACH_COUNTRY_US.to_string(),
+                    account_number: account_number.clone(),
+                    routing_number: routing_number.clone(),
+                    account_holder,
+                });
+                // For ACH bank debit, we typically want to store for future use if it's a mandate payment
+                let store_for_future = if item.router_data.request.is_mandate_payment() {
+                    Some(true)
+                } else {
+                    store_for_future_use
+                };
+                Ok((payment_source, None, Some(false), store_for_future))
+            }
             _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
@@ -578,10 +684,64 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|return_url| format!("{return_url}?status=failure")),
         };
 
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
         let metadata = build_metadata(&item);
+
+        let (customer, processing, shipping, items) = if let Some(l2l3_data) =
+            &item.router_data.resource_common_data.l2_l3_data
+        {
+            (
+                l2l3_data.customer_info.as_ref().map(|_| CheckoutCustomer {
+                    name: l2l3_data.get_customer_name(),
+                    email: l2l3_data.get_customer_email(),
+                    phone: Some(CheckoutPhoneDetails {
+                        country_code: l2l3_data.get_customer_phone_country_code(),
+                        number: l2l3_data.get_customer_phone_number(),
+                    }),
+                    tax_number: l2l3_data.get_customer_tax_registration_id(),
+                }),
+                l2l3_data.order_info.as_ref().map(|_| CheckoutProcessing {
+                    order_id: l2l3_data.get_merchant_order_reference_id(),
+                    tax_amount: l2l3_data.get_order_tax_amount(),
+                    discount_amount: l2l3_data.get_discount_amount(),
+                    duty_amount: l2l3_data.get_duty_amount(),
+                    shipping_amount: l2l3_data.get_shipping_cost(),
+                    shipping_tax_amount: l2l3_data.get_shipping_amount_tax(),
+                }),
+                Some(CheckoutShipping {
+                    address: Some(CheckoutAddress {
+                        country: l2l3_data.get_shipping_country(),
+                        address_line1: l2l3_data.get_shipping_address_line1(),
+                        address_line2: l2l3_data.get_shipping_address_line2(),
+                        city: l2l3_data.get_shipping_city(),
+                        state: l2l3_data.get_shipping_state(),
+                        zip: l2l3_data.get_shipping_zip(),
+                    }),
+                    from_address_zip: l2l3_data.get_shipping_origin_zip().map(|zip| zip.expose()),
+                }),
+                l2l3_data.get_order_details().map(|details| {
+                    details
+                        .iter()
+                        .map(|item| CheckoutLineItem {
+                            commodity_code: item.commodity_code.clone(),
+                            discount_amount: item.unit_discount_amount,
+                            name: Some(item.product_name.clone()),
+                            quantity: Some(item.quantity),
+                            reference: item.product_id.clone(),
+                            tax_exempt: None,
+                            tax_amount: item.total_tax_amount,
+                            total_amount: item.total_amount,
+                            unit_of_measure: item.unit_of_measure.clone(),
+                            unit_price: Some(item.amount),
+                        })
+                        .collect::<Vec<_>>()
+                }),
+            )
+        } else {
+            (None, None, None, None)
+        };
 
         let partial_authorization = item.router_data.request.enable_partial_authorization.map(
             |enable_partial_authorization| CheckoutPartialAuthorization {
@@ -621,6 +781,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             previous_payment_id,
             store_for_future_use,
             partial_authorization,
+            customer,
+            processing,
+            shipping,
+            items,
             payment_ip,
             billing_descriptor,
         };
@@ -785,11 +949,65 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|return_url| format!("{return_url}?status=failure")),
         };
 
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
 
         let metadata = item.router_data.request.metadata.clone();
+
+        let (customer, processing, shipping, items) = if let Some(l2l3_data) =
+            &item.router_data.resource_common_data.l2_l3_data
+        {
+            (
+                l2l3_data.customer_info.as_ref().map(|_| CheckoutCustomer {
+                    name: l2l3_data.get_customer_name(),
+                    email: l2l3_data.get_customer_email(),
+                    phone: Some(CheckoutPhoneDetails {
+                        country_code: l2l3_data.get_customer_phone_country_code(),
+                        number: l2l3_data.get_customer_phone_number(),
+                    }),
+                    tax_number: l2l3_data.get_customer_tax_registration_id(),
+                }),
+                l2l3_data.order_info.as_ref().map(|_| CheckoutProcessing {
+                    order_id: l2l3_data.get_merchant_order_reference_id(),
+                    tax_amount: l2l3_data.get_order_tax_amount(),
+                    discount_amount: l2l3_data.get_discount_amount(),
+                    duty_amount: l2l3_data.get_duty_amount(),
+                    shipping_amount: l2l3_data.get_shipping_cost(),
+                    shipping_tax_amount: l2l3_data.get_shipping_amount_tax(),
+                }),
+                Some(CheckoutShipping {
+                    address: Some(CheckoutAddress {
+                        country: l2l3_data.get_shipping_country(),
+                        address_line1: l2l3_data.get_shipping_address_line1(),
+                        address_line2: l2l3_data.get_shipping_address_line2(),
+                        city: l2l3_data.get_shipping_city(),
+                        state: l2l3_data.get_shipping_state(),
+                        zip: l2l3_data.get_shipping_zip(),
+                    }),
+                    from_address_zip: l2l3_data.get_shipping_origin_zip().map(|zip| zip.expose()),
+                }),
+                l2l3_data.get_order_details().map(|details| {
+                    details
+                        .iter()
+                        .map(|item| CheckoutLineItem {
+                            commodity_code: item.commodity_code.clone(),
+                            discount_amount: item.unit_discount_amount,
+                            name: Some(item.product_name.clone()),
+                            quantity: Some(item.quantity),
+                            reference: item.product_id.clone(),
+                            tax_exempt: None,
+                            tax_amount: item.total_tax_amount,
+                            total_amount: item.total_amount,
+                            unit_of_measure: item.unit_of_measure.clone(),
+                            unit_price: Some(item.amount),
+                        })
+                        .collect::<Vec<_>>()
+                }),
+            )
+        } else {
+            (None, None, None, None)
+        };
 
         let partial_authorization = item.router_data.request.enable_partial_authorization.map(
             |enable_partial_authorization| CheckoutPartialAuthorization {
@@ -829,6 +1047,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             previous_payment_id,
             store_for_future_use,
             partial_authorization,
+            customer,
+            processing,
+            shipping,
+            items,
             payment_ip,
             billing_descriptor,
         };
@@ -925,6 +1147,55 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 });
                 Ok((payment_source, None, Some(false), payment_type, Some(true)))
             }
+            PaymentMethodData::BankDebit(BankDebitData::AchBankDebit {
+                account_number,
+                routing_number,
+                bank_account_holder_name,
+                card_holder_name,
+                bank_holder_type,
+                bank_type,
+                ..
+            }) => {
+                // Get account holder name from bank_account_holder_name, card_holder_name, or billing details
+                let holder_name = bank_account_holder_name.or(card_holder_name).or_else(|| {
+                    item.router_data
+                        .resource_common_data
+                        .get_billing_full_name()
+                        .ok()
+                });
+
+                // Map bank_holder_type to Checkout's expected format
+                let holder_type: CheckoutAchHolderType = bank_holder_type
+                    .map(Into::into)
+                    .unwrap_or(CheckoutAchHolderType::Individual);
+
+                // Only include account_holder when a name is available to avoid
+                // sending null first_name/last_name which causes ACH validation errors
+                let account_holder = match holder_name {
+                    Some(name) => {
+                        let (first_name, last_name) = split_account_holder_name(Some(name));
+                        Some(AchAccountHolder {
+                            holder_type,
+                            first_name,
+                            last_name,
+                        })
+                    }
+                    None => None,
+                };
+
+                // Use bank_type from input or default to Savings
+                let account_type = bank_type.unwrap_or(common_enums::BankType::Savings);
+
+                let payment_source = PaymentSource::AchBankDebit(AchBankDebitSource {
+                    source_type: ACH_PAYMENT_TYPE.to_string(),
+                    account_type,
+                    country: ACH_COUNTRY_US.to_string(),
+                    account_number: account_number.clone(),
+                    routing_number: routing_number.clone(),
+                    account_holder,
+                });
+                Ok((payment_source, None, Some(false), payment_type, Some(true)))
+            }
             _ => Err(ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("checkout"),
             )),
@@ -966,9 +1237,63 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|return_url| format!("{return_url}?status=failure")),
         };
 
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
+
+        let (customer, processing, shipping, items) = if let Some(l2l3_data) =
+            &item.router_data.resource_common_data.l2_l3_data
+        {
+            (
+                l2l3_data.customer_info.as_ref().map(|_| CheckoutCustomer {
+                    name: l2l3_data.get_customer_name(),
+                    email: l2l3_data.get_customer_email(),
+                    phone: Some(CheckoutPhoneDetails {
+                        country_code: l2l3_data.get_customer_phone_country_code(),
+                        number: l2l3_data.get_customer_phone_number(),
+                    }),
+                    tax_number: l2l3_data.get_customer_tax_registration_id(),
+                }),
+                l2l3_data.order_info.as_ref().map(|_| CheckoutProcessing {
+                    order_id: l2l3_data.get_merchant_order_reference_id(),
+                    tax_amount: l2l3_data.get_order_tax_amount(),
+                    discount_amount: l2l3_data.get_discount_amount(),
+                    duty_amount: l2l3_data.get_duty_amount(),
+                    shipping_amount: l2l3_data.get_shipping_cost(),
+                    shipping_tax_amount: l2l3_data.get_shipping_amount_tax(),
+                }),
+                Some(CheckoutShipping {
+                    address: Some(CheckoutAddress {
+                        country: l2l3_data.get_shipping_country(),
+                        address_line1: l2l3_data.get_shipping_address_line1(),
+                        address_line2: l2l3_data.get_shipping_address_line2(),
+                        city: l2l3_data.get_shipping_city(),
+                        state: l2l3_data.get_shipping_state(),
+                        zip: l2l3_data.get_shipping_zip(),
+                    }),
+                    from_address_zip: l2l3_data.get_shipping_origin_zip().map(|zip| zip.expose()),
+                }),
+                l2l3_data.get_order_details().map(|details| {
+                    details
+                        .iter()
+                        .map(|item| CheckoutLineItem {
+                            commodity_code: item.commodity_code.clone(),
+                            discount_amount: item.unit_discount_amount,
+                            name: Some(item.product_name.clone()),
+                            quantity: Some(item.quantity),
+                            reference: item.product_id.clone(),
+                            tax_exempt: None,
+                            tax_amount: item.total_tax_amount,
+                            total_amount: item.total_amount,
+                            unit_of_measure: item.unit_of_measure.clone(),
+                            unit_price: Some(item.amount),
+                        })
+                        .collect::<Vec<_>>()
+                }),
+            )
+        } else {
+            (None, None, None, None)
+        };
 
         let partial_authorization = item.router_data.request.enable_partial_authorization.map(
             |enable_partial_authorization| CheckoutPartialAuthorization {
@@ -1008,6 +1333,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             previous_payment_id,
             store_for_future_use,
             partial_authorization,
+            customer,
+            processing,
+            shipping,
+            items,
             payment_ip,
             billing_descriptor,
         };
@@ -1729,7 +2058,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
         let capture_type = if item.router_data.request.is_multiple_capture() {

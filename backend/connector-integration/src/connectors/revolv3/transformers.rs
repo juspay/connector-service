@@ -14,7 +14,7 @@ use domain_types::{
         Card, CardDetailsForNetworkTransactionId, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -27,12 +27,12 @@ pub struct Revolv3AuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for Revolv3AuthType {
+impl TryFrom<&ConnectorSpecificConfig> for Revolv3AuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Revolv3 { api_key } => Ok(Self {
+            ConnectorSpecificConfig::Revolv3 { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
@@ -333,11 +333,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         if item.router_data.request.is_auto_capture()? {
             let invoice = Revolv3InvoiceData {
-                merchant_invoice_ref_id: item
-                    .router_data
-                    .request
-                    .merchant_order_reference_id
-                    .clone(),
+                merchant_invoice_ref_id: item.router_data.request.merchant_order_id.clone(),
                 amount,
                 order_processing_channel,
             };
@@ -864,7 +860,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let invoice = Revolv3InvoiceData {
-            merchant_invoice_ref_id: item.router_data.request.merchant_order_reference_id.clone(),
+            merchant_invoice_ref_id: item.router_data.request.merchant_order_id.clone(),
             amount: Revolv3AmountData {
                 value: item
                     .connector
@@ -1104,11 +1100,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 payment_method,
                 network_processing,
                 invoice: Revolv3InvoiceData {
-                    merchant_invoice_ref_id: item
-                        .router_data
-                        .request
-                        .merchant_order_reference_id
-                        .clone(),
+                    merchant_invoice_ref_id: item.router_data.request.merchant_order_id.clone(),
                     amount,
                     order_processing_channel: None,
                 },

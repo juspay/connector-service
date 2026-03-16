@@ -7,8 +7,10 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorSpecificAuth,
+    payment_method_data::{
+        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -26,15 +28,16 @@ pub struct NuveiAuthType {
     pub(super) merchant_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for NuveiAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for NuveiAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nuvei {
+            ConnectorSpecificConfig::Nuvei {
                 merchant_id,
                 merchant_site_id,
                 merchant_secret,
+                ..
             } => Ok(Self {
                 merchant_id: merchant_id.clone(),
                 merchant_site_id: merchant_site_id.clone(),
@@ -130,7 +133,10 @@ pub struct NuveiPaymentRequest<
 pub struct NuveiPaymentOption<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
-    pub card: NuveiCard<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card: Option<NuveiCard<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alternative_payment_method: Option<NuveiAlternativePaymentMethod>,
 }
 
 #[derive(Debug, Serialize)]
@@ -144,6 +150,19 @@ pub struct NuveiCard<
     pub expiration_year: Secret<String>,
     #[serde(rename = "CVV")]
     pub cvv: Secret<String>,
+}
+
+// ACH Bank Transfer specific structures
+#[derive(Debug, Serialize)]
+pub struct NuveiAlternativePaymentMethod {
+    #[serde(rename = "paymentMethod")]
+    pub payment_method: String,
+    #[serde(rename = "AccountNumber")]
+    pub account_number: Secret<String>,
+    #[serde(rename = "RoutingNumber")]
+    pub routing_number: Secret<String>,
+    #[serde(rename = "SECCode", skip_serializing_if = "Option::is_none")]
+    pub sec_code: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -433,7 +452,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data
@@ -549,7 +568,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
 
@@ -616,7 +635,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         // Extract payment method data
         let payment_option = match &router_data.request.payment_method_data {
@@ -630,13 +649,69 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })?;
 
                 NuveiPaymentOption {
-                    card: NuveiCard {
+                    card: Some(NuveiCard {
                         card_number: card_data.card_number.clone(),
                         card_holder_name,
                         expiration_month: card_data.card_exp_month.clone(),
                         expiration_year: card_data.card_exp_year.clone(),
                         cvv: card_data.card_cvc.clone(),
-                    },
+                    }),
+                    alternative_payment_method: None,
+                }
+            }
+            PaymentMethodData::BankTransfer(bank_transfer_data) => {
+                match bank_transfer_data.as_ref() {
+                    BankTransferData::AchBankTransfer {} => {
+                        // For ACH Bank Transfer, Nuvei requires account_number and routing_number
+                        // These should be provided in the request metadata as ACH details
+                        let metadata = router_data.request.metadata.as_ref().ok_or(
+                            errors::ConnectorError::MissingRequiredField {
+                                field_name: "metadata for ACH details",
+                            },
+                        )?;
+
+                        let ach_data = metadata.peek().get("ach").ok_or(
+                            errors::ConnectorError::MissingRequiredField {
+                                field_name: "ach in metadata",
+                            },
+                        )?;
+
+                        let account_number = ach_data
+                            .get("account_number")
+                            .and_then(|v: &serde_json::Value| v.as_str())
+                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                                field_name: "account_number",
+                            })?;
+
+                        let routing_number = ach_data
+                            .get("routing_number")
+                            .and_then(|v: &serde_json::Value| v.as_str())
+                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                                field_name: "routing_number",
+                            })?;
+
+                        let sec_code = ach_data
+                            .get("sec_code")
+                            .and_then(|v: &serde_json::Value| v.as_str())
+                            .map(String::from);
+
+                        NuveiPaymentOption {
+                            card: None,
+                            alternative_payment_method: Some(NuveiAlternativePaymentMethod {
+                                payment_method: "apmgw_ACH".to_string(),
+                                account_number: Secret::new(account_number.to_string()),
+                                routing_number: Secret::new(routing_number.to_string()),
+                                sec_code,
+                            }),
+                        }
+                    }
+                    other => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!("{:?} is not supported for Nuvei", other),
+                            connector: "nuvei",
+                        }
+                        .into())
+                    }
                 }
             }
             _ => {
@@ -915,7 +990,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data
@@ -1176,7 +1251,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data
@@ -1249,7 +1324,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
 
@@ -1462,7 +1537,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract auth data
-        let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = NuveiAuthType::try_from(&router_data.connector_config)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
         let client_request_id = router_data

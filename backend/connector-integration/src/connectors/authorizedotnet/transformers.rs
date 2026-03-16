@@ -12,10 +12,10 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{
-        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
@@ -131,8 +131,8 @@ fn get_random_string() -> String {
 }
 
 /// Returns invoice number if length <= MAX_ID_LENGTH, otherwise random string
-fn get_invoice_number_or_random(merchant_order_reference_id: Option<String>) -> String {
-    match merchant_order_reference_id {
+fn get_invoice_number_or_random(merchant_order_id: Option<String>) -> String {
+    match merchant_order_id {
         Some(num) if num.len() <= MAX_ID_LENGTH => num,
         None | Some(_) => get_random_string(),
     }
@@ -251,13 +251,14 @@ pub struct MerchantAuthentication {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for MerchantAuthentication {
+impl TryFrom<&ConnectorSpecificConfig> for MerchantAuthentication {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Authorizedotnet {
+            ConnectorSpecificConfig::Authorizedotnet {
                 name,
                 transaction_key,
+                ..
             } => Ok(Self {
                 name: name.clone(),
                 transaction_key: transaction_key.clone(),
@@ -322,10 +323,29 @@ pub struct CreditCardDetails<T: PaymentMethodDataTypes> {
     card_code: Option<Secret<String>>,
 }
 
+#[skip_serializing_none]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BankAccountDetails {
+    account_type: AccountType,
+    routing_number: Secret<String>,
+    account_number: Secret<String>,
+    name_on_account: Secret<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum PaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
+    BankAccount(BankAccountDetails),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum AccountType {
+    Checking,
+    Savings,
+    BusinessChecking,
 }
 
 #[skip_serializing_none]
@@ -525,7 +545,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
@@ -563,27 +583,84 @@ fn create_regular_transaction_request<
     >,
     currency: api_enums::Currency,
 ) -> Result<AuthorizedotnetTransactionRequest<T>, Error> {
-    let card_data = match &item.router_data.request.payment_method_data {
-        PaymentMethodData::Card(card) => Ok(card),
-        _ => Err(ConnectorError::RequestEncodingFailed),
+    let payment_details = match &item.router_data.request.payment_method_data {
+        PaymentMethodData::Card(card) => {
+            let expiry_month = card.card_exp_month.peek().clone();
+            let year = card.card_exp_year.peek().clone();
+            let expiry_year = if year.len() == 2 {
+                format!("20{year}")
+            } else {
+                year
+            };
+            let expiration_date = format!("{expiry_year}-{expiry_month}");
+
+            let credit_card_details = CreditCardDetails {
+                card_number: card.card_number.clone(),
+                expiration_date: Secret::new(expiration_date),
+                card_code: Some(card.card_cvc.clone()),
+            };
+
+            Ok(PaymentDetails::CreditCard(credit_card_details))
+        }
+        PaymentMethodData::BankDebit(bank_debit_data) => {
+            match bank_debit_data {
+                BankDebitData::AchBankDebit {
+                    account_number,
+                    routing_number,
+                    bank_account_holder_name,
+                    card_holder_name,
+                    bank_type,
+                    bank_holder_type,
+                    ..
+                } => {
+                    // Get account holder name from bank_account_holder_name, card_holder_name,
+                    // or billing address
+                    let name_on_account = bank_account_holder_name
+                        .clone()
+                        .or_else(|| card_holder_name.clone())
+                        .or_else(|| {
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                        })
+                        .ok_or_else(|| {
+                            error_stack::report!(ConnectorError::MissingRequiredField {
+                                field_name: "bank_account_holder_name",
+                            })
+                        })?;
+
+                    // Map bank_type and bank_holder_type to AccountType
+                    // Business accounts with checking should use BusinessChecking
+                    let account_type = match (bank_type, bank_holder_type) {
+                        (Some(common_enums::BankType::Savings), _) => AccountType::Savings,
+                        (_, Some(common_enums::BankHolderType::Business)) => {
+                            AccountType::BusinessChecking
+                        }
+                        _ => AccountType::Checking,
+                    };
+
+                    let bank_account_details = BankAccountDetails {
+                        account_type,
+                        routing_number: routing_number.clone(),
+                        account_number: account_number.clone(),
+                        name_on_account,
+                    };
+
+                    Ok(PaymentDetails::BankAccount(bank_account_details))
+                }
+                BankDebitData::SepaBankDebit { .. }
+                | BankDebitData::SepaGuaranteedBankDebit { .. }
+                | BankDebitData::BecsBankDebit { .. }
+                | BankDebitData::BacsBankDebit { .. } => {
+                    Err(error_stack::report!(ConnectorError::NotImplemented(
+                        "SEPA, SEPA Guaranteed, BECS, and BACS bank debits are not supported for authorizedotnet"
+                            .to_string(),
+                    )))
+                }
+            }
+        }
+        _ => Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),
     }?;
-
-    let expiry_month = card_data.card_exp_month.peek().clone();
-    let year = card_data.card_exp_year.peek().clone();
-    let expiry_year = if year.len() == 2 {
-        format!("20{year}")
-    } else {
-        year
-    };
-    let expiration_date = format!("{expiry_year}-{expiry_month}");
-
-    let credit_card_details = CreditCardDetails {
-        card_number: card_data.card_number.clone(),
-        expiration_date: Secret::new(expiration_date),
-        card_code: Some(card_data.card_cvc.clone()),
-    };
-
-    let payment_details = PaymentDetails::CreditCard(credit_card_details);
 
     let transaction_type = match item.router_data.request.capture_method {
         Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
@@ -608,7 +685,7 @@ fn create_regular_transaction_request<
 
     // Get invoice number (random string if > MAX_ID_LENGTH or None)
     let invoice_number =
-        get_invoice_number_or_random(item.router_data.request.merchant_order_reference_id.clone());
+        get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
     let order = Order {
         invoice_number,
@@ -772,7 +849,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
@@ -847,9 +924,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Get invoice number (random string if > MAX_ID_LENGTH or None)
-        let invoice_number = get_invoice_number_or_random(
-            item.router_data.request.merchant_order_reference_id.clone(),
-        );
+        let invoice_number =
+            get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
         let order = Order {
             invoice_number,
@@ -1017,7 +1093,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let create_transaction_request_payload = CreateCaptureTransactionRequest {
             merchant_authentication,
@@ -1064,13 +1140,14 @@ pub struct AuthorizedotnetAuthType {
     transaction_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for AuthorizedotnetAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for AuthorizedotnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Authorizedotnet {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Authorizedotnet {
             name,
             transaction_key,
+            ..
         } = auth_type
         {
             Ok(Self {
@@ -1138,7 +1215,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&router_data.connector_config)?;
 
         let create_transaction_void_request = CreateTransactionVoidRequest {
             merchant_authentication,
@@ -1201,7 +1278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
+            MerchantAuthentication::try_from(&item.router_data.connector_config)?;
 
         let payload = Self {
             get_transaction_details_request: TransactionDetails {
@@ -1242,7 +1319,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
+            MerchantAuthentication::try_from(&item.router_data.connector_config)?;
 
         let payload = Self {
             get_transaction_details_request: TransactionDetails {
@@ -1329,17 +1406,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         // Extract payment details from metadata using unified helper
         let connector_metadata_secret = item
             .router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .clone()
             .ok_or_else(|| {
                 error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                    field_name: "connector_metadata"
+                    field_name: "connector_feature_data"
                 })
             })?;
         let payment = get_refund_credit_card_payment(&Some(connector_metadata_secret))?;
@@ -2613,7 +2690,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let validation_mode = match item.router_data.resource_common_data.test_mode {
             Some(true) | None => ValidationMode::TestMode,
@@ -3056,7 +3133,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
         // Build ship_to_list from shipping address if available
         let ship_to_list = item

@@ -2,8 +2,9 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use grpc_server::{app, configs};
+use grpc_server::app;
 use hyperswitch_masking::{ExposeInterface, Secret};
+use ucs_env::configs;
 mod common;
 mod utils;
 
@@ -16,12 +17,12 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        payment_method, payment_service_client::PaymentServiceClient,
         refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
-        RefundServiceGetRequest, RefundStatus,
+        Currency, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
+        RefundStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -101,18 +102,15 @@ fn add_stripe_metadata<T>(request: &mut Request<T>) {
 
 // Helper function to extract connector transaction ID from response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
-    match &response.transaction_id {
-        Some(id) => match id.id_type.as_ref().unwrap() {
-            IdType::Id(id) => id.clone(),
-            _ => panic!("Expected connector transaction ID"),
-        },
+    match &response.connector_transaction_id {
+        Some(id) => id.clone(),
         None => panic!("Resource ID is None"),
     }
 }
 
 // Helper function to extract connector Refund ID from response
 fn extract_refund_id(response: &RefundResponse) -> &String {
-    &response.refund_id
+    &response.connector_refund_id
 }
 
 // Helper function to create a payment authorize request
@@ -131,9 +129,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         nick_name: None,
     };
     PaymentServiceAuthorizeRequest {
-        amount: TEST_AMOUNT,
-        minor_amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
@@ -143,16 +142,20 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         webhook_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
         ),
-        email: Some(TEST_EMAIL.to_string().into()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: None,
+            id: Some("cus_TE8065JzRWlLQf".to_string()),
+            connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
+            phone_number: None,
+            phone_country_code: None,
+        }),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("stripe_test"))),
-        }),
+        merchant_transaction_id: Some(generate_unique_id("stripe_test")),
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
-        connector_customer_id: Some("cus_TE8065JzRWlLQf".to_string()),
         // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
@@ -161,21 +164,17 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         encoded_data: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("stripe_sync"))),
-        }),
         capture_method: None,
         handle_response: None,
-        amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         state: None,
         metadata: None,
-        merchant_account_metadata: None,
-        connector_metadata: None,
+        connector_feature_data: None,
         setup_future_usage: None,
         sync_type: None,
         connector_order_reference_id: None,
@@ -187,13 +186,13 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
+        connector_transaction_id: transaction_id.to_string(),
+        amount_to_capture: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
         }),
-        amount_to_capture: TEST_AMOUNT,
-        currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        request_ref_id: None,
+        merchant_capture_id: None,
         ..Default::default()
     }
 }
@@ -201,17 +200,12 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 // Helper function to create a payment void request
 fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("stripe_void"))),
-        }),
+        merchant_void_id: Some(generate_unique_id("stripe_void")),
         all_keys_required: None,
         browser_info: None,
         amount: None,
-        currency: None,
         ..Default::default()
     }
 }
@@ -219,20 +213,17 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        refund_id: format!("refund_{}", generate_unique_id("test")),
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
-        currency: i32::from(Currency::Usd),
+        merchant_refund_id: Some(format!("refund_{}", generate_unique_id("test"))),
+        connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,
-        refund_amount: TEST_AMOUNT,
-        minor_payment_amount: TEST_AMOUNT,
-        minor_refund_amount: TEST_AMOUNT,
+        refund_amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Usd),
+        }),
         reason: None,
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
-        request_ref_id: None,
         webhook_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
         ),
@@ -243,12 +234,10 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
     RefundServiceGetRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        request_ref_id: None,
+        merchant_refund_id: None,
         ..Default::default()
     }
 }
@@ -432,7 +421,7 @@ async fn test_payment_void() {
 
         // Verify the void response
         assert!(
-            void_response.transaction_id.is_some(),
+            !void_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in void response"
         );
 

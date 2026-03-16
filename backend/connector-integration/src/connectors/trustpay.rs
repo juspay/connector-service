@@ -31,7 +31,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -116,10 +116,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Trustpay<T>
 {
-    fn should_do_access_token(&self, payment_method: common_enums::PaymentMethod) -> bool {
+    fn should_do_access_token(&self, payment_method: Option<common_enums::PaymentMethod>) -> bool {
         matches!(
             payment_method,
-            common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer
+            Some(
+                common_enums::PaymentMethod::BankRedirect
+                    | common_enums::PaymentMethod::BankTransfer
+            )
         )
     }
 }
@@ -188,7 +191,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, Report<errors::ConnectorError>> {
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
@@ -214,7 +217,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, Report<errors::ConnectorError>> {
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
@@ -231,7 +234,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, Report<errors::ConnectorError>> {
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
@@ -281,7 +284,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, Report<errors::ConnectorError>> {
         let webhook_response: trustpay::TrustpayWebhookResponse = request
             .body
@@ -317,7 +320,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         Report<errors::ConnectorError>,
@@ -509,7 +512,7 @@ macros::create_all_prerequisites!(
                     headers::CONTENT_TYPE.to_string(),
                     self.get_content_type().to_string().into(),
                 )];
-                let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+                let mut api_key = self.get_auth_header(&req.connector_config)?;
                 header.append(&mut api_key);
                 Ok(header)
             }
@@ -547,7 +550,7 @@ macros::create_all_prerequisites!(
                     headers::CONTENT_TYPE.to_string(),
                     self.get_content_type().to_string().into(),
                 )];
-                let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+                let mut api_key = self.get_auth_header(&req.connector_config)?;
                 header.append(&mut api_key);
                 Ok(header)
             }
@@ -584,7 +587,7 @@ macros::create_all_prerequisites!(
 
         pub fn get_auth_header(
             &self,
-            auth_type: &ConnectorSpecificAuth,
+            auth_type: &ConnectorSpecificConfig,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let auth = trustpay::TrustpayAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
@@ -813,7 +816,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = trustpay::TrustpayAuthType::try_from(&req.connector_auth_type)
+            let auth = trustpay::TrustpayAuthType::try_from(&req.connector_config)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             let auth_value = auth
                 .project_id

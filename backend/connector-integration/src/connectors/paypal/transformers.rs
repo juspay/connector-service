@@ -27,7 +27,7 @@ use domain_types::{
         PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
         WalletData,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::{RedirectForm, VerifyWebhookSourceResponseData, VerifyWebhookStatus},
@@ -890,7 +890,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let paypal_auth: PaypalAuthType =
-            PaypalAuthType::try_from(&item.router_data.connector_auth_type)?;
+            PaypalAuthType::try_from(&item.router_data.connector_config)?;
         let payee = get_payee(&paypal_auth);
 
         let amount = OrderRequestAmount::try_from(&item)?;
@@ -912,7 +912,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let purchase_units = vec![PurchaseUnitRequest {
             reference_id: Some(connector_request_reference_id.clone()),
-            custom_id: item.router_data.request.merchant_order_reference_id.clone(),
+            custom_id: item.router_data.request.merchant_order_id.clone(),
             invoice_id: Some(connector_request_reference_id),
             amount,
             payee,
@@ -1297,7 +1297,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PaypalAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PaypalAuthType::try_from(&item.router_data.connector_config)?;
         let credentials = auth.get_credentials()?;
         Ok(Self {
             grant_type: item.router_data.request.grant_type,
@@ -1453,14 +1453,15 @@ impl PaypalAuthType {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PaypalAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PaypalAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paypal {
+            ConnectorSpecificConfig::Paypal {
                 client_id,
                 client_secret,
                 payer_id,
+                ..
             } => match payer_id {
                 None => Ok(Self::AuthWithDetails(
                     PaypalConnectorCredentials::StandardIntegration(StandardFlowCredentials {
@@ -2349,7 +2350,7 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
         let connector_payment_id: PaypalMeta = to_connector_meta(
             item.router_data
                 .request
-                .connector_metadata
+                .connector_feature_data
                 .clone()
                 .map(|m| m.expose()),
         )?;
@@ -2602,7 +2603,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 connector_response_reference_id: None,
                                 status_code: item.http_code,
                             }),
-                            connector_auth_type: item.router_data.connector_auth_type,
+                            connector_config: item.router_data.connector_config,
                             request: item.router_data.request,
                         })
                     }
@@ -2644,7 +2645,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 network_decline_code: None,
                                 network_error_message: None,
                             }),
-                            connector_auth_type: item.router_data.connector_auth_type,
+                            connector_config: item.router_data.connector_config,
                             request: item.router_data.request,
                         })
                     }
@@ -2662,7 +2663,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     connector_response_reference_id: None,
                     status_code: item.http_code,
                 }),
-                connector_auth_type: item.router_data.connector_auth_type,
+                connector_config: item.router_data.connector_config,
                 request: item.router_data.request,
             }),
         }
@@ -2865,7 +2866,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaypalPaymentIntent::Authorize
         };
         let paypal_auth: PaypalAuthType =
-            PaypalAuthType::try_from(&item.router_data.connector_auth_type)?;
+            PaypalAuthType::try_from(&item.router_data.connector_config)?;
         let payee = get_payee(&paypal_auth);
 
         let amount = OrderRequestAmount::try_from(&item)?;
@@ -2880,7 +2881,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let purchase_units = vec![PurchaseUnitRequest {
             reference_id: Some(connector_request_reference_id.clone()),
-            custom_id: item.router_data.request.merchant_order_reference_id.clone(),
+            custom_id: item.router_data.request.merchant_order_id.clone(),
             invoice_id: Some(connector_request_reference_id),
             amount,
             payee,
