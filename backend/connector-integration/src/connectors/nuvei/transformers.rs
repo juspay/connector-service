@@ -152,7 +152,70 @@ pub struct NuveiCard<
     pub cvv: Secret<String>,
 }
 
-// ACH Bank Transfer and Bank Redirect specific structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AlternativePaymentMethodType {
+    #[serde(rename = "apmgw_Giropay")]
+    Giropay,
+    #[serde(rename = "apmgw_Sofort")]
+    Sofort,
+    #[serde(rename = "apmgw_iDeal")]
+    Ideal,
+    #[serde(rename = "apmgw_EPS")]
+    Eps,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NuveiBIC {
+    #[serde(rename = "ABNANL2A")]
+    Abnamro,
+    #[serde(rename = "ASNBNL21")]
+    AsnBank,
+    #[serde(rename = "BUNQNL2A")]
+    Bunq,
+    #[serde(rename = "INGBNL2A")]
+    Ing,
+    #[serde(rename = "KNABNL2H")]
+    Knab,
+    #[serde(rename = "RABONL2U")]
+    Rabobank,
+    #[serde(rename = "RBRBNL21")]
+    Regiobank,
+    #[serde(rename = "SNSBNL2A")]
+    SnsBank,
+    #[serde(rename = "TRIONL2U")]
+    TriodosBank,
+    #[serde(rename = "FVLBNL22")]
+    VanLanschotBankiers,
+    #[serde(rename = "MOYONL21")]
+    Moneyou,
+}
+
+impl TryFrom<common_enums::BankNames> for NuveiBIC {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(bank: common_enums::BankNames) -> Result<Self, Self::Error> {
+        match bank {
+            common_enums::BankNames::AbnAmro => Ok(Self::Abnamro),
+            common_enums::BankNames::AsnBank => Ok(Self::AsnBank),
+            common_enums::BankNames::Bunq => Ok(Self::Bunq),
+            common_enums::BankNames::Ing => Ok(Self::Ing),
+            common_enums::BankNames::Knab => Ok(Self::Knab),
+            common_enums::BankNames::Rabobank => Ok(Self::Rabobank),
+            common_enums::BankNames::Regiobank => Ok(Self::Regiobank),
+            common_enums::BankNames::SnsBank => Ok(Self::SnsBank),
+            common_enums::BankNames::TriodosBank => Ok(Self::TriodosBank),
+            common_enums::BankNames::VanLanschot => Ok(Self::VanLanschotBankiers),
+            common_enums::BankNames::Moneyou => Ok(Self::Moneyou),
+            _ => Err(errors::ConnectorError::NotImplemented(format!(
+                "Bank not supported by Nuvei iDEAL: {}",
+                bank
+            ))
+            .into()),
+        }
+    }
+}
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
@@ -169,9 +232,9 @@ pub enum NuveiAlternativePaymentMethod {
     },
     Redirect {
         #[serde(rename = "paymentMethod")]
-        payment_method: String,
+        payment_method: AlternativePaymentMethodType,
         #[serde(rename = "BIC")]
-        bank_id: Option<String>,
+        bank_id: Option<NuveiBIC>,
     },
 }
 
