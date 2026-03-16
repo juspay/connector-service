@@ -367,6 +367,363 @@ mod tests {
         );
         Ok(())
     }
+
+    // ── Webhook: verify_webhook_source ───────────────────────────────────────
+
+    /// Helper: compute HMAC-SHA256 and return hex-encoded signature.
+    fn sign_body(secret: &[u8], body: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
+        use common_utils::crypto::SignMessage;
+        let sig = common_utils::crypto::HmacSha256
+            .sign_message(secret, body)
+            .map_err(|e| format!("HMAC signing failed: {e:?}"))?;
+        Ok(hex::encode(sig))
+    }
+
+    fn make_signed_request(body: &[u8], signature: &str) -> RequestDetails {
+        let mut headers = HashMap::new();
+        headers.insert("Webhook-Signature".to_string(), signature.to_string());
+        RequestDetails {
+            method: HttpMethod::Post,
+            uri: None,
+            headers,
+            body: body.to_vec(),
+            query_params: None,
+        }
+    }
+
+    #[test]
+    fn test_verify_webhook_source_valid_signature() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let secret = b"my_webhook_secret";
+        let body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "CAPTURED");
+        let signature = sign_body(secret, &body)?;
+        let request = make_signed_request(&body, &signature);
+
+        let secrets = domain_types::connector_types::ConnectorWebhookSecrets {
+            secret: secret.to_vec(),
+            additional_secret: None,
+        };
+
+        let result = connector.verify_webhook_source(request, Some(secrets), None)?;
+        ensure!(result, "valid HMAC signature should verify as true");
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_webhook_source_invalid_signature() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let secret = b"my_webhook_secret";
+        let body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "CAPTURED");
+        // Sign with a different secret
+        let wrong_signature = sign_body(b"wrong_secret", &body)?;
+        let request = make_signed_request(&body, &wrong_signature);
+
+        let secrets = domain_types::connector_types::ConnectorWebhookSecrets {
+            secret: secret.to_vec(),
+            additional_secret: None,
+        };
+
+        let result = connector.verify_webhook_source(request, Some(secrets), None)?;
+        ensure!(!result, "invalid HMAC signature should verify as false");
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_webhook_source_missing_header() {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "CAPTURED");
+        // No Webhook-Signature header
+        let request = make_request(&body);
+        let secrets = domain_types::connector_types::ConnectorWebhookSecrets {
+            secret: b"my_webhook_secret".to_vec(),
+            additional_secret: None,
+        };
+
+        let result = connector.verify_webhook_source(request, Some(secrets), None);
+        assert!(
+            result.is_err(),
+            "missing Webhook-Signature header should return an error"
+        );
+    }
+
+    #[test]
+    fn test_verify_webhook_source_no_secret_returns_false() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "CAPTURED");
+        let request = make_request(&body);
+
+        let result = connector.verify_webhook_source(request, None, None)?;
+        ensure!(
+            !result,
+            "no connector_webhook_secret should return Ok(false)"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_webhook_source_tampered_body() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let secret = b"my_webhook_secret";
+        let body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "CAPTURED");
+        let signature = sign_body(secret, &body)?;
+
+        // Tamper with the body after signing
+        let tampered_body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "FAILED");
+        let request = make_signed_request(&tampered_body, &signature);
+
+        let secrets = domain_types::connector_types::ConnectorWebhookSecrets {
+            secret: secret.to_vec(),
+            additional_secret: None,
+        };
+
+        let result = connector.verify_webhook_source(request, Some(secrets), None)?;
+        ensure!(!result, "tampered body should fail signature verification");
+        Ok(())
+    }
+
+    // ── Webhook: get_webhook_resource_object ─────────────────────────────────
+
+    #[test]
+    fn test_get_webhook_resource_object_charge() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "CAPTURED");
+        let result = connector.get_webhook_resource_object(make_request(&body));
+        ensure!(
+            result.is_ok(),
+            "charge webhook should return a valid resource object"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_webhook_resource_object_agreement() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = agreement_webhook("PAYMENT_AGREEMENT_ACTIVE", "ACTIVE");
+        let result = connector.get_webhook_resource_object(make_request(&body));
+        ensure!(
+            result.is_ok(),
+            "agreement webhook should return a valid resource object"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_webhook_resource_object_invalid_body() {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let result = connector.get_webhook_resource_object(make_request(b"not-json"));
+        assert!(
+            result.is_err(),
+            "invalid JSON should fail resource object extraction"
+        );
+    }
+
+    // ── Webhook: process_payment_webhook — additional statuses ───────────────
+
+    #[test]
+    fn test_process_payment_webhook_authorization_success() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_AUTHORIZATION_SUCCEEDED", "SUCCESS");
+        let details = connector.process_payment_webhook(make_request(&body), None, None)?;
+        ensure_eq!(
+            details.status,
+            common_enums::AttemptStatus::Charged,
+            "SUCCESS charge should map to Charged"
+        );
+        ensure!(
+            details.resource_id.is_some(),
+            "resource_id should be set from charge.id"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_payment_webhook_voided() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_VOID_SUCCEEDED", "VOIDED");
+        let details = connector.process_payment_webhook(make_request(&body), None, None)?;
+        ensure_eq!(
+            details.status,
+            common_enums::AttemptStatus::Voided,
+            "VOIDED charge should map to Voided"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_payment_webhook_capture_failed() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = r#"{
+            "specversion": "1.0",
+            "type": "PAYMENT_CHARGE_CAPTURE_FAILED",
+            "source": "https://api.sandbox.eu.ppro.com",
+            "id": "evt_test_cap_fail",
+            "time": "2024-01-01T00:00:00Z",
+            "data": {
+                "charge": {
+                    "id": "pc_cap_fail",
+                    "status": "FAILED",
+                    "failure": {
+                        "failureType": "CAPTURE",
+                        "failureCode": "CAPTURE_TIMEOUT",
+                        "failureMessage": "Capture timed out"
+                    }
+                }
+            }
+        }"#
+        .as_bytes();
+        let details = connector.process_payment_webhook(make_request(body), None, None)?;
+        ensure_eq!(details.status, common_enums::AttemptStatus::Failure);
+        ensure_eq!(
+            details.error_code.as_deref(),
+            Some("CAPTURE_TIMEOUT"),
+            "error_code should reflect capture failure"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_payment_webhook_discarded() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_DISCARDED", "DISCARDED");
+        let details = connector.process_payment_webhook(make_request(&body), None, None)?;
+        ensure_eq!(
+            details.status,
+            common_enums::AttemptStatus::Failure,
+            "DISCARDED charge should map to Failure"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_payment_webhook_void_failed() -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = r#"{
+            "specversion": "1.0",
+            "type": "PAYMENT_CHARGE_VOID_FAILED",
+            "source": "https://api.sandbox.eu.ppro.com",
+            "id": "evt_test_void_fail",
+            "time": "2024-01-01T00:00:00Z",
+            "data": {
+                "charge": {
+                    "id": "pc_void_fail",
+                    "status": "FAILED",
+                    "failure": {
+                        "failureType": "VOID",
+                        "failureCode": "VOID_NOT_ALLOWED",
+                        "failureMessage": "Void not allowed"
+                    }
+                }
+            }
+        }"#
+        .as_bytes();
+        let details = connector.process_payment_webhook(make_request(body), None, None)?;
+        ensure_eq!(details.status, common_enums::AttemptStatus::Failure);
+        ensure_eq!(details.error_code.as_deref(), Some("VOID_NOT_ALLOWED"),);
+        ensure!(
+            details.error_message.is_some(),
+            "error_message should be populated"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_payment_webhook_raw_connector_response_present(
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_SUCCESS", "SUCCESS");
+        let details = connector.process_payment_webhook(make_request(&body), None, None)?;
+        ensure!(
+            details.raw_connector_response.is_some(),
+            "raw_connector_response should always be populated"
+        );
+        ensure_eq!(details.status_code, 200, "status_code should be 200");
+        Ok(())
+    }
+
+    // ── Webhook: process_payment_webhook — empty body / malformed ────────────
+
+    #[test]
+    fn test_process_payment_webhook_empty_body() {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let result = connector.process_payment_webhook(make_request(b""), None, None);
+        assert!(result.is_err(), "empty body should return an error");
+    }
+
+    #[test]
+    fn test_process_payment_webhook_malformed_json() {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let result = connector.process_payment_webhook(make_request(b"{invalid json}"), None, None);
+        assert!(result.is_err(), "malformed JSON should return an error");
+    }
+
+    // ── Webhook: process_refund_webhook — edge cases ─────────────────────────
+
+    #[test]
+    fn test_process_refund_webhook_with_failure_details() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = r#"{
+            "specversion": "1.0",
+            "type": "PAYMENT_CHARGE_REFUND_FAILED",
+            "source": "https://api.sandbox.eu.ppro.com",
+            "id": "evt_test_refund_fail_detail",
+            "time": "2024-01-01T00:00:00Z",
+            "data": {
+                "charge": {
+                    "id": "pc_refund_fail_detail",
+                    "status": "FAILED",
+                    "failure": {
+                        "failureType": "REFUND",
+                        "failureCode": "REFUND_LIMIT_EXCEEDED",
+                        "failureMessage": "Refund amount exceeds limit"
+                    }
+                }
+            }
+        }"#
+        .as_bytes();
+        let details = connector.process_refund_webhook(make_request(body), None, None)?;
+        ensure_eq!(details.status, common_enums::RefundStatus::Failure);
+        ensure_eq!(
+            details.error_code.as_deref(),
+            Some("REFUND_LIMIT_EXCEEDED"),
+            "error_code should be populated from refund failure"
+        );
+        ensure!(
+            details.error_message.is_some(),
+            "error_message should be populated"
+        );
+        ensure!(
+            details.connector_refund_id.is_some(),
+            "connector_refund_id should be set even on failure"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_process_refund_webhook_agreement_returns_error() {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = agreement_webhook("PAYMENT_AGREEMENT_ACTIVE", "ACTIVE");
+        let result = connector.process_refund_webhook(make_request(&body), None, None);
+        assert!(
+            result.is_err(),
+            "Agreement webhook should return an error for process_refund_webhook"
+        );
+    }
+
+    // ── Webhook: process_dispute_webhook — not implemented ───────────────────
+
+    #[test]
+    fn test_process_dispute_webhook_not_implemented() {
+        let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
+        let body = charge_webhook("PAYMENT_CHARGE_FAILED", "FAILED");
+        let result = connector.process_dispute_webhook(make_request(&body), None, None);
+        assert!(
+            result.is_err(),
+            "process_dispute_webhook should return NotImplemented error"
+        );
+    }
 }
 
 // ── Transformer unit tests ────────────────────────────────────────────────────

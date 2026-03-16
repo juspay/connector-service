@@ -434,7 +434,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+                return Err(errors::ConnectorError::WebhooksNotImplemented.into())
             }
         };
 
@@ -488,7 +488,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+                return Err(errors::ConnectorError::WebhooksNotImplemented.into())
             }
         };
 

@@ -240,13 +240,11 @@ pub enum PproPaymentStatus {
 impl From<PproPaymentStatus> for common_enums::AttemptStatus {
     fn from(status: PproPaymentStatus) -> Self {
         match status {
-            PproPaymentStatus::AuthorizationProcessing | PproPaymentStatus::CaptureProcessing => {
-                Self::Pending
-            }
+            PproPaymentStatus::AuthorizationProcessing => Self::Pending,
             PproPaymentStatus::AuthenticationPending => Self::AuthenticationPending,
-            PproPaymentStatus::AuthorizationAsync | PproPaymentStatus::CapturePending => {
-                Self::Authorized
-            }
+            PproPaymentStatus::AuthorizationAsync
+            | PproPaymentStatus::CapturePending
+            | PproPaymentStatus::CaptureProcessing => Self::Authorized,
             PproPaymentStatus::Captured | PproPaymentStatus::Success => Self::Charged,
             PproPaymentStatus::Failed
             | PproPaymentStatus::Discarded
