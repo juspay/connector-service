@@ -8,7 +8,8 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankRedirectData, BankTransferData, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -785,6 +786,45 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }
                         .into())
                     }
+                }
+            }
+            PaymentMethodData::BankRedirect(ref redirect_data) => {
+                let payment_method = match redirect_data {
+                    BankRedirectData::Eps { .. } => AlternativePaymentMethodType::Eps,
+                    BankRedirectData::Giropay { .. } => AlternativePaymentMethodType::Giropay,
+                    BankRedirectData::Ideal { bank_name } => {
+                        if let Some(ref bank) = bank_name {
+                            let _ = NuveiBIC::try_from(bank.clone())?;
+                        }
+                        AlternativePaymentMethodType::Ideal
+                    }
+                    BankRedirectData::Sofort { .. } => AlternativePaymentMethodType::Sofort,
+                    other => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!(
+                                "Bank redirect method {:?} not supported by Nuvei",
+                                other
+                            ),
+                            connector: "nuvei",
+                        }
+                        .into())
+                    }
+                };
+
+                let bank_id = match redirect_data {
+                    BankRedirectData::Ideal { bank_name } => bank_name
+                        .as_ref()
+                        .map(|bank| NuveiBIC::try_from(bank.clone()))
+                        .transpose()?,
+                    _ => None,
+                };
+
+                NuveiPaymentOption {
+                    card: None,
+                    alternative_payment_method: Some(NuveiAlternativePaymentMethod::Redirect {
+                        payment_method,
+                        bank_id,
+                    }),
                 }
             }
             _ => {
