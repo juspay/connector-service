@@ -16,6 +16,10 @@ pub fn create_router(state: AppState) -> Router {
             "/composite/payments/get",
             post(handlers::composite::payments::get),
         )
+        .route(
+            "/composite/payments/transform",
+            post(handlers::composite::payments::handle_event),
+        )
         .route("/payments/authorize", post(handlers::payments::authorize))
         // .route(
         //     "/payments/authorize_only",
