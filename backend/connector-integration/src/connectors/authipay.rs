@@ -41,6 +41,7 @@ use serde::Serialize;
 use transformers as authipay;
 use transformers::{
     AuthipayAuthorizeResponse, AuthipayCaptureRequest, AuthipayCaptureResponse,
+    AuthipayIncrementalAuthorizationRequest, AuthipayIncrementalAuthorizationResponse,
     AuthipayPaymentsRequest, AuthipayRefundRequest, AuthipayRefundResponse,
     AuthipayRefundSyncResponse, AuthipaySyncResponse, AuthipayVoidRequest, AuthipayVoidResponse,
 };
@@ -58,16 +59,6 @@ pub(crate) mod headers {
 
 // ===== CONNECTOR SERVICE TRAIT IMPLEMENTATIONS =====
 // Main service trait - aggregates all other traits
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        IncrementalAuthorization,
-        PaymentFlowData,
-        PaymentsIncrementalAuthorizationData,
-        PaymentsResponseData,
-    > for Authipay<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Authipay<T>
@@ -261,6 +252,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: AuthipayRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: IncrementalAuthorization,
+            request_body: AuthipayIncrementalAuthorizationRequest,
+            response_body: AuthipayIncrementalAuthorizationResponse,
+            router_data: RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -625,6 +622,55 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url_refunds(req);
             // GET request to retrieve refund transaction state
             Ok(format!("{base_url}/{refund_id}"))
+        }
+    }
+);
+
+// IncrementalAuthorization flow - Adjust pre-authorized amount
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authipay,
+    curl_request: Json(AuthipayIncrementalAuthorizationRequest),
+    curl_response: AuthipayIncrementalAuthorizationResponse,
+    flow_name: IncrementalAuthorization,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsIncrementalAuthorizationData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let auth = authipay::AuthipayAuthType::try_from(&req.connector_auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+            // Build the request to get the body for HMAC signature
+            let connector_req = AuthipayIncrementalAuthorizationRequest::try_from(req)?;
+            let request_body_str = serde_json::to_string(&connector_req)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+            // Generate headers with HMAC signature
+            self.build_headers_with_signature(
+                &auth,
+                &request_body_str,
+            )
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<IncrementalAuthorization, PaymentFlowData, PaymentsIncrementalAuthorizationData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            // Extract transaction ID from connector_transaction_id
+            let connector_transaction_id = req.request.connector_transaction_id.clone()
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+            let base_url = self.connector_base_url_payments(req);
+            // Secondary transaction pattern: {base_url}/{transaction_id}
+            Ok(format!("{base_url}/{connector_transaction_id}"))
         }
     }
 );
