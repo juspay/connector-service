@@ -11,13 +11,15 @@ use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData,
 use domain_types::{
     connector_flow::{Authorize, Capture, PaymentMethodToken, RSync},
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorSpecificAuth, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow},
+    router_data::{
+        ConnectorSpecificAuth, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
+    },
     router_data_v2::RouterDataV2,
 };
 
@@ -52,7 +54,9 @@ pub enum BillwerkStrongAuthRule {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BillwerkTokenRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct BillwerkTokenRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     number: RawCardNumber<T>,
     month: Secret<String>,
     year: Secret<String>,
@@ -199,31 +203,52 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("billwerk"),
-            )
-            .into()),
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("billwerk"),
+                )
+                .into())
+            }
         }
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        BillwerkRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        BillwerkRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for BillwerkPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: BillwerkRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.resource_common_data.is_three_ds() {
-            return Err(ConnectorError::NotImplemented("Three_ds payments through Billwerk".to_string()).into());
+            return Err(ConnectorError::NotImplemented(
+                "Three_ds payments through Billwerk".to_string(),
+            )
+            .into());
         };
-        let PaymentMethodTokenFlow::Token(source) = item.router_data.resource_common_data.get_payment_method_token()?;
+        let PaymentMethodTokenFlow::Token(source) = item
+            .router_data
+            .resource_common_data
+            .get_payment_method_token()?;
         Ok(Self {
             handle: item
                 .router_data
@@ -236,12 +261,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             customer: BillwerkCustomerObject {
                 handle: item.router_data.resource_common_data.customer_id.clone(),
                 email: item.router_data.request.email.clone(),
-                address: item.router_data.resource_common_data.get_optional_billing_line1(),
-                address2: item.router_data.resource_common_data.get_optional_billing_line2(),
-                city: item.router_data.resource_common_data.get_optional_billing_city(),
-                country: item.router_data.resource_common_data.get_optional_billing_country(),
-                first_name: item.router_data.resource_common_data.get_optional_billing_first_name(),
-                last_name: item.router_data.resource_common_data.get_optional_billing_last_name(),
+                address: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_line1(),
+                address2: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_line2(),
+                city: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_city(),
+                country: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_country(),
+                first_name: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_first_name(),
+                last_name: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_last_name(),
             },
             metadata: item.router_data.request.metadata.clone(),
             settle: item.router_data.request.is_auto_capture()?,
@@ -250,11 +293,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BillwerkTokenResponse, Self>>
-    for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<BillwerkTokenResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<BillwerkTokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
                 token: item.response.id.expose(),
@@ -268,7 +318,9 @@ impl<F, T> TryFrom<ResponseRouterData<BillwerkPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<BillwerkPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<BillwerkPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -276,8 +328,14 @@ impl<F, T> TryFrom<ResponseRouterData<BillwerkPaymentsResponse, Self>>
         } = item;
         let error_response = if response.error.is_some() || response.error_state.is_some() {
             Some(ErrorResponse {
-                code: response.error_state.clone().unwrap_or(NO_ERROR_CODE.to_string()),
-                message: response.error.clone().unwrap_or(NO_ERROR_MESSAGE.to_string()),
+                code: response
+                    .error_state
+                    .clone()
+                    .unwrap_or(NO_ERROR_CODE.to_string()),
+                message: response
+                    .error
+                    .clone()
+                    .unwrap_or(NO_ERROR_MESSAGE.to_string()),
                 reason: response.error,
                 status_code: http_code,
                 attempt_status: None,
@@ -339,13 +397,20 @@ impl TryFrom<&ConnectorSpecificAuth> for BillwerkAuthType {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<BillwerkRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for BillwerkCaptureRequest
+    TryFrom<
+        BillwerkRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for BillwerkCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: BillwerkRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: BillwerkRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount: item.router_data.request.minor_amount_to_capture,
@@ -354,12 +419,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<BillwerkRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for BillwerkRefundRequest
+    TryFrom<
+        BillwerkRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for BillwerkRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BillwerkRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: BillwerkRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount: item.router_data.request.minor_refund_amount,

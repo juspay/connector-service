@@ -11,14 +11,18 @@ mod tests {
         use common_utils::{pii::Email, request::RequestContent, types::MinorUnit};
         use domain_types::{
             connector_flow::Authorize,
-            connector_types::{ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
+            connector_types::{
+                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+            },
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, RawCardNumber},
             router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
         use hyperswitch_masking::Secret;
-        use interfaces::{connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector};
+        use interfaces::{
+            connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector,
+        };
         use serde_json::json;
 
         use crate::{connectors::Adyen, types::ConnectorData};
@@ -181,9 +185,11 @@ mod tests {
             let req_body = request.as_ref().map(|request_val| {
                 let masked_request = match request_val.body.as_ref() {
                     Some(request_content) => match request_content {
-                        RequestContent::Json(i) | RequestContent::FormUrlEncoded(i) | RequestContent::Xml(i) => i
-                            .masked_serialize()
-                            .unwrap_or(json!({ "error": "failed to mask serialize connector request"})),
+                        RequestContent::Json(i)
+                        | RequestContent::FormUrlEncoded(i)
+                        | RequestContent::Xml(i) => i.masked_serialize().unwrap_or(
+                            json!({ "error": "failed to mask serialize connector request"}),
+                        ),
                         RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
@@ -192,7 +198,10 @@ mod tests {
                 masked_request
             });
             println!("request: {req_body:?}");
-            assert_eq!(req_body.as_ref().unwrap()["reference"], "conn_ref_123456789");
+            assert_eq!(
+                req_body.as_ref().unwrap()["reference"],
+                "conn_ref_123456789"
+            );
         }
         #[test]
         fn test_build_request_missing() {

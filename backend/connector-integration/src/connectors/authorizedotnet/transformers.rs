@@ -1,16 +1,19 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{consts, pii::Email, types::FloatMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate},
+    connector_flow::{
+        Authorize, CreateConnectorCustomer, PSync, RSync, Refund, RepeatPayment, SetupMandate,
+    },
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData,
+        ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     payment_method_data::{
-        BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VaultTokenHolder,
+        BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        VaultTokenHolder,
     },
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -91,9 +94,11 @@ fn get_refund_credit_card_payment(
             .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?,
         serde_json::Value::Object(_) => credit_card_value.clone(),
         _ => {
-            return Err(error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                field_name: "creditCard"
-            }))
+            return Err(error_stack::report!(
+                HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "creditCard"
+                }
+            ))
         }
     };
 
@@ -208,8 +213,8 @@ pub struct AuthorizedotnetRawCardNumber<T: PaymentMethodDataTypes>(pub RawCardNu
 
 impl AuthorizedotnetRawCardNumber<DefaultPCIHolder> {
     pub fn from_card_number_string(card_number: String) -> Result<Self, Error> {
-        let card_number =
-            cards::CardNumber::from_str(&card_number).change_context(ConnectorError::RequestEncodingFailed)?;
+        let card_number = cards::CardNumber::from_str(&card_number)
+            .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self(RawCardNumber(card_number)))
     }
 }
@@ -250,7 +255,10 @@ impl TryFrom<&ConnectorSpecificAuth> for MerchantAuthentication {
     type Error = Error;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } => Ok(Self {
+            ConnectorSpecificAuth::Authorizedotnet {
+                name,
+                transaction_key,
+            } => Ok(Self {
                 name: name.clone(),
                 transaction_key: transaction_key.clone(),
             }),
@@ -292,7 +300,9 @@ impl TryFrom<enums::CaptureMethod> for AuthorizationType {
     fn try_from(capture_method: enums::CaptureMethod) -> Result<Self, Self::Error> {
         match capture_method {
             enums::CaptureMethod::Manual => Ok(Self::Pre),
-            enums::CaptureMethod::SequentialAutomatic | enums::CaptureMethod::Automatic => Ok(Self::Final),
+            enums::CaptureMethod::SequentialAutomatic | enums::CaptureMethod::Automatic => {
+                Ok(Self::Final)
+            }
             enums::CaptureMethod::ManualMultiple | enums::CaptureMethod::Scheduled => {
                 Err(error_stack::report!(ConnectorError::NotSupported {
                     message: "Capture method not supported".to_string(),
@@ -511,7 +521,12 @@ pub struct AuthorizedotnetPaymentsRequest<T: PaymentMethodDataTypes> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthorizedotnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for AuthorizedotnetPaymentsRequest<T>
@@ -519,11 +534,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Error;
     fn try_from(
         item: AuthorizedotnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
@@ -565,7 +586,11 @@ fn create_regular_transaction_request<
         PaymentMethodData::Card(card) => {
             let expiry_month = card.card_exp_month.peek().clone();
             let year = card.card_exp_year.peek().clone();
-            let expiry_year = if year.len() == 2 { format!("20{year}") } else { year };
+            let expiry_year = if year.len() == 2 {
+                format!("20{year}")
+            } else {
+                year
+            };
             let expiration_date = format!("{expiry_year}-{expiry_month}");
 
             let credit_card_details = CreditCardDetails {
@@ -630,7 +655,9 @@ fn create_regular_transaction_request<
 
     let transaction_type = match item.router_data.request.capture_method {
         Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
-        Some(enums::CaptureMethod::Automatic) | None | Some(enums::CaptureMethod::SequentialAutomatic) => {
+        Some(enums::CaptureMethod::Automatic)
+        | None
+        | Some(enums::CaptureMethod::SequentialAutomatic) => {
             TransactionType::AuthCaptureTransaction
         }
         Some(_) => {
@@ -648,7 +675,8 @@ fn create_regular_transaction_request<
         .clone();
 
     // Get invoice number (random string if > MAX_ID_LENGTH or None)
-    let invoice_number = get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
+    let invoice_number =
+        get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
     let order = Order {
         invoice_number,
@@ -656,10 +684,17 @@ fn create_regular_transaction_request<
     };
 
     // Extract user fields from metadata
-    let user_fields = metadata_to_user_fields(item.router_data.request.metadata.clone().expose_option(), false)?;
+    let user_fields = metadata_to_user_fields(
+        item.router_data.request.metadata.clone().expose_option(),
+        false,
+    )?;
 
     // Process billing address
-    let billing_address = item.router_data.resource_common_data.address.get_payment_billing();
+    let billing_address = item
+        .router_data
+        .resource_common_data
+        .address
+        .get_payment_billing();
     let bill_to = billing_address.as_ref().map(|billing| {
         let first_name = billing.address.as_ref().and_then(|a| a.first_name.clone());
         let last_name = billing.address.as_ref().and_then(|a| a.last_name.clone());
@@ -681,7 +716,9 @@ fn create_regular_transaction_request<
                 .address
                 .as_ref()
                 .and_then(|a| a.country)
-                .and_then(|api_country| enums::CountryAlpha2::from_str(&api_country.to_string()).ok()),
+                .and_then(|api_country| {
+                    enums::CountryAlpha2::from_str(&api_country.to_string()).ok()
+                }),
         }
     });
 
@@ -690,7 +727,12 @@ fn create_regular_transaction_request<
         .request
         .customer_id
         .as_ref()
-        .filter(|_| !item.router_data.request.is_customer_initiated_mandate_payment())
+        .filter(|_| {
+            !item
+                .router_data
+                .request
+                .is_customer_initiated_mandate_payment()
+        })
         .and_then(|customer| {
             let customer_id = customer.get_string_repr();
             (customer_id.len() <= MAX_ID_LENGTH).then_some(CustomerDetails {
@@ -721,7 +763,10 @@ fn create_regular_transaction_request<
         amount: Some(
             item.connector
                 .amount_converter
-                .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                .convert(
+                    item.router_data.request.minor_amount,
+                    item.router_data.request.currency,
+                )
                 .change_context(ConnectorError::AmountConversionFailed)
                 .attach_printable("Failed to convert payment amount for authorize transaction")?,
         ),
@@ -772,7 +817,12 @@ pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthorizedotnetRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for AuthorizedotnetRepeatPaymentRequest
@@ -780,11 +830,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Error;
     fn try_from(
         item: AuthorizedotnetRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
@@ -795,11 +851,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             match &item.router_data.request.mandate_reference {
                 // Case 1: Mandate-based MIT (using stored customer profile)
                 MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
-                    let mandate_id = connector_mandate_ref.get_connector_mandate_id().ok_or_else(|| {
-                        error_stack::report!(ConnectorError::MissingRequiredField {
-                            field_name: "connector_mandate_id"
-                        })
-                    })?;
+                    let mandate_id = connector_mandate_ref
+                        .get_connector_mandate_id()
+                        .ok_or_else(|| {
+                            error_stack::report!(ConnectorError::MissingRequiredField {
+                                field_name: "connector_mandate_id"
+                            })
+                        })?;
 
                     // Parse mandate_id to extract customer_profile_id and payment_profile_id
                     let profile = mandate_id
@@ -808,7 +866,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             ProfileDetails::CustomerProfileDetails(CustomerProfileDetails {
                                 customer_profile_id: Secret::from(customer_profile_id.to_string()),
                                 payment_profile: PaymentProfileDetails {
-                                    payment_profile_id: Secret::from(payment_profile_id.to_string()),
+                                    payment_profile_id: Secret::from(
+                                        payment_profile_id.to_string(),
+                                    ),
                                 },
                             })
                         })
@@ -855,7 +915,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Get invoice number (random string if > MAX_ID_LENGTH or None)
-        let invoice_number = get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
+        let invoice_number =
+            get_invoice_number_or_random(item.router_data.request.merchant_order_id.clone());
 
         let order = Order {
             invoice_number,
@@ -898,7 +959,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let transaction_type = match item.router_data.request.capture_method {
             Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
-            Some(enums::CaptureMethod::Automatic) | None | Some(enums::CaptureMethod::SequentialAutomatic) => {
+            Some(enums::CaptureMethod::Automatic)
+            | None
+            | Some(enums::CaptureMethod::SequentialAutomatic) => {
                 TransactionType::AuthCaptureTransaction
             }
             Some(_) => {
@@ -914,9 +977,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount: item
                 .connector
                 .amount_converter
-                .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                .convert(
+                    item.router_data.request.minor_amount,
+                    item.router_data.request.currency,
+                )
                 .change_context(ConnectorError::AmountConversionFailed)
-                .attach_printable("Failed to convert payment amount for repeat payment transaction")?,
+                .attach_printable(
+                    "Failed to convert payment amount for repeat payment transaction",
+                )?,
             currency_code: currency,
             profile,
             order: Some(order),
@@ -993,9 +1061,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let original_connector_txn_id = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => {
-                return Err(error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id"
-                }));
+                return Err(error_stack::report!(
+                    HsInterfacesConnectorError::MissingRequiredField {
+                        field_name: "connector_transaction_id"
+                    }
+                ));
             }
         };
 
@@ -1013,7 +1083,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ref_trans_id: original_connector_txn_id,
         };
 
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let create_transaction_request_payload = CreateCaptureTransactionRequest {
             merchant_authentication,
@@ -1064,7 +1135,11 @@ impl TryFrom<&ConnectorSpecificAuth> for AuthorizedotnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Authorizedotnet { name, transaction_key } = auth_type {
+        if let ConnectorSpecificAuth::Authorizedotnet {
+            name,
+            transaction_key,
+        } = auth_type
+        {
             Ok(Self {
                 name: name.to_owned(),
                 transaction_key: transaction_key.to_owned(),
@@ -1077,7 +1152,12 @@ impl TryFrom<&ConnectorSpecificAuth> for AuthorizedotnetAuthType {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthorizedotnetRouterData<
-            RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<
+                domain_types::connector_flow::Void,
+                PaymentFlowData,
+                PaymentVoidData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for AuthorizedotnetVoidRequest
@@ -1086,7 +1166,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: AuthorizedotnetRouterData<
-            RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<
+                domain_types::connector_flow::Void,
+                PaymentFlowData,
+                PaymentVoidData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1096,9 +1181,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // This transaction ID comes from the authorization response
         let transaction_id = match router_data.request.connector_transaction_id.as_str() {
             "" => {
-                return Err(error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id"
-                }));
+                return Err(error_stack::report!(
+                    HsInterfacesConnectorError::MissingRequiredField {
+                        field_name: "connector_transaction_id"
+                    }
+                ));
             }
             id => id.to_string(),
         };
@@ -1117,7 +1204,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount: None,
         };
 
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&router_data.connector_auth_type)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&router_data.connector_auth_type)?;
 
         let create_transaction_void_request = CreateTransactionVoidRequest {
             merchant_authentication,
@@ -1152,8 +1240,12 @@ pub struct AuthorizedotnetRSyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<AuthorizedotnetRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for AuthorizedotnetCreateSyncRequest
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for AuthorizedotnetCreateSyncRequest
 {
     type Error = Error;
 
@@ -1167,13 +1259,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let connector_transaction_id = match &item.router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => {
-                return Err(error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id"
-                }))
+                return Err(error_stack::report!(
+                    HsInterfacesConnectorError::MissingRequiredField {
+                        field_name: "connector_transaction_id"
+                    }
+                ))
             }
         };
 
-        let merchant_authentication = MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
 
         let payload = Self {
             get_transaction_details_request: TransactionDetails {
@@ -1187,24 +1282,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Implementation for the RSync flow to support refund synchronization
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<AuthorizedotnetRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for AuthorizedotnetRSyncRequest
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for AuthorizedotnetRSyncRequest
 {
     type Error = Error;
 
     fn try_from(
-        item: AuthorizedotnetRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Extract connector_refund_id from the request
         let connector_refund_id = if !item.router_data.request.connector_refund_id.is_empty() {
             item.router_data.request.connector_refund_id.clone()
         } else {
-            return Err(error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                field_name: "connector_refund_id"
-            }));
+            return Err(error_stack::report!(
+                HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "connector_refund_id"
+                }
+            ));
         };
 
-        let merchant_authentication = MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
 
         let payload = Self {
             get_transaction_details_request: TransactionDetails {
@@ -1275,22 +1380,35 @@ pub struct CreditCardInfo {
 
 // Unified generic implementation for all payment method types
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<AuthorizedotnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for AuthorizedotnetRefundRequest
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for AuthorizedotnetRefundRequest
 {
     type Error = Error;
 
     fn try_from(
-        item: AuthorizedotnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         // Extract payment details from metadata using unified helper
-        let connector_metadata_secret = item.router_data.request.connector_metadata.clone().ok_or_else(|| {
-            error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
-                field_name: "connector_metadata"
-            })
-        })?;
+        let connector_metadata_secret = item
+            .router_data
+            .request
+            .connector_metadata
+            .clone()
+            .ok_or_else(|| {
+                error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "connector_metadata"
+                })
+            })?;
         let payment = get_refund_credit_card_payment(&Some(connector_metadata_secret))?;
 
         // Build the refund transaction request
@@ -1299,7 +1417,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount: item
                 .connector
                 .amount_converter
-                .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
+                .convert(
+                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.currency,
+                )
                 .change_context(ConnectorError::AmountConversionFailed)
                 .attach_printable("Failed to convert refund amount for refund transaction")?,
             currency_code: item.router_data.request.currency,
@@ -1403,13 +1524,15 @@ fn convert_to_additional_payment_method_connector_response(
                 "description": description
             });
 
-            Some(domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
-                authentication_data: None,
-                payment_checks: Some(payment_checks),
-                card_network: None,
-                domestic_network: None,
-                auth_code: None,
-            })
+            Some(
+                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Card {
+                    authentication_data: None,
+                    payment_checks: Some(payment_checks),
+                    card_network: None,
+                    domestic_network: None,
+                    auth_code: None,
+                },
+            )
         }
     }
 }
@@ -1479,7 +1602,9 @@ struct Profile<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'stat
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PaymentProfiles<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+struct PaymentProfiles<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     customer_type: CustomerType,
     payment: PaymentDetails<T>,
 }
@@ -1522,7 +1647,9 @@ pub struct AuthorizedotnetPaymentProfileRequest<
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PaymentProfile<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct PaymentProfile<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     #[serde(skip_serializing_if = "Option::is_none")]
     bill_to: Option<BillTo>,
     payment: PaymentDetails<T>,
@@ -1577,12 +1704,16 @@ impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetRepeatPaymentRespo
 
 // TryFrom implementations for the router data conversions
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
-    TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
+impl<
+        F,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
-    fn try_from(value: ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1590,14 +1721,18 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         } = value;
 
         // Use our helper function to convert the response
-        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
-            &response.0,
-            http_code,
-            Operation::Authorize,
-            router_data.request.capture_method,
-            router_data.resource_common_data.raw_connector_response.clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        let (status, response_result, connector_response_data) =
+            convert_to_payments_response_data_or_error(
+                &response.0,
+                http_code,
+                Operation::Authorize,
+                router_data.request.capture_method,
+                router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
+            )
+            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1619,7 +1754,9 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
-    fn try_from(value: ResponseRouterData<AuthorizedotnetCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1627,14 +1764,18 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
         } = value;
 
         // Use our helper function to convert the response
-        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
-            &response.0,
-            http_code,
-            Operation::Capture,
-            None,
-            router_data.resource_common_data.raw_connector_response.clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        let (status, response_result, connector_response_data) =
+            convert_to_payments_response_data_or_error(
+                &response.0,
+                http_code,
+                Operation::Capture,
+                None,
+                router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
+            )
+            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1656,21 +1797,27 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
-    fn try_from(value: ResponseRouterData<AuthorizedotnetVoidResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetVoidResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
             http_code,
         } = value;
         // Use our helper function to convert the response
-        let (status, response_result, connector_response_data) = convert_to_payments_response_data_or_error(
-            &response.0,
-            http_code,
-            Operation::Void,
-            None,
-            router_data.resource_common_data.raw_connector_response.clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        let (status, response_result, connector_response_data) =
+            convert_to_payments_response_data_or_error(
+                &response.0,
+                http_code,
+                Operation::Void,
+                None,
+                router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
+            )
+            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1688,12 +1835,16 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
-    TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
+impl<
+        F,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
-    fn try_from(value: ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1701,7 +1852,12 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         } = value;
 
         // Dedicated RepeatPayment response handling (matching Hyperswitch)
-        let status = get_hs_status(&response.0, http_code, Operation::Authorize, router_data.request.capture_method);
+        let status = get_hs_status(
+            &response.0,
+            http_code,
+            Operation::Authorize,
+            router_data.request.capture_method,
+        );
 
         // Extract connector response data
         let connector_response_data = match &response.0.transaction_response {
@@ -1730,14 +1886,18 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 });
 
                 // Extract mandate_reference from transaction_response.profile (RepeatPayment returns profile info)
-                let mandate_reference = transaction_response.profile.as_ref().map(|profile| MandateReference {
-                    connector_mandate_id: Some(format!(
-                        "{}-{}",
-                        profile.customer_profile_id, profile.customer_payment_profile_id
-                    )),
-                    payment_method_id: None,
-                    connector_mandate_request_reference_id: None,
-                });
+                let mandate_reference =
+                    transaction_response
+                        .profile
+                        .as_ref()
+                        .map(|profile| MandateReference {
+                            connector_mandate_id: Some(format!(
+                                "{}-{}",
+                                profile.customer_profile_id, profile.customer_payment_profile_id
+                            )),
+                            payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
+                        });
 
                 // Build connector_metadata from account_number
                 let connector_metadata = build_connector_metadata(transaction_response);
@@ -1745,12 +1905,19 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 match error {
                     Some(err) => Err(err),
                     None => Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(transaction_response.transaction_id.clone()),
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            transaction_response.transaction_id.clone(),
+                        ),
                         redirection_data: None,
                         mandate_reference: mandate_reference.map(Box::new),
                         connector_metadata,
-                        network_txn_id: transaction_response.network_trans_id.as_ref().map(|s| s.peek().clone()),
-                        connector_response_reference_id: Some(transaction_response.transaction_id.clone()),
+                        network_txn_id: transaction_response
+                            .network_trans_id
+                            .as_ref()
+                            .map(|s| s.peek().clone()),
+                        connector_response_reference_id: Some(
+                            transaction_response.transaction_id.clone(),
+                        ),
                         incremental_authorization_allowed: None,
                         status_code: http_code,
                     }),
@@ -1764,7 +1931,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     error_message,
                     status,
                     None,
-                    router_data.resource_common_data.raw_connector_response.clone(),
+                    router_data
+                        .resource_common_data
+                        .raw_connector_response
+                        .clone(),
                 ))
             }
         };
@@ -1789,7 +1959,9 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
-    fn try_from(value: ResponseRouterData<AuthorizedotnetRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1840,7 +2012,9 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
-    fn try_from(value: ResponseRouterData<AuthorizedotnetPSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetPSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1863,7 +2037,9 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
 
                 // Set the response
                 new_router_data.response = Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(transaction.transaction_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        transaction.transaction_id.clone(),
+                    ),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
@@ -1958,12 +2134,20 @@ fn extract_error_details(
     trans_res: Option<&AuthorizedotnetTransactionResponse>,
 ) -> (String, String) {
     let error_code = trans_res
-        .and_then(|tr| tr.errors.as_ref().and_then(|e| e.first().map(|e| e.error_code.clone())))
+        .and_then(|tr| {
+            tr.errors
+                .as_ref()
+                .and_then(|e| e.first().map(|e| e.error_code.clone()))
+        })
         .or_else(|| response.messages.message.first().map(|m| m.code.clone()))
         .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
 
     let error_message = trans_res
-        .and_then(|tr| tr.errors.as_ref().and_then(|e| e.first().map(|e| e.error_text.clone())))
+        .and_then(|tr| {
+            tr.errors
+                .as_ref()
+                .and_then(|e| e.first().map(|e| e.error_text.clone()))
+        })
         .or_else(|| response.messages.message.first().map(|m| m.text.clone()))
         .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
 
@@ -1995,8 +2179,12 @@ fn create_error_response(
 impl From<AuthorizedotnetRefundStatus> for RefundStatus {
     fn from(item: AuthorizedotnetRefundStatus) -> Self {
         match item {
-            AuthorizedotnetRefundStatus::Declined | AuthorizedotnetRefundStatus::Error => Self::Failure,
-            AuthorizedotnetRefundStatus::Approved | AuthorizedotnetRefundStatus::HeldForReview => Self::Pending,
+            AuthorizedotnetRefundStatus::Declined | AuthorizedotnetRefundStatus::Error => {
+                Self::Failure
+            }
+            AuthorizedotnetRefundStatus::Approved | AuthorizedotnetRefundStatus::HeldForReview => {
+                Self::Pending
+            }
         }
     }
 }
@@ -2091,14 +2279,17 @@ fn get_hs_status(
     // Safety: transaction_response is checked above to be Some
     match response.transaction_response.as_ref() {
         Some(trans_resp) => match trans_resp {
-            TransactionResponse::AuthorizedotnetTransactionResponseError(_) => AttemptStatus::Failure,
+            TransactionResponse::AuthorizedotnetTransactionResponseError(_) => {
+                AttemptStatus::Failure
+            }
             TransactionResponse::AuthorizedotnetTransactionResponse(trans_res) => {
                 match trans_res.response_code {
-                    AuthorizedotnetPaymentStatus::Declined | AuthorizedotnetPaymentStatus::Error => {
-                        AttemptStatus::Failure
-                    }
+                    AuthorizedotnetPaymentStatus::Declined
+                    | AuthorizedotnetPaymentStatus::Error => AttemptStatus::Failure,
                     AuthorizedotnetPaymentStatus::HeldForReview => AttemptStatus::Pending,
-                    AuthorizedotnetPaymentStatus::RequiresAction => AttemptStatus::AuthenticationPending,
+                    AuthorizedotnetPaymentStatus::RequiresAction => {
+                        AttemptStatus::AuthenticationPending
+                    }
                     AuthorizedotnetPaymentStatus::Approved => {
                         // For Approved status, determine specific status based on operation and capture method
                         match operation {
@@ -2133,8 +2324,14 @@ struct ConnectorMetadataPayment {
 
 // Build connector_metadata from transaction response
 // Uses simple structs without validation to handle masked card numbers like "XXXX2346"
-fn build_connector_metadata(transaction_response: &AuthorizedotnetTransactionResponse) -> Option<serde_json::Value> {
-    let card_number = transaction_response.account_number.as_ref()?.peek().to_string();
+fn build_connector_metadata(
+    transaction_response: &AuthorizedotnetTransactionResponse,
+) -> Option<serde_json::Value> {
+    let card_number = transaction_response
+        .account_number
+        .as_ref()?
+        .peek()
+        .to_string();
 
     let payment = ConnectorMetadataPayment {
         credit_card: ConnectorMetadataCreditCard {
@@ -2190,7 +2387,9 @@ pub fn convert_to_payments_response_data_or_error(
     };
 
     let response_payload_result = match &response.transaction_response {
-        Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) if is_successful_status => {
+        Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res))
+            if is_successful_status =>
+        {
             let connector_metadata = build_connector_metadata(trans_res);
 
             // Extract mandate_reference from profile_response if available
@@ -2203,8 +2402,9 @@ pub fn convert_to_payments_response_data_or_error(
                 MandateReference {
                     connector_mandate_id: profile_response.customer_profile_id.as_ref().and_then(
                         |customer_profile_id| {
-                            payment_profile_id
-                                .map(|payment_profile_id| format!("{customer_profile_id}-{payment_profile_id}"))
+                            payment_profile_id.map(|payment_profile_id| {
+                                format!("{customer_profile_id}-{payment_profile_id}")
+                            })
                         },
                     ),
                     payment_method_id: None,
@@ -2217,7 +2417,10 @@ pub fn convert_to_payments_response_data_or_error(
                 redirection_data: None,
                 connector_metadata,
                 mandate_reference: mandate_reference.map(Box::new),
-                network_txn_id: trans_res.network_trans_id.as_ref().map(|s| s.peek().clone()),
+                network_txn_id: trans_res
+                    .network_trans_id
+                    .as_ref()
+                    .map(|s| s.peek().clone()),
                 connector_response_reference_id: Some(trans_res.transaction_id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: http_status_code,
@@ -2311,7 +2514,9 @@ pub struct SyncTransactionResponse {
 impl From<SyncStatus> for AttemptStatus {
     fn from(transaction_status: SyncStatus) -> Self {
         match transaction_status {
-            SyncStatus::SettledSuccessfully | SyncStatus::CapturedPendingSettlement => Self::Charged,
+            SyncStatus::SettledSuccessfully | SyncStatus::CapturedPendingSettlement => {
+                Self::Charged
+            }
             SyncStatus::AuthorizedPendingCapture => Self::Authorized,
             SyncStatus::Declined => Self::AuthenticationFailed,
             SyncStatus::Voided => Self::Voided,
@@ -2357,7 +2562,9 @@ impl From<RSyncStatus> for RefundStatus {
         match transaction_status {
             RSyncStatus::RefundSettledSuccessfully => Self::Success,
             RSyncStatus::RefundPendingSettlement => Self::Pending,
-            RSyncStatus::Declined | RSyncStatus::GeneralError | RSyncStatus::Voided => Self::Failure,
+            RSyncStatus::Declined | RSyncStatus::GeneralError | RSyncStatus::Voided => {
+                Self::Failure
+            }
         }
     }
 }
@@ -2367,7 +2574,9 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
 
-    fn try_from(value: ResponseRouterData<AuthorizedotnetRSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetRSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -2443,7 +2652,12 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthorizedotnetRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for AuthorizedotnetSetupMandateRequest<T>
@@ -2451,7 +2665,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: AuthorizedotnetRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
@@ -2460,7 +2679,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             _ => return Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),
         };
 
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let validation_mode = match item.router_data.resource_common_data.test_mode {
             Some(true) | None => ValidationMode::TestMode,
@@ -2495,7 +2715,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Create expiry date manually since we can't use the trait method generically
         let expiry_month = ccard.card_exp_month.peek().clone();
         let year = ccard.card_exp_year.peek().clone();
-        let expiry_year = if year.len() == 2 { format!("20{year}") } else { year };
+        let expiry_year = if year.len() == 2 {
+            format!("20{year}")
+        } else {
+            year
+        };
         let expiration_date = format!("{expiry_year}-{expiry_month}");
 
         let payment_profile = PaymentProfile {
@@ -2529,7 +2753,12 @@ pub struct AuthorizedotnetCreateConnectorCustomerResponse {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<AuthorizedotnetSetupMandateResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -2727,7 +2956,9 @@ impl From<AuthorizedotnetIncomingWebhookEventType> for interfaces::webhooks::Inc
             | AuthorizedotnetIncomingWebhookEventType::CaptureCreated
             | AuthorizedotnetIncomingWebhookEventType::VoidCreated
             | AuthorizedotnetIncomingWebhookEventType::CustomerCreated
-            | AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => Self::PaymentIntentSuccess,
+            | AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
+                Self::PaymentIntentSuccess
+            }
             AuthorizedotnetIncomingWebhookEventType::RefundCreated => Self::RefundSuccess,
             AuthorizedotnetIncomingWebhookEventType::Unknown => Self::EventNotSupported,
         }
@@ -2755,9 +2986,8 @@ impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
     fn from(event_type: AuthorizedotnetWebhookEvent) -> Self {
         match event_type {
             AuthorizedotnetWebhookEvent::AuthorizationCreated => Self::AuthorizedPendingCapture,
-            AuthorizedotnetWebhookEvent::CaptureCreated | AuthorizedotnetWebhookEvent::AuthCapCreated => {
-                Self::CapturedPendingSettlement
-            }
+            AuthorizedotnetWebhookEvent::CaptureCreated
+            | AuthorizedotnetWebhookEvent::AuthCapCreated => Self::CapturedPendingSettlement,
             AuthorizedotnetWebhookEvent::PriorAuthCapture => Self::SettledSuccessfully,
             AuthorizedotnetWebhookEvent::VoidCreated => Self::Voided,
             AuthorizedotnetWebhookEvent::RefundCreated => Self::RefundSettledSuccessfully,
@@ -2870,7 +3100,12 @@ fn extract_customer_id_from_error(error_text: &str) -> Option<String> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         AuthorizedotnetRouterData<
-            RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
             T,
         >,
     > for AuthorizedotnetCreateConnectorCustomerRequest<T>
@@ -2878,11 +3113,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Error;
     fn try_from(
         item: AuthorizedotnetRouterData<
-            RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
+            RouterDataV2<
+                CreateConnectorCustomer,
+                PaymentFlowData,
+                ConnectorCustomerData,
+                ConnectorCustomerResponse,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         // Build ship_to_list from shipping address if available
         let ship_to_list = item
@@ -2900,7 +3141,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         state: address.state.clone(),
                         zip: address.zip.clone(),
                         country: address.country,
-                        phone_number: shipping.phone.as_ref().and_then(|phone| phone.number.clone()),
+                        phone_number: shipping
+                            .phone
+                            .as_ref()
+                            .and_then(|phone| phone.number.clone()),
                     }]
                 })
             });
@@ -2938,7 +3182,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, Self>>
-    for RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
+    for RouterDataV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    >
 {
     type Error = Error;
     fn try_from(

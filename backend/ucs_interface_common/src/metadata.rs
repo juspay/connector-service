@@ -110,7 +110,9 @@ pub fn connector_from_metadata(
     })
 }
 
-pub fn merchant_id_from_metadata(metadata: &metadata::MetadataMap) -> CustomResult<String, ApplicationErrorResponse> {
+pub fn merchant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
     Ok(common_utils::metadata::merchant_id_or_default(
         metadata
             .get(consts::X_MERCHANT_ID)
@@ -118,7 +120,9 @@ pub fn merchant_id_from_metadata(metadata: &metadata::MetadataMap) -> CustomResu
     ))
 }
 
-pub fn request_id_from_metadata(metadata: &metadata::MetadataMap) -> CustomResult<String, ApplicationErrorResponse> {
+pub fn request_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
     parse_metadata(metadata, consts::X_REQUEST_ID)
         .map(|inner| inner.to_string())
         .or_else(|_| {
@@ -131,7 +135,9 @@ pub fn request_id_from_metadata(metadata: &metadata::MetadataMap) -> CustomResul
         })
 }
 
-pub fn tenant_id_from_metadata(metadata: &metadata::MetadataMap) -> CustomResult<String, ApplicationErrorResponse> {
+pub fn tenant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
     parse_metadata(metadata, consts::X_TENANT_ID)
         .map(|s| s.to_string())
         .or_else(|_| Ok("DefaultTenantId".to_string()))
@@ -187,14 +193,18 @@ pub fn parse_optional_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
 ) -> CustomResult<Option<&'a str>, ApplicationErrorResponse> {
-    metadata.get(key).map(|value| value.to_str()).transpose().map_err(|e| {
-        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "INVALID_METADATA".to_string(),
-            error_identifier: 400,
-            error_message: format!("Invalid {key} in request metadata: {e}"),
-            error_object: None,
-        }))
-    })
+    metadata
+        .get(key)
+        .map(|value| value.to_str())
+        .transpose()
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_METADATA".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid {key} in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
 }
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]

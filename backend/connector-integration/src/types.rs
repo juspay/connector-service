@@ -11,7 +11,9 @@ pub struct ConnectorData<T: PaymentMethodDataTypes + Debug + Default + Send + Sy
     pub connector_name: ConnectorEnum,
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize> ConnectorData<T> {
+impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize>
+    ConnectorData<T>
+{
     pub fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
         let connector = Self::convert_connector(*connector_name);
         Self {

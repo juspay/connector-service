@@ -11,20 +11,23 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder, CreateSessionToken,
-        DefendDispute, IncrementalAuthorization, MandateRevoke, PSync, PostAuthenticate, PreAuthenticate, RSync,
-        Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse, ConnectorSpecifications,
-        ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorCustomerData, ConnectorCustomerResponse,
+        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData,
+        PaymentsCaptureData, PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -39,11 +42,13 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        AcceptDispute, ConnectorServiceTrait, CreateConnectorCustomer as CreateConnectorCustomerTrait, DisputeDefend,
-        IncomingWebhook, MandateRevokeV2, PaymentAuthenticateV2, PaymentAuthorizeV2, PaymentCapture,
-        PaymentOrderCreate, PaymentPostAuthenticateV2, PaymentPreAuthenticateV2, PaymentSessionToken, PaymentSyncV2,
-        PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SdkSessionTokenV2,
-        SetupMandateV2, SubmitEvidenceV2, ValidationTrait, VerifyRedirectResponse,
+        AcceptDispute, ConnectorServiceTrait,
+        CreateConnectorCustomer as CreateConnectorCustomerTrait, DisputeDefend, IncomingWebhook,
+        MandateRevokeV2, PaymentAuthenticateV2, PaymentAuthorizeV2, PaymentCapture,
+        PaymentOrderCreate, PaymentPostAuthenticateV2, PaymentPreAuthenticateV2,
+        PaymentSessionToken, PaymentSyncV2, PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2,
+        RefundV2, RepeatPaymentV2, SdkSessionTokenV2, SetupMandateV2, SubmitEvidenceV2,
+        ValidationTrait, VerifyRedirectResponse,
     },
     decode::BodyDecoding,
     verification::SourceVerification,
@@ -51,7 +56,8 @@ use interfaces::{
 use serde::Serialize;
 
 use self::transformers::{
-    CnpOnlineResponse, VantivSyncResponse, WorldpayvantivAuthType, WorldpayvantivPaymentsRequest, BASE64_ENGINE,
+    CnpOnlineResponse, VantivSyncResponse, WorldpayvantivAuthType, WorldpayvantivPaymentsRequest,
+    BASE64_ENGINE,
 };
 
 use super::macros;
@@ -91,76 +97,88 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentPreAuthenticateV2<T>
-    for Worldpayvantiv<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> SdkSessionTokenV2
-    for Worldpayvantiv<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentAuthenticateV2<T>
-    for Worldpayvantiv<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentPostAuthenticateV2<T>
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    PaymentPreAuthenticateV2<T> for Worldpayvantiv<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
-    for Worldpayvantiv<T>
+    SdkSessionTokenV2 for Worldpayvantiv<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
-    for Worldpayvantiv<T>
+    PaymentAuthenticateV2<T> for Worldpayvantiv<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
-    for Worldpayvantiv<T>
+    PaymentPostAuthenticateV2<T> for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ConnectorServiceTrait<T>
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentSessionToken
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> CreateConnectorCustomerTrait
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> SetupMandateV2<T>
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorServiceTrait<T> for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ValidationTrait
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    PaymentSessionToken for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> VerifyRedirectResponse
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    CreateConnectorCustomerTrait for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> SourceVerification
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    SetupMandateV2<T> for Worldpayvantiv<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ValidationTrait for Worldpayvantiv<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    VerifyRedirectResponse for Worldpayvantiv<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    SourceVerification for Worldpayvantiv<T>
 {
 }
 
@@ -169,8 +187,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> IncomingWebhook
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    IncomingWebhook for Worldpayvantiv<T>
 {
     fn verify_webhook_source(
         &self,
@@ -209,8 +227,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> SubmitEvidenceV2
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    SubmitEvidenceV2 for Worldpayvantiv<T>
 {
 }
 
@@ -234,18 +252,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> RepeatPaymentV2<T>
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    RepeatPaymentV2<T> for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentOrderCreate
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    PaymentOrderCreate for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentAuthorizeV2<T>
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    PaymentAuthorizeV2<T> for Worldpayvantiv<T>
 {
 }
 
@@ -259,8 +277,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentVoidPostCaptureV2
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    PaymentVoidPostCaptureV2 for Worldpayvantiv<T>
 {
 }
 
@@ -274,21 +292,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> RefundV2 for Worldpayvantiv<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> RefundV2
+    for Worldpayvantiv<T>
+{
+}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentCapture
     for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> MandateRevokeV2
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    MandateRevokeV2 for Worldpayvantiv<T>
 {
 }
 
 // Basic connector implementation
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorCommon for Worldpayvantiv<T>
 {
     fn id(&self) -> &'static str {
         "worldpayvantiv"
@@ -485,7 +506,8 @@ macros::macro_connector_implementation!(
 
 // Manual implementations for flows that share request/response types
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Worldpayvantiv<T>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Worldpayvantiv<T>
 {
     fn get_headers(
         &self,
@@ -521,12 +543,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         event_builder: Option<&mut events::Event>,
         res: Response,
-    ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, ConnectorError>
-    {
+    ) -> CustomResult<
+        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ConnectorError,
+    > {
         let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
-        let response: CnpOnlineResponse =
-            deserialize_xml_to_struct(&xml_str).change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -551,7 +575,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Worldpayvantiv<T>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Worldpayvantiv<T>
 {
     fn get_headers(
         &self,
@@ -587,11 +612,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         event_builder: Option<&mut events::Event>,
         res: Response,
-    ) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ConnectorError,
+    > {
         let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
-        let response: CnpOnlineResponse =
-            deserialize_xml_to_struct(&xml_str).change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -616,12 +644,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
     fn get_headers(
         &self,
-        req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         self.build_headers(req)
     }
@@ -632,14 +669,24 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn get_url(
         &self,
-        req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<String, ConnectorError> {
         Ok(self.connector_base_url_payments(req).to_string())
     }
 
     fn get_request_body(
         &self,
-        req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<Option<RequestContent>, ConnectorError> {
         let request = WorldpayvantivPaymentsRequest::try_from(WorldpayvantivRouterData {
             router_data: req.clone(),
@@ -650,7 +697,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        data: &RouterDataV2<
+            VoidPC,
+            PaymentFlowData,
+            PaymentsCancelPostCaptureData,
+            PaymentsResponseData,
+        >,
         event_builder: Option<&mut events::Event>,
         res: Response,
     ) -> CustomResult<
@@ -659,8 +711,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     > {
         let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
-        let response: CnpOnlineResponse =
-            deserialize_xml_to_struct(&xml_str).change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -685,7 +737,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Worldpayvantiv<T>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Worldpayvantiv<T>
 {
     fn get_headers(
         &self,
@@ -721,11 +774,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         event_builder: Option<&mut events::Event>,
         res: Response,
-    ) -> CustomResult<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ConnectorError,
+    > {
         let xml_str = unwrap_json_wrapped_xml(&res.response)?;
 
-        let response: CnpOnlineResponse =
-            deserialize_xml_to_struct(&xml_str).change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -750,7 +806,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Worldpayvantiv<T>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Worldpayvantiv<T>
 {
     fn get_headers(
         &self,
@@ -775,7 +832,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .secondary_base_url
             .as_ref()
             .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
-        Ok(format!("{secondary_base_url}/reports/dtrPaymentStatus/{refund_id}"))
+        Ok(format!(
+            "{secondary_base_url}/reports/dtrPaymentStatus/{refund_id}"
+        ))
     }
 
     fn get_request_body(
@@ -791,7 +850,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         event_builder: Option<&mut events::Event>,
         res: Response,
-    ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ConnectorError,
+    > {
         let response: VantivSyncResponse = res
             .response
             .parse_struct("VantivSyncResponse")
@@ -820,20 +882,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
 // Empty implementations for dispute flows
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Worldpayvantiv<T>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Worldpayvantiv<T>
 {
 }
 
@@ -851,14 +922,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Empty implementations for order flows
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Worldpayvantiv<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
@@ -883,24 +962,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        SdkSessionToken,
+        PaymentFlowData,
+        PaymentsSdkSessionTokenData,
+        PaymentsResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    > for Worldpayvantiv<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
-    for Worldpayvantiv<T>
+    ConnectorIntegrationV2<
+        CreateConnectorCustomer,
+        PaymentFlowData,
+        ConnectorCustomerData,
+        ConnectorCustomerResponse,
+    > for Worldpayvantiv<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
-    for Worldpayvantiv<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorSpecifications for Worldpayvantiv<T>
 {
 }

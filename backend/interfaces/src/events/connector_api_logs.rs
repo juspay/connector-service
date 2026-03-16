@@ -49,7 +49,11 @@ impl ConnectorEvent {
         Self {
             // tenant_id,
             connector_name,
-            flow: flow.rsplit_once("::").map(|(_, s)| s).unwrap_or(flow).to_string(),
+            flow: flow
+                .rsplit_once("::")
+                .map(|(_, s)| s)
+                .unwrap_or(flow)
+                .to_string(),
             request: request.to_string(),
             masked_response: None,
             error: None,

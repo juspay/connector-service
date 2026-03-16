@@ -6,7 +6,9 @@ use crate::types::FfiRequestData;
 use domain_types::payment_method_data::DefaultPCIHolder;
 use grpc_api_types::payments::Environment;
 
-fn get_config(environment: Option<Environment>) -> Result<std::sync::Arc<ucs_env::configs::Config>, FfiPaymentError> {
+fn get_config(
+    environment: Option<Environment>,
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, FfiPaymentError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {

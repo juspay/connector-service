@@ -3,9 +3,9 @@ use common_utils::pii::SecretSerdeValue;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, Refund, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
@@ -56,11 +56,10 @@ pub struct JpmorganConnectorMetadataObject {
 impl TryFrom<&Option<SecretSerdeValue>> for JpmorganConnectorMetadataObject {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(meta_data: &Option<SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone()).change_context(
-            errors::ConnectorError::InvalidConnectorConfig {
+        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
+            .change_context(errors::ConnectorError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
-            },
-        )?;
+            })?;
         Ok(metadata)
     }
 }
@@ -69,7 +68,12 @@ impl TryFrom<&Option<SecretSerdeValue>> for JpmorganConnectorMetadataObject {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         JpmorganRouterData<
-            RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
             T,
         >,
     > for requests::JpmorganTokenRequest
@@ -77,7 +81,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = Error;
     fn try_from(
         _item: JpmorganRouterData<
-            RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -92,7 +101,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganAuthUpdateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
 {
     type Error = Error;
-    fn try_from(item: ResponseRouterData<responses::JpmorganAuthUpdateResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganAuthUpdateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
                 access_token: item.response.access_token,
@@ -119,8 +130,15 @@ fn map_capture_method(
 }
 
 /// Extract first name and last name from account holder name or billing info
-fn extract_account_holder_names<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
-    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+fn extract_account_holder_names<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
     _bank_account_holder_name: &Option<Secret<String>>,
 ) -> Result<(Secret<String>, Secret<String>), error_stack::Report<errors::ConnectorError>> {
     // Use billing address first_name and last_name directly (like Forte connector)
@@ -140,13 +158,26 @@ fn extract_account_holder_names<T: PaymentMethodDataTypes + std::fmt::Debug + Sy
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        JpmorganRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        JpmorganRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for requests::JpmorganPaymentsRequest<T>
 {
     type Error = Error;
     fn try_from(
         item: JpmorganRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -165,8 +196,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Card(card_data) => {
                 let capture_method = map_capture_method(router_data.request.capture_method)?;
 
-                let connector_metadata =
-                    JpmorganConnectorMetadataObject::try_from(&router_data.request.merchant_account_metadata.clone())?;
+                let connector_metadata = JpmorganConnectorMetadataObject::try_from(
+                    &router_data.request.merchant_account_metadata.clone(),
+                )?;
 
                 let merchant = requests::JpmorganMerchant {
                     merchant_software: requests::JpmorganMerchantSoftware {
@@ -174,7 +206,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         product_name: connector_metadata.product_name.clone(),
                     },
                     soft_merchant: requests::JpmorganSoftMerchant {
-                        merchant_purchase_description: connector_metadata.merchant_purchase_description.clone(),
+                        merchant_purchase_description: connector_metadata
+                            .merchant_purchase_description
+                            .clone(),
                     },
                 };
 
@@ -205,8 +239,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ach: None,
                 };
 
-                let amount =
-                    JpmorganAmountConvertor::convert(router_data.request.minor_amount, router_data.request.currency)?;
+                let amount = JpmorganAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
 
                 // Card payments don't use account_holder or statement_descriptor
                 // Using placeholder values to satisfy mandatory fields
@@ -235,8 +271,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }) => {
                 let capture_method = map_capture_method(router_data.request.capture_method)?;
 
-                let connector_metadata =
-                    JpmorganConnectorMetadataObject::try_from(&router_data.request.merchant_account_metadata.clone())?;
+                let connector_metadata = JpmorganConnectorMetadataObject::try_from(
+                    &router_data.request.merchant_account_metadata.clone(),
+                )?;
 
                 let merchant = requests::JpmorganMerchant {
                     merchant_software: requests::JpmorganMerchantSoftware {
@@ -244,14 +281,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         product_name: connector_metadata.product_name.clone(),
                     },
                     soft_merchant: requests::JpmorganSoftMerchant {
-                        merchant_purchase_description: connector_metadata.merchant_purchase_description.clone(),
+                        merchant_purchase_description: connector_metadata
+                            .merchant_purchase_description
+                            .clone(),
                     },
                 };
 
                 // Extract first name and last name from account holder name or billing info
-                let (first_name, last_name) = extract_account_holder_names(router_data, bank_account_holder_name)?;
+                let (first_name, last_name) =
+                    extract_account_holder_names(router_data, bank_account_holder_name)?;
 
-                let account_holder = requests::JpmorganAccountHolder { first_name, last_name };
+                let account_holder = requests::JpmorganAccountHolder {
+                    first_name,
+                    last_name,
+                };
 
                 // Determine account type based on bank_type field, default to Checking
                 let account_type = if let Some(common_enums::BankType::Savings) = bank_type {
@@ -271,8 +314,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ach: Some(ach),
                 };
 
-                let amount =
-                    JpmorganAmountConvertor::convert(router_data.request.minor_amount, router_data.request.currency)?;
+                let amount = JpmorganAmountConvertor::convert(
+                    router_data.request.minor_amount,
+                    router_data.request.currency,
+                )?;
 
                 // Get statement_descriptor from connector_metadata, fallback to default
                 let statement_descriptor = connector_metadata.statement_descriptor.clone();
@@ -287,26 +332,38 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     statement_descriptor,
                 })
             }
-            PaymentMethodData::BankDebit(_) => {
-                Err(errors::ConnectorError::NotImplemented("Only ACH Bank Debit is supported".to_string()).into())
-            }
-            _ => Err(errors::ConnectorError::NotImplemented("Payment method not supported".to_string()).into()),
+            PaymentMethodData::BankDebit(_) => Err(errors::ConnectorError::NotImplemented(
+                "Only ACH Bank Debit is supported".to_string(),
+            )
+            .into()),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "Payment method not supported".to_string(),
+            )
+            .into()),
         }
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<JpmorganRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for requests::JpmorganCaptureRequest
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::JpmorganCaptureRequest
 {
     type Error = Error;
     fn try_from(
-        item: JpmorganRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: JpmorganRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let capture_method = requests::CapMethod::Now;
         let amount_to_capture = item.router_data.request.minor_amount_to_capture;
 
-        let amount = JpmorganAmountConvertor::convert(amount_to_capture, item.router_data.request.currency)?;
+        let amount =
+            JpmorganAmountConvertor::convert(amount_to_capture, item.router_data.request.currency)?;
 
         // When AuthenticationType is `Manual`, Documentation suggests us to pass `isAmountFinal` field being `true`
         // isAmountFinal is by default `true`. Since Manual Multiple support is not added here, the field is not used.
@@ -319,27 +376,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<JpmorganRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for requests::JpmorganVoidRequest
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::JpmorganVoidRequest
 {
     type Error = Error;
     fn try_from(
-        _item: JpmorganRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        _item: JpmorganRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self { is_void: true })
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<JpmorganRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for requests::JpmorganRefundRequest
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for requests::JpmorganRefundRequest
 {
     type Error = Error;
     fn try_from(
-        item: JpmorganRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: JpmorganRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let connector_metadata =
-            JpmorganConnectorMetadataObject::try_from(&item.router_data.request.merchant_account_metadata.clone())?;
+        let connector_metadata = JpmorganConnectorMetadataObject::try_from(
+            &item.router_data.request.merchant_account_metadata.clone(),
+        )?;
 
         let merchant = requests::JpmorganMerchantRefund {
             merchant_software: requests::JpmorganMerchantSoftware {
@@ -371,9 +443,8 @@ fn map_transaction_state_to_attempt_status(
             _ => AttemptStatus::Authorized,
         },
         responses::JpmorganTransactionState::Authorized => AttemptStatus::Authorized,
-        responses::JpmorganTransactionState::Declined | responses::JpmorganTransactionState::Error => {
-            AttemptStatus::Failure
-        }
+        responses::JpmorganTransactionState::Declined
+        | responses::JpmorganTransactionState::Error => AttemptStatus::Failure,
         responses::JpmorganTransactionState::Pending => AttemptStatus::Pending,
         responses::JpmorganTransactionState::Voided => AttemptStatus::Voided,
     }
@@ -408,8 +479,11 @@ impl TryFrom<&responses::JpmorganPaymentsResponse> for AttemptStatus {
 impl TryFrom<&responses::JpmorganRefundResponse> for RefundsResponseData {
     type Error = Error;
     fn try_from(item: &responses::JpmorganRefundResponse) -> Result<Self, Self::Error> {
-        let refund_status =
-            responses::RefundStatus::from((item.response_status.clone(), item.transaction_state.clone())).into();
+        let refund_status = responses::RefundStatus::from((
+            item.response_status.clone(),
+            item.transaction_state.clone(),
+        ))
+        .into();
 
         Ok(Self {
             connector_refund_id: item.transaction_id.clone(),
@@ -421,11 +495,14 @@ impl TryFrom<&responses::JpmorganRefundResponse> for RefundsResponseData {
 
 // Bridge pattern implementations for RouterDataV2
 
-impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
+impl<T: PaymentMethodDataTypes, F>
+    TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Error;
-    fn try_from(item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let response_data = PaymentsResponseData::try_from(&item.response)?;
 
@@ -444,7 +521,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = Error;
-    fn try_from(item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let response_data = PaymentsResponseData::try_from(&item.response)?;
 
@@ -463,7 +542,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = Error;
-    fn try_from(item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let response_data = PaymentsResponseData::try_from(&item.response)?;
 
@@ -482,7 +563,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = Error;
-    fn try_from(item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::try_from(&item.response)?;
         let response_data = PaymentsResponseData::try_from(&item.response)?;
 
@@ -501,7 +584,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = Error;
-    fn try_from(item: ResponseRouterData<responses::JpmorganRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = responses::RefundStatus::from((
             item.response.response_status.clone(),
             item.response.transaction_state.clone(),
@@ -524,7 +609,9 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = Error;
-    fn try_from(item: ResponseRouterData<responses::JpmorganRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = responses::RefundStatus::from((
             item.response.response_status.clone(),
             item.response.transaction_state.clone(),

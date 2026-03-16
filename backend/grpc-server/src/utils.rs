@@ -124,14 +124,19 @@ pub async fn grpc_logging_wrapper<T, F, Fut, R>(
     handler: F,
 ) -> Result<tonic::Response<R>, tonic::Status>
 where
-    T: serde::Serialize + std::fmt::Debug + Send + 'static + hyperswitch_masking::ErasedMaskSerialize,
+    T: serde::Serialize
+        + std::fmt::Debug
+        + Send
+        + 'static
+        + hyperswitch_masking::ErasedMaskSerialize,
     F: FnOnce(RequestData<T>) -> Fut + Send,
     Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,
     R: serde::Serialize + std::fmt::Debug + hyperswitch_masking::ErasedMaskSerialize,
 {
     let current_span = tracing::Span::current();
     let start_time = tokio::time::Instant::now();
-    let masked_request_data = MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
+    let masked_request_data =
+        MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
     let mut event_metadata_payload = None;
     let mut event_headers = HashMap::new();
 
@@ -190,11 +195,14 @@ fn create_and_emit_grpc_event<R>(
         response_data: None,
         headers: masked_headers,
         additional_fields: HashMap::new(),
-        lineage_ids: metadata_payload.map_or_else(|| LineageIds::empty(""), |md| md.lineage_ids.clone()),
+        lineage_ids: metadata_payload
+            .map_or_else(|| LineageIds::empty(""), |md| md.lineage_ids.clone()),
     };
 
-    grpc_event.add_reference_id(metadata_payload.and_then(|metadata| metadata.reference_id.as_deref()));
-    grpc_event.add_resource_id(metadata_payload.and_then(|metadata| metadata.resource_id.as_deref()));
+    grpc_event
+        .add_reference_id(metadata_payload.and_then(|metadata| metadata.reference_id.as_deref()));
+    grpc_event
+        .add_resource_id(metadata_payload.and_then(|metadata| metadata.resource_id.as_deref()));
     grpc_event.add_service_type(service_type_str(&config.server.type_));
     grpc_event.add_service_name(service_name);
 
@@ -207,7 +215,9 @@ fn create_and_emit_grpc_event<R>(
 }
 
 #[allow(clippy::result_large_err)]
-pub fn get_config_from_request<T>(request: &tonic::Request<T>) -> Result<Arc<configs::Config>, tonic::Status>
+pub fn get_config_from_request<T>(
+    request: &tonic::Request<T>,
+) -> Result<Arc<configs::Config>, tonic::Status>
 where
     T: serde::Serialize,
 {
@@ -218,7 +228,9 @@ where
         }
         None => {
             tracing::info!("Configuration not found in request extensions, using default config.");
-            Err(tonic::Status::internal("Configuration not found in request extensions"))
+            Err(tonic::Status::internal(
+                "Configuration not found in request extensions",
+            ))
         }
     }
 }

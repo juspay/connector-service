@@ -5,8 +5,9 @@ use common_utils::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -40,11 +41,16 @@ impl TryFrom<&ConnectorSpecificAuth> for DatatransAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Datatrans { merchant_id, password } => Ok(Self {
+            ConnectorSpecificAuth::Datatrans {
+                merchant_id,
+                password,
+            } => Ok(Self {
                 merchant_id: merchant_id.to_owned(),
                 password: password.to_owned(),
             }),
-            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -86,7 +92,9 @@ impl Default for DatatransErrorResponse {
 // Card details for Datatrans API
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DatatransCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct DatatransCard<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub alias: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -105,7 +113,9 @@ pub struct DatatransCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Se
 // Authorize request structure based on tech spec
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DatatransPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct DatatransPaymentsRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     pub currency: Currency,
     pub refno: String,
     pub amount: MinorUnit,
@@ -127,7 +137,12 @@ pub struct DatatransPaymentOptions {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::DatatransRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for DatatransPaymentsRequest<T>
@@ -136,7 +151,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::DatatransRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -168,7 +188,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         Ok(Self {
             currency: router_data.request.currency,
-            refno: router_data.resource_common_data.connector_request_reference_id.clone(),
+            refno: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             amount: router_data.request.minor_amount,
             card,
             auto_settle,
@@ -202,13 +225,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<DatatransPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DatatransPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Datatrans authorize endpoint returns 200 on success
         // The presence of transactionId indicates success
         // Status mapping:
         // - If we get a 200 response with transactionId, the payment is authorized
         // - Based on autoSettle parameter, it's either Charged or Authorized
-        let is_auto_settle = item.router_data.request.capture_method == Some(common_enums::CaptureMethod::Automatic);
+        let is_auto_settle =
+            item.router_data.request.capture_method == Some(common_enums::CaptureMethod::Automatic);
 
         let status = if is_auto_settle {
             AttemptStatus::Charged
@@ -245,8 +271,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 pub struct DatatransSyncRequest;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::DatatransRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for DatatransSyncRequest
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for DatatransSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -288,7 +318,9 @@ impl From<DatatransPaymentStatus> for AttemptStatus {
             DatatransPaymentStatus::Failed | DatatransPaymentStatus::Canceled => Self::Failure,
 
             // Pending statuses - payment is in progress
-            DatatransPaymentStatus::Initialized | DatatransPaymentStatus::Authenticated => Self::Pending,
+            DatatransPaymentStatus::Initialized | DatatransPaymentStatus::Authenticated => {
+                Self::Pending
+            }
         }
     }
 }
@@ -349,7 +381,9 @@ impl TryFrom<ResponseRouterData<DatatransSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<DatatransSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DatatransSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Map Datatrans status to UCS status
@@ -360,7 +394,11 @@ impl TryFrom<ResponseRouterData<DatatransSyncResponse, Self>>
             d.authorize
                 .as_ref()
                 .and_then(|a| a.acquirer_authorization_code.clone())
-                .or_else(|| d.settle.as_ref().and_then(|s| s.acquirer_authorization_code.clone()))
+                .or_else(|| {
+                    d.settle
+                        .as_ref()
+                        .and_then(|s| s.acquirer_authorization_code.clone())
+                })
         });
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
@@ -421,7 +459,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             amount,
             currency: router_data.request.currency,
-            refno: router_data.resource_common_data.connector_request_reference_id.clone(),
+            refno: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             refno2: None,
         })
     }
@@ -443,7 +484,9 @@ impl TryFrom<ResponseRouterData<DatatransCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<DatatransCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DatatransCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Datatrans returns 200 with JSON body for successful capture
         // Use transaction_id from response if available, otherwise fall back to request
         let transaction_id = item.response.transaction_id.clone().unwrap_or_else(|| {
@@ -490,13 +533,20 @@ pub struct DatatransRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::DatatransRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for DatatransRefundRequest
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for DatatransRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::DatatransRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: super::DatatransRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         // Get the refund amount from RefundsData
@@ -505,7 +555,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             amount,
             currency: router_data.request.currency,
-            refno: router_data.resource_common_data.connector_request_reference_id.clone(),
+            refno: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             refno2: None,
         })
     }
@@ -526,7 +579,9 @@ impl TryFrom<ResponseRouterData<DatatransRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<DatatransRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DatatransRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Datatrans credit endpoint returns 200 on success with transaction details
         // The refund is successful when we get a 200 response with transactionId
         let refunds_response_data = RefundsResponseData {
@@ -549,13 +604,20 @@ impl TryFrom<ResponseRouterData<DatatransRefundResponse, Self>>
 pub struct DatatransRefundSyncRequest;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::DatatransRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for DatatransRefundSyncRequest
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for DatatransRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: super::DatatransRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        _item: super::DatatransRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Empty request body for GET-based sync endpoint
         Ok(Self)
@@ -607,7 +669,9 @@ impl TryFrom<ResponseRouterData<DatatransRefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<DatatransRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DatatransRefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Map Datatrans refund status to UCS RefundStatus
@@ -638,8 +702,12 @@ pub struct DatatransVoidRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::DatatransRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for DatatransVoidRequest
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for DatatransVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -671,7 +739,9 @@ impl TryFrom<ResponseRouterData<DatatransVoidResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<DatatransVoidResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DatatransVoidResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Datatrans returns 200 with JSON body for successful void
         // Use transaction_id from response if available, otherwise fall back to request
         let transaction_id = item

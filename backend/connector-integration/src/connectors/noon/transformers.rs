@@ -1,15 +1,20 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, MandateRevoke, Refund, RepeatPayment, SetupMandate, Void},
+    connector_flow::{
+        Authorize, Capture, MandateRevoke, Refund, RepeatPayment, SetupMandate, Void,
+    },
     connector_types::{
-        MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::MandateDataType,
-    payment_method_data::{GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
+    payment_method_data::{
+        GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -137,7 +142,8 @@ pub struct NoonSubscription {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoonCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct NoonCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+{
     name_on_card: Option<Secret<String>>,
     number_plain: RawCardNumber<T>,
     expiry_month: Secret<String>,
@@ -206,7 +212,9 @@ pub struct NoonPayPal {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "UPPERCASE")]
-pub enum NoonPaymentData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub enum NoonPaymentData<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     Card(NoonCard<T>),
     Subscription(NoonSubscription),
     ApplePay(NoonApplePay),
@@ -225,7 +233,9 @@ pub enum NoonApiOperations {
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoonPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct NoonPaymentsRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     api_operation: NoonApiOperations,
     order: NoonOrder,
     configuration: NoonConfiguration,
@@ -235,13 +245,27 @@ pub struct NoonPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Syn
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NoonRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
-    for NoonPaymentsRequest<T>
+    TryFrom<
+        NoonRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NoonPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         data: NoonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -249,7 +273,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = data
             .connector
             .amount_converter
-            .convert(data.router_data.request.minor_amount, data.router_data.request.currency)
+            .convert(
+                data.router_data.request.minor_amount,
+                data.router_data.request.currency,
+            )
             .change_context(ConnectorError::ParsingFailed)?;
 
         let payment_data = match item.request.payment_method_data.clone() {
@@ -261,21 +288,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 cvv: req_card.card_cvc,
             })),
             PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
-                WalletData::GooglePay(google_pay_data) => Ok(NoonPaymentData::GooglePay(NoonGooglePay {
-                    api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
-                    api_version: GOOGLEPAY_API_VERSION,
-                    payment_method_data: google_pay_data,
-                })),
+                WalletData::GooglePay(google_pay_data) => {
+                    Ok(NoonPaymentData::GooglePay(NoonGooglePay {
+                        api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
+                        api_version: GOOGLEPAY_API_VERSION,
+                        payment_method_data: google_pay_data,
+                    }))
+                }
                 WalletData::ApplePay(apple_pay_data) => {
                     let payment_token_data = NoonApplePayTokenData {
                         token: NoonApplePayData {
-                            payment_data: wallet_data.get_wallet_token_as_json("Apple Pay".to_string())?,
+                            payment_data: wallet_data
+                                .get_wallet_token_as_json("Apple Pay".to_string())?,
                             payment_method: NoonApplePayPaymentMethod {
                                 display_name: apple_pay_data.payment_method.display_name,
                                 network: apple_pay_data.payment_method.network,
                                 pm_type: apple_pay_data.payment_method.pm_type,
                             },
-                            transaction_identifier: Secret::new(apple_pay_data.transaction_identifier),
+                            transaction_identifier: Secret::new(
+                                apple_pay_data.transaction_identifier,
+                            ),
                         },
                     };
                     let payment_token = payment_token_data
@@ -336,20 +368,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Noon"),
-            )),
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Noon"),
+                ))
+            }
         }?;
 
         let currency = Some(item.request.currency);
-        let category = Some(
-            item.request
-                .order_category
-                .clone()
-                .ok_or(ConnectorError::MissingRequiredField {
-                    field_name: "order_category",
-                })?,
-        );
+        let category = Some(item.request.order_category.clone().ok_or(
+            ConnectorError::MissingRequiredField {
+                field_name: "order_category",
+            },
+        )?);
 
         let ip_address = item.request.get_ip_address_as_optional();
 
@@ -386,9 +417,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency,
             channel,
             category,
-            reference: item.resource_common_data.connector_request_reference_id.clone(),
+            reference: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             name: name.clone(),
-            nvp: item.request.metadata.as_ref().map(|m| NoonOrderNvp::new(m.peek())),
+            nvp: item
+                .request
+                .metadata
+                .as_ref()
+                .map(|m| NoonOrderNvp::new(m.peek())),
             ip_address,
         };
         let payment_action = if item.request.is_auto_capture()? {
@@ -502,16 +540,18 @@ fn get_payment_status(item: NoonPaymentStatus) -> AttemptStatus {
         | NoonPaymentStatus::PartiallyRefunded
         | NoonPaymentStatus::Refunded => AttemptStatus::Charged,
         NoonPaymentStatus::Reversed | NoonPaymentStatus::PartiallyReversed => AttemptStatus::Voided,
-        NoonPaymentStatus::Cancelled | NoonPaymentStatus::Expired => AttemptStatus::AuthenticationFailed,
+        NoonPaymentStatus::Cancelled | NoonPaymentStatus::Expired => {
+            AttemptStatus::AuthenticationFailed
+        }
         NoonPaymentStatus::ThreeDsEnrollInitiated | NoonPaymentStatus::ThreeDsEnrollChecked => {
             AttemptStatus::AuthenticationPending
         }
         NoonPaymentStatus::ThreeDsResultVerified => AttemptStatus::AuthenticationSuccessful,
         NoonPaymentStatus::Failed | NoonPaymentStatus::Rejected => AttemptStatus::Failure,
         NoonPaymentStatus::Pending | NoonPaymentStatus::MarkedForReview => AttemptStatus::Pending,
-        NoonPaymentStatus::Initiated | NoonPaymentStatus::PaymentInfoAdded | NoonPaymentStatus::Authenticated => {
-            AttemptStatus::Started
-        }
+        NoonPaymentStatus::Initiated
+        | NoonPaymentStatus::PaymentInfoAdded
+        | NoonPaymentStatus::Authenticated => AttemptStatus::Started,
         NoonPaymentStatus::Locked => AttemptStatus::Unspecified,
     }
 }
@@ -589,7 +629,8 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
                     network_error_message: None,
                 }),
                 _ => {
-                    let connector_response_reference_id = order.reference.or(Some(order.id.to_string()));
+                    let connector_response_reference_id =
+                        order.reference.or(Some(order.id.to_string()));
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(order.id.to_string()),
                         redirection_data,
@@ -630,12 +671,19 @@ pub struct NoonPaymentsActionRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NoonRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for NoonPaymentsActionRequest
+    TryFrom<
+        NoonRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for NoonPaymentsActionRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        data: NoonRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        data: NoonRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let amount = data.connector.amount_converter.convert(
@@ -672,12 +720,19 @@ pub struct NoonPaymentsCancelRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NoonRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for NoonPaymentsCancelRequest
+    TryFrom<
+        NoonRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for NoonPaymentsCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NoonRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: NoonRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let order = NoonActionOrder {
             id: item.router_data.request.connector_transaction_id.clone(),
@@ -699,7 +754,12 @@ pub struct NoonRevokeMandateRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<
-            RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
+            RouterDataV2<
+                MandateRevoke,
+                PaymentFlowData,
+                MandateRevokeRequestData,
+                MandateRevokeResponseData,
+            >,
             T,
         >,
     > for NoonRevokeMandateRequest
@@ -707,7 +767,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NoonRouterData<
-            RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>,
+            RouterDataV2<
+                MandateRevoke,
+                PaymentFlowData,
+                MandateRevokeRequestData,
+                MandateRevokeResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -721,18 +786,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for NoonPaymentsActionRequest
+    TryFrom<
+        NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for NoonPaymentsActionRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        data: NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        data: NoonRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
-        let refund_amount = data
-            .connector
-            .amount_converter
-            .convert(data.router_data.request.minor_refund_amount, data.router_data.request.currency);
+        let refund_amount = data.connector.amount_converter.convert(
+            data.router_data.request.minor_refund_amount,
+            data.router_data.request.currency,
+        );
         let order = NoonActionOrder {
             id: item.request.connector_transaction_id.clone(),
         };
@@ -769,11 +838,18 @@ pub struct NoonRevokeMandateResponse {
 }
 
 impl TryFrom<ResponseRouterData<NoonRevokeMandateResponse, Self>>
-    for RouterDataV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>
+    for RouterDataV2<
+        MandateRevoke,
+        PaymentFlowData,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NoonRevokeMandateResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NoonRevokeMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         match item.response.result.subscription.status {
             NoonRevokeStatus::Cancelled => Ok(Self {
                 response: Ok(MandateRevokeResponseData {
@@ -834,7 +910,8 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
-        let refund_status = enums::RefundStatus::from(response.result.transaction.status.to_owned());
+        let refund_status =
+            enums::RefundStatus::from(response.result.transaction.status.to_owned());
         let response = if utils::is_refund_failure(refund_status) {
             Err(ErrorResponse {
                 status_code: item.http_code,
@@ -1002,14 +1079,19 @@ pub struct NoonErrorResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct SetupMandateRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
-    NoonPaymentsRequest<T>,
-);
+pub struct SetupMandateRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(NoonPaymentsRequest<T>);
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NoonRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for SetupMandateRequest<T>
@@ -1017,15 +1099,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         data: NoonRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
-        let amount = data
-            .connector
-            .amount_converter
-            .convert(common_utils::types::MinorUnit::new(1), data.router_data.request.currency);
+        let amount = data.connector.amount_converter.convert(
+            common_utils::types::MinorUnit::new(1),
+            data.router_data.request.currency,
+        );
         let mandate_amount = &data.router_data.request.setup_mandate_details;
 
         let (payment_data, currency, category) = match &item.request.mandate_id {
@@ -1063,21 +1150,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         cvv: req_card.card_cvc,
                     })),
                     PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
-                        WalletData::GooglePay(google_pay_data) => Ok(NoonPaymentData::GooglePay(NoonGooglePay {
-                            api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
-                            api_version: GOOGLEPAY_API_VERSION,
-                            payment_method_data: google_pay_data,
-                        })),
+                        WalletData::GooglePay(google_pay_data) => {
+                            Ok(NoonPaymentData::GooglePay(NoonGooglePay {
+                                api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
+                                api_version: GOOGLEPAY_API_VERSION,
+                                payment_method_data: google_pay_data,
+                            }))
+                        }
                         WalletData::ApplePay(apple_pay_data) => {
                             let payment_token_data = NoonApplePayTokenData {
                                 token: NoonApplePayData {
-                                    payment_data: wallet_data.get_wallet_token_as_json("Apple Pay".to_string())?,
+                                    payment_data: wallet_data
+                                        .get_wallet_token_as_json("Apple Pay".to_string())?,
                                     payment_method: NoonApplePayPaymentMethod {
                                         display_name: apple_pay_data.payment_method.display_name,
                                         network: apple_pay_data.payment_method.network,
                                         pm_type: apple_pay_data.payment_method.pm_type,
                                     },
-                                    transaction_identifier: Secret::new(apple_pay_data.transaction_identifier),
+                                    transaction_identifier: Secret::new(
+                                        apple_pay_data.transaction_identifier,
+                                    ),
                                 },
                             };
                             let payment_token = payment_token_data
@@ -1138,9 +1230,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     | PaymentMethodData::OpenBanking(_)
                     | PaymentMethodData::CardToken(_)
                     | PaymentMethodData::NetworkToken(_)
-                    | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("Noon"),
-                    )),
+                    | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                        Err(ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("Noon"),
+                        ))
+                    }
                 }?,
                 Some(item.request.currency),
                 // Get order_category from metadata field, return error if not provided
@@ -1158,11 +1252,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ),
         };
 
-        let ip_address = item
-            .request
-            .browser_info
-            .as_ref()
-            .and_then(|browser_info| browser_info.ip_address.map(|ip| Secret::new(ip.to_string())));
+        let ip_address = item.request.browser_info.as_ref().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        });
 
         let channel = NoonChannels::Web;
 
@@ -1221,9 +1315,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency,
             channel,
             category,
-            reference: item.resource_common_data.connector_request_reference_id.clone(),
+            reference: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             name,
-            nvp: item.request.metadata.as_ref().map(|m| NoonOrderNvp::new(m.peek())),
+            nvp: item
+                .request
+                .metadata
+                .as_ref()
+                .map(|m| NoonOrderNvp::new(m.peek())),
             ip_address,
         };
         let payment_action = match item.request.capture_method {
@@ -1300,7 +1401,8 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     network_error_message: None,
                 }),
                 _ => {
-                    let connector_response_reference_id = order.reference.or(Some(order.id.to_string()));
+                    let connector_response_reference_id =
+                        order.reference.or(Some(order.id.to_string()));
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(order.id.to_string()),
                         redirection_data,
@@ -1320,9 +1422,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 
 // RepeatPayment types - wrapper around NoonPaymentsRequest
 #[derive(Debug, Serialize)]
-pub struct NoonRepeatPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
-    pub NoonPaymentsRequest<T>,
-);
+pub struct NoonRepeatPaymentRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(pub NoonPaymentsRequest<T>);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -1330,14 +1432,28 @@ pub struct NoonRepeatPaymentResponse(pub NoonPaymentsResponse);
 
 // TryFrom for NoonRepeatPaymentRequest - creates a payment using the saved mandate
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NoonRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>, T>>
-    for NoonRepeatPaymentRequest<T>
+    TryFrom<
+        NoonRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NoonRepeatPaymentRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: NoonRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1345,23 +1461,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(router_data.request.minor_amount, router_data.request.currency)
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
             .change_context(ConnectorError::ParsingFailed)?;
 
         // For repeat payments, use the subscription payment method with the mandate ID
         let payment_data = match &router_data.request.mandate_reference {
             MandateReferenceId::ConnectorMandateId(mandate_ids) => {
-                let connector_mandate_id =
-                    mandate_ids
-                        .get_connector_mandate_id()
-                        .ok_or(ConnectorError::MissingRequiredField {
-                            field_name: "connector_mandate_id",
-                        })?;
+                let connector_mandate_id = mandate_ids.get_connector_mandate_id().ok_or(
+                    ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    },
+                )?;
                 NoonPaymentData::Subscription(NoonSubscription {
                     subscription_identifier: Secret::new(connector_mandate_id.to_string()),
                 })
             }
-            MandateReferenceId::NetworkMandateId(_) | MandateReferenceId::NetworkTokenWithNTI(_) => {
+            MandateReferenceId::NetworkMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => {
                 return Err(ConnectorError::NotImplemented(
                     "Only connector mandate ID is supported for Noon repeat payments".to_string(),
                 )
@@ -1405,7 +1524,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: None,
             channel,
             category: None,
-            reference: router_data.resource_common_data.connector_request_reference_id.clone(),
+            reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             name,
             nvp: router_data
                 .request
@@ -1446,7 +1568,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NoonRepeatPaymentResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NoonRepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Unwrap the response and process it directly
         let ResponseRouterData {
             response: NoonRepeatPaymentResponse(payments_response),
@@ -1456,20 +1580,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let order = payments_response.result.order;
         let status = get_payment_status(order.status);
-        let redirection_data = payments_response.result.checkout_data.map(|redirection_data| {
-            Box::new(RedirectForm::Form {
-                endpoint: redirection_data.post_url.to_string(),
-                method: Method::Post,
-                form_fields: std::collections::HashMap::new(),
-            })
-        });
-        let mandate_reference = payments_response.result.subscription.map(|subscription_data| {
-            Box::new(MandateReference {
-                connector_mandate_id: Some(subscription_data.identifier.expose()),
-                payment_method_id: None,
-                connector_mandate_request_reference_id: None,
-            })
-        });
+        let redirection_data = payments_response
+            .result
+            .checkout_data
+            .map(|redirection_data| {
+                Box::new(RedirectForm::Form {
+                    endpoint: redirection_data.post_url.to_string(),
+                    method: Method::Post,
+                    form_fields: std::collections::HashMap::new(),
+                })
+            });
+        let mandate_reference = payments_response
+            .result
+            .subscription
+            .map(|subscription_data| {
+                Box::new(MandateReference {
+                    connector_mandate_id: Some(subscription_data.identifier.expose()),
+                    payment_method_id: None,
+                    connector_mandate_request_reference_id: None,
+                })
+            });
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status,
@@ -1488,7 +1618,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     network_error_message: None,
                 }),
                 _ => {
-                    let connector_response_reference_id = order.reference.or(Some(order.id.to_string()));
+                    let connector_response_reference_id =
+                        order.reference.or(Some(order.id.to_string()));
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(order.id.to_string()),
                         redirection_data,

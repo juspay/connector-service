@@ -18,10 +18,11 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
-        PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
+        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -29,7 +30,10 @@ use uuid::Uuid;
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
 
 // Helper function to generate a unique ID using UUID
@@ -53,25 +57,29 @@ const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_stripe_metadata<T>(request: &mut Request<T>) {
     // Get API credentials using the common credential loading utility
-    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load Stripe credentials");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load Stripe credentials");
 
     let api_key = match auth {
         domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
         _ => panic!("Expected HeaderKey auth type for Stripe"),
     };
 
-    request
-        .metadata_mut()
-        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
+    request.metadata_mut().append(
+        "x-connector",
+        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
+    );
     request
         .metadata_mut()
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
-    request
-        .metadata_mut()
-        .append("x-api-key", api_key.parse().expect("Failed to parse x-api-key"));
-    request
-        .metadata_mut()
-        .append("x-merchant-id", MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"));
+    request.metadata_mut().append(
+        "x-api-key",
+        api_key.parse().expect("Failed to parse x-api-key"),
+    );
+    request.metadata_mut().append(
+        "x-merchant-id",
+        MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
+    );
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())
@@ -79,9 +87,10 @@ fn add_stripe_metadata<T>(request: &mut Request<T>) {
             .expect("Failed to parse x-request-id"),
     );
 
-    request
-        .metadata_mut()
-        .append("x-tenant-id", "default".parse().expect("Failed to parse x-tenant-id"));
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
 
     request.metadata_mut().append(
         "x-connector-request-reference-id",
@@ -130,8 +139,12 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
-        return_url: Some("https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string()),
-        webhook_url: Some("https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string()),
+        return_url: Some(
+            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
+        ),
+        webhook_url: Some(
+            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
+        ),
         customer: Some(grpc_api_types::payments::Customer {
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
@@ -228,7 +241,9 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
-        webhook_url: Some("https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string()),
+        webhook_url: Some(
+            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
+        ),
         ..Default::default()
     }
 }

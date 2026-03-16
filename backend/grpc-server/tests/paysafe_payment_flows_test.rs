@@ -61,10 +61,11 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
-        PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
+        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -86,19 +87,28 @@ const TEST_EMAIL: &str = "customer@example.com";
 
 // Helper function to get current timestamp in microseconds for unique IDs
 fn get_timestamp_micros() -> u128 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_micros()
 }
 
 // Helper function to get current timestamp in seconds
 fn get_timestamp() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
 
 // Helper function to load Paysafe credentials from environment or file
 // Returns None if credentials are not available (for skipping tests)
 fn load_paysafe_credentials() -> Option<(String, String)> {
     // Try environment variables first (for quick testing)
-    if let (Ok(api_key), Ok(key1)) = (std::env::var("TEST_PAYSAFE_API_KEY"), std::env::var("TEST_PAYSAFE_KEY1")) {
+    if let (Ok(api_key), Ok(key1)) = (
+        std::env::var("TEST_PAYSAFE_API_KEY"),
+        std::env::var("TEST_PAYSAFE_KEY1"),
+    ) {
         return Some((api_key, key1));
     }
 
@@ -121,23 +131,26 @@ fn add_paysafe_metadata<T>(request: &mut Request<T>) -> bool {
         return false;
     };
 
-    request
-        .metadata_mut()
-        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
+    request.metadata_mut().append(
+        "x-connector",
+        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
+    );
     request
         .metadata_mut()
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
 
-    request
-        .metadata_mut()
-        .append("x-api-key", api_key.parse().expect("Failed to parse x-api-key"));
+    request.metadata_mut().append(
+        "x-api-key",
+        api_key.parse().expect("Failed to parse x-api-key"),
+    );
     request
         .metadata_mut()
         .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
 
-    request
-        .metadata_mut()
-        .append("x-merchant-id", MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"));
+    request.metadata_mut().append(
+        "x-merchant-id",
+        MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
+    );
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())
@@ -145,9 +158,10 @@ fn add_paysafe_metadata<T>(request: &mut Request<T>) -> bool {
             .expect("Failed to parse x-request-id"),
     );
 
-    request
-        .metadata_mut()
-        .append("x-tenant-id", "default".parse().expect("Failed to parse x-tenant-id"));
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
 
     true
 }
@@ -164,7 +178,9 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 }
 
 // Helper function to create a payment authorization request
-fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
+fn create_payment_authorize_request(
+    capture_method: CaptureMethod,
+) -> PaymentServiceAuthorizeRequest {
     let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
@@ -389,7 +405,10 @@ async fn test_payment_authorization_auto_capture() {
         let request = create_payment_authorize_request(CaptureMethod::Automatic);
 
         let mut grpc_request = Request::new(request);
-        assert!(add_paysafe_metadata(&mut grpc_request), "Failed to add credentials");
+        assert!(
+            add_paysafe_metadata(&mut grpc_request),
+            "Failed to add credentials"
+        );
 
         let response = client
             .authorize(grpc_request)
@@ -420,7 +439,10 @@ async fn test_payment_authorization_manual_capture() {
         // Step 1: Authorize payment with manual capture
         let request = create_payment_authorize_request(CaptureMethod::Manual);
         let mut grpc_request = Request::new(request);
-        assert!(add_paysafe_metadata(&mut grpc_request), "Failed to add credentials");
+        assert!(
+            add_paysafe_metadata(&mut grpc_request),
+            "Failed to add credentials"
+        );
 
         let response = client
             .authorize(grpc_request)
@@ -445,7 +467,10 @@ async fn test_payment_authorization_manual_capture() {
         // Step 2: Capture the payment
         let capture_request = create_payment_capture_request(&transaction_id);
         let mut grpc_capture_request = Request::new(capture_request);
-        assert!(add_paysafe_metadata(&mut grpc_capture_request), "Failed to add credentials");
+        assert!(
+            add_paysafe_metadata(&mut grpc_capture_request),
+            "Failed to add credentials"
+        );
 
         let capture_response = client
             .capture(grpc_capture_request)
@@ -480,7 +505,10 @@ async fn test_payment_sync() {
         // First create a payment to sync
         let request = create_payment_authorize_request(CaptureMethod::Automatic);
         let mut grpc_request = Request::new(request);
-        assert!(add_paysafe_metadata(&mut grpc_request), "Failed to add credentials");
+        assert!(
+            add_paysafe_metadata(&mut grpc_request),
+            "Failed to add credentials"
+        );
 
         let response = client
             .authorize(grpc_request)
@@ -492,9 +520,15 @@ async fn test_payment_sync() {
         // Sync the payment
         let sync_request = create_payment_sync_request(&transaction_id);
         let mut grpc_sync_request = Request::new(sync_request);
-        assert!(add_paysafe_metadata(&mut grpc_sync_request), "Failed to add credentials");
+        assert!(
+            add_paysafe_metadata(&mut grpc_sync_request),
+            "Failed to add credentials"
+        );
 
-        let sync_response = client.get(grpc_sync_request).await.expect("Payment sync failed");
+        let sync_response = client
+            .get(grpc_sync_request)
+            .await
+            .expect("Payment sync failed");
 
         let sync_response_inner = sync_response.into_inner();
         // Payment sync response logged
@@ -534,7 +568,10 @@ async fn test_refund() {
         let mut grpc_refund_request = Request::new(refund_request);
         add_paysafe_metadata(&mut grpc_refund_request);
 
-        let refund_response = client.refund(grpc_refund_request).await.expect("Refund failed");
+        let refund_response = client
+            .refund(grpc_refund_request)
+            .await
+            .expect("Refund failed");
 
         let refund_response_inner = refund_response.into_inner();
         // Refund response logged
@@ -575,7 +612,10 @@ async fn test_refund_sync() {
             let mut grpc_refund_request = Request::new(refund_request);
             add_paysafe_metadata(&mut grpc_refund_request);
 
-            let refund_response = payment_client.refund(grpc_refund_request).await.expect("Refund failed");
+            let refund_response = payment_client
+                .refund(grpc_refund_request)
+                .await
+                .expect("Refund failed");
 
             let refund_response_inner: RefundResponse = refund_response.into_inner();
             let refund_id = &refund_response_inner.connector_refund_id;
@@ -615,7 +655,10 @@ async fn test_payment_void() {
         // First create a payment with manual capture (so we can void it)
         let request = create_payment_authorize_request(CaptureMethod::Manual);
         let mut grpc_request = Request::new(request);
-        assert!(add_paysafe_metadata(&mut grpc_request), "Failed to add credentials");
+        assert!(
+            add_paysafe_metadata(&mut grpc_request),
+            "Failed to add credentials"
+        );
 
         let response = client
             .authorize(grpc_request)
@@ -627,9 +670,15 @@ async fn test_payment_void() {
         // Void the payment
         let void_request = create_payment_void_request(&transaction_id);
         let mut grpc_void_request = Request::new(void_request);
-        assert!(add_paysafe_metadata(&mut grpc_void_request), "Failed to add credentials");
+        assert!(
+            add_paysafe_metadata(&mut grpc_void_request),
+            "Failed to add credentials"
+        );
 
-        let void_response = client.void(grpc_void_request).await.expect("Payment void failed");
+        let void_response = client
+            .void(grpc_void_request)
+            .await
+            .expect("Payment void failed");
 
         let void_response_inner = void_response.into_inner();
         // Payment void response logged

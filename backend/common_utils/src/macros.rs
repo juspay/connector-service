@@ -4,14 +4,19 @@ mod id_type {
     macro_rules! id_type {
         ($type:ident, $doc:literal, $max_length:expr, $min_length:expr) => {
             #[doc = $doc]
-            #[derive(Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+            #[derive(
+                Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema,
+            )]
             #[schema(value_type = String)]
             pub struct $type($crate::id_type::LengthId<$max_length, $min_length>);
         };
         ($type:ident, $doc:literal) => {
-            $crate::id_type!($type, $doc, { $crate::consts::MAX_ALLOWED_MERCHANT_REFERENCE_ID_LENGTH }, {
-                $crate::consts::MIN_REQUIRED_MERCHANT_REFERENCE_ID_LENGTH
-            });
+            $crate::id_type!(
+                $type,
+                $doc,
+                { $crate::consts::MAX_ALLOWED_MERCHANT_REFERENCE_ID_LENGTH },
+                { $crate::consts::MIN_REQUIRED_MERCHANT_REFERENCE_ID_LENGTH }
+            );
         };
     }
 
@@ -45,7 +50,9 @@ mod id_type {
         ($type:ty) => {
             impl core::fmt::Debug for $type {
                 fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                    f.debug_tuple(stringify!($type)).field(&self.0 .0 .0).finish()
+                    f.debug_tuple(stringify!($type))
+                        .field(&self.0 .0 .0)
+                        .finish()
                 }
             }
         };

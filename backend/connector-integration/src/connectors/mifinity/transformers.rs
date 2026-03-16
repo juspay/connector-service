@@ -5,7 +5,9 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::Authorize,
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+    },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::ConnectorSpecificAuth,
@@ -32,11 +34,10 @@ pub struct MifinityConnectorMetadataObject {
 impl TryFrom<&Option<pii::SecretSerdeValue>> for MifinityConnectorMetadataObject {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone()).change_context(
-            ConnectorError::InvalidConnectorConfig {
+        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
+            .change_context(ConnectorError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
-            },
-        )?;
+            })?;
         Ok(metadata)
     }
 }
@@ -86,21 +87,38 @@ pub struct MifinityAddress {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        MifinityRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for MifinityPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: MifinityRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata: MifinityConnectorMetadataObject =
-            utils::to_connector_meta_from_secret(item.router_data.resource_common_data.connector_meta_data.clone())
-                .change_context(ConnectorError::InvalidConnectorConfig {
-                    config: "merchant_connector_account.metadata",
-                })?;
+        let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
+            item.router_data
+                .resource_common_data
+                .connector_meta_data
+                .clone(),
+        )
+        .change_context(ConnectorError::InvalidConnectorConfig {
+            config: "merchant_connector_account.metadata",
+        })?;
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(wallet_data) => {
                 match wallet_data {
@@ -109,29 +127,51 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             amount: item
                                 .connector
                                 .amount_converter
-                                .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                                .convert(
+                                    item.router_data.request.minor_amount,
+                                    item.router_data.request.currency,
+                                )
                                 .change_context(ConnectorError::RequestEncodingFailed)?,
                             currency: item.router_data.request.currency,
                         };
-                        let phone_details = item.router_data.resource_common_data.get_billing_phone()?;
-                        let billing_country = item.router_data.resource_common_data.get_billing_country()?;
+                        let phone_details =
+                            item.router_data.resource_common_data.get_billing_phone()?;
+                        let billing_country = item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_country()?;
                         let client = MifinityClient {
-                            first_name: item.router_data.resource_common_data.get_billing_first_name()?,
-                            last_name: item.router_data.resource_common_data.get_billing_last_name()?,
+                            first_name: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_first_name()?,
+                            last_name: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_last_name()?,
                             phone: phone_details.get_number()?,
                             dialing_code: phone_details.get_country_code()?,
                             nationality: billing_country,
-                            email_address: item.router_data.resource_common_data.get_billing_email()?,
+                            email_address: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_email()?,
                             dob: data.date_of_birth.clone(),
                         };
                         let address = MifinityAddress {
-                            address_line1: item.router_data.resource_common_data.get_billing_line1()?,
+                            address_line1: item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_line1()?,
                             country_code: billing_country,
                             city: item.router_data.resource_common_data.get_billing_city()?,
                         };
                         let validation_key = format!(
                             "payment_validation_key_{}_{}",
-                            item.router_data.resource_common_data.merchant_id.get_string_repr(),
+                            item.router_data
+                                .resource_common_data
+                                .merchant_id
+                                .get_string_repr(),
                             item.router_data
                                 .resource_common_data
                                 .connector_request_reference_id
@@ -216,10 +256,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Mifinity"),
-            )
-            .into()),
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Mifinity"),
+                )
+                .into())
+            }
         }
     }
 }
@@ -233,7 +275,9 @@ impl TryFrom<&ConnectorSpecificAuth> for MifinityAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Mifinity { key } => Ok(Self { key: key.to_owned() }),
+            ConnectorSpecificAuth::Mifinity { key } => Ok(Self {
+                key: key.to_owned(),
+            }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
     }
@@ -256,7 +300,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<MifinityPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<MifinityPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let payload = item.response.payload.first();
         match payload {
             Some(payload) => {
@@ -338,7 +384,9 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<MifinityPsyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<MifinityPsyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let payload = item.response.payload.first();
 
         match payload {
@@ -352,7 +400,9 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
 
                         Ok(Self {
                             response: Ok(PaymentsResponseData::TransactionResponse {
-                                resource_id: ResponseId::ConnectorTransactionId(transaction_reference),
+                                resource_id: ResponseId::ConnectorTransactionId(
+                                    transaction_reference,
+                                ),
                                 redirection_data: None,
                                 mandate_reference: None,
                                 connector_metadata: None,

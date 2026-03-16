@@ -118,11 +118,15 @@ macro_rules! req_transformer {
                 $response_data_type,
             )?;
 
-            let connector_request = connector_integration.build_request_v2(&router_data).map_err(
-                |err: error_stack::Report<domain_types::errors::ConnectorError>| FfiError::IntegrationError {
-                    message: err.to_string(),
-                },
-            )?;
+            let connector_request = connector_integration
+                .build_request_v2(&router_data)
+                .map_err(
+                    |err: error_stack::Report<domain_types::errors::ConnectorError>| {
+                        FfiError::IntegrationError {
+                            message: err.to_string(),
+                        }
+                    },
+                )?;
 
             Ok(connector_request)
         }
@@ -195,14 +199,16 @@ macro_rules! res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                FfiPaymentError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(e.to_string()),
-                    None,
-                    Some(500),
-                )
-            })?;
+            .map_err(
+                |e: error_stack::Report<domain_types::errors::ConnectorError>| {
+                    FfiPaymentError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(e.to_string()),
+                        None,
+                        Some(500),
+                    )
+                },
+            )?;
 
             domain_types::types::$generate_response_fn(response).map_err(|e| {
                 FfiPaymentError::new(

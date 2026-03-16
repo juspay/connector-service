@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, AuthorizationStatus, Currency, DisputeStatus, EventClass, PaymentChannel,
-    PaymentMethod, PaymentMethodType,
+    AttemptStatus, AuthenticationType, AuthorizationStatus, Currency, DisputeStatus, EventClass,
+    PaymentChannel, PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
     errors,
@@ -24,16 +24,17 @@ use crate::{
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{self, ConnectorResponseData, PaymentMethodToken},
     router_request_types::{
-        self, AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation, CaptureIntegrityObject,
-        CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentMethodTokenIntegrityObject,
-        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, PaymentVoidPostCaptureIntegrityObject,
-        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType,
+        self, AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
+        CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        PaymentVoidPostCaptureIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
-        ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails, PaymentMethodTypeMetadata,
-        SupportedPaymentMethods,
+        ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
+        PaymentMethodTypeMetadata, SupportedPaymentMethods,
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
@@ -41,7 +42,9 @@ use grpc_api_types::payments::connector_auth::AuthType;
 use url::Url;
 
 // snake case for enum variants
-#[derive(Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(
+    Clone, Copy, Debug, Display, EnumString, serde::Deserialize, Eq, Hash, PartialEq, Serialize,
+)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -202,13 +205,15 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Revolv3 => Ok(Self::Revolv3),
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
-            grpc_api_types::payments::Connector::Unspecified => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
-                error_identifier: 400,
-                error_message: "Connector must be specified".to_owned(),
-                error_object: None,
-            })
-            .into()),
+            grpc_api_types::payments::Connector::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Connector must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 400,
@@ -292,7 +297,12 @@ pub trait ConnectorResponseHeaders {
             .map(|headers| {
                 headers
                     .iter()
-                    .filter_map(|(name, value)| value.to_str().ok().map(|v| (name.to_string(), v.to_string())))
+                    .filter_map(|(name, value)| {
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
+                    })
                     .collect()
             })
             .unwrap_or_default()
@@ -321,7 +331,10 @@ pub struct MandateIds {
 
 impl MandateIds {
     pub fn is_network_transaction_id_flow(&self) -> bool {
-        matches!(self.mandate_reference_id, Some(MandateReferenceId::NetworkMandateId(_)))
+        matches!(
+            self.mandate_reference_id,
+            Some(MandateReferenceId::NetworkMandateId(_))
+        )
     }
 
     pub fn new(mandate_id: String) -> Self {
@@ -371,7 +384,10 @@ impl PaymentsSyncData {
         }
     }
     pub fn is_mandate_payment(&self) -> bool {
-        matches!(self.setup_future_usage, Some(common_enums::FutureUsage::OffSession))
+        matches!(
+            self.setup_future_usage,
+            Some(common_enums::FutureUsage::OffSession)
+        )
     }
 }
 
@@ -435,7 +451,9 @@ impl PaymentFlowData {
             .get_payment_method_billing()
             .and_then(|a| a.address.as_ref())
             .and_then(|ad| ad.country)
-            .ok_or_else(missing_field_err("payment_method_data.billing.address.country"))
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.country",
+            ))
     }
 
     pub fn get_billing_phone(&self) -> Result<&PhoneDetails, Error> {
@@ -558,7 +576,9 @@ impl PaymentFlowData {
     }
 
     pub fn get_description(&self) -> Result<String, Error> {
-        self.description.clone().ok_or_else(missing_field_err("description"))
+        self.description
+            .clone()
+            .ok_or_else(missing_field_err("description"))
     }
     pub fn get_billing_address(&self) -> Result<&AddressDetails, Error> {
         self.address
@@ -596,7 +616,9 @@ impl PaymentFlowData {
     }
 
     pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
-        self.access_token.clone().ok_or_else(missing_field_err("access_token"))
+        self.access_token
+            .clone()
+            .ok_or_else(missing_field_err("access_token"))
     }
 
     pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
@@ -613,14 +635,18 @@ impl PaymentFlowData {
                     .address
                     .and_then(|billing_details| billing_details.first_name.clone())
             })
-            .ok_or_else(missing_field_err("payment_method_data.billing.address.first_name"))
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.first_name",
+            ))
     }
 
     pub fn get_billing_full_name(&self) -> Result<Secret<String>, Error> {
         self.get_optional_billing()
             .and_then(|billing_details| billing_details.address.as_ref())
             .and_then(|billing_address| billing_address.get_optional_full_name())
-            .ok_or_else(missing_field_err("payment_method_data.billing.address.first_name"))
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.first_name",
+            ))
     }
 
     pub fn get_billing_last_name(&self) -> Result<Secret<String>, Error> {
@@ -632,7 +658,9 @@ impl PaymentFlowData {
                     .address
                     .and_then(|billing_details| billing_details.last_name.clone())
             })
-            .ok_or_else(missing_field_err("payment_method_data.billing.address.last_name"))
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.last_name",
+            ))
     }
 
     pub fn get_billing_line1(&self) -> Result<Secret<String>, Error> {
@@ -644,7 +672,9 @@ impl PaymentFlowData {
                     .address
                     .and_then(|billing_details| billing_details.line1.clone())
             })
-            .ok_or_else(missing_field_err("payment_method_data.billing.address.line1"))
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.line1",
+            ))
     }
     pub fn get_billing_city(&self) -> Result<Secret<String>, Error> {
         self.address
@@ -655,7 +685,9 @@ impl PaymentFlowData {
                     .address
                     .and_then(|billing_details| billing_details.city)
             })
-            .ok_or_else(missing_field_err("payment_method_data.billing.address.city"))
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.city",
+            ))
     }
 
     pub fn get_billing_email(&self) -> Result<Email, Error> {
@@ -675,90 +707,113 @@ impl PaymentFlowData {
     }
 
     pub fn get_optional_billing_line1(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.line1)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line1)
+            })
     }
 
     pub fn get_optional_billing_line2(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.line2)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line2)
+            })
     }
 
     pub fn get_optional_billing_line3(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.line3)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line3)
+            })
     }
 
     pub fn get_optional_billing_city(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.city)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.city)
+            })
     }
 
     pub fn get_optional_billing_country(&self) -> Option<common_enums::CountryAlpha2> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.country)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.country)
+            })
     }
 
     pub fn get_optional_billing_zip(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.zip)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.zip)
+            })
     }
 
     pub fn get_optional_billing_state(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.state)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.state)
+            })
     }
 
     pub fn get_optional_billing_first_name(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.first_name)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.first_name)
+            })
     }
 
     pub fn get_optional_billing_last_name(&self) -> Option<Secret<String>> {
-        self.address.get_payment_method_billing().and_then(|billing_address| {
-            billing_address
-                .clone()
-                .address
-                .and_then(|billing_details| billing_details.last_name)
-        })
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.last_name)
+            })
     }
 
     pub fn get_optional_billing_phone_number(&self) -> Option<Secret<String>> {
         self.address
             .get_payment_method_billing()
-            .and_then(|billing_address| billing_address.clone().phone.and_then(|phone_data| phone_data.number))
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .phone
+                    .and_then(|phone_data| phone_data.number)
+            })
     }
 
     pub fn get_optional_billing_email(&self) -> Option<Email> {
@@ -787,7 +842,9 @@ impl PaymentFlowData {
     }
 
     pub fn get_shipping_address_with_phone_number(&self) -> Result<&Address, Error> {
-        self.address.get_shipping().ok_or_else(missing_field_err("shipping"))
+        self.address
+            .get_shipping()
+            .ok_or_else(missing_field_err("shipping"))
     }
 
     pub fn get_payment_method_token(&self) -> Result<PaymentMethodToken, Error> {
@@ -796,7 +853,9 @@ impl PaymentFlowData {
             .ok_or_else(missing_field_err("payment_method_token"))
     }
     pub fn get_customer_id(&self) -> Result<CustomerId, Error> {
-        self.customer_id.to_owned().ok_or_else(missing_field_err("customer_id"))
+        self.customer_id
+            .to_owned()
+            .ok_or_else(missing_field_err("customer_id"))
     }
     pub fn get_connector_customer_id(&self) -> Result<String, Error> {
         self.connector_customer
@@ -835,7 +894,8 @@ impl PaymentFlowData {
     }
     pub fn set_payment_method_token(mut self, payment_method_token: Option<String>) -> Self {
         if payment_method_token.is_some() && self.payment_method_token.is_none() {
-            self.payment_method_token = payment_method_token.map(|token| PaymentMethodToken::Token(Secret::new(token)));
+            self.payment_method_token =
+                payment_method_token.map(|token| PaymentMethodToken::Token(Secret::new(token)));
         }
         self
     }
@@ -946,12 +1006,16 @@ impl PaymentVoidData {
     //         .ok_or_else(missing_field_err("browser_info"))
     // }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
-    }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
         self.browser_info
             .clone()
-            .and_then(|browser_info| browser_info.ip_address.map(|ip| Secret::new(ip.to_string())))
+            .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
 
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
@@ -977,7 +1041,9 @@ impl PaymentsCancelPostCaptureData {
     }
 
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
 }
 
@@ -1063,14 +1129,20 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
         self.email.clone()
     }
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
-        self.browser_info.clone().ok_or_else(missing_field_err("browser_info"))
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
 
     pub fn get_customer_id(&self) -> Result<CustomerId, Error> {
-        self.customer_id.to_owned().ok_or_else(missing_field_err("customer_id"))
+        self.customer_id
+            .to_owned()
+            .ok_or_else(missing_field_err("customer_id"))
     }
 
     pub fn get_card(&self) -> Result<Card<T>, Error> {
@@ -1126,7 +1198,9 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
     // }
     pub fn get_webhook_url(&self) -> Result<String, Error> {
-        self.webhook_url.clone().ok_or_else(missing_field_err("webhook_url"))
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
     }
     pub fn get_router_return_url(&self) -> Result<String, Error> {
         self.router_return_url
@@ -1151,9 +1225,11 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
             .ok_or_else(missing_field_err("connector_mandate_id"))
     }
     pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
-        self.browser_info
-            .clone()
-            .and_then(|browser_info| browser_info.ip_address.map(|ip| Secret::new(ip.to_string())))
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
 
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
@@ -1401,7 +1477,8 @@ impl<T: PaymentMethodDataTypes> PaymentsPreAuthenticateData<T> {
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(common_enums::CaptureMethod::ManualMultiple) | Some(common_enums::CaptureMethod::Scheduled) => {
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
                 Err(ConnectorError::CaptureMethodNotSupported.into())
             }
         }
@@ -1431,14 +1508,17 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthenticateData<T> {
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(common_enums::CaptureMethod::ManualMultiple) | Some(common_enums::CaptureMethod::Scheduled) => {
+            Some(common_enums::CaptureMethod::ManualMultiple)
+            | Some(common_enums::CaptureMethod::Scheduled) => {
                 Err(ConnectorError::CaptureMethodNotSupported.into())
             }
         }
     }
 
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
-        self.browser_info.clone().ok_or_else(missing_field_err("browser_info"))
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
     }
 
     pub fn get_continue_redirection_url(&self) -> Result<Url, Error> {
@@ -1514,7 +1594,9 @@ pub struct SessionTokenRequestData {
 
 impl SessionTokenRequestData {
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
-        self.browser_info.clone().ok_or_else(missing_field_err("browser_info"))
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
     }
 }
 
@@ -1581,7 +1663,9 @@ pub struct RefundSyncData {
 
 impl RefundSyncData {
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
 }
 
@@ -1660,7 +1744,9 @@ impl PayoutFlowData {
     }
 
     pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
-        self.access_token.clone().ok_or_else(missing_field_err("access_token"))
+        self.access_token
+            .clone()
+            .ok_or_else(missing_field_err("access_token"))
     }
 
     pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
@@ -1706,7 +1792,9 @@ impl RefundFlowData {
     }
 
     pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
-        self.access_token.clone().ok_or_else(missing_field_err("access_token"))
+        self.access_token
+            .clone()
+            .ok_or_else(missing_field_err("access_token"))
     }
 
     pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
@@ -1898,7 +1986,10 @@ impl EventType {
 
     /// Returns true if this event type is refund-related
     pub fn is_refund_event(&self) -> bool {
-        matches!(self, Self::RefundFailure | Self::RefundSuccess | Self::Refund)
+        matches!(
+            self,
+            Self::RefundFailure | Self::RefundSuccess | Self::Refund
+        )
     }
 
     /// Returns true if this event type is dispute-related
@@ -1966,13 +2057,21 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
         value: grpc_api_types::payments::WebhookEventType,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::WebhookEventType::PaymentIntentFailure => Ok(Self::PaymentIntentFailure),
-            grpc_api_types::payments::WebhookEventType::PaymentIntentSuccess => Ok(Self::PaymentIntentSuccess),
-            grpc_api_types::payments::WebhookEventType::PaymentIntentProcessing => Ok(Self::PaymentIntentProcessing),
+            grpc_api_types::payments::WebhookEventType::PaymentIntentFailure => {
+                Ok(Self::PaymentIntentFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentSuccess => {
+                Ok(Self::PaymentIntentSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentProcessing => {
+                Ok(Self::PaymentIntentProcessing)
+            }
             grpc_api_types::payments::WebhookEventType::PaymentIntentPartiallyFunded => {
                 Ok(Self::PaymentIntentPartiallyFunded)
             }
-            grpc_api_types::payments::WebhookEventType::PaymentIntentCancelled => Ok(Self::PaymentIntentCancelled),
+            grpc_api_types::payments::WebhookEventType::PaymentIntentCancelled => {
+                Ok(Self::PaymentIntentCancelled)
+            }
             grpc_api_types::payments::WebhookEventType::PaymentIntentCancelFailure => {
                 Ok(Self::PaymentIntentCancelFailure)
             }
@@ -1988,22 +2087,46 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::PaymentIntentCaptureFailure => {
                 Ok(Self::PaymentIntentCaptureFailure)
             }
-            grpc_api_types::payments::WebhookEventType::PaymentIntentExpired => Ok(Self::PaymentIntentExpired),
-            grpc_api_types::payments::WebhookEventType::PaymentActionRequired => Ok(Self::PaymentActionRequired),
-            grpc_api_types::payments::WebhookEventType::SourceChargeable => Ok(Self::SourceChargeable),
-            grpc_api_types::payments::WebhookEventType::SourceTransactionCreated => Ok(Self::SourceTransactionCreated),
-            grpc_api_types::payments::WebhookEventType::WebhookRefundFailure => Ok(Self::RefundFailure),
-            grpc_api_types::payments::WebhookEventType::WebhookRefundSuccess => Ok(Self::RefundSuccess),
-            grpc_api_types::payments::WebhookEventType::WebhookDisputeOpened => Ok(Self::DisputeOpened),
-            grpc_api_types::payments::WebhookEventType::WebhookDisputeExpired => Ok(Self::DisputeExpired),
-            grpc_api_types::payments::WebhookEventType::WebhookDisputeAccepted => Ok(Self::DisputeAccepted),
-            grpc_api_types::payments::WebhookEventType::WebhookDisputeCancelled => Ok(Self::DisputeCancelled),
-            grpc_api_types::payments::WebhookEventType::WebhookDisputeChallenged => Ok(Self::DisputeChallenged),
+            grpc_api_types::payments::WebhookEventType::PaymentIntentExpired => {
+                Ok(Self::PaymentIntentExpired)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentActionRequired => {
+                Ok(Self::PaymentActionRequired)
+            }
+            grpc_api_types::payments::WebhookEventType::SourceChargeable => {
+                Ok(Self::SourceChargeable)
+            }
+            grpc_api_types::payments::WebhookEventType::SourceTransactionCreated => {
+                Ok(Self::SourceTransactionCreated)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookRefundFailure => {
+                Ok(Self::RefundFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookRefundSuccess => {
+                Ok(Self::RefundSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeOpened => {
+                Ok(Self::DisputeOpened)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeExpired => {
+                Ok(Self::DisputeExpired)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeAccepted => {
+                Ok(Self::DisputeAccepted)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeCancelled => {
+                Ok(Self::DisputeCancelled)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeChallenged => {
+                Ok(Self::DisputeChallenged)
+            }
             grpc_api_types::payments::WebhookEventType::WebhookDisputeWon => Ok(Self::DisputeWon),
             grpc_api_types::payments::WebhookEventType::WebhookDisputeLost => Ok(Self::DisputeLost),
             grpc_api_types::payments::WebhookEventType::MandateActive => Ok(Self::MandateActive),
             grpc_api_types::payments::WebhookEventType::MandateRevoked => Ok(Self::MandateRevoked),
-            grpc_api_types::payments::WebhookEventType::EndpointVerification => Ok(Self::EndpointVerification),
+            grpc_api_types::payments::WebhookEventType::EndpointVerification => {
+                Ok(Self::EndpointVerification)
+            }
             grpc_api_types::payments::WebhookEventType::ExternalAuthenticationAres => {
                 Ok(Self::ExternalAuthenticationAres)
             }
@@ -2011,16 +2134,30 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
             grpc_api_types::payments::WebhookEventType::FrmRejected => Ok(Self::FrmRejected),
             grpc_api_types::payments::WebhookEventType::PayoutSuccess => Ok(Self::PayoutSuccess),
             grpc_api_types::payments::WebhookEventType::PayoutFailure => Ok(Self::PayoutFailure),
-            grpc_api_types::payments::WebhookEventType::PayoutProcessing => Ok(Self::PayoutProcessing),
-            grpc_api_types::payments::WebhookEventType::PayoutCancelled => Ok(Self::PayoutCancelled),
+            grpc_api_types::payments::WebhookEventType::PayoutProcessing => {
+                Ok(Self::PayoutProcessing)
+            }
+            grpc_api_types::payments::WebhookEventType::PayoutCancelled => {
+                Ok(Self::PayoutCancelled)
+            }
             grpc_api_types::payments::WebhookEventType::PayoutCreated => Ok(Self::PayoutCreated),
             grpc_api_types::payments::WebhookEventType::PayoutExpired => Ok(Self::PayoutExpired),
             grpc_api_types::payments::WebhookEventType::PayoutReversed => Ok(Self::PayoutReversed),
-            grpc_api_types::payments::WebhookEventType::RecoveryPaymentFailure => Ok(Self::RecoveryPaymentFailure),
-            grpc_api_types::payments::WebhookEventType::RecoveryPaymentSuccess => Ok(Self::RecoveryPaymentSuccess),
-            grpc_api_types::payments::WebhookEventType::RecoveryPaymentPending => Ok(Self::RecoveryPaymentPending),
-            grpc_api_types::payments::WebhookEventType::RecoveryInvoiceCancel => Ok(Self::RecoveryInvoiceCancel),
-            grpc_api_types::payments::WebhookEventType::Unspecified => Ok(Self::IncomingWebhookEventUnspecified),
+            grpc_api_types::payments::WebhookEventType::RecoveryPaymentFailure => {
+                Ok(Self::RecoveryPaymentFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::RecoveryPaymentSuccess => {
+                Ok(Self::RecoveryPaymentSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::RecoveryPaymentPending => {
+                Ok(Self::RecoveryPaymentPending)
+            }
+            grpc_api_types::payments::WebhookEventType::RecoveryInvoiceCancel => {
+                Ok(Self::RecoveryInvoiceCancel)
+            }
+            grpc_api_types::payments::WebhookEventType::Unspecified => {
+                Ok(Self::IncomingWebhookEventUnspecified)
+            }
         }
     }
 }
@@ -2036,8 +2173,12 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
             EventType::PaymentIntentPartiallyFunded => Ok(Self::PaymentIntentPartiallyFunded),
             EventType::PaymentIntentCancelled => Ok(Self::PaymentIntentCancelled),
             EventType::PaymentIntentCancelFailure => Ok(Self::PaymentIntentCancelFailure),
-            EventType::PaymentIntentAuthorizationSuccess => Ok(Self::PaymentIntentAuthorizationSuccess),
-            EventType::PaymentIntentAuthorizationFailure => Ok(Self::PaymentIntentAuthorizationFailure),
+            EventType::PaymentIntentAuthorizationSuccess => {
+                Ok(Self::PaymentIntentAuthorizationSuccess)
+            }
+            EventType::PaymentIntentAuthorizationFailure => {
+                Ok(Self::PaymentIntentAuthorizationFailure)
+            }
             EventType::PaymentIntentCaptureSuccess => Ok(Self::PaymentIntentCaptureSuccess),
             EventType::PaymentIntentCaptureFailure => Ok(Self::PaymentIntentCaptureFailure),
             EventType::PaymentIntentExpired => Ok(Self::PaymentIntentExpired),
@@ -2074,7 +2215,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
 
             // Legacy broad categories (for backward compatibility)
             EventType::Payment => Ok(Self::PaymentIntentSuccess), // Map broad Payment to PaymentIntentSuccess
-            EventType::Refund => Ok(Self::WebhookRefundSuccess),  // Map broad Refund to WebhookRefundSuccess
+            EventType::Refund => Ok(Self::WebhookRefundSuccess), // Map broad Refund to WebhookRefundSuccess
             EventType::Dispute => Ok(Self::WebhookDisputeOpened), // Map broad Dispute to WebhookDisputeOpened
         }
     }
@@ -2083,7 +2224,9 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
 impl ForeignTryFrom<grpc_api_types::payments::HttpMethod> for HttpMethod {
     type Error = ApplicationErrorResponse;
 
-    fn foreign_try_from(value: grpc_api_types::payments::HttpMethod) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(
+        value: grpc_api_types::payments::HttpMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
             grpc_api_types::payments::HttpMethod::Unspecified => Ok(Self::Get), // Default
             grpc_api_types::payments::HttpMethod::Get => Ok(Self::Get),
@@ -2125,7 +2268,9 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets> for ConnectorRedirectResponseSecrets {
+impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets>
+    for ConnectorRedirectResponseSecrets
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -2172,7 +2317,9 @@ impl RefundsData {
             .change_context(ConnectorError::MissingConnectorTransactionID)
     }
     pub fn get_webhook_url(&self) -> Result<String, Error> {
-        self.webhook_url.clone().ok_or_else(missing_field_err("webhook_url"))
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
     }
     pub fn get_connector_metadata(&self) -> Result<SecretSerdeValue, Error> {
         self.connector_metadata
@@ -2180,12 +2327,16 @@ impl RefundsData {
             .ok_or_else(missing_field_err("connector_metadata"))
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
-    }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
         self.browser_info
             .clone()
-            .and_then(|browser_info| browser_info.ip_address.map(|ip| Secret::new(ip.to_string())))
+            .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
 
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
@@ -2230,12 +2381,16 @@ impl PaymentsCaptureData {
         }
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
-    }
-    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
         self.browser_info
             .clone()
-            .and_then(|browser_info| browser_info.ip_address.map(|ip| Secret::new(ip.to_string())))
+            .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
 
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
@@ -2284,7 +2439,9 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
     }
 
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
-        self.browser_info.clone().ok_or_else(missing_field_err("browser_info"))
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
     }
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
@@ -2293,10 +2450,14 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
         matches!(self.payment_method_data, PaymentMethodData::Card(_))
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
     pub fn get_webhook_url(&self) -> Result<String, Error> {
-        self.webhook_url.clone().ok_or_else(missing_field_err("webhook_url"))
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
     }
     pub fn get_router_return_url(&self) -> Result<String, Error> {
         self.router_return_url
@@ -2304,9 +2465,11 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
             .ok_or_else(missing_field_err("return_url"))
     }
     pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
-        self.browser_info
-            .clone()
-            .and_then(|browser_info| browser_info.ip_address.map(|ip| Secret::new(ip.to_string())))
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
 
     pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
@@ -2364,10 +2527,14 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
         }
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
-        self.browser_info.clone().and_then(|browser_info| browser_info.language)
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
     pub fn get_webhook_url(&self) -> Result<String, Error> {
-        self.webhook_url.clone().ok_or_else(missing_field_err("webhook_url"))
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
     }
     pub fn get_router_return_url(&self) -> Result<String, Error> {
         self.router_return_url
@@ -2377,22 +2544,27 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
     }
-    pub fn get_recurring_mandate_payment_data(&self) -> Result<router_data::RecurringMandatePaymentData, Error> {
+    pub fn get_recurring_mandate_payment_data(
+        &self,
+    ) -> Result<router_data::RecurringMandatePaymentData, Error> {
         self.recurring_mandate_payment_data
             .to_owned()
             .ok_or_else(missing_field_err("recurring_mandate_payment_data"))
     }
     pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
-        self.browser_info
-            .clone()
-            .and_then(|browser_info| browser_info.ip_address.map(|ip| Secret::new(ip.to_string())))
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
     }
     pub fn connector_mandate_id(&self) -> Option<String> {
         match &self.mandate_reference {
             MandateReferenceId::ConnectorMandateId(connector_mandate_ids) => {
                 connector_mandate_ids.get_connector_mandate_id()
             }
-            MandateReferenceId::NetworkMandateId(_) | MandateReferenceId::NetworkTokenWithNTI(_) => None,
+            MandateReferenceId::NetworkMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => None,
         }
     }
     pub fn get_optional_email(&self) -> Option<Email> {
@@ -2401,8 +2573,11 @@ impl<T: PaymentMethodDataTypes> RepeatPaymentData<T> {
 
     pub fn get_network_mandate_id(&self) -> Option<String> {
         match &self.mandate_reference {
-            MandateReferenceId::NetworkMandateId(network_mandate_id) => Some(network_mandate_id.to_string()),
-            MandateReferenceId::ConnectorMandateId(_) | MandateReferenceId::NetworkTokenWithNTI(_) => None,
+            MandateReferenceId::NetworkMandateId(network_mandate_id) => {
+                Some(network_mandate_id.to_string())
+            }
+            MandateReferenceId::ConnectorMandateId(_)
+            | MandateReferenceId::NetworkTokenWithNTI(_) => None,
         }
     }
 }
@@ -2633,11 +2808,15 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::WalletData::GcashRedirect(_) => Self::GcashRedirect,
                 payment_method_data::WalletData::ApplePay(_) => Self::ApplePay,
                 payment_method_data::WalletData::ApplePayRedirect(_) => Self::ApplePayRedirect,
-                payment_method_data::WalletData::ApplePayThirdPartySdk(_) => Self::ApplePayThirdPartySdk,
+                payment_method_data::WalletData::ApplePayThirdPartySdk(_) => {
+                    Self::ApplePayThirdPartySdk
+                }
                 payment_method_data::WalletData::DanaRedirect {} => Self::DanaRedirect,
                 payment_method_data::WalletData::GooglePay(_) => Self::GooglePay,
                 payment_method_data::WalletData::GooglePayRedirect(_) => Self::GooglePayRedirect,
-                payment_method_data::WalletData::GooglePayThirdPartySdk(_) => Self::GooglePayThirdPartySdk,
+                payment_method_data::WalletData::GooglePayThirdPartySdk(_) => {
+                    Self::GooglePayThirdPartySdk
+                }
                 payment_method_data::WalletData::MbWayRedirect(_) => Self::MbWayRedirect,
                 payment_method_data::WalletData::MobilePayRedirect(_) => Self::MobilePayRedirect,
                 payment_method_data::WalletData::PaypalRedirect(_) => Self::PaypalRedirect,
@@ -2659,14 +2838,18 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::PayLaterData::KlarnaRedirect { .. } => Self::KlarnaRedirect,
                 payment_method_data::PayLaterData::KlarnaSdk { .. } => Self::KlarnaSdk,
                 payment_method_data::PayLaterData::AffirmRedirect {} => Self::AffirmRedirect,
-                payment_method_data::PayLaterData::AfterpayClearpayRedirect { .. } => Self::AfterpayClearpayRedirect,
+                payment_method_data::PayLaterData::AfterpayClearpayRedirect { .. } => {
+                    Self::AfterpayClearpayRedirect
+                }
                 payment_method_data::PayLaterData::PayBrightRedirect {} => Self::PayBrightRedirect,
                 payment_method_data::PayLaterData::WalleyRedirect {} => Self::WalleyRedirect,
                 payment_method_data::PayLaterData::AlmaRedirect {} => Self::AlmaRedirect,
                 payment_method_data::PayLaterData::AtomeRedirect {} => Self::AtomeRedirect,
             },
             PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
-                payment_method_data::BankRedirectData::BancontactCard { .. } => Self::BancontactCard,
+                payment_method_data::BankRedirectData::BancontactCard { .. } => {
+                    Self::BancontactCard
+                }
                 payment_method_data::BankRedirectData::Bizum {} => Self::Bizum,
                 payment_method_data::BankRedirectData::Blik { .. } => Self::Blik,
                 payment_method_data::BankRedirectData::Eps { .. } => Self::Eps,
@@ -2676,16 +2859,28 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankRedirectData::OnlineBankingCzechRepublic { .. } => {
                     Self::OnlineBankingCzechRepublic
                 }
-                payment_method_data::BankRedirectData::OnlineBankingFinland { .. } => Self::OnlineBankingFinland,
-                payment_method_data::BankRedirectData::OnlineBankingPoland { .. } => Self::OnlineBankingPoland,
-                payment_method_data::BankRedirectData::OnlineBankingSlovakia { .. } => Self::OnlineBankingSlovakia,
+                payment_method_data::BankRedirectData::OnlineBankingFinland { .. } => {
+                    Self::OnlineBankingFinland
+                }
+                payment_method_data::BankRedirectData::OnlineBankingPoland { .. } => {
+                    Self::OnlineBankingPoland
+                }
+                payment_method_data::BankRedirectData::OnlineBankingSlovakia { .. } => {
+                    Self::OnlineBankingSlovakia
+                }
                 payment_method_data::BankRedirectData::OpenBankingUk { .. } => Self::OpenBankingUk,
                 payment_method_data::BankRedirectData::Przelewy24 { .. } => Self::Przelewy24,
                 payment_method_data::BankRedirectData::Sofort { .. } => Self::Sofort,
                 payment_method_data::BankRedirectData::Trustly { .. } => Self::Trustly,
-                payment_method_data::BankRedirectData::OnlineBankingFpx { .. } => Self::OnlineBankingFpx,
-                payment_method_data::BankRedirectData::OnlineBankingThailand { .. } => Self::OnlineBankingThailand,
-                payment_method_data::BankRedirectData::LocalBankRedirect {} => Self::LocalBankRedirect,
+                payment_method_data::BankRedirectData::OnlineBankingFpx { .. } => {
+                    Self::OnlineBankingFpx
+                }
+                payment_method_data::BankRedirectData::OnlineBankingThailand { .. } => {
+                    Self::OnlineBankingThailand
+                }
+                payment_method_data::BankRedirectData::LocalBankRedirect {} => {
+                    Self::LocalBankRedirect
+                }
                 payment_method_data::BankRedirectData::Eft { .. } => Self::Eft,
                 payment_method_data::BankRedirectData::OpenBanking {} => Self::OpenBanking,
             },
@@ -2694,31 +2889,61 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::BankDebitData::SepaBankDebit { .. } => Self::SepaBankDebit,
                 payment_method_data::BankDebitData::BecsBankDebit { .. } => Self::BecsBankDebit,
                 payment_method_data::BankDebitData::BacsBankDebit { .. } => Self::BacsBankDebit,
-                payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => Self::SepaGuaranteedBankDebit,
+                payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                    Self::SepaGuaranteedBankDebit
+                }
             },
             PaymentMethodData::BankTransfer(bank_transfer_data) => match *bank_transfer_data {
-                payment_method_data::BankTransferData::AchBankTransfer { .. } => Self::AchBankTransfer,
-                payment_method_data::BankTransferData::SepaBankTransfer { .. } => Self::SepaBankTransfer,
-                payment_method_data::BankTransferData::BacsBankTransfer { .. } => Self::BacsBankTransfer,
-                payment_method_data::BankTransferData::MultibancoBankTransfer { .. } => Self::MultibancoBankTransfer,
-                payment_method_data::BankTransferData::PermataBankTransfer { .. } => Self::PermataBankTransfer,
-                payment_method_data::BankTransferData::BcaBankTransfer { .. } => Self::BcaBankTransfer,
-                payment_method_data::BankTransferData::BniVaBankTransfer { .. } => Self::BniVaBankTransfer,
-                payment_method_data::BankTransferData::BriVaBankTransfer { .. } => Self::BriVaBankTransfer,
-                payment_method_data::BankTransferData::CimbVaBankTransfer { .. } => Self::CimbVaBankTransfer,
-                payment_method_data::BankTransferData::DanamonVaBankTransfer { .. } => Self::DanamonVaBankTransfer,
-                payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => Self::MandiriVaBankTransfer,
+                payment_method_data::BankTransferData::AchBankTransfer { .. } => {
+                    Self::AchBankTransfer
+                }
+                payment_method_data::BankTransferData::SepaBankTransfer { .. } => {
+                    Self::SepaBankTransfer
+                }
+                payment_method_data::BankTransferData::BacsBankTransfer { .. } => {
+                    Self::BacsBankTransfer
+                }
+                payment_method_data::BankTransferData::MultibancoBankTransfer { .. } => {
+                    Self::MultibancoBankTransfer
+                }
+                payment_method_data::BankTransferData::PermataBankTransfer { .. } => {
+                    Self::PermataBankTransfer
+                }
+                payment_method_data::BankTransferData::BcaBankTransfer { .. } => {
+                    Self::BcaBankTransfer
+                }
+                payment_method_data::BankTransferData::BniVaBankTransfer { .. } => {
+                    Self::BniVaBankTransfer
+                }
+                payment_method_data::BankTransferData::BriVaBankTransfer { .. } => {
+                    Self::BriVaBankTransfer
+                }
+                payment_method_data::BankTransferData::CimbVaBankTransfer { .. } => {
+                    Self::CimbVaBankTransfer
+                }
+                payment_method_data::BankTransferData::DanamonVaBankTransfer { .. } => {
+                    Self::DanamonVaBankTransfer
+                }
+                payment_method_data::BankTransferData::MandiriVaBankTransfer { .. } => {
+                    Self::MandiriVaBankTransfer
+                }
                 payment_method_data::BankTransferData::Pix { .. } => Self::Pix,
                 payment_method_data::BankTransferData::Pse {} => Self::Pse,
-                payment_method_data::BankTransferData::LocalBankTransfer { .. } => Self::LocalBankTransfer,
-                payment_method_data::BankTransferData::InstantBankTransfer { .. } => Self::InstantBankTransfer,
+                payment_method_data::BankTransferData::LocalBankTransfer { .. } => {
+                    Self::LocalBankTransfer
+                }
+                payment_method_data::BankTransferData::InstantBankTransfer { .. } => {
+                    Self::InstantBankTransfer
+                }
                 payment_method_data::BankTransferData::InstantBankTransferFinland { .. } => {
                     Self::InstantBankTransferFinland
                 }
                 payment_method_data::BankTransferData::InstantBankTransferPoland { .. } => {
                     Self::InstantBankTransferPoland
                 }
-                payment_method_data::BankTransferData::IndonesianBankTransfer { .. } => Self::IndonesianBankTransfer,
+                payment_method_data::BankTransferData::IndonesianBankTransfer { .. } => {
+                    Self::IndonesianBankTransfer
+                }
             },
             PaymentMethodData::Crypto(_) => Self::Crypto,
             PaymentMethodData::MandatePayment => Self::MandatePayment,
@@ -2740,12 +2965,14 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
                 payment_method_data::VoucherData::Seicomart(_) => Self::Seicomart,
                 payment_method_data::VoucherData::PayEasy(_) => Self::PayEasy,
             },
-            PaymentMethodData::RealTimePayment(real_time_payment_data) => match *real_time_payment_data {
-                payment_method_data::RealTimePaymentData::DuitNow {} => Self::DuitNow,
-                payment_method_data::RealTimePaymentData::Fps {} => Self::Fps,
-                payment_method_data::RealTimePaymentData::PromptPay {} => Self::PromptPay,
-                payment_method_data::RealTimePaymentData::VietQr {} => Self::VietQr,
-            },
+            PaymentMethodData::RealTimePayment(real_time_payment_data) => {
+                match *real_time_payment_data {
+                    payment_method_data::RealTimePaymentData::DuitNow {} => Self::DuitNow,
+                    payment_method_data::RealTimePaymentData::Fps {} => Self::Fps,
+                    payment_method_data::RealTimePaymentData::PromptPay {} => Self::PromptPay,
+                    payment_method_data::RealTimePaymentData::VietQr {} => Self::VietQr,
+                }
+            }
             PaymentMethodData::GiftCard(gift_card_data) => match *gift_card_data {
                 payment_method_data::GiftCardData::Givex(_) => Self::Givex,
                 payment_method_data::GiftCardData::PaySafeCard {} => Self::PaySafeCar,
@@ -2754,10 +2981,14 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodData
             PaymentMethodData::OpenBanking(data) => match data {
                 payment_method_data::OpenBankingData::OpenBankingPIS {} => Self::OpenBanking,
             },
-            PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Self::CardDetailsForNetworkTransactionId,
+            PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Self::CardDetailsForNetworkTransactionId
+            }
             PaymentMethodData::NetworkToken(_) => Self::NetworkToken,
             PaymentMethodData::MobilePayment(mobile_payment_data) => match mobile_payment_data {
-                payment_method_data::MobilePaymentData::DirectCarrierBilling { .. } => Self::DirectCarrierBilling,
+                payment_method_data::MobilePaymentData::DirectCarrierBilling { .. } => {
+                    Self::DirectCarrierBilling
+                }
             },
         }
     }
@@ -2938,15 +3169,21 @@ pub struct CustomerInfo {
 
 impl L2L3Data {
     pub fn get_shipping_country(&self) -> Option<common_enums::enums::CountryAlpha2> {
-        self.shipping_details.as_ref().and_then(|address| address.country)
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.country)
     }
 
     pub fn get_shipping_city(&self) -> Option<Secret<String>> {
-        self.shipping_details.as_ref().and_then(|address| address.city.clone())
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.city.clone())
     }
 
     pub fn get_shipping_state(&self) -> Option<Secret<String>> {
-        self.shipping_details.as_ref().and_then(|address| address.state.clone())
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.state.clone())
     }
 
     pub fn get_shipping_origin_zip(&self) -> Option<Secret<String>> {
@@ -2956,15 +3193,21 @@ impl L2L3Data {
     }
 
     pub fn get_shipping_zip(&self) -> Option<Secret<String>> {
-        self.shipping_details.as_ref().and_then(|address| address.zip.clone())
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.zip.clone())
     }
 
     pub fn get_shipping_address_line1(&self) -> Option<Secret<String>> {
-        self.shipping_details.as_ref().and_then(|address| address.line1.clone())
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.line1.clone())
     }
 
     pub fn get_shipping_address_line2(&self) -> Option<Secret<String>> {
-        self.shipping_details.as_ref().and_then(|address| address.line2.clone())
+        self.shipping_details
+            .as_ref()
+            .and_then(|address| address.line2.clone())
     }
 
     pub fn get_order_date(&self) -> Option<time::PrimitiveDateTime> {
@@ -2972,7 +3215,9 @@ impl L2L3Data {
     }
 
     pub fn get_order_details(&self) -> Option<Vec<payment_address::OrderDetailsWithAmount>> {
-        self.order_info.as_ref().and_then(|order| order.order_details.clone())
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.order_details.clone())
     }
 
     pub fn get_merchant_order_reference_id(&self) -> Option<String> {
@@ -2982,11 +3227,15 @@ impl L2L3Data {
     }
 
     pub fn get_discount_amount(&self) -> Option<MinorUnit> {
-        self.order_info.as_ref().and_then(|order| order.discount_amount)
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.discount_amount)
     }
 
     pub fn get_shipping_cost(&self) -> Option<MinorUnit> {
-        self.order_info.as_ref().and_then(|order| order.shipping_cost)
+        self.order_info
+            .as_ref()
+            .and_then(|order| order.shipping_cost)
     }
 
     pub fn get_duty_amount(&self) -> Option<MinorUnit> {
@@ -3010,7 +3259,9 @@ impl L2L3Data {
     }
 
     pub fn get_shipping_amount_tax(&self) -> Option<MinorUnit> {
-        self.tax_info.as_ref().and_then(|tax| tax.shipping_amount_tax)
+        self.tax_info
+            .as_ref()
+            .and_then(|tax| tax.shipping_amount_tax)
     }
 
     pub fn get_order_tax_amount(&self) -> Option<MinorUnit> {
@@ -3047,7 +3298,9 @@ impl L2L3Data {
             .and_then(|customer| customer.customer_phone_country_code.clone())
     }
     pub fn get_billing_city(&self) -> Option<Secret<String>> {
-        self.billing_details.as_ref().and_then(|billing| billing.city.clone())
+        self.billing_details
+            .as_ref()
+            .and_then(|billing| billing.city.clone())
     }
 }
 
@@ -3501,39 +3754,47 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for Conn
             AuthType::Gigadat(_) => Ok(Self::Gigadat),
             AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
             AuthType::Zift(_) => Ok(Self::Zift),
-            AuthType::Screenstream(_) => {
-                Err(error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+            AuthType::Screenstream(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
                     error_identifier: 400,
                     error_message: "Connector is not supported".to_string(),
                     error_object: None,
-                })))
-            }
-            AuthType::Ebanx(_) => Err(error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                error_identifier: 400,
-                error_message: "Connector is not supported".to_string(),
-                error_object: None,
-            }))),
+                }),
+            )),
+            AuthType::Ebanx(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
             AuthType::Fiuu(_) => Ok(Self::Fiuu),
-            AuthType::Globepay(_) => Err(error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                error_identifier: 400,
-                error_message: "Connector is not supported".to_string(),
-                error_object: None,
-            }))),
-            AuthType::Coinbase(_) => Err(error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                error_identifier: 400,
-                error_message: "Connector is not supported".to_string(),
-                error_object: None,
-            }))),
-            AuthType::Coingate(_) => Err(error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                error_identifier: 400,
-                error_message: "Connector is not supported".to_string(),
-                error_object: None,
-            }))),
+            AuthType::Globepay(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coinbase(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coingate(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
             AuthType::Revolv3(_) => Ok(Self::Revolv3),
             AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
         }

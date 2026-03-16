@@ -5,7 +5,9 @@ use std::{
     time::Duration,
 };
 
-use log_utils::{AdditionalFieldsPlacement, JsonFormattingLayer, JsonFormattingLayerConfig, LoggerError};
+use log_utils::{
+    AdditionalFieldsPlacement, JsonFormattingLayer, JsonFormattingLayerConfig, LoggerError,
+};
 use tracing::Subscriber;
 use tracing_subscriber::Layer;
 

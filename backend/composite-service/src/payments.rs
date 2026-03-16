@@ -4,12 +4,14 @@ use domain_types::{
     utils::ForeignTryFrom as _,
 };
 use grpc_api_types::payments::{
-    composite_payment_service_server::CompositePaymentService, customer_service_server::CustomerService,
-    merchant_authentication_service_server::MerchantAuthenticationService, payment_service_server::PaymentService,
-    CompositeAuthorizeRequest, CompositeAuthorizeResponse, CompositeGetRequest, CompositeGetResponse, ConnectorState,
-    CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
+    composite_payment_service_server::CompositePaymentService,
+    customer_service_server::CustomerService,
+    merchant_authentication_service_server::MerchantAuthenticationService,
+    payment_service_server::PaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    CompositeGetRequest, CompositeGetResponse, ConnectorState, CustomerServiceCreateResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
+    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
 };
 
 use crate::transformers::ForeignFrom;
@@ -67,7 +69,11 @@ pub struct Payments<P, M, C> {
 }
 
 impl<P, M, C> Payments<P, M, C> {
-    pub fn new(payment_service: P, merchant_authentication_service: M, customer_service: C) -> Self {
+    pub fn new(
+        payment_service: P,
+        merchant_authentication_service: M,
+        customer_service: C,
+    ) -> Self {
         Self {
             payment_service,
             merchant_authentication_service,
@@ -95,11 +101,15 @@ where
                 .map(common_enums::PaymentMethod::foreign_try_from)
                 .transpose()
                 .map_err(|err| {
-                    tonic::Status::invalid_argument(format!("invalid payment_method in request payload: {err}"))
+                    tonic::Status::invalid_argument(format!(
+                        "invalid payment_method in request payload: {err}"
+                    ))
                 })?;
             let connector_data =
                 ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
-            connector_data.connector.should_do_access_token(payment_method)
+            connector_data
+                .connector
+                .should_do_access_token(payment_method)
         };
         let payload_access_token = payload
             .state()
@@ -141,9 +151,15 @@ where
             .state
             .as_ref()
             .and_then(|state| state.connector_customer_id.as_ref())
-            .or_else(|| payload.customer.as_ref().and_then(|c| c.connector_customer_id.as_ref()));
+            .or_else(|| {
+                payload
+                    .customer
+                    .as_ref()
+                    .and_then(|c| c.connector_customer_id.as_ref())
+            });
         let should_create_connector_customer =
-            connector_data.connector.should_create_connector_customer() && connector_customer_id.is_none();
+            connector_data.connector.should_create_connector_customer()
+                && connector_customer_id.is_none();
 
         let create_customer_response = match should_create_connector_customer {
             true => {
@@ -175,14 +191,21 @@ where
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<PaymentServiceAuthorizeResponse, tonic::Status> {
-        let authorize_payload =
-            PaymentServiceAuthorizeRequest::foreign_from((payload, access_token_response, create_customer_response));
+        let authorize_payload = PaymentServiceAuthorizeRequest::foreign_from((
+            payload,
+            access_token_response,
+            create_customer_response,
+        ));
 
         let mut authorize_request = tonic::Request::new(authorize_payload);
         *authorize_request.metadata_mut() = metadata.clone();
         *authorize_request.extensions_mut() = extensions.clone();
 
-        let authorize_response = self.payment_service.authorize(authorize_request).await?.into_inner();
+        let authorize_response = self
+            .payment_service
+            .authorize(authorize_request)
+            .await?
+            .into_inner();
 
         Ok(authorize_response)
     }
@@ -193,7 +216,8 @@ where
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector = connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector =
+            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
@@ -224,8 +248,10 @@ where
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<PaymentServiceGetResponse, tonic::Status> {
-        let get_payload =
-            grpc_api_types::payments::PaymentServiceGetRequest::foreign_from((payload, access_token_response));
+        let get_payload = grpc_api_types::payments::PaymentServiceGetRequest::foreign_from((
+            payload,
+            access_token_response,
+        ));
 
         let mut get_request = tonic::Request::new(get_payload);
         *get_request.metadata_mut() = metadata.clone();
@@ -242,12 +268,18 @@ where
     ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector = connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector =
+            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
         let get_response = self
-            .get(&payload, access_token_response.as_ref(), &metadata, &extensions)
+            .get(
+                &payload,
+                access_token_response.as_ref(),
+                &metadata,
+                &extensions,
+            )
             .await?;
 
         Ok(tonic::Response::new(CompositeGetResponse {

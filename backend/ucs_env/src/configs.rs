@@ -78,7 +78,9 @@ impl TestConfig {
                 self.mock_server_url
                     .as_ref()
                     .ok_or_else(|| {
-                        config::ConfigError::Message("Test mode enabled but mock_server_url is not set".to_string())
+                        config::ConfigError::Message(
+                            "Test mode enabled but mock_server_url is not set".to_string(),
+                        )
                     })
                     .map(|url| external_services::service::TestContext {
                         session_id: request_id.to_string(),
@@ -208,16 +210,19 @@ where
                 )
             })
         })
-        .fold((HashSet::new(), Vec::new()), |(mut values, mut errors), result| match result {
-            Ok(t) => {
-                values.insert(t);
-                (values, errors)
-            }
-            Err(error) => {
-                errors.push(error);
-                (values, errors)
-            }
-        });
+        .fold(
+            (HashSet::new(), Vec::new()),
+            |(mut values, mut errors), result| match result {
+                Ok(t) => {
+                    values.insert(t);
+                    (values, errors)
+                }
+                Err(error) => {
+                    errors.push(error);
+                    (values, errors)
+                }
+            },
+        );
     if !errors.is_empty() {
         Err(format!("Some errors occurred:\n{}", errors.join("\n")))
     } else {
@@ -234,7 +239,9 @@ where
     <T as FromStr>::Err: std::fmt::Display,
 {
     match Option::<String>::deserialize(deserializer)? {
-        Some(s) if !s.trim().is_empty() => deserialize_hashset_inner(s).map(Some).map_err(D::Error::custom),
+        Some(s) if !s.trim().is_empty() => deserialize_hashset_inner(s)
+            .map(Some)
+            .map_err(D::Error::custom),
         _ => Ok(None), // Empty string or None -> None
     }
 }
@@ -267,7 +274,9 @@ impl Config {
     }
 
     /// Function to build the configuration by picking it from default locations
-    pub fn new_with_config_path(explicit_config_path: Option<PathBuf>) -> Result<Self, config::ConfigError> {
+    pub fn new_with_config_path(
+        explicit_config_path: Option<PathBuf>,
+    ) -> Result<Self, config::ConfigError> {
         let env = consts::Env::current_env();
         let config_path = Self::config_path(&env, explicit_config_path);
 
@@ -310,7 +319,10 @@ impl Config {
     }
 
     /// Config path.
-    pub fn config_path(environment: &consts::Env, explicit_config_path: Option<PathBuf>) -> PathBuf {
+    pub fn config_path(
+        environment: &consts::Env,
+        explicit_config_path: Option<PathBuf>,
+    ) -> PathBuf {
         let mut config_path = PathBuf::new();
         if let Some(explicit_config_path_val) = explicit_config_path {
             config_path.push(explicit_config_path_val);

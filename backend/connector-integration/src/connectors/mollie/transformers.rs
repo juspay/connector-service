@@ -6,9 +6,10 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -31,11 +32,16 @@ impl TryFrom<&ConnectorSpecificAuth> for MollieAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Mollie { api_key, profile_token } => Ok(Self {
+            ConnectorSpecificAuth::Mollie {
+                api_key,
+                profile_token,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 profile_token: profile_token.to_owned(),
             }),
-            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -132,14 +138,27 @@ pub enum MollieCaptureMode {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        MollieRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        MollieRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for MolliePaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: MollieRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -156,36 +175,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Card(_card_data) => {
                 // Extract card token from payment_method_token
                 // Following Hyperswitch pattern: ALL tokens (cst_ and tkn_) go to cardToken field
-                let card_token = item
-                    .resource_common_data
-                    .payment_method_token
-                    .as_ref()
-                    .map(|token| match token {
+                let card_token = item.resource_common_data.payment_method_token.as_ref().map(
+                    |token| match token {
                         domain_types::router_data::PaymentMethodToken::Token(t) => t.clone(),
-                    });
+                    },
+                );
 
                 // Extract billing address if available
                 // Match Hyperswitch format: comma separator, no region
-                let billing_address =
-                    item.resource_common_data
-                        .address
-                        .get_payment_method_billing()
-                        .and_then(|billing| {
-                            let address = billing.address.as_ref()?;
-                            let line1 = address.line1.as_ref()?.peek().to_string();
-                            let street_and_number = match address.line2.as_ref() {
-                                Some(line2) => format!("{},{}", line1, line2.peek().as_str()),
-                                None => line1,
-                            };
+                let billing_address = item
+                    .resource_common_data
+                    .address
+                    .get_payment_method_billing()
+                    .and_then(|billing| {
+                        let address = billing.address.as_ref()?;
+                        let line1 = address.line1.as_ref()?.peek().to_string();
+                        let street_and_number = match address.line2.as_ref() {
+                            Some(line2) => format!("{},{}", line1, line2.peek().as_str()),
+                            None => line1,
+                        };
 
-                            Some(MollieAddress {
-                                street_and_number: Secret::new(street_and_number),
-                                postal_code: Secret::new(address.zip.as_ref()?.peek().to_string()),
-                                city: address.city.as_ref()?.peek().to_string(),
-                                region: None, // Match Hyperswitch: always null
-                                country: address.country?,
-                            })
-                        });
+                        Some(MollieAddress {
+                            street_and_number: Secret::new(street_and_number),
+                            postal_code: Secret::new(address.zip.as_ref()?.peek().to_string()),
+                            city: address.city.as_ref()?.peek().to_string(),
+                            region: None, // Match Hyperswitch: always null
+                            country: address.country?,
+                        })
+                    });
 
                 MolliePaymentMethodData::CreditCard(Box::new(CreditCardMethodData {
                     card_token,
@@ -207,18 +224,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let sequence_type = SequenceType::Oneoff;
 
         // captureMode is required for oneoff payments
-        let capture_mode = if item.request.capture_method == Some(common_enums::CaptureMethod::Automatic) {
-            MollieCaptureMode::Automatic
-        } else {
-            MollieCaptureMode::Manual
-        };
+        let capture_mode =
+            if item.request.capture_method == Some(common_enums::CaptureMethod::Automatic) {
+                MollieCaptureMode::Automatic
+            } else {
+                MollieCaptureMode::Manual
+            };
 
         // Build metadata - match Hyperswitch format with orderId
         // Always use orderId format, not connector_meta_data
         let mut metadata_map = serde_json::Map::new();
         metadata_map.insert(
             "orderId".to_string(),
-            serde_json::Value::String(item.resource_common_data.connector_request_reference_id.clone()),
+            serde_json::Value::String(
+                item.resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
         );
 
         Ok(Self {
@@ -317,15 +339,20 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MolliePaymentsRespons
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<MolliePaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         let status = item.response.status.to_attempt_status();
 
         // Extract redirection URL if available
         let redirection_data = item.response.links.checkout.as_ref().and_then(|checkout| {
-            url::Url::parse(&checkout.href)
-                .ok()
-                .map(|url| Box::new(RedirectForm::from((url, common_utils::request::Method::Get))))
+            url::Url::parse(&checkout.href).ok().map(|url| {
+                Box::new(RedirectForm::from((
+                    url,
+                    common_utils::request::Method::Get,
+                )))
+            })
         });
 
         Ok(Self {
@@ -354,15 +381,20 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<MolliePaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         let status = item.response.status.to_attempt_status();
 
         // Extract redirection URL if available
         let redirection_data = item.response.links.checkout.as_ref().and_then(|checkout| {
-            url::Url::parse(&checkout.href)
-                .ok()
-                .map(|url| Box::new(RedirectForm::from((url, common_utils::request::Method::Get))))
+            url::Url::parse(&checkout.href).ok().map(|url| {
+                Box::new(RedirectForm::from((
+                    url,
+                    common_utils::request::Method::Get,
+                )))
+            })
         });
 
         Ok(Self {
@@ -450,13 +482,17 @@ impl MollieRefundStatus {
 
 // Request transformer for Refund flow
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<MollieRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for MollieRefundRequest
+    TryFrom<
+        MollieRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for MollieRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: MollieRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: MollieRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = item.router_data;
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
@@ -523,7 +559,9 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<MolliePaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         // Status "canceled" maps to AttemptStatus::Voided
         let status = item.response.status.to_attempt_status();
@@ -633,15 +671,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Get profile token from auth
         let auth = MollieAuthType::try_from(&item.connector_auth_type)?;
-        let profile_token = auth
-            .profile_token
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "profile_token",
-            })?;
+        let profile_token =
+            auth.profile_token
+                .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                    config: "profile_token",
+                })?;
 
         // Format expiry date as "MM/YY" (required by Mollie Components API)
         // Using CardData util for consistent formatting
-        let card_expiry_date = card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
+        let card_expiry_date =
+            card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
 
         // Extract browser info and get language - use default if not available
         // Note: When called via UCS gRPC from Hyperswitch, browser_info may not be passed
@@ -654,12 +693,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or_else(|| "en-US".to_string());
 
         // test_mode is required - error if not provided (matching Hyperswitch)
-        let testmode = item
-            .resource_common_data
-            .test_mode
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+        let testmode = item.resource_common_data.test_mode.ok_or(
+            errors::ConnectorError::MissingRequiredField {
                 field_name: "test_mode",
-            })?;
+            },
+        )?;
 
         Ok(Self {
             card_holder: card_data
@@ -678,11 +716,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Response transformer for PaymentMethodToken flow - Card Token Response
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<MollieCardTokenResponse, Self>>
-    for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<MollieCardTokenResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<MollieCardTokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
                 token: item.response.card_token.expose(), // Return tkn_ token
@@ -709,13 +754,20 @@ pub struct MollieCaptureRequest {
 
 // Request transformer for Capture flow
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<MollieRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for MollieCaptureRequest
+    TryFrom<
+        MollieRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for MollieCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: MollieRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: MollieRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = item.router_data;
         // Convert amount to string major unit format (e.g., "10.00" for $10.00)
@@ -744,7 +796,9 @@ impl TryFrom<ResponseRouterData<MolliePaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<MolliePaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<MolliePaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map status from Mollie response - NEVER HARDCODE
         let status = item.response.status.to_attempt_status();
 

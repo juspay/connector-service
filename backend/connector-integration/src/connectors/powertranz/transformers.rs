@@ -2,8 +2,9 @@ use common_enums::enums;
 use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
@@ -180,7 +181,11 @@ pub struct PowertranzErrorResponse {
 /// Maps PowerTranz transaction type and approval status to payment status
 /// Transaction types:
 /// 1 = Auth, 2 = Sale, 3 = Capture, 4 = Void, 5 = Refund
-fn get_payment_status(transaction_type: u8, approved: Option<bool>, iso_response_code: &str) -> enums::AttemptStatus {
+fn get_payment_status(
+    transaction_type: u8,
+    approved: Option<bool>,
+    iso_response_code: &str,
+) -> enums::AttemptStatus {
     use enums::AttemptStatus;
 
     // Determine if transaction is approved
@@ -323,7 +328,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
-        let amount = PowertranzAmountConvertor::convert(request_data.amount, request_data.currency)?;
+        let amount =
+            PowertranzAmountConvertor::convert(request_data.amount, request_data.currency)?;
         // Use ISO 4217 numeric code (e.g., "840" for USD)
         let currency_code = request_data.currency.iso_4217().to_string();
 
@@ -413,7 +419,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PowertranzRouterData<
-            RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<
+                domain_types::connector_flow::Void,
+                PaymentFlowData,
+                PaymentVoidData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for PowertranzVoidRequest
@@ -422,7 +433,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: PowertranzRouterData<
-            RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<
+                domain_types::connector_flow::Void,
+                PaymentFlowData,
+                PaymentVoidData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -439,7 +455,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PowertranzRouterData<
-            RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            RouterDataV2<
+                domain_types::connector_flow::Refund,
+                RefundFlowData,
+                RefundsData,
+                RefundsResponseData,
+            >,
             T,
         >,
     > for PowertranzRefundRequest
@@ -448,7 +469,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: PowertranzRouterData<
-            RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            RouterDataV2<
+                domain_types::connector_flow::Refund,
+                RefundFlowData,
+                RefundsData,
+                RefundsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -477,7 +503,9 @@ impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<PowertranzPayments
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PowertranzPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PowertranzPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -485,7 +513,11 @@ impl<T: PaymentMethodDataTypes, F> TryFrom<ResponseRouterData<PowertranzPayments
         } = item;
 
         // Determine payment status from transaction type and ISO code
-        let status = get_payment_status(response.transaction_type, response.approved, &response.iso_response_code);
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -512,7 +544,9 @@ impl<F> TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PowertranzPaymentsSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PowertranzPaymentsSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -520,7 +554,11 @@ impl<F> TryFrom<ResponseRouterData<PowertranzPaymentsSyncResponse, Self>>
         } = item;
 
         // Determine payment status from transaction type and ISO code
-        let status = get_payment_status(response.transaction_type, response.approved, &response.iso_response_code);
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -547,7 +585,9 @@ impl<F> TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PowertranzCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PowertranzCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -555,7 +595,11 @@ impl<F> TryFrom<ResponseRouterData<PowertranzCaptureResponse, Self>>
         } = item;
 
         // Determine payment status
-        let status = get_payment_status(response.transaction_type, response.approved, &response.iso_response_code);
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -582,7 +626,9 @@ impl<F> TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PowertranzVoidResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PowertranzVoidResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -590,7 +636,11 @@ impl<F> TryFrom<ResponseRouterData<PowertranzVoidResponse, Self>>
         } = item;
 
         // Determine payment status
-        let status = get_payment_status(response.transaction_type, response.approved, &response.iso_response_code);
+        let status = get_payment_status(
+            response.transaction_type,
+            response.approved,
+            &response.iso_response_code,
+        );
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -617,7 +667,9 @@ impl<F> TryFrom<ResponseRouterData<PowertranzRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PowertranzRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PowertranzRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -649,7 +701,9 @@ impl<F> TryFrom<ResponseRouterData<PowertranzRSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PowertranzRSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PowertranzRSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,

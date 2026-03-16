@@ -115,9 +115,10 @@ impl From<PayboxStatus> for RefundStatus {
     fn from(item: PayboxStatus) -> Self {
         match item {
             PayboxStatus::Refunded => Self::Success,
-            PayboxStatus::Cancelled | PayboxStatus::Authorised | PayboxStatus::Captured | PayboxStatus::Rejected => {
-                Self::Failure
-            }
+            PayboxStatus::Cancelled
+            | PayboxStatus::Authorised
+            | PayboxStatus::Captured
+            | PayboxStatus::Rejected => Self::Failure,
         }
     }
 }
@@ -150,7 +151,8 @@ fn generate_request_id() -> CustomResult<String, errors::ConnectorError> {
 }
 
 fn generate_date_time() -> CustomResult<String, errors::ConnectorError> {
-    format_date(now(), DateFormat::DDMMYYYYHHmmss).change_context(errors::ConnectorError::RequestEncodingFailed)
+    format_date(now(), DateFormat::DDMMYYYYHHmmss)
+        .change_context(errors::ConnectorError::RequestEncodingFailed)
 }
 
 // ============================================================================
@@ -188,14 +190,27 @@ pub struct PayboxPaymentRequest<T: PaymentMethodDataTypes> {
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        PayboxRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        PayboxRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for PayboxPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: PayboxRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -207,7 +222,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let amount = connector
             .amount_converter
-            .convert(router_data.request.minor_amount, router_data.request.currency)
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
         let card_data = match &router_data.request.payment_method_data {
@@ -238,7 +256,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             paybox_request_number: generate_request_id()?,
             amount,
             currency: router_data.request.currency,
-            reference: router_data.resource_common_data.connector_request_reference_id.clone(),
+            reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             date: generate_date_time()?,
             card_number: card_data.card_number.clone(),
             expiration_date,
@@ -277,7 +298,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxAuthorizeRespon
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PayboxAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayboxAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let is_auto_capture = matches!(
             item.router_data.request.capture_method,
             Some(common_enums::CaptureMethod::Automatic)
@@ -297,7 +320,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PayboxAuthorizeRespon
 
             Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        item.response.paybox_order_id.clone(),
+                    ),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: Some(connector_metadata),
@@ -359,13 +384,20 @@ pub struct PayboxSyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayboxRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for PayboxSyncRequest
+    TryFrom<
+        PayboxRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for PayboxSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PayboxRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: PayboxRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)
@@ -433,7 +465,9 @@ impl TryFrom<ResponseRouterData<PayboxPSyncResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.paybox_order_id.clone(),
+                ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -484,13 +518,20 @@ pub struct PayboxCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayboxRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for PayboxCaptureRequest
+    TryFrom<
+        PayboxRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for PayboxCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PayboxRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: PayboxRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
@@ -515,7 +556,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let amount = connector
             .amount_converter
-            .convert(router_data.request.minor_amount_to_capture, router_data.request.currency)
+            .convert(
+                router_data.request.minor_amount_to_capture,
+                router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
         let capture_request = Self {
@@ -527,7 +571,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             paybox_request_number: generate_request_id()?,
             amount,
             currency: router_data.request.currency,
-            reference: router_data.resource_common_data.connector_request_reference_id.clone(),
+            reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             date: generate_date_time()?,
             transaction_number: numtrans,
             paybox_order_id: numappel,
@@ -542,11 +589,15 @@ impl TryFrom<ResponseRouterData<PayboxCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<PayboxCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayboxCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         if item.response.response_code == SUCCESS_CODE {
             Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        item.response.paybox_order_id.clone(),
+                    ),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
@@ -613,13 +664,20 @@ pub struct PayboxVoidRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayboxRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for PayboxVoidRequest
+    TryFrom<
+        PayboxRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for PayboxVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PayboxRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: PayboxRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
@@ -638,15 +696,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .map(|meta| meta.connector_request_id)
             .unwrap_or_else(|| numappel.clone());
 
-        let amount = router_data
-            .request
-            .amount
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "amount" })?;
+        let amount =
+            router_data
+                .request
+                .amount
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
 
-        let currency = router_data
-            .request
-            .currency
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "currency" })?;
+        let currency =
+            router_data
+                .request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
 
         let amount = connector
             .amount_converter
@@ -662,7 +726,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             paybox_request_number: generate_request_id()?,
             amount,
             currency,
-            reference: router_data.resource_common_data.connector_request_reference_id.clone(),
+            reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             date: generate_date_time()?,
             transaction_number: numtrans,
             paybox_order_id: numappel,
@@ -683,7 +750,9 @@ impl TryFrom<ResponseRouterData<PayboxVoidResponse, Self>>
 
             Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(item.response.paybox_order_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        item.response.paybox_order_id.clone(),
+                    ),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: Some(connector_metadata),
@@ -752,13 +821,17 @@ pub struct PayboxRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayboxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for PayboxRefundRequest
+    TryFrom<
+        PayboxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for PayboxRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PayboxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: PayboxRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
@@ -778,7 +851,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let amount = connector
             .amount_converter
-            .convert(router_data.request.minor_refund_amount, router_data.request.currency)
+            .convert(
+                router_data.request.minor_refund_amount,
+                router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::ParsingFailed)?;
 
         Ok(Self {
@@ -790,7 +866,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             paybox_request_number: generate_request_id()?,
             amount,
             currency: router_data.request.currency,
-            reference: router_data.resource_common_data.connector_request_reference_id.clone(),
+            reference: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             date: generate_date_time()?,
             transaction_number: numtrans,
             paybox_order_id: numappel,
@@ -862,13 +941,20 @@ impl TryFrom<ResponseRouterData<PayboxRefundResponse, Self>>
 // ============================================================================
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayboxRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for PayboxSyncRequest
+    TryFrom<
+        PayboxRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for PayboxSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: PayboxRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        item: PayboxRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)

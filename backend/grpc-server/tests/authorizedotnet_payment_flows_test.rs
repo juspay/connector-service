@@ -22,14 +22,16 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, mandate_reference::MandateIdType, payment_method,
-        payment_service_client::PaymentServiceClient, recurring_payment_service_client::RecurringPaymentServiceClient,
-        AcceptanceType, Address, AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
-        ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage, Identifier,
-        MandateReference, PaymentAddress, PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
-        RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundServiceGetRequest,
-        RefundStatus,
+        payment_service_client::PaymentServiceClient,
+        recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
+        AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
+        ConnectorMandateReferenceId, CountryAlpha2, Currency, CustomerAcceptance, FutureUsage,
+        Identifier, MandateReference, PaymentAddress, PaymentMethod, PaymentMethodType,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
+        RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse,
+        RefundServiceGetRequest, RefundStatus,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -68,7 +70,10 @@ const BASE64_METADATA: &str =
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
 
 // Helper function to generate unique email
@@ -84,35 +89,44 @@ fn generate_unique_request_ref_id(prefix: &str) -> String {
 // Helper function to add AuthorizeDotNet metadata headers to a request
 fn add_authorizenet_metadata<T>(request: &mut Request<T>) {
     // Get API credentials using the common credential loading utility
-    let auth =
-        utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load Authorize.Net credentials");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load Authorize.Net credentials");
 
     let (api_key, key1) = match auth {
-        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => (api_key.expose(), key1.expose()),
+        domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
+            (api_key.expose(), key1.expose())
+        }
         _ => panic!("Expected BodyKey auth type for Authorize.Net"),
     };
 
-    request
-        .metadata_mut()
-        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
-    request
-        .metadata_mut()
-        .append("x-auth", "body-key".parse().expect("Failed to parse x-auth"));
-    request
-        .metadata_mut()
-        .append("x-api-key", api_key.parse().expect("Failed to parse x-api-key"));
+    request.metadata_mut().append(
+        "x-connector",
+        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
+    );
+    request.metadata_mut().append(
+        "x-auth",
+        "body-key".parse().expect("Failed to parse x-auth"),
+    );
+    request.metadata_mut().append(
+        "x-api-key",
+        api_key.parse().expect("Failed to parse x-api-key"),
+    );
     request
         .metadata_mut()
         .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
     // Add merchant ID which is required by the server
-    request
-        .metadata_mut()
-        .append("x-merchant-id", "test_merchant".parse().expect("Failed to parse x-merchant-id"));
+    request.metadata_mut().append(
+        "x-merchant-id",
+        "test_merchant"
+            .parse()
+            .expect("Failed to parse x-merchant-id"),
+    );
 
     // Add tenant ID which is required by the server
-    request
-        .metadata_mut()
-        .append("x-tenant-id", "default".parse().expect("Failed to parse x-tenant-id"));
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
 
     // Add request ID which is required by the server
     request.metadata_mut().append(
@@ -169,17 +183,22 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
     };
 
     let mandate_reference = MandateReference {
-        mandate_id_type: Some(MandateIdType::ConnectorMandateId(ConnectorMandateReferenceId {
-            connector_mandate_request_reference_id: None,
-            connector_mandate_id: Some(mandate_id.to_string()),
-            payment_method_id: None,
-        })),
+        mandate_id_type: Some(MandateIdType::ConnectorMandateId(
+            ConnectorMandateReferenceId {
+                connector_mandate_request_reference_id: None,
+                connector_mandate_id: Some(mandate_id.to_string()),
+                payment_method_id: None,
+            },
+        )),
     };
 
     // Create metadata matching your JSON format
     let mut metadata_map = HashMap::new();
     metadata_map.insert("order_type".to_string(), "recurring".to_string());
-    metadata_map.insert("customer_note".to_string(), "Monthly subscription payment".to_string());
+    metadata_map.insert(
+        "customer_note".to_string(),
+        "Monthly subscription payment".to_string(),
+    );
 
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
@@ -274,7 +293,9 @@ async fn test_repeat_everything() {
 
 // Helper function to create a payment authorization request
 #[allow(clippy::field_reassign_with_default)]
-fn create_payment_authorize_request(capture_method: common_enums::CaptureMethod) -> PaymentServiceAuthorizeRequest {
+fn create_payment_authorize_request(
+    capture_method: common_enums::CaptureMethod,
+) -> PaymentServiceAuthorizeRequest {
     // Initialize with all required fields
     let mut request = PaymentServiceAuthorizeRequest::default();
 
@@ -344,7 +365,9 @@ fn create_payment_authorize_request(capture_method: common_enums::CaptureMethod)
         screen_height: Some(1080),
         screen_width: Some(1920),
         user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
-        accept_header: Some("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string()),
+        accept_header: Some(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
+        ),
         java_script_enabled: Some(false),
         language: Some("en-US".to_string()),
         referer: None,
@@ -654,7 +677,10 @@ async fn test_payment_authorization_auto_capture() {
 
         // println!("Payment authorize response for auto: {:?}", response);
         // Verify the response - transaction_id may not be present for failed or pending payments
-        let successful_statuses = [i32::from(PaymentStatus::Charged), i32::from(PaymentStatus::Authorized)];
+        let successful_statuses = [
+            i32::from(PaymentStatus::Charged),
+            i32::from(PaymentStatus::Authorized),
+        ];
         if successful_statuses.contains(&response.status) {
             assert!(
                 response.connector_transaction_id.is_some(),
@@ -667,7 +693,10 @@ async fn test_payment_authorization_auto_capture() {
         let _transaction_id = extract_transaction_id(&response);
 
         // Verify payment status - allow CHARGED, PENDING, or FAILURE (common in sandbox)
-        let acceptable_statuses = [i32::from(PaymentStatus::Charged), i32::from(PaymentStatus::Pending)];
+        let acceptable_statuses = [
+            i32::from(PaymentStatus::Charged),
+            i32::from(PaymentStatus::Pending),
+        ];
         assert!(
             acceptable_statuses.contains(&response.status),
             "Payment should be in CHARGED, PENDING, or FAILURE state (sandbox) but was: {}",
@@ -929,7 +958,10 @@ async fn test_refund() {
         let transaction_id = extract_transaction_id(&auth_response);
 
         // Verify payment status or handle other states - allow PENDING or FAILURE in sandbox
-        let acceptable_statuses = [i32::from(PaymentStatus::Charged), i32::from(PaymentStatus::Pending)];
+        let acceptable_statuses = [
+            i32::from(PaymentStatus::Charged),
+            i32::from(PaymentStatus::Pending),
+        ];
         assert!(
             acceptable_statuses.contains(&auth_response.status),
             "Payment should be in CHARGED, PENDING, or FAILURE state (sandbox) but was: {}",
@@ -957,9 +989,9 @@ async fn test_refund() {
         let refund_result = client.refund(refund_grpc_request).await;
 
         // Check if we have a successful refund OR any expected error (including gRPC errors)
-        let is_success_status = refund_result
-            .as_ref()
-            .is_ok_and(|response| response.get_ref().status == i32::from(RefundStatus::RefundSuccess));
+        let is_success_status = refund_result.as_ref().is_ok_and(|response| {
+            response.get_ref().status == i32::from(RefundStatus::RefundSuccess)
+        });
 
         let has_expected_error = refund_result.as_ref().is_ok_and(|response| {
             let error_msg = response
@@ -970,8 +1002,9 @@ async fn test_refund() {
                 .and_then(|e| e.message)
                 .unwrap_or_default()
                 .to_lowercase();
-            error_msg.contains("The referenced transaction does not meet the criteria for issuing a credit.")
-                || error_msg.contains("credit")
+            error_msg.contains(
+                "The referenced transaction does not meet the criteria for issuing a credit.",
+            ) || error_msg.contains("credit")
                 || error_msg.contains("refund")
                 || error_msg.contains("transaction")
                 || response.get_ref().status == i32::from(RefundStatus::RefundFailure)
@@ -1010,13 +1043,21 @@ async fn test_register() {
         );
 
         // Check if we have a mandate reference
-        assert!(response.mandate_reference.is_some(), "Mandate reference should be present");
+        assert!(
+            response.mandate_reference.is_some(),
+            "Mandate reference should be present"
+        );
 
         // Verify the mandate reference has the expected structure
         if let Some(mandate_ref) = &response.mandate_reference {
             // Verify the composite ID format (profile_id-payment_profile_id)
-            if let Some(MandateIdType::ConnectorMandateId(mandate_id)) = &mandate_ref.mandate_id_type {
-                assert!(mandate_id.connector_mandate_id.is_some(), "Mandate ID should be present");
+            if let Some(MandateIdType::ConnectorMandateId(mandate_id)) =
+                &mandate_ref.mandate_id_type
+            {
+                assert!(
+                    mandate_id.connector_mandate_id.is_some(),
+                    "Mandate ID should be present"
+                );
                 if let Some(mandate_id) = mandate_id.connector_mandate_id.as_ref() {
                     assert!(
                         mandate_id.contains('-') || !mandate_id.is_empty(),
@@ -1026,7 +1067,10 @@ async fn test_register() {
             }
         }
 
-        let error_message = response.error.and_then(|e| e.connector_details).and_then(|e| e.message);
+        let error_message = response
+            .error
+            .and_then(|e| e.connector_details)
+            .and_then(|e| e.message);
         // Verify no error occurred
         assert!(
             error_message.is_none() || error_message.as_ref().unwrap().is_empty(),
@@ -1040,7 +1084,8 @@ async fn test_register() {
 async fn test_authorize_with_setup_future_usage() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create an authorization request with setup_future_usage
-        let mut auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
+        let mut auth_request =
+            create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
 
         // Add setup_future_usage to trigger profile creation
         auth_request.setup_future_usage = Some(i32::from(FutureUsage::OnSession));
@@ -1057,7 +1102,10 @@ async fn test_authorize_with_setup_future_usage() {
             .into_inner();
 
         // Verify the response - transaction_id may not be present for failed or pending payments
-        let successful_statuses = [i32::from(PaymentStatus::Charged), i32::from(PaymentStatus::Authorized)];
+        let successful_statuses = [
+            i32::from(PaymentStatus::Charged),
+            i32::from(PaymentStatus::Authorized),
+        ];
         if successful_statuses.contains(&auth_response.status) {
             assert!(
                 auth_response.connector_transaction_id.is_some(),

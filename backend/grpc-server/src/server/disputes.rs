@@ -8,20 +8,27 @@ use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},
-    connector_types::{AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, SubmitEvidenceData},
+    connector_types::{
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        SubmitEvidenceData,
+    },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
-    types::{generate_accept_dispute_response, generate_defend_dispute_response, generate_submit_evidence_response},
+    types::{
+        generate_accept_dispute_response, generate_defend_dispute_response,
+        generate_submit_evidence_response,
+    },
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest, DisputeServiceAcceptResponse,
-    DisputeServiceDefendRequest, DisputeServiceDefendResponse, DisputeServiceGetRequest,
-    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse, EventResponse,
-    EventServiceHandleRequest, EventServiceHandleResponse, WebhookEventType,
+    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, EventResponse, EventServiceHandleRequest,
+    EventServiceHandleResponse, WebhookEventType,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -119,12 +126,14 @@ impl DisputeService for Disputes {
                         DisputeResponseData,
                     > = connector_data.connector.get_connector_integration_v2();
 
-                    let dispute_data =
-                        SubmitEvidenceData::foreign_try_from(payload.clone()).map_err(|e| e.into_grpc_status())?;
+                    let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_flow_data =
-                        DisputeFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
-                            .map_err(|e| e.into_grpc_status())?;
+                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
+                        payload.clone(),
+                        config.connectors.clone(),
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
 
                     let router_data: RouterDataV2<
                         SubmitEvidence,
@@ -151,23 +160,25 @@ impl DisputeService for Disputes {
                         shadow_mode,
                     };
 
-                    let response = Box::pin(external_services::service::execute_connector_processing_step(
-                        &config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        common_enums::CallConnectorAction::Trigger,
-                        None,
-                        None,
-                    ))
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        ),
+                    )
                     .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_response =
-                        generate_submit_evidence_response(response).map_err(|e| e.into_grpc_status())?;
+                    let dispute_response = generate_submit_evidence_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(dispute_response))
                 }
@@ -216,7 +227,9 @@ impl DisputeService for Disputes {
             common_utils::events::FlowName::Dsync,
             |request_data| async {
                 let _payload = request_data.payload;
-                let response = DisputeResponse { ..Default::default() };
+                let response = DisputeResponse {
+                    ..Default::default()
+                };
                 Ok(tonic::Response::new(response))
             },
         )
@@ -327,21 +340,27 @@ impl DisputeService for Disputes {
                         DisputeResponseData,
                     > = connector_data.connector.get_connector_integration_v2();
 
-                    let dispute_data =
-                        AcceptDisputeData::foreign_try_from(payload.clone()).map_err(|e| e.into_grpc_status())?;
+                    let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_flow_data =
-                        DisputeFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
-                            .map_err(|e| e.into_grpc_status())?;
+                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
+                        payload.clone(),
+                        config.connectors.clone(),
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
 
-                    let router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> =
-                        RouterDataV2 {
-                            flow: std::marker::PhantomData,
-                            resource_common_data: dispute_flow_data,
-                            connector_auth_type,
-                            request: dispute_data,
-                            response: Err(ErrorResponse::default()),
-                        };
+                    let router_data: RouterDataV2<
+                        Accept,
+                        DisputeFlowData,
+                        AcceptDisputeData,
+                        DisputeResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: dispute_flow_data,
+                        connector_auth_type,
+                        request: dispute_data,
+                        response: Err(ErrorResponse::default()),
+                    };
 
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
@@ -356,23 +375,25 @@ impl DisputeService for Disputes {
                         shadow_mode,
                     };
 
-                    let response = Box::pin(external_services::service::execute_connector_processing_step(
-                        &config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        common_enums::CallConnectorAction::Trigger,
-                        None,
-                        None,
-                    ))
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        ),
+                    )
                     .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_response =
-                        generate_accept_dispute_response(response).map_err(|e| e.into_grpc_status())?;
+                    let dispute_response = generate_accept_dispute_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(dispute_response))
                 }
@@ -491,6 +512,8 @@ async fn get_disputes_webhook_content(
     )?;
 
     Ok(EventResponse {
-        content: Some(grpc_api_types::payments::event_response::Content::DisputesResponse(response)),
+        content: Some(
+            grpc_api_types::payments::event_response::Content::DisputesResponse(response),
+        ),
     })
 }

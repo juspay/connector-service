@@ -62,14 +62,15 @@ pub struct MandateAmountData {
 
 impl MandateAmountData {
     pub fn get_end_date(&self, format: date_time::DateFormat) -> Result<String, Error> {
-        let date = self
-            .end_date
-            .ok_or_else(missing_field_err("mandate_data.mandate_type.{multi_use|single_use}.end_date"))?;
-        date_time::format_date(date, format).change_context(crate::errors::ConnectorError::DateFormattingFailed)
+        let date = self.end_date.ok_or_else(missing_field_err(
+            "mandate_data.mandate_type.{multi_use|single_use}.end_date",
+        ))?;
+        date_time::format_date(date, format)
+            .change_context(crate::errors::ConnectorError::DateFormattingFailed)
     }
     pub fn get_metadata(&self) -> Result<SecretSerdeValue, Error> {
-        self.metadata
-            .clone()
-            .ok_or_else(missing_field_err("mandate_data.mandate_type.{multi_use|single_use}.metadata"))
+        self.metadata.clone().ok_or_else(missing_field_err(
+            "mandate_data.mandate_type.{multi_use|single_use}.metadata",
+        ))
     }
 }

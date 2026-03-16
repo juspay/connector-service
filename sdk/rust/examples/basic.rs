@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use grpc_api_types::payments::{
-    self, Connector, ConnectorAuth, ConnectorConfig, Environment, FfiOptions, PaymentServiceAuthorizeRequest,
-    RequestConfig,
+    self, Connector, ConnectorAuth, ConnectorConfig, Environment, FfiOptions,
+    PaymentServiceAuthorizeRequest, RequestConfig,
 };
 use hyperswitch_masking::Secret;
 use hyperswitch_payments_client::ConnectorClient;
@@ -10,16 +10,19 @@ use hyperswitch_payments_client::ConnectorClient;
 #[tokio::main]
 async fn main() {
     let request = build_authorize_request();
-    let api_key = std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_placeholder".to_string());
+    let api_key =
+        std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_placeholder".to_string());
 
     // Define the final configuration context
     let ffi_options = FfiOptions {
         environment: Environment::Sandbox.into(),
         connector: Connector::Stripe.into(),
         auth: Some(ConnectorAuth {
-            auth_type: Some(payments::connector_auth::AuthType::Stripe(payments::StripeAuth {
-                api_key: Some(Secret::new(api_key.to_string())),
-            })),
+            auth_type: Some(payments::connector_auth::AuthType::Stripe(
+                payments::StripeAuth {
+                    api_key: Some(Secret::new(api_key.to_string())),
+                },
+            )),
         }),
     };
 
@@ -37,7 +40,9 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
         // Identification
         merchant_transaction_id: Some(payments::Identifier {
-            id_type: Some(payments::identifier::IdType::Id("test_rust_stripe_123".to_string())),
+            id_type: Some(payments::identifier::IdType::Id(
+                "test_rust_stripe_123".to_string(),
+            )),
         }),
 
         // Payment details
@@ -49,14 +54,21 @@ fn build_authorize_request() -> PaymentServiceAuthorizeRequest {
 
         // Card payment method
         payment_method: Some(payments::PaymentMethod {
-            payment_method: Some(payments::payment_method::PaymentMethod::Card(payments::CardDetails {
-                card_number: Some("4242424242424242".to_string().try_into().expect("valid card number")),
-                card_exp_month: Some(Secret::new("12".to_string())),
-                card_exp_year: Some(Secret::new("2050".to_string())),
-                card_cvc: Some(Secret::new("123".to_string())),
-                card_holder_name: Some(Secret::new("Rust Test User".to_string())),
-                ..Default::default()
-            })),
+            payment_method: Some(payments::payment_method::PaymentMethod::Card(
+                payments::CardDetails {
+                    card_number: Some(
+                        "4242424242424242"
+                            .to_string()
+                            .try_into()
+                            .expect("valid card number"),
+                    ),
+                    card_exp_month: Some(Secret::new("12".to_string())),
+                    card_exp_year: Some(Secret::new("2050".to_string())),
+                    card_cvc: Some(Secret::new("123".to_string())),
+                    card_holder_name: Some(Secret::new("Rust Test User".to_string())),
+                    ..Default::default()
+                },
+            )),
         }),
 
         // Customer info
@@ -111,7 +123,11 @@ fn demo_low_level(
 ) {
     eprintln!("=== Demo 1: Low-Level Handler Call ===\n");
 
-    let ffi_request = match hyperswitch_payments_client::build_ffi_request(request.clone(), metadata, ffi_options) {
+    let ffi_request = match hyperswitch_payments_client::build_ffi_request(
+        request.clone(),
+        metadata,
+        ffi_options,
+    ) {
         Ok(req) => req,
         Err(e) => {
             eprintln!("Failed to build FFI request: {}", e);
@@ -119,10 +135,13 @@ fn demo_low_level(
         }
     };
 
-    let environment =
-        Some(grpc_api_types::payments::Environment::try_from(ffi_options.environment).unwrap_or_default());
+    let environment = Some(
+        grpc_api_types::payments::Environment::try_from(ffi_options.environment)
+            .unwrap_or_default(),
+    );
 
-    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, environment) {
+    match connector_service_ffi::handlers::payments::authorize_req_handler(ffi_request, environment)
+    {
         Ok(Some(connector_request)) => {
             let url = connector_request.url.clone();
             let method = connector_request.method;
@@ -186,7 +205,8 @@ async fn demo_full_round_trip(
     // 2. Optional RequestConfig defaults (http, vault)
     let defaults = RequestConfig::default();
 
-    let client = ConnectorClient::new(config, Some(defaults)).expect("Failed to create ConnectorClient");
+    let client =
+        ConnectorClient::new(config, Some(defaults)).expect("Failed to create ConnectorClient");
 
     // 3. Call authorize
     match client.authorize(request, metadata, None).await {
@@ -194,7 +214,8 @@ async fn demo_full_round_trip(
             eprintln!("Authorize response received:");
             eprintln!(
                 "{}",
-                serde_json::to_string_pretty(&response).unwrap_or_else(|_| format!("{:?}", response))
+                serde_json::to_string_pretty(&response)
+                    .unwrap_or_else(|_| format!("{:?}", response))
             );
         }
         Err(e) => {

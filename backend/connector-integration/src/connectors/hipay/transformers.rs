@@ -8,9 +8,10 @@ use common_utils::{request::MultipartData, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -32,11 +33,16 @@ impl TryFrom<&ConnectorSpecificAuth> for HipayAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Hipay { api_key, api_secret } => Ok(Self {
+            ConnectorSpecificAuth::Hipay {
+                api_key,
+                api_secret,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -269,14 +275,27 @@ pub struct HipayPaymentsRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        HipayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        HipayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for HipayPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: HipayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -319,7 +338,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 return Err(errors::ConnectorError::NotImplemented(
                     "Payment method not supported".to_string(),
                 ))
-                .change_context(errors::ConnectorError::NotImplemented("Payment method".to_string()))
+                .change_context(errors::ConnectorError::NotImplemented(
+                    "Payment method".to_string(),
+                ))
             }
         };
 
@@ -327,7 +348,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         // Determine operation based on capture method (matching HS)
@@ -346,7 +370,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .map(|pmt| match pmt {
                 PaymentMethodTokenType::Token(token) => token.peek().to_string(),
             })
-            .or_else(|| item.router_data.resource_common_data.connector_customer.clone());
+            .or_else(|| {
+                item.router_data
+                    .resource_common_data
+                    .connector_customer
+                    .clone()
+            });
 
         // Build callback URLs matching HS implementation
         // Use /redirect/response/hipay path (not /redirect/complete/hipay)
@@ -439,7 +468,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayAuthorizeRespons
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<HipayAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<HipayAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
         let status = AttemptStatus::from(item.response.status.clone());
 
@@ -459,15 +490,19 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayAuthorizeRespons
         } else {
             // Check if redirection is needed (for 3DS flows)
             let redirection_data = if !item.response.forward_url.is_empty() {
-                Some(Box::new(domain_types::router_response_types::RedirectForm::Uri {
-                    uri: item.response.forward_url.clone(),
-                }))
+                Some(Box::new(
+                    domain_types::router_response_types::RedirectForm::Uri {
+                        uri: item.response.forward_url.clone(),
+                    },
+                ))
             } else {
                 None
             };
 
             Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_reference.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.transaction_reference.clone(),
+                ),
                 redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -554,10 +589,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(errors::ConnectorError::NotImplemented(
-                "Payment method not supported for tokenization".to_string(),
-            ))
-            .change_context(errors::ConnectorError::NotImplemented("Payment method".to_string())),
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    "Payment method not supported for tokenization".to_string(),
+                ))
+                .change_context(errors::ConnectorError::NotImplemented(
+                    "Payment method".to_string(),
+                ))
+            }
         }
     }
 }
@@ -576,7 +615,12 @@ pub struct HipayTokenResponse {
 }
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayTokenResponse, Self>>
-    for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+    for RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -701,13 +745,20 @@ pub struct HipayCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<HipayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for HipayCaptureRequest
+    TryFrom<
+        HipayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for HipayCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: HipayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: HipayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Convert amount to StringMajorUnit (HiPay expects decimal format)
         let amount = item
@@ -739,7 +790,8 @@ impl TryFrom<ResponseRouterData<HipayCaptureResponse, Self>>
         let status = AttemptStatus::from(item.response.status.clone());
 
         // Check if status indicates failure
-        let response = if status == AttemptStatus::Failure || status == AttemptStatus::CaptureFailed {
+        let response = if status == AttemptStatus::Failure || status == AttemptStatus::CaptureFailed
+        {
             Err(domain_types::router_data::ErrorResponse {
                 code: "CAPTURE_FAILED".to_string(),
                 message: item.response.message.clone(),
@@ -753,7 +805,9 @@ impl TryFrom<ResponseRouterData<HipayCaptureResponse, Self>>
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_reference.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.transaction_reference.clone(),
+                ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -786,19 +840,26 @@ pub struct HipayRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<HipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for HipayRefundRequest
+    TryFrom<
+        HipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for HipayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: HipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: HipayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Convert minor unit amount to StringMajorUnit (HiPay expects decimal format)
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_refund_amount,
+                item.router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
@@ -874,13 +935,20 @@ pub struct HipayVoidRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<HipayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for HipayVoidRequest
+    TryFrom<
+        HipayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for HipayVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: HipayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: HipayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             operation: HipayOperation::Cancel,
@@ -916,7 +984,9 @@ impl TryFrom<ResponseRouterData<HipayVoidResponse, Self>>
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_reference.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.transaction_reference.clone(),
+                ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,

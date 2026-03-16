@@ -4,9 +4,9 @@ use common_utils::{id_type::CustomerId, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -79,7 +79,9 @@ impl TryFrom<&ConnectorSpecificAuth> for GetnetAuthType {
                 api_secret: api_secret.to_owned(),
                 seller_id: seller_id.to_owned(),
             }),
-            _other => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _other => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -123,7 +125,9 @@ impl From<&GetnetPaymentStatus> for AttemptStatus {
             GetnetPaymentStatus::Approved | GetnetPaymentStatus::Captured => Self::Charged,
             GetnetPaymentStatus::Authorized => Self::Authorized,
             GetnetPaymentStatus::Pending | GetnetPaymentStatus::Waiting => Self::Pending,
-            GetnetPaymentStatus::Denied | GetnetPaymentStatus::Failed | GetnetPaymentStatus::Error => Self::Failure,
+            GetnetPaymentStatus::Denied
+            | GetnetPaymentStatus::Failed
+            | GetnetPaymentStatus::Error => Self::Failure,
             GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => Self::Voided,
             GetnetPaymentStatus::Unknown => Self::Pending,
         }
@@ -135,7 +139,9 @@ impl From<&GetnetPaymentStatus> for RefundStatus {
         match status {
             GetnetPaymentStatus::Canceled | GetnetPaymentStatus::Cancelled => Self::Success,
             GetnetPaymentStatus::Pending | GetnetPaymentStatus::Waiting => Self::Pending,
-            GetnetPaymentStatus::Denied | GetnetPaymentStatus::Failed | GetnetPaymentStatus::Error => Self::Failure,
+            GetnetPaymentStatus::Denied
+            | GetnetPaymentStatus::Failed
+            | GetnetPaymentStatus::Error => Self::Failure,
             _ => Self::Pending,
         }
     }
@@ -177,14 +183,27 @@ pub struct GetnetCard<T: PaymentMethodDataTypes> {
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        GetnetRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        GetnetRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for GetnetAuthorizeRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         wrapper: GetnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -219,7 +238,10 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             security_code: card_data.card_cvc.clone(),
         };
 
-        let request_ref_id = item.resource_common_data.connector_request_reference_id.clone();
+        let request_ref_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
 
         // Determine payment method based on capture method
         let payment_method = GetnetPaymentMethod::from_capture_method(item.request.capture_method);
@@ -275,7 +297,9 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GetnetAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GetnetAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Getnet returns status in the response - use it directly
         // The status mapping already handles both manual and automatic capture correctly:
         // - Authorized/Captured/Approved -> Charged (for automatic capture)
@@ -311,13 +335,20 @@ pub struct GetnetCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<GetnetRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for GetnetCaptureRequest
+    TryFrom<
+        GetnetRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for GetnetCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: GetnetRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: GetnetRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -332,7 +363,10 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
         let capture_amount_minor = MinorUnit::new(capture_amount);
 
         Ok(Self {
-            idempotency_key: router_data.resource_common_data.connector_request_reference_id.clone(),
+            idempotency_key: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             payment_id,
             amount: capture_amount_minor,
         })
@@ -358,7 +392,9 @@ impl TryFrom<ResponseRouterData<GetnetCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GetnetCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GetnetCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(&item.response.status);
 
         Ok(Self {
@@ -453,23 +489,31 @@ pub struct GetnetRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<GetnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for GetnetRefundRequest
+    TryFrom<
+        GetnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for GetnetRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: GetnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: GetnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
         let payment_id = router_data.request.connector_transaction_id.clone();
 
         // Determine payment method based on capture method
-        let payment_method = GetnetPaymentMethod::from_capture_method(router_data.request.capture_method);
+        let payment_method =
+            GetnetPaymentMethod::from_capture_method(router_data.request.capture_method);
 
         Ok(Self {
-            idempotency_key: router_data.resource_common_data.connector_request_reference_id.clone(),
+            idempotency_key: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             payment_id,
             amount: router_data.request.minor_refund_amount,
             payment_method: payment_method.to_string(),
@@ -517,7 +561,9 @@ impl TryFrom<ResponseRouterData<GetnetRefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GetnetRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GetnetRefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(&item.response.status);
 
         Ok(Self {
@@ -539,7 +585,12 @@ pub struct GetnetAccessTokenRequest {
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GetnetRouterData<
-            RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
             T,
         >,
     > for GetnetAccessTokenRequest
@@ -548,7 +599,12 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 
     fn try_from(
         item: GetnetRouterData<
-            RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -572,7 +628,9 @@ impl<F, T> TryFrom<ResponseRouterData<GetnetAccessTokenResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GetnetAccessTokenResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GetnetAccessTokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
                 access_token: item.response.access_token,
@@ -589,25 +647,38 @@ impl<F, T> TryFrom<ResponseRouterData<GetnetAccessTokenResponse, Self>>
 pub type GetnetVoidRequest = GetnetRefundRequest;
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<GetnetRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for GetnetVoidRequest
+    TryFrom<
+        GetnetRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for GetnetVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: GetnetRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: GetnetRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
         let payment_id = router_data.request.connector_transaction_id.clone();
 
-        let void_amount = router_data
-            .request
-            .amount
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "amount" })?;
+        let void_amount =
+            router_data
+                .request
+                .amount
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
 
         Ok(Self {
-            idempotency_key: router_data.resource_common_data.connector_request_reference_id.clone(),
+            idempotency_key: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             payment_id,
             amount: void_amount,
             payment_method: GetnetPaymentMethod::DirectCreditAuthorization.to_string(),

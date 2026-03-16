@@ -8,11 +8,13 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use grpc_api_types::payouts::{
-    payout_service_server::PayoutService, PayoutServiceCreateLinkRequest, PayoutServiceCreateLinkResponse,
-    PayoutServiceCreateRecipientRequest, PayoutServiceCreateRecipientResponse, PayoutServiceCreateRequest,
-    PayoutServiceCreateResponse, PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse,
-    PayoutServiceGetRequest, PayoutServiceGetResponse, PayoutServiceStageRequest, PayoutServiceStageResponse,
-    PayoutServiceTransferRequest, PayoutServiceTransferResponse, PayoutServiceVoidRequest, PayoutServiceVoidResponse,
+    payout_service_server::PayoutService, PayoutServiceCreateLinkRequest,
+    PayoutServiceCreateLinkResponse, PayoutServiceCreateRecipientRequest,
+    PayoutServiceCreateRecipientResponse, PayoutServiceCreateRequest, PayoutServiceCreateResponse,
+    PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse,
+    PayoutServiceGetRequest, PayoutServiceGetResponse, PayoutServiceStageRequest,
+    PayoutServiceStageResponse, PayoutServiceTransferRequest, PayoutServiceTransferResponse,
+    PayoutServiceVoidRequest, PayoutServiceVoidResponse,
 };
 use ucs_env::error::{ReportSwitchExt, ResultExtGrpc};
 
@@ -31,9 +33,13 @@ impl PayoutService for Payouts {
         request: tonic::Request<PayoutServiceCreateRequest>,
     ) -> Result<tonic::Response<PayoutServiceCreateResponse>, tonic::Status> {
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(request, "PAYOUT_CREATE", config, FlowName::PayoutCreate, |request_data| {
-            self.internal_payout_create(request_data)
-        })
+        grpc_logging_wrapper(
+            request,
+            "PAYOUT_CREATE",
+            config,
+            FlowName::PayoutCreate,
+            |request_data| self.internal_payout_create(request_data),
+        )
         .await
     }
 
@@ -69,21 +75,27 @@ impl PayoutService for Payouts {
         &self,
         _request: tonic::Request<PayoutServiceCreateLinkRequest>,
     ) -> Result<tonic::Response<PayoutServiceCreateLinkResponse>, tonic::Status> {
-        Err(tonic::Status::unimplemented("create_link is not implemented"))
+        Err(tonic::Status::unimplemented(
+            "create_link is not implemented",
+        ))
     }
 
     async fn create_recipient(
         &self,
         _request: tonic::Request<PayoutServiceCreateRecipientRequest>,
     ) -> Result<tonic::Response<PayoutServiceCreateRecipientResponse>, tonic::Status> {
-        Err(tonic::Status::unimplemented("create_recipient is not implemented"))
+        Err(tonic::Status::unimplemented(
+            "create_recipient is not implemented",
+        ))
     }
 
     async fn enroll_disburse_account(
         &self,
         _request: tonic::Request<PayoutServiceEnrollDisburseAccountRequest>,
     ) -> Result<tonic::Response<PayoutServiceEnrollDisburseAccountResponse>, tonic::Status> {
-        Err(tonic::Status::unimplemented("enroll_disburse_account is not implemented"))
+        Err(tonic::Status::unimplemented(
+            "enroll_disburse_account is not implemented",
+        ))
     }
 }
 
@@ -91,7 +103,9 @@ pub(crate) trait PayoutOperationsInternal {
     fn internal_payout_create(
         &self,
         request: RequestData<PayoutServiceCreateRequest>,
-    ) -> impl std::future::Future<Output = Result<tonic::Response<PayoutServiceCreateResponse>, tonic::Status>> + Send;
+    ) -> impl std::future::Future<
+        Output = Result<tonic::Response<PayoutServiceCreateResponse>, tonic::Status>,
+    > + Send;
 }
 
 impl PayoutOperationsInternal for Payouts {

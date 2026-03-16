@@ -45,7 +45,11 @@ impl<'de> Deserialize<'de> for HeaderMaskingConfig {
         }
 
         Config::deserialize(deserializer).map(|config| Self {
-            unmasked_keys: config.keys.into_iter().map(|key| key.to_lowercase()).collect(),
+            unmasked_keys: config
+                .keys
+                .into_iter()
+                .map(|key| key.to_lowercase())
+                .collect(),
         })
     }
 }
@@ -113,7 +117,10 @@ impl Default for MaskedMetadata {
 }
 
 impl MaskedMetadata {
-    pub fn new(raw_metadata: tonic::metadata::MetadataMap, masking_config: HeaderMaskingConfig) -> Self {
+    pub fn new(
+        raw_metadata: tonic::metadata::MetadataMap,
+        masking_config: HeaderMaskingConfig,
+    ) -> Self {
         Self {
             raw_metadata,
             masking_config,
@@ -160,7 +167,9 @@ impl MaskedMetadata {
 
     /// Returns raw Bytes value regardless of config
     pub fn get_bin_raw(&self, key: &str) -> Option<Bytes> {
-        self.raw_metadata.get_bin(key).and_then(|value| value.to_bytes().ok())
+        self.raw_metadata
+            .get_bin(key)
+            .and_then(|value| value.to_bytes().ok())
     }
 
     /// Returns Maskable<String> with base64 encoding for binary headers
@@ -186,12 +195,12 @@ impl MaskedMetadata {
                 };
 
                 let masked_value = match entry {
-                    tonic::metadata::KeyAndValueRef::Ascii(_, _) => {
-                        self.get_maskable(key_name).map(|maskable| format!("{maskable:?}"))
-                    }
-                    tonic::metadata::KeyAndValueRef::Binary(_, _) => {
-                        self.get_bin_maskable(key_name).map(|maskable| format!("{maskable:?}"))
-                    }
+                    tonic::metadata::KeyAndValueRef::Ascii(_, _) => self
+                        .get_maskable(key_name)
+                        .map(|maskable| format!("{maskable:?}")),
+                    tonic::metadata::KeyAndValueRef::Binary(_, _) => self
+                        .get_bin_maskable(key_name)
+                        .map(|maskable| format!("{maskable:?}")),
                 };
 
                 masked_value.map(|value| (key_name.to_string(), value))

@@ -274,8 +274,10 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
             ucaf_collection_indicator: value.ucaf_collection_indicator,
             eci: value.eci,
             cavv: value.cavv.map(|cavv| cavv.expose()),
-            threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| payments::Identifier {
-                id_type: Some(payments::identifier::IdType::Id(id)),
+            threeds_server_transaction_id: value.threeds_server_transaction_id.map(|id| {
+                payments::Identifier {
+                    id_type: Some(payments::identifier::IdType::Id(id)),
+                }
             }),
             message_version: value.message_version.map(|v| v.to_string()),
             ds_transaction_id: value.ds_trans_id,
@@ -289,7 +291,9 @@ impl ForeignFrom<AuthenticationData> for payments::AuthenticationData {
                 .exemption_indicator
                 .map(payments::ExemptionIndicator::foreign_from)
                 .map(i32::from),
-            network_params: value.network_params.map(payments::NetworkParams::foreign_from),
+            network_params: value
+                .network_params
+                .map(payments::NetworkParams::foreign_from),
         }
     }
 }
@@ -327,7 +331,9 @@ pub struct ConnectorCustomerData<T: PaymentMethodDataTypes> {
 
 impl<T: PaymentMethodDataTypes> ConnectorCustomerData<T> {
     pub fn get_email(&self) -> Result<Email, Error> {
-        self.email.clone().ok_or_else(utils::missing_field_err("email"))
+        self.email
+            .clone()
+            .ok_or_else(utils::missing_field_err("email"))
     }
 }
 #[derive(Debug, Clone, PartialEq, Serialize)]

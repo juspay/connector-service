@@ -2,8 +2,9 @@ use common_utils::{pii, request::Method, FloatMajorUnit};
 use domain_types::{
     connector_flow::{self, Authorize},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -56,7 +57,9 @@ pub enum PaymentMethodFlow {
 }
 
 #[derive(Default, Debug, Serialize, PartialEq)]
-pub struct DlocalPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct DlocalPaymentsRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     pub amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
     pub country: common_enums::CountryAlpha2,
@@ -72,18 +75,34 @@ pub struct DlocalPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + S
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        DlocalRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        DlocalRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for DlocalPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: DlocalRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let email = item.router_data.request.get_email()?;
-        let address = item.router_data.resource_common_data.get_billing_address()?;
+        let address = item
+            .router_data
+            .resource_common_data
+            .get_billing_address()?;
         let country = *address.get_country()?;
         let name = address.get_full_name()?;
         match item.router_data.request.payment_method_data {
@@ -124,7 +143,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector_request_reference_id
                         .clone(),
                     three_dsecure: match item.router_data.resource_common_data.auth_type {
-                        common_enums::AuthenticationType::ThreeDs => Some(ThreeDSecureReqData { force: true }),
+                        common_enums::AuthenticationType::ThreeDs => {
+                            Some(ThreeDSecureReqData { force: true })
+                        }
                         common_enums::AuthenticationType::NoThreeDs => None,
                     },
                     callback_url: Some(item.router_data.request.get_router_return_url()?),
@@ -149,9 +170,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
-                crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
-            ))?,
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    crate::utils::get_unimplemented_payment_method_error_message("Dlocal"),
+                ))?
+            }
         }
     }
 }
@@ -167,7 +190,12 @@ pub struct DlocalPaymentsCaptureRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         DlocalRouterData<
-            RouterDataV2<connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                connector_flow::Capture,
+                PaymentFlowData,
+                PaymentsCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for DlocalPaymentsCaptureRequest
@@ -175,7 +203,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: DlocalRouterData<
-            RouterDataV2<connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                connector_flow::Capture,
+                PaymentFlowData,
+                PaymentsCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -269,7 +302,9 @@ impl<F, T> TryFrom<ResponseRouterData<DlocalPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<DlocalPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DlocalPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let redirection_data = item
             .response
             .three_dsecure
@@ -308,7 +343,9 @@ impl<F> TryFrom<ResponseRouterData<DlocalPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<DlocalPaymentsSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DlocalPaymentsSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::from(item.response.status),
@@ -340,7 +377,9 @@ impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<DlocalPaymentsCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DlocalPaymentsCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::from(item.response.status),
@@ -371,7 +410,9 @@ impl<F> TryFrom<ResponseRouterData<DlocalPaymentsCancelResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<DlocalPaymentsCancelResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<DlocalPaymentsCancelResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::from(item.response.status),
@@ -407,7 +448,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: DlocalRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: DlocalRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let amount_to_refund = utils::convert_amount(
             item.connector.amount_converter,

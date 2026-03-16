@@ -3,8 +3,9 @@ use std::fmt::Debug;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -99,7 +100,10 @@ fn build_bill_to(
     let administrative_area = address
         .to_state_code_as_optional()
         .unwrap_or_else(|_| {
-            address.state.as_ref().map(|state| truncate_string(state, 20)) // NOTE: Cybersource connector throws error if billing state exceeds 20 characters. Since Barclaycard is Cybersource just whitelisting, we truncate if state exceeds 20 characters, so truncation is done to avoid payment failure
+            address
+                .state
+                .as_ref()
+                .map(|state| truncate_string(state, 20)) // NOTE: Cybersource connector throws error if billing state exceeds 20 characters. Since Barclaycard is Cybersource just whitelisting, we truncate if state exceeds 20 characters, so truncation is done to avoid payment failure
         })
         .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
             field_name: "billing_address.state",
@@ -137,9 +141,8 @@ fn map_barclaycard_attempt_status(
                 common_enums::AttemptStatus::Pending
             }
         }
-        responses::BarclaycardPaymentStatus::Succeeded | responses::BarclaycardPaymentStatus::Transmitted => {
-            common_enums::AttemptStatus::Charged
-        }
+        responses::BarclaycardPaymentStatus::Succeeded
+        | responses::BarclaycardPaymentStatus::Transmitted => common_enums::AttemptStatus::Charged,
         responses::BarclaycardPaymentStatus::Voided
         | responses::BarclaycardPaymentStatus::Reversed
         | responses::BarclaycardPaymentStatus::Cancelled => common_enums::AttemptStatus::Voided,
@@ -149,7 +152,8 @@ fn map_barclaycard_attempt_status(
         | responses::BarclaycardPaymentStatus::InvalidRequest
         | responses::BarclaycardPaymentStatus::Rejected
         | responses::BarclaycardPaymentStatus::ServerError => common_enums::AttemptStatus::Failure,
-        responses::BarclaycardPaymentStatus::PendingReview | responses::BarclaycardPaymentStatus::StatusNotReceived => {
+        responses::BarclaycardPaymentStatus::PendingReview
+        | responses::BarclaycardPaymentStatus::StatusNotReceived => {
             common_enums::AttemptStatus::Pending
         }
     }
@@ -160,9 +164,8 @@ fn map_barclaycard_refund_status(
     error_reason: Option<String>,
 ) -> common_enums::RefundStatus {
     match status {
-        responses::BarclaycardRefundStatus::Succeeded | responses::BarclaycardRefundStatus::Transmitted => {
-            common_enums::RefundStatus::Success
-        }
+        responses::BarclaycardRefundStatus::Succeeded
+        | responses::BarclaycardRefundStatus::Transmitted => common_enums::RefundStatus::Success,
         responses::BarclaycardRefundStatus::Cancelled
         | responses::BarclaycardRefundStatus::Failed
         | responses::BarclaycardRefundStatus::Voided => common_enums::RefundStatus::Failure,
@@ -186,9 +189,15 @@ fn get_error_reason(
         (Some(message), Some(details), Some(avs_message)) => Some(format!(
             "{message}, detailed_error_information: {details}, avs_message: {avs_message}",
         )),
-        (Some(message), Some(details), None) => Some(format!("{message}, detailed_error_information: {details}")),
-        (Some(message), None, Some(avs_message)) => Some(format!("{message}, avs_message: {avs_message}")),
-        (None, Some(details), Some(avs_message)) => Some(format!("{details}, avs_message: {avs_message}")),
+        (Some(message), Some(details), None) => {
+            Some(format!("{message}, detailed_error_information: {details}"))
+        }
+        (Some(message), None, Some(avs_message)) => {
+            Some(format!("{message}, avs_message: {avs_message}"))
+        }
+        (None, Some(details), Some(avs_message)) => {
+            Some(format!("{details}, avs_message: {avs_message}"))
+        }
         (Some(message), None, None) => Some(message),
         (None, Some(details), None) => Some(details),
         (None, None, Some(avs_message)) => Some(avs_message),
@@ -207,7 +216,10 @@ fn transform_payment_response<F, Req>(
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
     >,
     auto_capture: bool,
-) -> Result<RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>, error_stack::Report<errors::ConnectorError>> {
+) -> Result<
+    RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
+    error_stack::Report<errors::ConnectorError>,
+> {
     match item.response {
         responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info_response) => {
             let status = map_barclaycard_attempt_status((
@@ -255,15 +267,24 @@ fn transform_payment_response<F, Req>(
             })
         }
         responses::BarclaycardPaymentsResponse::ErrorInformation(error_response) => {
-            let detailed_error_info = error_response.error_information.details.as_ref().map(|details| {
-                details
-                    .iter()
-                    .map(|d| format!("{} : {}", d.field, d.reason))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            });
+            let detailed_error_info =
+                error_response
+                    .error_information
+                    .details
+                    .as_ref()
+                    .map(|details| {
+                        details
+                            .iter()
+                            .map(|d| format!("{} : {}", d.field, d.reason))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    });
 
-            let reason = get_error_reason(error_response.error_information.message.clone(), detailed_error_info, None);
+            let reason = get_error_reason(
+                error_response.error_information.message.clone(),
+                detailed_error_info,
+                None,
+            );
 
             Ok(RouterDataV2 {
                 response: Err(ErrorResponse {
@@ -302,20 +323,21 @@ fn get_error_response(
     status_code: u16,
     transaction_id: String,
 ) -> ErrorResponse {
-    let avs_message = risk_information.clone().and_then(|client_risk_information| {
-        client_risk_information.rules.map(|rules| {
-            rules
-                .iter()
-                .map(|risk_info| {
-                    risk_info
-                        .name
-                        .clone()
-                        .map_or("".to_string(), |name| format!(" , {}", name.clone().expose()))
-                })
-                .collect::<Vec<String>>()
-                .join("")
-        })
-    });
+    let avs_message = risk_information
+        .clone()
+        .and_then(|client_risk_information| {
+            client_risk_information.rules.map(|rules| {
+                rules
+                    .iter()
+                    .map(|risk_info| {
+                        risk_info.name.clone().map_or("".to_string(), |name| {
+                            format!(" , {}", name.clone().expose())
+                        })
+                    })
+                    .collect::<Vec<String>>()
+                    .join("")
+            })
+        });
 
     let detailed_error_info = error_data.to_owned().and_then(|error_info| {
         error_info.details.map(|error_details| {
@@ -337,17 +359,22 @@ fn get_error_response(
     });
 
     let reason = get_error_reason(
-        error_data.clone().and_then(|error_details| error_details.message),
+        error_data
+            .clone()
+            .and_then(|error_details| error_details.message),
         detailed_error_info,
         avs_message,
     );
-    let error_message = error_data.clone().and_then(|error_details| error_details.reason);
+    let error_message = error_data
+        .clone()
+        .and_then(|error_details| error_details.reason);
 
     ErrorResponse {
         code: error_message
             .clone()
             .unwrap_or_else(|| common_utils::consts::NO_ERROR_CODE.to_string()),
-        message: error_message.unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
+        message: error_message
+            .unwrap_or_else(|| common_utils::consts::NO_ERROR_MESSAGE.to_string()),
         reason,
         status_code,
         attempt_status,
@@ -361,7 +388,12 @@ fn get_error_response(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BarclaycardRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for requests::BarclaycardPaymentsRequest<T>
@@ -370,12 +402,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn try_from(
         item: BarclaycardRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount = BarclaycardAmountConvertor::convert(router_data.request.amount, router_data.request.currency)?;
+        let amount = BarclaycardAmountConvertor::convert(
+            router_data.request.amount,
+            router_data.request.currency,
+        )?;
 
         let ccard = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
@@ -385,18 +425,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         }?;
 
         let card_network = ccard.card_network.clone();
-        let card_type = card_network.and_then(get_barclaycard_card_type).map(|s| s.to_string());
+        let card_type = card_network
+            .and_then(get_barclaycard_card_type)
+            .map(|s| s.to_string());
 
-        let payment_information = requests::PaymentInformation::Cards(Box::new(requests::CardPaymentInformation {
-            card: requests::Card {
-                number: ccard.card_number.clone(),
-                expiration_month: ccard.card_exp_month.clone(),
-                expiration_year: ccard.get_expiry_year_4_digit(),
-                security_code: ccard.card_cvc.clone(),
-                card_type,
-                type_selection_indicator: Some("1".to_owned()),
-            },
-        }));
+        let payment_information =
+            requests::PaymentInformation::Cards(Box::new(requests::CardPaymentInformation {
+                card: requests::Card {
+                    number: ccard.card_number.clone(),
+                    expiration_month: ccard.card_exp_month.clone(),
+                    expiration_year: ccard.get_expiry_year_4_digit(),
+                    security_code: ccard.card_cvc.clone(),
+                    card_type,
+                    type_selection_indicator: Some("1".to_owned()),
+                },
+            }));
 
         let email = router_data
             .resource_common_data
@@ -407,7 +450,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .resource_common_data
             .address
             .get_payment_method_billing()
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "billing" })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "billing",
+            })?;
 
         let bill_to = build_bill_to(billing, email)?;
 
@@ -430,7 +475,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let client_reference_information = requests::ClientReferenceInformation {
-            code: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+            code: Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
         };
 
         let merchant_defined_information = router_data
@@ -451,8 +501,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<BarclaycardRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for requests::BarclaycardCaptureRequest
+    TryFrom<
+        BarclaycardRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::BarclaycardCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -468,11 +522,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data.request.currency,
         )?;
 
-        let merchant_defined_information = router_data
-            .request
-            .metadata
-            .clone()
-            .map(|metadata| utils::convert_metadata_to_merchant_defined_info(metadata.expose()));
+        let merchant_defined_information =
+            router_data.request.metadata.clone().map(|metadata| {
+                utils::convert_metadata_to_merchant_defined_info(metadata.expose())
+            });
 
         Ok(Self {
             order_information: requests::OrderInformation {
@@ -482,7 +535,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 },
             },
             client_reference_information: requests::ClientReferenceInformation {
-                code: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+                code: Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
             },
             merchant_defined_information,
         })
@@ -490,36 +548,52 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<BarclaycardRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for requests::BarclaycardVoidRequest
+    TryFrom<
+        BarclaycardRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for requests::BarclaycardVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: BarclaycardRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        value: BarclaycardRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &value.router_data;
-        let currency = router_data
-            .request
-            .currency
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "currency" })?;
+        let currency =
+            router_data
+                .request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
         let amount = BarclaycardAmountConvertor::convert(
             router_data
                 .request
                 .amount
-                .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "amount" })?,
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?,
             currency,
         )?;
 
-        let merchant_defined_information = router_data
-            .request
-            .metadata
-            .clone()
-            .map(|metadata| utils::convert_metadata_to_merchant_defined_info(metadata.expose()));
+        let merchant_defined_information =
+            router_data.request.metadata.clone().map(|metadata| {
+                utils::convert_metadata_to_merchant_defined_info(metadata.expose())
+            });
 
         Ok(Self {
             client_reference_information: requests::ClientReferenceInformation {
-                code: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+                code: Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
             },
             reversal_information: requests::ReversalInformation {
                 amount_details: requests::Amount {
@@ -538,17 +612,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<BarclaycardRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for requests::BarclaycardRefundRequest
+    TryFrom<
+        BarclaycardRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for requests::BarclaycardRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: BarclaycardRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: BarclaycardRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
-        let amount =
-            BarclaycardAmountConvertor::convert(router_data.request.minor_refund_amount, router_data.request.currency)?;
+        let amount = BarclaycardAmountConvertor::convert(
+            router_data.request.minor_refund_amount,
+            router_data.request.currency,
+        )?;
 
         Ok(Self {
             order_information: requests::OrderInformation {
@@ -570,7 +653,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<responses::BarclaycardAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::BarclaycardAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let auto_capture = matches!(
             item.router_data.request.capture_method,
             Some(common_enums::CaptureMethod::Automatic) | None
@@ -584,7 +669,9 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         transform_payment_response(item, true)
     }
 }
@@ -594,7 +681,9 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         transform_payment_response(item, false)
     }
 }
@@ -636,7 +725,9 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardTransactionResponse, Self>
                 } else {
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                item.response.id.clone(),
+                            ),
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,
@@ -679,14 +770,17 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<responses::BarclaycardRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::BarclaycardRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let error_reason = item
             .response
             .error_information
             .as_ref()
             .and_then(|error_info| error_info.reason.clone());
 
-        let refund_status = map_barclaycard_refund_status(item.response.status.clone(), error_reason);
+        let refund_status =
+            map_barclaycard_refund_status(item.response.status.clone(), error_reason);
 
         let response = if utils::is_refund_failure(refund_status) {
             Err(get_error_response(
@@ -717,7 +811,9 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRsyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<responses::BarclaycardRsyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<responses::BarclaycardRsyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = match item
             .response
             .application_information

@@ -35,8 +35,8 @@ pub use id_type::{CustomerId, MerchantId};
 pub use pii::{Email, SecretSerdeValue};
 pub use request::{Method, Request, RequestContent};
 pub use types::{
-    AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit, MinorUnitForConnector, StringMajorUnit,
-    StringMajorUnitForConnector, StringMinorUnit,
+    AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit, MinorUnitForConnector,
+    StringMajorUnit, StringMajorUnitForConnector, StringMinorUnit,
 };
 pub mod events;
 pub mod global_id;
@@ -102,14 +102,19 @@ pub mod date_time {
 
     /// Calculate execution time for a async block in milliseconds
     #[cfg(feature = "async_ext")]
-    pub async fn time_it<T, Fut: futures::Future<Output = T>, F: FnOnce() -> Fut>(block: F) -> (T, f64) {
+    pub async fn time_it<T, Fut: futures::Future<Output = T>, F: FnOnce() -> Fut>(
+        block: F,
+    ) -> (T, f64) {
         let start = Instant::now();
         let result = block().await;
         (result, start.elapsed().as_secs_f64() * 1000f64)
     }
 
     /// Return the given date and time in UTC with the given format Eg: format: YYYYMMDDHHmmss Eg: 20191105081132
-    pub fn format_date(date: PrimitiveDateTime, format: DateFormat) -> Result<String, time::error::Format> {
+    pub fn format_date(
+        date: PrimitiveDateTime,
+        format: DateFormat,
+    ) -> Result<String, time::error::Format> {
         let format = <&[BorrowedFormatItem<'_>]>::from(format);
         date.format(&format)
     }

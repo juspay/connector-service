@@ -28,15 +28,19 @@ impl EventPublisher {
     pub fn new(config: &EventConfig) -> CustomResult<Self, EventPublisherError> {
         // Validate configuration before attempting to create writer
         if config.brokers.is_empty() {
-            return Err(error_stack::Report::new(EventPublisherError::InvalidConfiguration {
-                message: "brokers list cannot be empty".to_string(),
-            }));
+            return Err(error_stack::Report::new(
+                EventPublisherError::InvalidConfiguration {
+                    message: "brokers list cannot be empty".to_string(),
+                },
+            ));
         }
 
         if config.topic.is_empty() {
-            return Err(error_stack::Report::new(EventPublisherError::InvalidConfiguration {
-                message: "topic cannot be empty".to_string(),
-            }));
+            return Err(error_stack::Report::new(
+                EventPublisherError::InvalidConfiguration {
+                    message: "topic cannot be empty".to_string(),
+                },
+            ));
         }
 
         tracing::debug!(
@@ -52,7 +56,10 @@ impl EventPublisher {
             .map_err(|e| {
                 error_stack::Report::new(EventPublisherError::KafkaWriterInitializationFailed)
                     .attach_printable(format!("KafkaWriter build failed: {e}"))
-                    .attach_printable(format!("Brokers: {:?}, Topic: {}", config.brokers, config.topic))
+                    .attach_printable(format!(
+                        "Brokers: {:?}, Topic: {}",
+                        config.brokers, config.topic
+                    ))
             })?;
 
         tracing::info!("EventPublisher created successfully");
@@ -79,7 +86,9 @@ impl EventPublisher {
 
         let mut headers = metadata;
 
-        let key = if let Some(partition_key_value) = event.get(partition_key_field).and_then(|v| v.as_str()) {
+        let key = if let Some(partition_key_value) =
+            event.get(partition_key_field).and_then(|v| v.as_str())
+        {
             headers = headers.insert(Header {
                 key: PARTITION_KEY_METADATA,
                 value: Some(partition_key_value.as_bytes()),
@@ -104,7 +113,11 @@ impl EventPublisher {
                 let event_json = serde_json::to_string(&event).unwrap_or_default();
                 error_stack::Report::new(EventPublisherError::EventPublishFailed)
                     .attach_printable(format!("Kafka publish failed: {e}"))
-                    .attach_printable(format!("Topic: {}, Event size: {} bytes", topic, event_bytes.len()))
+                    .attach_printable(format!(
+                        "Topic: {}, Event size: {} bytes",
+                        topic,
+                        event_bytes.len()
+                    ))
                     .attach_printable(format!("Failed event: {event_json}"))
             })?;
 
@@ -162,7 +175,8 @@ fn process_event_with_config(
     })?;
 
     // Helper function to normalize paths (replace _DOT_ and _dot_ with .)
-    let normalize_path = |path: &str| -> String { path.replace("_DOT_", ".").replace("_dot_", ".") };
+    let normalize_path =
+        |path: &str| -> String { path.replace("_DOT_", ".").replace("_dot_", ".") };
 
     // Process transformations
     for (target_path, source_field) in &config.transformations {
@@ -214,7 +228,10 @@ fn process_event_with_config(
     Ok(result)
 }
 
-fn extract_from_request(event_value: &serde_json::Value, extraction_path: &str) -> Option<serde_json::Value> {
+fn extract_from_request(
+    event_value: &serde_json::Value,
+    extraction_path: &str,
+) -> Option<serde_json::Value> {
     let mut path_parts = extraction_path.split('.');
 
     let first_part = path_parts.next()?;
@@ -246,9 +263,11 @@ fn set_nested_value(
     }
 
     if path_parts.len() == 1 {
-        let key = path_parts
-            .first()
-            .ok_or_else(|| error_stack::Report::new(EventPublisherError::InvalidPath { path: path.to_string() }))?;
+        let key = path_parts.first().ok_or_else(|| {
+            error_stack::Report::new(EventPublisherError::InvalidPath {
+                path: path.to_string(),
+            })
+        })?;
         target[key] = value;
         return Ok(());
     }
@@ -277,7 +296,10 @@ fn set_nested_value(
 
 /// Initialize the global EventPublisher with the given configuration
 pub fn init_event_publisher(config: &EventConfig) -> CustomResult<(), EventPublisherError> {
-    tracing::info!(enabled = config.enabled, "Initializing global EventPublisher");
+    tracing::info!(
+        enabled = config.enabled,
+        "Initializing global EventPublisher"
+    );
 
     let publisher = EventPublisher::new(config)?;
 
@@ -288,7 +310,10 @@ pub fn init_event_publisher(config: &EventConfig) -> CustomResult<(), EventPubli
                 "Existing config: brokers={:?}, topic={}",
                 failed_publisher.config.brokers, failed_publisher.config.topic
             ))
-            .attach_printable(format!("New config: brokers={:?}, topic={}", config.brokers, config.topic))
+            .attach_printable(format!(
+                "New config: brokers={:?}, topic={}",
+                config.brokers, config.topic
+            ))
     })?;
 
     tracing::info!("Global EventPublisher initialized successfully");
@@ -296,7 +321,9 @@ pub fn init_event_publisher(config: &EventConfig) -> CustomResult<(), EventPubli
 }
 
 /// Get or initialize the global EventPublisher
-fn get_event_publisher(config: &EventConfig) -> CustomResult<&'static EventPublisher, EventPublisherError> {
+fn get_event_publisher(
+    config: &EventConfig,
+) -> CustomResult<&'static EventPublisher, EventPublisherError> {
     EVENT_PUBLISHER.get_or_try_init(|| EventPublisher::new(config))
 }
 
@@ -321,7 +348,11 @@ pub fn emit_event_with_config(event: Event, config: &EventConfig) {
     tracing::info!(
         events_enabled = config.enabled,
         "Event processed (Kafka publishing: {}) - Event JSON: {}",
-        if config.enabled { "enabled" } else { "disabled" },
+        if config.enabled {
+            "enabled"
+        } else {
+            "disabled"
+        },
         event_json
     );
 

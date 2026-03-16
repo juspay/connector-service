@@ -18,10 +18,14 @@ pub struct InterfaceRequestData<T> {
 impl<T> InterfaceRequestData<T> {
     /// Construct from a gRPC request, extracting metadata and masking config.
     #[allow(clippy::result_large_err)]
-    pub fn from_grpc_request(request: tonic::Request<T>, config: Arc<configs::Config>) -> Result<Self, tonic::Status> {
+    pub fn from_grpc_request(
+        request: tonic::Request<T>,
+        config: Arc<configs::Config>,
+    ) -> Result<Self, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let metadata_payload = get_metadata_payload(&metadata, config.clone()).into_grpc_status()?;
+        let metadata_payload =
+            get_metadata_payload(&metadata, config.clone()).into_grpc_status()?;
 
         let masked_metadata = MaskedMetadata::new(metadata, config.unmasked_headers.clone());
 

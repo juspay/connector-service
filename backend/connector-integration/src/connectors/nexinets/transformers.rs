@@ -4,13 +4,14 @@ use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
     connector_flow::{Authorize, Capture, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{
-        ApplePayWalletData, BankRedirectData, Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        WalletData,
+        ApplePayWalletData, BankRedirectData, Card, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
@@ -27,7 +28,9 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NexinetsPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct NexinetsPaymentsRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     initial_amount: i64,
     currency: enums::Currency,
     channel: NexinetsChannel,
@@ -61,7 +64,9 @@ pub enum NexinetsProduct {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
-pub enum NexinetsPaymentDetails<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub enum NexinetsPaymentDetails<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     Card(Box<NexiCardDetails<T>>),
     Wallet(Box<NexinetsWalletDetails>),
     BankRedirects(Box<NexinetsBankRedirects>),
@@ -69,7 +74,9 @@ pub enum NexinetsPaymentDetails<T: PaymentMethodDataTypes + std::fmt::Debug + Sy
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NexiCardDetails<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct NexiCardDetails<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     #[serde(flatten)]
     card_data: CardDataDetails<T>,
     cof_contract: Option<CofContract>,
@@ -77,14 +84,18 @@ pub struct NexiCardDetails<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + 
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum CardDataDetails<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub enum CardDataDetails<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     CardDetails(Box<CardDetails<T>>),
     PaymentInstrument(Box<PaymentInstrument>),
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CardDetails<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct CardDetails<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     card_number: RawCardNumber<T>,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
@@ -172,13 +183,26 @@ pub struct ApplepayPaymentMethod {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        NexinetsRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        NexinetsRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for NexinetsPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NexinetsRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -220,7 +244,10 @@ impl TryFrom<&ConnectorSpecificAuth> for NexinetsAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nexinets { merchant_id, api_key } => {
+            ConnectorSpecificAuth::Nexinets {
+                merchant_id,
+                api_key,
+            } => {
                 let auth_key = format!("{}:{}", merchant_id.peek(), api_key.peek());
                 let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
                 Ok(Self {
@@ -249,7 +276,9 @@ fn get_status(status: NexinetsPaymentStatus, method: NexinetsTransactionType) ->
     match status {
         NexinetsPaymentStatus::Success => match method {
             NexinetsTransactionType::Preauth => AttemptStatus::Authorized,
-            NexinetsTransactionType::Debit | NexinetsTransactionType::Capture => AttemptStatus::Charged,
+            NexinetsTransactionType::Debit | NexinetsTransactionType::Capture => {
+                AttemptStatus::Charged
+            }
             NexinetsTransactionType::Cancel => AttemptStatus::Voided,
         },
         NexinetsPaymentStatus::Declined
@@ -257,7 +286,9 @@ fn get_status(status: NexinetsPaymentStatus, method: NexinetsTransactionType) ->
         | NexinetsPaymentStatus::Expired
         | NexinetsPaymentStatus::Aborted => match method {
             NexinetsTransactionType::Preauth => AttemptStatus::AuthorizationFailed,
-            NexinetsTransactionType::Debit | NexinetsTransactionType::Capture => AttemptStatus::CaptureFailed,
+            NexinetsTransactionType::Debit | NexinetsTransactionType::Capture => {
+                AttemptStatus::CaptureFailed
+            }
             NexinetsTransactionType::Cancel => AttemptStatus::VoidFailed,
         },
         NexinetsPaymentStatus::Ok => match method {
@@ -333,7 +364,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NexinetsPreAuthOrDebitResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexinetsPreAuthOrDebitResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let transaction = match item.response.transactions.first() {
             Some(order) => order,
             _ => Err(ConnectorError::ResponseHandlingFailed)?,
@@ -343,15 +376,17 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             order_id: Some(item.response.order_id.clone()),
             psync_flow: item.response.transaction_type.clone(),
         };
-        let connector_metadata =
-            serde_json::to_value(&nexinets_metadata).change_context(ConnectorError::ResponseHandlingFailed)?;
+        let connector_metadata = serde_json::to_value(&nexinets_metadata)
+            .change_context(ConnectorError::ResponseHandlingFailed)?;
 
         let redirection_data = item
             .response
             .redirect_url
             .map(|url| RedirectForm::from((url, Method::Get)));
         let resource_id = match item.response.transaction_type.clone() {
-            NexinetsTransactionType::Preauth | NexinetsTransactionType::Debit | NexinetsTransactionType::Capture => {
+            NexinetsTransactionType::Preauth
+            | NexinetsTransactionType::Debit
+            | NexinetsTransactionType::Capture => {
                 ResponseId::ConnectorTransactionId(transaction.transaction_id.clone())
             }
             _ => Err(ConnectorError::ResponseHandlingFailed)?,
@@ -399,12 +434,19 @@ pub struct NexinetsOrder {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NexinetsRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for NexinetsCaptureOrVoidRequest
+    TryFrom<
+        NexinetsRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for NexinetsCaptureOrVoidRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NexinetsRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: NexinetsRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             initial_amount: item.router_data.request.amount_to_capture,
@@ -414,23 +456,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NexinetsRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for NexinetsCaptureOrVoidRequest
+    TryFrom<
+        NexinetsRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for NexinetsCaptureOrVoidRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NexinetsRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: NexinetsRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let amount = item
-            .router_data
-            .request
-            .amount
-            .ok_or(ConnectorError::MissingRequiredField { field_name: "amount" })?;
-        let currency = item
-            .router_data
-            .request
-            .currency
-            .ok_or(ConnectorError::MissingRequiredField { field_name: "currency" })?;
+        let amount =
+            item.router_data
+                .request
+                .amount
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
+        let currency =
+            item.router_data
+                .request
+                .currency
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
         Ok(Self {
             initial_amount: amount.get_amount_as_i64(),
             currency,
@@ -452,7 +505,9 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NexinetsPaymentResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexinetsPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let transaction_id = Some(item.response.transaction_id.clone());
 
         let connector_metadata = serde_json::to_value(NexinetsPaymentsMetadata {
@@ -462,7 +517,9 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
         })
         .change_context(ConnectorError::ResponseHandlingFailed)?;
         let resource_id = match item.response.transaction_type.clone() {
-            NexinetsTransactionType::Preauth | NexinetsTransactionType::Debit | NexinetsTransactionType::Capture => {
+            NexinetsTransactionType::Preauth
+            | NexinetsTransactionType::Debit
+            | NexinetsTransactionType::Capture => {
                 ResponseId::ConnectorTransactionId(item.response.transaction_id)
             }
             _ => ResponseId::NoResponseId,
@@ -497,12 +554,16 @@ pub struct NexinetsRefundRequest {
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NexinetsRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for NexinetsRefundRequest
+    TryFrom<
+        NexinetsRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for NexinetsRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NexinetsRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: NexinetsRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             initial_amount: item.router_data.request.refund_amount,
@@ -553,7 +614,9 @@ impl<F> TryFrom<ResponseRouterData<NexinetsRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NexinetsRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexinetsRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id,
@@ -569,7 +632,9 @@ impl<F> TryFrom<ResponseRouterData<NexinetsRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NexinetsRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexinetsRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id,
@@ -596,21 +661,29 @@ pub struct OrderErrorDetails {
     pub field: Option<String>,
 }
 
-fn get_payment_details_and_product<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+fn get_payment_details_and_product<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-) -> Result<(Option<NexinetsPaymentDetails<T>>, NexinetsProduct), error_stack::Report<ConnectorError>> {
+) -> Result<(Option<NexinetsPaymentDetails<T>>, NexinetsProduct), error_stack::Report<ConnectorError>>
+{
     match &item.request.payment_method_data {
-        PaymentMethodData::Card(card) => Ok((Some(get_card_data(item, card)?), NexinetsProduct::Creditcard)),
+        PaymentMethodData::Card(card) => Ok((
+            Some(get_card_data(item, card)?),
+            NexinetsProduct::Creditcard,
+        )),
         PaymentMethodData::Wallet(wallet) => Ok(get_wallet_details(wallet)?),
         PaymentMethodData::BankRedirect(bank_redirect) => match bank_redirect {
             BankRedirectData::Eps { .. } => Ok((None, NexinetsProduct::Eps)),
             BankRedirectData::Giropay { .. } => Ok((None, NexinetsProduct::Giropay)),
             BankRedirectData::Ideal { bank_name, .. } => Ok((
-                Some(NexinetsPaymentDetails::BankRedirects(Box::new(NexinetsBankRedirects {
-                    bic: bank_name
-                        .map(|bank_name| NexinetsBIC::try_from(&bank_name))
-                        .transpose()?,
-                }))),
+                Some(NexinetsPaymentDetails::BankRedirects(Box::new(
+                    NexinetsBankRedirects {
+                        bic: bank_name
+                            .map(|bank_name| NexinetsBIC::try_from(&bank_name))
+                            .transpose()?,
+                    },
+                ))),
                 NexinetsProduct::Ideal,
             )),
             BankRedirectData::Sofort { .. } => Ok((None, NexinetsProduct::Sofort)),
@@ -648,13 +721,17 @@ fn get_payment_details_and_product<T: PaymentMethodDataTypes + std::fmt::Debug +
         | PaymentMethodData::OpenBanking(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::NetworkToken(_)
-        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
-            utils::get_unimplemented_payment_method_error_message("nexinets"),
-        ))?,
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+            Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("nexinets"),
+            ))?
+        }
     }
 }
 
-fn get_card_data<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+fn get_card_data<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     card: &Card<T>,
 ) -> Result<NexinetsPaymentDetails<T>, ConnectorError> {
@@ -671,7 +748,10 @@ fn get_card_data<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'st
             });
             (card_data, cof_contract)
         }
-        false => (CardDataDetails::CardDetails(Box::new(get_card_details(card)?)), None),
+        false => (
+            CardDataDetails::CardDetails(Box::new(get_card_details(card)?)),
+            None,
+        ),
     };
     Ok(NexinetsPaymentDetails::Card(Box::new(NexiCardDetails {
         card_data,
@@ -695,7 +775,9 @@ fn get_applepay_details(
     })
 }
 
-fn get_card_details<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+fn get_card_details<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
     req_card: &Card<T>,
 ) -> Result<CardDetails<T>, ConnectorError> {
     Ok(CardDetails {
@@ -706,15 +788,21 @@ fn get_card_details<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 
     })
 }
 
-fn get_wallet_details<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+fn get_wallet_details<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
     wallet: &WalletData,
-) -> Result<(Option<NexinetsPaymentDetails<T>>, NexinetsProduct), error_stack::Report<ConnectorError>> {
+) -> Result<(Option<NexinetsPaymentDetails<T>>, NexinetsProduct), error_stack::Report<ConnectorError>>
+{
     match wallet {
         WalletData::PaypalRedirect(_) => Ok((None, NexinetsProduct::Paypal)),
         WalletData::ApplePay(applepay_data) => Ok((
-            Some(NexinetsPaymentDetails::Wallet(Box::new(NexinetsWalletDetails::ApplePayToken(
-                Box::new(get_applepay_details(wallet, applepay_data)?),
-            )))),
+            Some(NexinetsPaymentDetails::Wallet(Box::new(
+                NexinetsWalletDetails::ApplePayToken(Box::new(get_applepay_details(
+                    wallet,
+                    applepay_data,
+                )?)),
+            ))),
             NexinetsProduct::Applepay,
         )),
         WalletData::AliPayQr(_)
@@ -751,27 +839,32 @@ fn get_wallet_details<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send 
     }
 }
 
-pub fn get_order_id(meta: &NexinetsPaymentsMetadata) -> Result<String, error_stack::Report<ConnectorError>> {
-    let order_id = meta
-        .order_id
-        .clone()
-        .ok_or(ConnectorError::MissingConnectorRelatedTransactionID {
-            id: "order_id".to_string(),
-        })?;
+pub fn get_order_id(
+    meta: &NexinetsPaymentsMetadata,
+) -> Result<String, error_stack::Report<ConnectorError>> {
+    let order_id =
+        meta.order_id
+            .clone()
+            .ok_or(ConnectorError::MissingConnectorRelatedTransactionID {
+                id: "order_id".to_string(),
+            })?;
     Ok(order_id)
 }
 
-pub fn get_transaction_id(meta: &NexinetsPaymentsMetadata) -> Result<String, error_stack::Report<ConnectorError>> {
-    let transaction_id = meta
-        .transaction_id
-        .clone()
-        .ok_or(ConnectorError::MissingConnectorRelatedTransactionID {
+pub fn get_transaction_id(
+    meta: &NexinetsPaymentsMetadata,
+) -> Result<String, error_stack::Report<ConnectorError>> {
+    let transaction_id = meta.transaction_id.clone().ok_or(
+        ConnectorError::MissingConnectorRelatedTransactionID {
             id: "transaction_id".to_string(),
-        })?;
+        },
+    )?;
     Ok(transaction_id)
 }
 
-fn is_mandate_payment<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
+fn is_mandate_payment<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+>(
     item: &PaymentsAuthorizeData<T>,
 ) -> bool {
     (item.setup_future_usage == Some(enums::FutureUsage::OffSession))

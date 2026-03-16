@@ -105,19 +105,27 @@ pub trait BridgeRequestResponse: Send + Sync {
     type RequestBody;
     type ResponseBody;
     type ConnectorInputData: FlowTypes;
-    fn request_body(&self, rd: Self::ConnectorInputData) -> CustomResult<Self::RequestBody, errors::ConnectorError>
+    fn request_body(
+        &self,
+        rd: Self::ConnectorInputData,
+    ) -> CustomResult<Self::RequestBody, errors::ConnectorError>
     where
-        Self::RequestBody: TryFrom<Self::ConnectorInputData, Error = error_stack::Report<errors::ConnectorError>>,
+        Self::RequestBody:
+            TryFrom<Self::ConnectorInputData, Error = error_stack::Report<errors::ConnectorError>>,
     {
         Self::RequestBody::try_from(rd)
     }
 
-    fn response(&self, bytes: bytes::Bytes) -> CustomResult<Self::ResponseBody, errors::ConnectorError>
+    fn response(
+        &self,
+        bytes: bytes::Bytes,
+    ) -> CustomResult<Self::ResponseBody, errors::ConnectorError>
     where
         Self::ResponseBody: for<'a> serde::Deserialize<'a>,
     {
         if bytes.is_empty() {
-            serde_json::from_str("{}").change_context(errors::ConnectorError::ResponseDeserializationFailed)
+            serde_json::from_str("{}")
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)
         } else {
             bytes
                 .parse_struct(std::any::type_name::<Self::ResponseBody>())
@@ -297,8 +305,10 @@ macro_rules! expand_fn_handle_response {
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
             event_builder: Option<&mut events::Event>,
             res: Response,
-        ) -> CustomResult<RouterDataV2<$flow, $resource_common_data, $request, $response>, macro_types::ConnectorError>
-        {
+        ) -> CustomResult<
+            RouterDataV2<$flow, $resource_common_data, $request, $response>,
+            macro_types::ConnectorError,
+        > {
             use error_stack::ResultExt;
             paste::paste! {let bridge = self.[< $flow:snake >];}
 
@@ -326,8 +336,10 @@ macro_rules! expand_fn_handle_response {
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
             event_builder: Option<&mut events::Event>,
             res: Response,
-        ) -> CustomResult<RouterDataV2<$flow, $resource_common_data, $request, $response>, macro_types::ConnectorError>
-        {
+        ) -> CustomResult<
+            RouterDataV2<$flow, $resource_common_data, $request, $response>,
+            macro_types::ConnectorError,
+        > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
             event_builder.map(|i| i.set_connector_response(&response_body));
@@ -354,7 +366,10 @@ macro_rules! expand_default_functions {
         fn get_headers(
             &self,
             req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-        ) -> macro_types::CustomResult<Vec<(String, macro_types::Maskable<String>)>, macro_types::ConnectorError> {
+        ) -> macro_types::CustomResult<
+            Vec<(String, macro_types::Maskable<String>)>,
+            macro_types::ConnectorError,
+        > {
             self.build_headers(req)
         }
     };
@@ -1119,7 +1134,8 @@ macro_rules! expand_imports {
 
         #[allow(unused_imports)]
         use crate::connectors::macros::{
-            Bridge, BridgeRequestResponse, FlowTypes, GetFormData, NoRequestBody, NoRequestBodyTemplating,
+            Bridge, BridgeRequestResponse, FlowTypes, GetFormData, NoRequestBody,
+            NoRequestBodyTemplating,
         };
         #[allow(unused_imports)]
         mod macro_types {

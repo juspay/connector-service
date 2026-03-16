@@ -4,13 +4,15 @@ use common_utils::{pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        BillingDescriptor, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        BillingDescriptor, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
     errors,
     payment_method_data::{
-        Card, CardDetailsForNetworkTransactionId, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        Card, CardDetailsForNetworkTransactionId, PaymentMethodData, PaymentMethodDataTypes,
+        RawCardNumber,
     },
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
@@ -33,7 +35,9 @@ impl TryFrom<&ConnectorSpecificAuth> for Revolv3AuthType {
             ConnectorSpecificAuth::Revolv3 { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -170,7 +174,8 @@ impl Revolv3BillingAddress {
         let email = common_data.get_optional_billing_email();
         let phone_number = common_data.get_optional_billing_phone_number();
 
-        if common_data.get_optional_billing().is_some() || email.is_some() || phone_number.is_some() {
+        if common_data.get_optional_billing().is_some() || email.is_some() || phone_number.is_some()
+        {
             Some(Self {
                 address_line1: common_data.get_optional_billing_line1(),
                 address_line2: common_data.get_optional_billing_line2(),
@@ -194,7 +199,12 @@ pub struct PaymentMethodSpecificRequest<T: PaymentMethodDataTypes> {
 
 impl<T: PaymentMethodDataTypes> PaymentMethodSpecificRequest<T> {
     pub fn set_credit_card_data(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
         card: Card<T>,
     ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
         let common_data = &item.resource_common_data;
@@ -215,10 +225,13 @@ impl<T: PaymentMethodDataTypes> PaymentMethodSpecificRequest<T> {
                 security_code: card.card_cvc.clone(),
             },
         };
-        let network_data = item.request.is_mandate_payment().then_some(NetworkProcessingData {
-            processing_type: Some(PaymentProcessingType::InitialRecurring),
-            original_network_transaction_id: None,
-        });
+        let network_data = item
+            .request
+            .is_mandate_payment()
+            .then_some(NetworkProcessingData {
+                processing_type: Some(PaymentProcessingType::InitialRecurring),
+                original_network_transaction_id: None,
+            });
 
         Ok(Self {
             payment_method_data: Revolv3PaymentMethodData::CreditCard(credit_card_data),
@@ -231,7 +244,8 @@ impl From<common_enums::PaymentChannel> for OrderProcessingChannelType {
     fn from(item: common_enums::PaymentChannel) -> Self {
         match item {
             common_enums::PaymentChannel::Ecommerce => Self::Ecommerce,
-            common_enums::PaymentChannel::MailOrder | common_enums::PaymentChannel::TelephoneOrder => Self::Moto,
+            common_enums::PaymentChannel::MailOrder
+            | common_enums::PaymentChannel::TelephoneOrder => Self::Moto,
         }
     }
 }
@@ -250,7 +264,12 @@ impl From<BillingDescriptor> for Revolv3DynamicDescriptor {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::Revolv3RouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for Revolv3PaymentsRequest<T>
@@ -259,7 +278,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::Revolv3RouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -271,7 +295,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         connector: "revolv3",
                     })?
                 };
-                PaymentMethodSpecificRequest::set_credit_card_data(&item.router_data, card_data.clone())?
+                PaymentMethodSpecificRequest::set_credit_card_data(
+                    &item.router_data,
+                    card_data.clone(),
+                )?
             }
             _ => Err(errors::ConnectorError::NotImplemented(
                 domain_types::utils::get_unimplemented_payment_method_error_message("revolv3"),
@@ -282,7 +309,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             value: item
                 .connector
                 .amount_converter
-                .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                .convert(
+                    item.router_data.request.minor_amount,
+                    item.router_data.request.currency,
+                )
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
             currency: item.router_data.request.currency,
         };
@@ -423,12 +453,13 @@ impl Revolv3AuthorizeResponse {
         is_setup_mandate: bool,
     ) -> Result<DerivedPaymentResponse, error_stack::Report<errors::ConnectorError>> {
         let mandate_reference = self.payment_method.as_ref().and_then(|pm| {
-            pm.payment_method_id
-                .map(|connector_mandate_id| domain_types::connector_types::MandateReference {
+            pm.payment_method_id.map(|connector_mandate_id| {
+                domain_types::connector_types::MandateReference {
                     connector_mandate_id: Some(connector_mandate_id.to_string()),
                     payment_method_id: None,
                     connector_mandate_request_reference_id: None,
-                })
+                }
+            })
         });
         // Synchronous flow — PSync is not applicable
         match self.payment_method_authorization_id {
@@ -439,7 +470,9 @@ impl Revolv3AuthorizeResponse {
                     AttemptStatus::Authorized
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(payment_method_authorization_id.to_string()),
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        payment_method_authorization_id.to_string(),
+                    ),
                     redirection_data: None,
                     mandate_reference: mandate_reference.map(Box::new),
                     connector_metadata: None,
@@ -488,9 +521,9 @@ impl From<&InvoiceStatus> for AttemptStatus {
     fn from(status: &InvoiceStatus) -> Self {
         match status {
             InvoiceStatus::Paid => Self::Charged,
-            InvoiceStatus::Pending | InvoiceStatus::OneTimePaymentPending | InvoiceStatus::RetryPending => {
-                Self::Pending
-            }
+            InvoiceStatus::Pending
+            | InvoiceStatus::OneTimePaymentPending
+            | InvoiceStatus::RetryPending => Self::Pending,
             InvoiceStatus::Noncollectable | InvoiceStatus::Failed => Self::Failure,
         }
     }
@@ -502,12 +535,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<Revolv3PaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<Revolv3PaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let derived_response = match item.response {
             Revolv3PaymentsResponse::Authorize(ref auth_response) => {
                 auth_response.get_transaction_response(item.http_code, false)
             }
-            Revolv3PaymentsResponse::Sale(ref sale_response) => sale_response.get_transaction_response(item.http_code),
+            Revolv3PaymentsResponse::Sale(ref sale_response) => {
+                sale_response.get_transaction_response(item.http_code)
+            }
         }?;
 
         Ok(Self {
@@ -546,7 +583,9 @@ pub struct Revolv3InvoiceAttempt {
     pub response_message: Option<String>,
 }
 
-fn get_latest_attempt(attempts: &Option<Vec<Revolv3InvoiceAttempt>>) -> Option<&Revolv3InvoiceAttempt> {
+fn get_latest_attempt(
+    attempts: &Option<Vec<Revolv3InvoiceAttempt>>,
+) -> Option<&Revolv3InvoiceAttempt> {
     attempts
         .as_ref()?
         .iter()
@@ -564,7 +603,9 @@ impl TryFrom<ResponseRouterData<Revolv3PaymentSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<Revolv3PaymentSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<Revolv3PaymentSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(&item.response.invoice_status);
         let response = if domain_types::utils::is_payment_failure(status) {
             let latest_attempt = get_latest_attempt(&item.response.invoice_attempts);
@@ -587,17 +628,21 @@ impl TryFrom<ResponseRouterData<Revolv3PaymentSyncResponse, Self>>
             })
         } else {
             let mandate_reference = item.response.payment_method.and_then(|payment_method| {
-                payment_method.payment_method_id.map(|connector_mandate_id| {
-                    domain_types::connector_types::MandateReference {
-                        connector_mandate_id: Some(connector_mandate_id.to_string()),
-                        payment_method_id: None,
-                        connector_mandate_request_reference_id: None,
-                    }
-                })
+                payment_method
+                    .payment_method_id
+                    .map(
+                        |connector_mandate_id| domain_types::connector_types::MandateReference {
+                            connector_mandate_id: Some(connector_mandate_id.to_string()),
+                            payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
+                        },
+                    )
             });
 
             Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.invoice_id.to_string()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.invoice_id.to_string(),
+                ),
                 redirection_data: None,
                 mandate_reference: mandate_reference.map(Box::new),
                 connector_metadata: None,
@@ -626,19 +671,29 @@ pub struct Revolv3RefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<super::Revolv3RouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for Revolv3RefundRequest
+    TryFrom<
+        super::Revolv3RouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for Revolv3RefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::Revolv3RouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: super::Revolv3RouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount: item
                 .connector
                 .amount_converter
-                .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
+                .convert(
+                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.currency,
+                )
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
         })
     }
@@ -674,7 +729,9 @@ impl From<&RefundInvoiceStatus> for RefundStatus {
         match status {
             RefundInvoiceStatus::Refund | RefundInvoiceStatus::PartialRefund => Self::Success,
             RefundInvoiceStatus::RefundPending => Self::Pending,
-            RefundInvoiceStatus::RefundDeclined | RefundInvoiceStatus::RefundFailed => Self::Failure,
+            RefundInvoiceStatus::RefundDeclined | RefundInvoiceStatus::RefundFailed => {
+                Self::Failure
+            }
         }
     }
 }
@@ -684,7 +741,9 @@ impl TryFrom<ResponseRouterData<Revolv3RefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<Revolv3RefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<Revolv3RefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::Pending; //from(&item.response.invoice.invoice_status);
         let response = if is_refund_failure(refund_status) {
             let latest_attempt = get_latest_attempt(&item.response.refunds);
@@ -738,7 +797,9 @@ impl TryFrom<ResponseRouterData<Revolv3RefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<Revolv3RefundSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<Revolv3RefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(&item.response.invoice_status);
         let response = if is_refund_failure(refund_status) {
             let latest_attempt = get_latest_attempt(&item.response.invoice_attempts);
@@ -784,7 +845,10 @@ pub struct Revolv3CaptureRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::Revolv3RouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        super::Revolv3RouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     > for Revolv3CaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -841,23 +905,36 @@ pub struct Revolv3AuthReversalRequest {
     pub amount: Option<FloatMajorUnit>,
 }
 
-impl<T> TryFrom<super::Revolv3RouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for Revolv3AuthReversalRequest
+impl<T>
+    TryFrom<
+        super::Revolv3RouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for Revolv3AuthReversalRequest
 where
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: super::Revolv3RouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: super::Revolv3RouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let payment_method_authorization_id = item.router_data.request.connector_transaction_id.clone();
+        let payment_method_authorization_id =
+            item.router_data.request.connector_transaction_id.clone();
         let reason = item.router_data.request.cancellation_reason.clone();
         let amount = item
             .router_data
             .request
             .amount
             .zip(item.router_data.request.currency)
-            .map(|(minor_amount, currency)| item.connector.amount_converter.convert(minor_amount, currency))
+            .map(|(minor_amount, currency)| {
+                item.connector
+                    .amount_converter
+                    .convert(minor_amount, currency)
+            })
             .transpose()
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
@@ -882,7 +959,9 @@ impl TryFrom<ResponseRouterData<Revolv3AuthReversalResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<Revolv3AuthReversalResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<Revolv3AuthReversalResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::NoResponseId,
@@ -958,7 +1037,12 @@ impl<T: PaymentMethodDataTypes> Revolv3PaymentMethodData<T> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::Revolv3RouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for Revolv3RepeatPaymentRequest<T>
@@ -966,7 +1050,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: super::Revolv3RouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -998,7 +1087,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             value: item
                 .connector
                 .amount_converter
-                .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                .convert(
+                    item.router_data.request.minor_amount,
+                    item.router_data.request.currency,
+                )
                 .change_context(errors::ConnectorError::AmountConversionFailed)?,
             currency: item.router_data.request.currency,
         };
@@ -1036,7 +1128,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<Revolv3RepeatPaymentResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<Revolv3RepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let derived_response = match item.response {
             Revolv3RepeatPaymentResponse::Authorize(ref auth_response) => {
                 auth_response.get_transaction_response(item.http_code, false)
@@ -1070,7 +1164,12 @@ pub struct Revolv3SetupMandateRequest<T: PaymentMethodDataTypes> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::Revolv3RouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for Revolv3SetupMandateRequest<T>
@@ -1079,7 +1178,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::Revolv3RouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1150,12 +1254,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<Revolv3AuthorizeResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<Revolv3AuthorizeResponse, Self>) -> Result<Self, Self::Error> {
-        let derived_response = item.response.get_transaction_response(item.http_code, true)?;
+    fn try_from(
+        item: ResponseRouterData<Revolv3AuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let derived_response = item
+            .response
+            .get_transaction_response(item.http_code, true)?;
 
         Ok(Self {
             response: derived_response.response,
@@ -1194,8 +1307,8 @@ pub fn validate_psync(
             connector: "revolv3",
         })?;
 
-    let operation_metadata: Revolv3OperationMetadata =
-        serde_json::from_value(metadata.clone()).map_err(|_| errors::ConnectorError::NotSupported {
+    let operation_metadata: Revolv3OperationMetadata = serde_json::from_value(metadata.clone())
+        .map_err(|_| errors::ConnectorError::NotSupported {
             message: "Invalid connector metadata for PSync validation".to_string(),
             connector: "revolv3",
         })?;

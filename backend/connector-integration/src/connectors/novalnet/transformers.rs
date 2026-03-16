@@ -10,14 +10,16 @@ use common_utils::{
 use domain_types::{
     connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        EventType, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData, WebhookDetailsResponse,
+        EventType, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        WebhookDetailsResponse,
     },
     errors::ConnectorError,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData as WalletDataPaymentMethod,
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        WalletData as WalletDataPaymentMethod,
     },
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -85,7 +87,9 @@ pub struct NovalnetPaymentsRequestCustomer {
     birth_date: Option<String>, // Mandatory for SEPA Guarantee Payment
 }
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct NovalnetCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct NovalnetCard<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     card_number: RawCardNumber<T>,
     card_expiry_month: Secret<String>,
     card_expiry_year: Secret<String>,
@@ -131,7 +135,9 @@ pub struct NovalnetApplePay {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
-pub enum NovalNetPaymentData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub enum NovalNetPaymentData<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     Card(NovalnetCard<T>),
     RawCardForNTI(NovalnetRawCardDetails),
     GooglePay(NovalnetGooglePay),
@@ -171,7 +177,9 @@ pub struct NovalnetPaymentsRequestTransaction<
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct NovalnetPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct NovalnetPaymentsRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     merchant: NovalnetPaymentsRequestMerchant,
     customer: NovalnetPaymentsRequestCustomer,
     transaction: NovalnetPaymentsRequestTransaction<T>,
@@ -197,13 +205,26 @@ impl TryFrom<&common_enums::PaymentMethodType> for NovalNetPaymentTypes {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        NovalnetRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        NovalnetRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for NovalnetPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NovalnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -221,16 +242,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let test_mode = get_test_mode(item.router_data.resource_common_data.test_mode);
 
         let billing = NovalnetPaymentsRequestBilling {
-            house_no: item.router_data.resource_common_data.get_optional_billing_line1(),
-            street: item.router_data.resource_common_data.get_optional_billing_line2(),
-            city: item.router_data.resource_common_data.get_optional_billing_city(),
-            zip: item.router_data.resource_common_data.get_optional_billing_zip(),
-            country_code: item.router_data.resource_common_data.get_optional_billing_country(),
+            house_no: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line1(),
+            street: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line2(),
+            city: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_city(),
+            zip: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_zip(),
+            country_code: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_country(),
         };
 
         let customer = NovalnetPaymentsRequestCustomer {
-            first_name: item.router_data.resource_common_data.get_optional_billing_first_name(),
-            last_name: item.router_data.resource_common_data.get_optional_billing_last_name(),
+            first_name: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_first_name(),
+            last_name: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_last_name(),
             email: item
                 .router_data
                 .resource_common_data
@@ -264,7 +306,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         match item.router_data.request.payment_method_data {
@@ -274,7 +319,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     card_expiry_month: req_card.card_exp_month.clone(),
                     card_expiry_year: req_card.card_exp_year.clone(),
                     card_cvc: req_card.card_cvc.clone(),
-                    card_holder: item.router_data.resource_common_data.get_billing_full_name()?,
+                    card_holder: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_full_name()?,
                 });
 
                 let transaction = NovalnetPaymentsRequestTransaction {
@@ -443,7 +491,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     } => {
                         let account_holder = match bank_account_holder_name {
                             Some(name) => name.clone(),
-                            None => item.router_data.resource_common_data.get_billing_full_name()?,
+                            None => item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_full_name()?,
                         };
                         NovalnetPaymentsRequestTransaction {
                             test_mode,
@@ -474,7 +525,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     } => {
                         let account_holder = match bank_account_holder_name {
                             Some(name) => name.clone(),
-                            None => item.router_data.resource_common_data.get_billing_full_name()?,
+                            None => item
+                                .router_data
+                                .resource_common_data
+                                .get_billing_full_name()?,
                         };
                         NovalnetPaymentsRequestTransaction {
                             test_mode,
@@ -515,10 +569,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     custom,
                 })
             }
-            _ => Err(
-                ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message("novalnet"))
-                    .into(),
-            ),
+            _ => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("novalnet"),
+            )
+            .into()),
         }
     }
 }
@@ -572,7 +626,9 @@ pub enum NovalnetAPIStatus {
 impl From<NovalnetTransactionStatus> for common_enums::AttemptStatus {
     fn from(item: NovalnetTransactionStatus) -> Self {
         match item {
-            NovalnetTransactionStatus::Success | NovalnetTransactionStatus::Confirmed => Self::Charged,
+            NovalnetTransactionStatus::Success | NovalnetTransactionStatus::Confirmed => {
+                Self::Charged
+            }
             NovalnetTransactionStatus::OnHold => Self::Authorized,
             NovalnetTransactionStatus::Pending => Self::Pending,
             NovalnetTransactionStatus::Progress => Self::AuthenticationPending,
@@ -613,7 +669,11 @@ pub struct NovalnetPaymentsResponse {
     transaction: Option<NovalnetPaymentsResponseTransactionData>,
 }
 
-pub fn get_error_response(result: ResultData, status_code: u16, transaction_id: Option<String>) -> ErrorResponse {
+pub fn get_error_response(
+    result: ResultData,
+    status_code: u16,
+    transaction_id: Option<String>,
+) -> ErrorResponse {
     let error_code = result.status;
     let error_reason = result.status_text.clone();
 
@@ -654,7 +714,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NovalnetPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NovalnetPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let transaction_id = item
             .response
             .transaction
@@ -664,14 +726,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         match item.response.result.status {
             NovalnetAPIStatus::Success => {
                 let redirection_data: Option<RedirectForm> =
-                    item.response.result.redirect_url.map(|url| RedirectForm::Form {
-                        endpoint: url.expose().to_string(),
-                        method: Method::Get,
-                        form_fields: HashMap::new(),
-                    });
+                    item.response
+                        .result
+                        .redirect_url
+                        .map(|url| RedirectForm::Form {
+                            endpoint: url.expose().to_string(),
+                            method: Method::Get,
+                            form_fields: HashMap::new(),
+                        });
 
-                let mandate_reference_id =
-                    NovalnetPaymentsResponseTransactionData::get_token(item.response.transaction.clone().as_ref());
+                let mandate_reference_id = NovalnetPaymentsResponseTransactionData::get_token(
+                    item.response.transaction.clone().as_ref(),
+                );
 
                 let transaction_status = item
                     .response
@@ -707,10 +773,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .map(Box::new),
                         connector_metadata: None,
                         network_txn_id: item.response.transaction.and_then(|data| {
-                            data.payment_data.and_then(|payment_data| match payment_data {
-                                NovalnetResponsePaymentData::Card(card) => card.scheme_tid.map(|tid| tid.expose()),
-                                NovalnetResponsePaymentData::Paypal(_) => None,
-                            })
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
@@ -720,7 +789,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, transaction_id));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    transaction_id,
+                ));
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -737,10 +810,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Specific implementations for SetupMandate flow
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<NovalnetPaymentsResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NovalnetPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NovalnetPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let transaction_id = item
             .response
             .transaction
@@ -750,14 +830,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         match item.response.result.status {
             NovalnetAPIStatus::Success => {
                 let redirection_data: Option<RedirectForm> =
-                    item.response.result.redirect_url.map(|url| RedirectForm::Form {
-                        endpoint: url.expose().to_string(),
-                        method: Method::Get,
-                        form_fields: HashMap::new(),
-                    });
+                    item.response
+                        .result
+                        .redirect_url
+                        .map(|url| RedirectForm::Form {
+                            endpoint: url.expose().to_string(),
+                            method: Method::Get,
+                            form_fields: HashMap::new(),
+                        });
 
-                let mandate_reference_id =
-                    NovalnetPaymentsResponseTransactionData::get_token(item.response.transaction.clone().as_ref());
+                let mandate_reference_id = NovalnetPaymentsResponseTransactionData::get_token(
+                    item.response.transaction.clone().as_ref(),
+                );
 
                 let transaction_status = item
                     .response
@@ -793,10 +877,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .map(Box::new),
                         connector_metadata: None,
                         network_txn_id: item.response.transaction.and_then(|data| {
-                            data.payment_data.and_then(|payment_data| match payment_data {
-                                NovalnetResponsePaymentData::Card(card) => card.scheme_tid.map(|tid| tid.expose()),
-                                NovalnetResponsePaymentData::Paypal(_) => None,
-                            })
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
@@ -806,7 +893,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, transaction_id));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    transaction_id,
+                ));
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -821,12 +912,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // Specific implementations for RepeatPayment flow
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
-    TryFrom<ResponseRouterData<NovalnetPaymentsResponse, Self>>
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<NovalnetPaymentsResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NovalnetPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NovalnetPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let transaction_id = item
             .response
             .transaction
@@ -836,14 +930,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         match item.response.result.status {
             NovalnetAPIStatus::Success => {
                 let redirection_data: Option<RedirectForm> =
-                    item.response.result.redirect_url.map(|url| RedirectForm::Form {
-                        endpoint: url.expose().to_string(),
-                        method: Method::Get,
-                        form_fields: HashMap::new(),
-                    });
+                    item.response
+                        .result
+                        .redirect_url
+                        .map(|url| RedirectForm::Form {
+                            endpoint: url.expose().to_string(),
+                            method: Method::Get,
+                            form_fields: HashMap::new(),
+                        });
 
-                let mandate_reference_id =
-                    NovalnetPaymentsResponseTransactionData::get_token(item.response.transaction.clone().as_ref());
+                let mandate_reference_id = NovalnetPaymentsResponseTransactionData::get_token(
+                    item.response.transaction.clone().as_ref(),
+                );
 
                 let transaction_status = item
                     .response
@@ -879,10 +977,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .map(Box::new),
                         connector_metadata: None,
                         network_txn_id: item.response.transaction.and_then(|data| {
-                            data.payment_data.and_then(|payment_data| match payment_data {
-                                NovalnetResponsePaymentData::Card(card) => card.scheme_tid.map(|tid| tid.expose()),
-                                NovalnetResponsePaymentData::Paypal(_) => None,
-                            })
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
@@ -892,7 +993,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, transaction_id));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    transaction_id,
+                ));
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -1025,7 +1130,12 @@ pub struct NovalnetCaptureRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NovalnetRouterData<
-            RouterDataV2<connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                connector_flow::Capture,
+                PaymentFlowData,
+                PaymentsCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for NovalnetCaptureRequest
@@ -1033,7 +1143,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NovalnetRouterData<
-            RouterDataV2<connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            RouterDataV2<
+                connector_flow::Capture,
+                PaymentFlowData,
+                PaymentsCaptureData,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1074,7 +1189,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_optional_language_from_browser_info()
                 .unwrap_or(DEFAULT_LOCALE.to_string()),
         };
-        Ok(Self { transaction, custom })
+        Ok(Self {
+            transaction,
+            custom,
+        })
     }
 }
 
@@ -1092,17 +1210,24 @@ pub struct NovalnetRefundRequest {
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NovalnetRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for NovalnetRefundRequest
+    TryFrom<
+        NovalnetRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for NovalnetRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NovalnetRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: NovalnetRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_refund_amount,
+                item.router_data.request.currency,
+            )
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         let transaction = NovalnetRefundTransaction {
@@ -1117,14 +1242,19 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 .get_optional_language_from_browser_info()
                 .unwrap_or(DEFAULT_LOCALE.to_string().to_string()),
         };
-        Ok(Self { transaction, custom })
+        Ok(Self {
+            transaction,
+            custom,
+        })
     }
 }
 
 impl From<NovalnetTransactionStatus> for common_enums::RefundStatus {
     fn from(item: NovalnetTransactionStatus) -> Self {
         match item {
-            NovalnetTransactionStatus::Success | NovalnetTransactionStatus::Confirmed => Self::Success,
+            NovalnetTransactionStatus::Success | NovalnetTransactionStatus::Confirmed => {
+                Self::Success
+            }
             NovalnetTransactionStatus::Pending => Self::Pending,
             NovalnetTransactionStatus::Failure
             | NovalnetTransactionStatus::OnHold
@@ -1175,7 +1305,9 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NovalnetRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NovalnetRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let refund_id = item
             .response
             .transaction
@@ -1201,7 +1333,11 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, Some(refund_id)));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    Some(refund_id),
+                ));
                 Ok(Self {
                     response,
                     ..item.router_data
@@ -1218,12 +1354,19 @@ pub struct NovalnetRedirectionResponse {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NovalnetRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for NovalnetSyncRequest
+    TryFrom<
+        NovalnetRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for NovalnetSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NovalnetRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: NovalnetRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let transaction = if item
             .router_data
@@ -1260,7 +1403,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let custom = NovalnetCustom {
             lang: DEFAULT_LOCALE.to_string().to_string(),
         };
-        Ok(Self { transaction, custom })
+        Ok(Self {
+            transaction,
+            custom,
+        })
     }
 }
 
@@ -1286,7 +1432,9 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NovalnetPSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NovalnetPSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let transaction_id = item
             .response
             .transaction
@@ -1302,8 +1450,9 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                     .clone()
                     .map(|transaction_data| transaction_data.status)
                     .unwrap_or(NovalnetTransactionStatus::Pending);
-                let mandate_reference_id =
-                    NovalnetSyncResponseTransactionData::get_token(item.response.transaction.as_ref());
+                let mandate_reference_id = NovalnetSyncResponseTransactionData::get_token(
+                    item.response.transaction.as_ref(),
+                );
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -1326,10 +1475,13 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                             .map(Box::new),
                         connector_metadata: None,
                         network_txn_id: item.response.transaction.and_then(|data| {
-                            data.payment_data.and_then(|payment_data| match payment_data {
-                                NovalnetResponsePaymentData::Card(card) => card.scheme_tid.map(|tid| tid.expose()),
-                                NovalnetResponsePaymentData::Paypal(_) => None,
-                            })
+                            data.payment_data
+                                .and_then(|payment_data| match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                })
                         }),
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
@@ -1339,7 +1491,11 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, transaction_id));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    transaction_id,
+                ));
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -1385,8 +1541,14 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NovalnetCaptureResponse, Self>) -> Result<Self, Self::Error> {
-        let transaction_id = item.response.transaction.clone().map(|data| data.tid.to_string());
+    fn try_from(
+        item: ResponseRouterData<NovalnetCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let transaction_id = item
+            .response
+            .transaction
+            .clone()
+            .map(|data| data.tid.to_string());
 
         match item.response.result.status {
             NovalnetAPIStatus::Success => {
@@ -1418,7 +1580,11 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, transaction_id));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    transaction_id,
+                ));
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -1444,12 +1610,19 @@ pub struct NovalnetSyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NovalnetRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for NovalnetSyncRequest
+    TryFrom<
+        NovalnetRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for NovalnetSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NovalnetRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        item: NovalnetRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let transaction = NovalnetSyncTransaction {
             tid: item.router_data.request.connector_transaction_id.clone(),
@@ -1462,7 +1635,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_optional_language_from_browser_info()
                 .unwrap_or(DEFAULT_LOCALE.to_string().to_string()),
         };
-        Ok(Self { transaction, custom })
+        Ok(Self {
+            transaction,
+            custom,
+        })
     }
 }
 
@@ -1470,7 +1646,9 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<NovalnetRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NovalnetRefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let refund_id = item
             .response
             .transaction
@@ -1498,7 +1676,11 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundSyncResponse, Self>>
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, Some(refund_id)));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    Some(refund_id),
+                ));
                 Ok(Self {
                     response,
                     ..item.router_data
@@ -1520,12 +1702,19 @@ pub struct NovalnetCancelRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NovalnetRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for NovalnetCancelRequest
+    TryFrom<
+        NovalnetRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for NovalnetCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: NovalnetRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: NovalnetRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let transaction = NovalnetCancelTransaction {
             tid: item.router_data.request.connector_transaction_id.clone(),
@@ -1538,7 +1727,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .get_optional_language_from_browser_info()
                 .unwrap_or(DEFAULT_LOCALE.to_string().to_string()),
         };
-        Ok(Self { transaction, custom })
+        Ok(Self {
+            transaction,
+            custom,
+        })
     }
 }
 
@@ -1553,7 +1745,9 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NovalnetCancelResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NovalnetCancelResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let transaction_id = item
             .response
             .transaction
@@ -1594,7 +1788,11 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
                 })
             }
             NovalnetAPIStatus::Failure => {
-                let response = Err(get_error_response(item.response.result, item.http_code, transaction_id));
+                let response = Err(get_error_response(
+                    item.response.result,
+                    item.http_code,
+                    transaction_id,
+                ));
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: common_enums::AttemptStatus::Failure,
@@ -1702,7 +1900,12 @@ pub fn option_to_result<T>(opt: Option<T>) -> Result<T, ConnectorError> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NovalnetRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for NovalnetPaymentsRequest<T>
@@ -1710,7 +1913,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NovalnetRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
@@ -1729,11 +1937,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let req_address = item.router_data.resource_common_data.get_optional_billing();
 
         let billing = NovalnetPaymentsRequestBilling {
-            house_no: item.router_data.resource_common_data.get_optional_billing_line1(),
-            street: item.router_data.resource_common_data.get_optional_billing_line2(),
-            city: item.router_data.resource_common_data.get_optional_billing_city(),
-            zip: item.router_data.resource_common_data.get_optional_billing_zip(),
-            country_code: item.router_data.resource_common_data.get_optional_billing_country(),
+            house_no: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line1(),
+            street: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line2(),
+            city: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_city(),
+            zip: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_zip(),
+            country_code: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_country(),
         };
 
         let email = item
@@ -1944,13 +2167,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        NovalnetRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>, T>,
+        NovalnetRouterData<
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for NovalnetPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NovalnetRouterData<
-            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                RepeatPayment,
+                PaymentFlowData,
+                RepeatPaymentData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1968,16 +2204,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let test_mode = get_test_mode(item.router_data.resource_common_data.test_mode);
 
         let billing = NovalnetPaymentsRequestBilling {
-            house_no: item.router_data.resource_common_data.get_optional_billing_line1(),
-            street: item.router_data.resource_common_data.get_optional_billing_line2(),
-            city: item.router_data.resource_common_data.get_optional_billing_city(),
-            zip: item.router_data.resource_common_data.get_optional_billing_zip(),
-            country_code: item.router_data.resource_common_data.get_optional_billing_country(),
+            house_no: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line1(),
+            street: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_line2(),
+            city: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_city(),
+            zip: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_zip(),
+            country_code: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_country(),
         };
 
         let customer = NovalnetPaymentsRequestCustomer {
-            first_name: item.router_data.resource_common_data.get_optional_billing_first_name(),
-            last_name: item.router_data.resource_common_data.get_optional_billing_last_name(),
+            first_name: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_first_name(),
+            last_name: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_last_name(),
             email: item
                 .router_data
                 .resource_common_data
@@ -2006,17 +2263,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         match item.router_data.request.mandate_reference {
             MandateReferenceId::ConnectorMandateId(mandate_data) => {
-                let connector_mandate_id =
-                    mandate_data
-                        .get_connector_mandate_id()
-                        .ok_or(ConnectorError::MissingRequiredField {
-                            field_name: "connector_mandate_id",
-                        })?;
+                let connector_mandate_id = mandate_data.get_connector_mandate_id().ok_or(
+                    ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    },
+                )?;
 
                 let novalnet_mandate_data = NovalNetPaymentData::MandatePayment(NovalnetMandate {
                     token: Secret::new(connector_mandate_id),
@@ -2055,12 +2314,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateReferenceId::NetworkMandateId(network_transaction_id) => {
                 match item.router_data.request.payment_method_data {
                     PaymentMethodData::CardDetailsForNetworkTransactionId(ref raw_card_details) => {
-                        let novalnet_card = NovalNetPaymentData::RawCardForNTI(NovalnetRawCardDetails {
-                            card_number: raw_card_details.card_number.clone(),
-                            card_expiry_month: raw_card_details.card_exp_month.clone(),
-                            card_expiry_year: raw_card_details.card_exp_year.clone(),
-                            scheme_tid: network_transaction_id.into(),
-                        });
+                        let novalnet_card =
+                            NovalNetPaymentData::RawCardForNTI(NovalnetRawCardDetails {
+                                card_number: raw_card_details.card_number.clone(),
+                                card_expiry_month: raw_card_details.card_exp_month.clone(),
+                                card_expiry_year: raw_card_details.card_exp_year.clone(),
+                                scheme_tid: network_transaction_id.into(),
+                            });
 
                         let transaction = NovalnetPaymentsRequestTransaction {
                             test_mode,
@@ -2087,18 +2347,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             custom,
                         })
                     }
-                    _ => Err(
-                        ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message(
-                            "novalnet",
-                        ))
-                        .into(),
-                    ),
+                    _ => Err(ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    )
+                    .into()),
                 }
             }
-            _ => Err(
-                ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message("novalnet"))
-                    .into(),
-            ),
+            _ => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("novalnet"),
+            )
+            .into()),
         }
     }
 }
@@ -2128,7 +2386,9 @@ pub fn get_incoming_webhook_event(
             _ => EventType::PaymentIntentCancelFailure,
         },
         WebhookEventType::TransactionRefund => match transaction_status {
-            NovalnetTransactionStatus::Confirmed | NovalnetTransactionStatus::Success => EventType::RefundSuccess,
+            NovalnetTransactionStatus::Confirmed | NovalnetTransactionStatus::Success => {
+                EventType::RefundSuccess
+            }
             _ => EventType::RefundFailure,
         },
         WebhookEventType::Chargeback => EventType::DisputeOpened,
@@ -2146,7 +2406,8 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
 
                 match notif.result.status {
                     NovalnetAPIStatus::Success => {
-                        let mandate_reference_id = NovalnetSyncResponseTransactionData::get_token(Some(&response));
+                        let mandate_reference_id =
+                            NovalnetSyncResponseTransactionData::get_token(Some(&response));
                         let transaction_status = response.status;
 
                         Ok(Self {
@@ -2174,11 +2435,16 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                             minor_amount_captured: None,
                             amount_captured: None,
                             error_reason: None,
-                            network_txn_id: response.payment_data.and_then(|payment_data| match payment_data {
-                                NovalnetResponsePaymentData::Card(card) => card.scheme_tid.map(|tid| tid.expose()),
-                                NovalnetResponsePaymentData::Paypal(_) => None,
+                            network_txn_id: response.payment_data.and_then(|payment_data| {
+                                match payment_data {
+                                    NovalnetResponsePaymentData::Card(card) => {
+                                        card.scheme_tid.map(|tid| tid.expose())
+                                    }
+                                    NovalnetResponsePaymentData::Paypal(_) => None,
+                                }
                             }),
-                            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+                            transformation_status:
+                                common_enums::WebhookTransformationStatus::Complete,
                         })
                     }
                     NovalnetAPIStatus::Failure => Ok(Self {

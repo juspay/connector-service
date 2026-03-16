@@ -67,7 +67,9 @@ impl<'de> Deserialize<'de> for Level {
 }
 
 /// Telemetry / tracing.
-#[derive(Default, Debug, Deserialize, Serialize, Clone, PartialEq, Eq, config_patch_derive::Patch)]
+#[derive(
+    Default, Debug, Deserialize, Serialize, Clone, PartialEq, Eq, config_patch_derive::Patch,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum LogFormat {
     /// Default pretty log format

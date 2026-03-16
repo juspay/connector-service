@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency, FutureUsage,
+    AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
+    FutureUsage,
 };
 use common_utils::{
     consts::NO_ERROR_CODE,
@@ -10,8 +11,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId as DomainResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId as DomainResponseId,
     },
     errors::{self},
     payment_address::PaymentAddress,
@@ -82,7 +84,9 @@ impl Serialize for TransactionType {
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
-pub struct CardPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct CardPaymentRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     pub ssl_transaction_type: TransactionType,
     pub ssl_account_id: Secret<String>,
     pub ssl_user_id: Secret<String>,
@@ -111,7 +115,9 @@ pub struct CardPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum ElavonPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub enum ElavonPaymentsRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     Card(CardPaymentRequest<T>),
 }
 
@@ -120,26 +126,43 @@ fn get_avs_details_from_payment_address(
 ) -> (Option<Secret<String>>, Option<Secret<String>>) {
     payment_address
         .and_then(|addr| {
-            addr.get_payment_billing().as_ref().and_then(|billing_api_address| {
-                billing_api_address
-                    .address
-                    .as_ref()
-                    .map(|detailed_address| (detailed_address.line1.clone(), detailed_address.zip.clone()))
-            })
+            addr.get_payment_billing()
+                .as_ref()
+                .and_then(|billing_api_address| {
+                    billing_api_address
+                        .address
+                        .as_ref()
+                        .map(|detailed_address| {
+                            (detailed_address.line1.clone(), detailed_address.zip.clone())
+                        })
+                })
         })
         .unwrap_or((None, None))
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        ElavonRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        ElavonRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for ElavonPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ElavonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -153,21 +176,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Some(HyperswitchCaptureMethod::Manual) => TransactionType::CcAuthOnly,
                     Some(HyperswitchCaptureMethod::Automatic) => TransactionType::CcSale,
                     None => TransactionType::CcSale,
-                    Some(other_capture_method) => Err(report!(errors::ConnectorError::FlowNotSupported {
-                        flow: format!("Capture method: {other_capture_method:?}"),
-                        connector: "Elavon".to_string()
-                    }))?,
+                    Some(other_capture_method) => {
+                        Err(report!(errors::ConnectorError::FlowNotSupported {
+                            flow: format!("Capture method: {other_capture_method:?}"),
+                            connector: "Elavon".to_string()
+                        }))?
+                    }
                 };
 
                 let exp_month = card.card_exp_month.peek().to_string();
                 let formatted_exp_month = format!("{exp_month:0>2}");
 
                 let exp_year = card.card_exp_year.peek().to_string();
-                let formatted_exp_year = if exp_year.len() == 4 { &exp_year[2..] } else { &exp_year };
+                let formatted_exp_year = if exp_year.len() == 4 {
+                    &exp_year[2..]
+                } else {
+                    &exp_year
+                };
                 let exp_date = format!("{formatted_exp_month}{formatted_exp_year}");
 
-                let (avs_address, avs_zip) =
-                    get_avs_details_from_payment_address(Some(&router_data.resource_common_data.address));
+                let (avs_address, avs_zip) = get_avs_details_from_payment_address(Some(
+                    &router_data.resource_common_data.address,
+                ));
 
                 let _cvv_indicator = if card.card_cvc.peek().is_empty() {
                     Some(0)
@@ -180,13 +210,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .as_ref()
                     .map(|c| c.get_string_repr().to_string());
 
-                let add_token = request_data.setup_future_usage.as_ref().and_then(|sfu: &FutureUsage| {
-                    if *sfu == FutureUsage::OnSession || *sfu == FutureUsage::OffSession {
-                        Some("ADD".to_string())
-                    } else {
-                        None
-                    }
-                });
+                let add_token =
+                    request_data
+                        .setup_future_usage
+                        .as_ref()
+                        .and_then(|sfu: &FutureUsage| {
+                            if *sfu == FutureUsage::OnSession || *sfu == FutureUsage::OffSession {
+                                Some("ADD".to_string())
+                            } else {
+                                None
+                            }
+                        });
                 let token_source = add_token.as_ref().map(|_| "ECOMMERCE".to_string());
 
                 // Manually convert to StringMajorUnit to avoid error handling issues
@@ -248,14 +282,27 @@ pub struct XMLRSyncRequest(pub HashMap<String, Secret<String, WithoutType>>);
 // TryFrom implementation to convert from the router data to XMLElavonRequest
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        ElavonRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        ElavonRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for XMLElavonRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         data: ElavonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -279,7 +326,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         tracing::info!(xml=?raw_xml, "Generated raw XML");
 
         let mut result = HashMap::new();
-        result.insert("xmldata".to_string(), Secret::<_, WithoutType>::new(xml_content));
+        result.insert(
+            "xmldata".to_string(),
+            Secret::<_, WithoutType>::new(xml_content),
+        );
 
         // Log form data keys
         let keys = result.keys().collect::<Vec<_>>();
@@ -291,13 +341,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // TryFrom implementation for PSync flow using XMLPSyncRequest
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for XMLPSyncRequest
+    TryFrom<
+        ElavonRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for XMLPSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        data: ElavonRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        data: ElavonRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Direct implementation to avoid recursive calls
         let request = SyncRequest::try_from(&data.router_data)
@@ -318,7 +375,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         tracing::info!(xml=?raw_xml, "Generated raw XML");
 
         let mut result = HashMap::new();
-        result.insert("xmldata".to_string(), Secret::<_, WithoutType>::new(xml_content));
+        result.insert(
+            "xmldata".to_string(),
+            Secret::<_, WithoutType>::new(xml_content),
+        );
 
         // Log form data keys
         let keys = result.keys().collect::<Vec<_>>();
@@ -689,12 +749,16 @@ pub fn get_elavon_attempt_status(
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
-    TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
+impl<
+        F,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(value: ResponseRouterData<ElavonPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<ElavonPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -704,12 +768,16 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         // Log the response for debugging
         tracing::info!(response=?response, "Processing Elavon response");
 
-        let (attempt_status, error_response) = get_elavon_attempt_status(&response.result, http_code);
+        let (attempt_status, error_response) =
+            get_elavon_attempt_status(&response.result, http_code);
 
         let payment_method_token = match &response.result {
             ElavonResult::Success(payment_resp_struct) => {
                 if payment_resp_struct.ssl_token_response.as_deref() == Some("SUCCESS") {
-                    payment_resp_struct.ssl_token.clone().map(PaymentMethodToken::Token)
+                    payment_resp_struct
+                        .ssl_token
+                        .clone()
+                        .map(PaymentMethodToken::Token)
                 } else {
                     None
                 }
@@ -718,16 +786,20 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         };
 
         let payments_response_data = match (&response.result, error_response) {
-            (ElavonResult::Success(payment_resp_struct), None) => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: DomainResponseId::ConnectorTransactionId(payment_resp_struct.ssl_txn_id.clone()),
-                redirection_data: None,
-                connector_metadata: None,
-                network_txn_id: payment_resp_struct.ssl_approval_code.clone(),
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                mandate_reference: None,
-                status_code: http_code,
-            }),
+            (ElavonResult::Success(payment_resp_struct), None) => {
+                Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: DomainResponseId::ConnectorTransactionId(
+                        payment_resp_struct.ssl_txn_id.clone(),
+                    ),
+                    redirection_data: None,
+                    connector_metadata: None,
+                    network_txn_id: payment_resp_struct.ssl_approval_code.clone(),
+                    connector_response_reference_id: None,
+                    incremental_authorization_allowed: None,
+                    mandate_reference: None,
+                    status_code: http_code,
+                })
+            }
             (_, Some(err_resp)) => Err(err_resp),
             (ElavonResult::Error(error_payload), None) => Err(ErrorResponse {
                 status_code: http_code,
@@ -768,19 +840,28 @@ pub struct SyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for SyncRequest
+    TryFrom<
+        ElavonRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for SyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ElavonRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: ElavonRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
     }
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for SyncRequest {
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for SyncRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -792,8 +873,10 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
 
             _ => {
-                return Err(report!(errors::ConnectorError::MissingConnectorTransactionID))
-                    .attach_printable("Missing connector_transaction_id for Elavon PSync")
+                return Err(report!(
+                    errors::ConnectorError::MissingConnectorTransactionID
+                ))
+                .attach_printable("Missing connector_transaction_id for Elavon PSync")
             }
         };
 
@@ -819,26 +902,40 @@ pub struct ElavonCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for ElavonCaptureRequest
+    TryFrom<
+        ElavonRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for ElavonCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ElavonRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: ElavonRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
 
         let previous_connector_txn_id = match &router_data.request.connector_transaction_id {
             DomainResponseId::ConnectorTransactionId(id) => id.clone(),
-            _ => return Err(report!(errors::ConnectorError::MissingConnectorTransactionID)),
+            _ => {
+                return Err(report!(
+                    errors::ConnectorError::MissingConnectorTransactionID
+                ))
+            }
         };
 
         // Convert amount for capture
         let amount_converter = StringMajorUnitForConnector;
         let amount = amount_converter
-            .convert(router_data.request.minor_amount_to_capture, router_data.request.currency)
+            .convert(
+                router_data.request.minor_amount_to_capture,
+                router_data.request.currency,
+            )
             .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
@@ -854,13 +951,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Implementation for XMLCaptureRequest
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for XMLCaptureRequest
+    TryFrom<
+        ElavonRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for XMLCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        data: ElavonRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        data: ElavonRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Create the ElavonCaptureRequest
         let request = ElavonCaptureRequest::try_from(data)
@@ -873,7 +977,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Create the form data HashMap
         let mut result = HashMap::new();
-        result.insert("xmldata".to_string(), Secret::<_, WithoutType>::new(xml_content));
+        result.insert(
+            "xmldata".to_string(),
+            Secret::<_, WithoutType>::new(xml_content),
+        );
 
         Ok(Self(result))
     }
@@ -885,41 +992,51 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(value: ResponseRouterData<ElavonCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<ElavonCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
             http_code,
         } = value;
 
-        let (attempt_status, error_response) = get_elavon_attempt_status(&response.result, http_code);
+        let (attempt_status, error_response) =
+            get_elavon_attempt_status(&response.result, http_code);
 
         // Determine final status based on the transaction type
         let final_status = match &response.result {
-            ElavonResult::Success(success_payload) => match success_payload.ssl_transaction_type.as_deref() {
-                Some("cccomplete") | Some("ccsale") => match success_payload.ssl_result {
-                    SslResult::Approved => HyperswitchAttemptStatus::Charged,
-                    _ => HyperswitchAttemptStatus::Failure,
-                },
-                _ => attempt_status,
-            },
+            ElavonResult::Success(success_payload) => {
+                match success_payload.ssl_transaction_type.as_deref() {
+                    Some("cccomplete") | Some("ccsale") => match success_payload.ssl_result {
+                        SslResult::Approved => HyperswitchAttemptStatus::Charged,
+                        _ => HyperswitchAttemptStatus::Failure,
+                    },
+                    _ => attempt_status,
+                }
+            }
             _ => attempt_status,
         };
 
         // Build the response data
         let response_data = match (&response.result, error_response) {
-            (ElavonResult::Success(payment_resp_struct), None) => Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: DomainResponseId::ConnectorTransactionId(payment_resp_struct.ssl_txn_id.clone()),
-                redirection_data: None,
-                connector_metadata: Some(
-                    serde_json::to_value(payment_resp_struct.clone()).unwrap_or(serde_json::Value::Null),
-                ),
-                network_txn_id: None,
-                connector_response_reference_id: payment_resp_struct.ssl_approval_code.clone(),
-                incremental_authorization_allowed: None,
-                mandate_reference: None,
-                status_code: http_code,
-            }),
+            (ElavonResult::Success(payment_resp_struct), None) => {
+                Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: DomainResponseId::ConnectorTransactionId(
+                        payment_resp_struct.ssl_txn_id.clone(),
+                    ),
+                    redirection_data: None,
+                    connector_metadata: Some(
+                        serde_json::to_value(payment_resp_struct.clone())
+                            .unwrap_or(serde_json::Value::Null),
+                    ),
+                    network_txn_id: None,
+                    connector_response_reference_id: payment_resp_struct.ssl_approval_code.clone(),
+                    incremental_authorization_allowed: None,
+                    mandate_reference: None,
+                    status_code: http_code,
+                })
+            }
             (_, Some(err_resp)) => Err(err_resp),
             (ElavonResult::Error(error_payload), None) => Err(ErrorResponse {
                 status_code: http_code,
@@ -961,13 +1078,17 @@ pub struct ElavonRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for ElavonRefundRequest
+    TryFrom<
+        ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for ElavonRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: ElavonRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let request_data = &router_data.request;
@@ -992,13 +1113,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Implementation for XMLRefundRequest
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for XMLRefundRequest
+    TryFrom<
+        ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for XMLRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        data: ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        data: ElavonRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Create the ElavonRefundRequest
         let request = ElavonRefundRequest::try_from(data)
@@ -1011,7 +1136,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Create the form data HashMap
         let mut result = HashMap::new();
-        result.insert("xmldata".to_string(), Secret::<_, WithoutType>::new(xml_content));
+        result.insert(
+            "xmldata".to_string(),
+            Secret::<_, WithoutType>::new(xml_content),
+        );
 
         Ok(Self(result))
     }
@@ -1023,25 +1151,30 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(value: ResponseRouterData<ElavonRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<ElavonRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
             http_code,
         } = value;
 
-        let (attempt_status, error_response) = get_elavon_attempt_status(&response.result, http_code);
+        let (attempt_status, error_response) =
+            get_elavon_attempt_status(&response.result, http_code);
 
         // Determine refund status
         let refund_status = match &response.result {
-            ElavonResult::Success(success_payload) => match success_payload.ssl_transaction_type.as_deref() {
-                Some("RETURN") => match success_payload.ssl_result {
-                    SslResult::Approved => common_enums::RefundStatus::Success,
-                    SslResult::Declined => common_enums::RefundStatus::Failure,
-                    SslResult::Other(_) => common_enums::RefundStatus::Pending,
-                },
-                _ => common_enums::RefundStatus::Pending,
-            },
+            ElavonResult::Success(success_payload) => {
+                match success_payload.ssl_transaction_type.as_deref() {
+                    Some("RETURN") => match success_payload.ssl_result {
+                        SslResult::Approved => common_enums::RefundStatus::Success,
+                        SslResult::Declined => common_enums::RefundStatus::Failure,
+                        SslResult::Other(_) => common_enums::RefundStatus::Pending,
+                    },
+                    _ => common_enums::RefundStatus::Pending,
+                }
+            }
             _ => common_enums::RefundStatus::Failure,
         };
 
@@ -1082,19 +1215,28 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
 
 // Implementation for Refund Sync
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for SyncRequest
+    TryFrom<
+        ElavonRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for SyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ElavonRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        item: ElavonRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
     }
 }
 
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>> for SyncRequest {
+impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
+    for SyncRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -1115,13 +1257,20 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
 
 // Implementation for XMLRSyncRequest
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ElavonRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for XMLRSyncRequest
+    TryFrom<
+        ElavonRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for XMLRSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        data: ElavonRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        data: ElavonRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         // Create the SyncRequest
         let request = SyncRequest::try_from(data)
@@ -1134,7 +1283,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Create the form data HashMap
         let mut result = HashMap::new();
-        result.insert("xmldata".to_string(), Secret::<_, WithoutType>::new(xml_content));
+        result.insert(
+            "xmldata".to_string(),
+            Secret::<_, WithoutType>::new(xml_content),
+        );
 
         Ok(Self(result))
     }
@@ -1158,9 +1310,9 @@ pub fn get_refund_status_from_elavon_sync_response(
             TransactionSyncStatus::PEN => common_enums::RefundStatus::Pending,
             TransactionSyncStatus::OPN => common_enums::RefundStatus::Pending,
             TransactionSyncStatus::REV => common_enums::RefundStatus::ManualReview,
-            TransactionSyncStatus::PST | TransactionSyncStatus::FPR | TransactionSyncStatus::PRE => {
-                common_enums::RefundStatus::Failure
-            }
+            TransactionSyncStatus::PST
+            | TransactionSyncStatus::FPR
+            | TransactionSyncStatus::PRE => common_enums::RefundStatus::Failure,
         },
         _ => common_enums::RefundStatus::Pending,
     }
@@ -1246,8 +1398,12 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
                 SyncTransactionType::Sale => HyperswitchAttemptStatus::Pending,
                 SyncTransactionType::Return => HyperswitchAttemptStatus::Pending,
             },
-            TransactionSyncStatus::PEN | TransactionSyncStatus::REV => HyperswitchAttemptStatus::Pending,
-            TransactionSyncStatus::PST | TransactionSyncStatus::FPR | TransactionSyncStatus::PRE => {
+            TransactionSyncStatus::PEN | TransactionSyncStatus::REV => {
+                HyperswitchAttemptStatus::Pending
+            }
+            TransactionSyncStatus::PST
+            | TransactionSyncStatus::FPR
+            | TransactionSyncStatus::PRE => {
                 if response.ssl_transaction_type == SyncTransactionType::AuthOnly
                     && response.ssl_trans_status == TransactionSyncStatus::PRE
                 {

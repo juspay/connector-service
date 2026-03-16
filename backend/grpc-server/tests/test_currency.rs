@@ -6,37 +6,117 @@ mod tests {
     #[test]
     fn test_zero_decimal_currencies() {
         // Test currencies that should have 0 decimal places
-        assert_eq!(Currency::JPY.number_of_digits_after_decimal_point().unwrap(), 0);
-        assert_eq!(Currency::KRW.number_of_digits_after_decimal_point().unwrap(), 0);
-        assert_eq!(Currency::VND.number_of_digits_after_decimal_point().unwrap(), 0);
-        assert_eq!(Currency::BIF.number_of_digits_after_decimal_point().unwrap(), 0);
-        assert_eq!(Currency::CLP.number_of_digits_after_decimal_point().unwrap(), 0);
+        assert_eq!(
+            Currency::JPY
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            Currency::KRW
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            Currency::VND
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            Currency::BIF
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            Currency::CLP
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            0
+        );
     }
 
     #[test]
     fn test_two_decimal_currencies() {
         // Test currencies that should have 2 decimal places
-        assert_eq!(Currency::USD.number_of_digits_after_decimal_point().unwrap(), 2);
-        assert_eq!(Currency::EUR.number_of_digits_after_decimal_point().unwrap(), 2);
-        assert_eq!(Currency::GBP.number_of_digits_after_decimal_point().unwrap(), 2);
-        assert_eq!(Currency::CAD.number_of_digits_after_decimal_point().unwrap(), 2);
-        assert_eq!(Currency::AUD.number_of_digits_after_decimal_point().unwrap(), 2);
+        assert_eq!(
+            Currency::USD
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            Currency::EUR
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            Currency::GBP
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            Currency::CAD
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            Currency::AUD
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            2
+        );
     }
 
     #[test]
     fn test_three_decimal_currencies() {
         // Test currencies that should have 3 decimal places
-        assert_eq!(Currency::BHD.number_of_digits_after_decimal_point().unwrap(), 3);
-        assert_eq!(Currency::JOD.number_of_digits_after_decimal_point().unwrap(), 3);
-        assert_eq!(Currency::KWD.number_of_digits_after_decimal_point().unwrap(), 3);
-        assert_eq!(Currency::OMR.number_of_digits_after_decimal_point().unwrap(), 3);
-        assert_eq!(Currency::TND.number_of_digits_after_decimal_point().unwrap(), 3);
+        assert_eq!(
+            Currency::BHD
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            Currency::JOD
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            Currency::KWD
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            Currency::OMR
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            Currency::TND
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            3
+        );
     }
 
     #[test]
     fn test_four_decimal_currencies() {
         // Test currencies that should have 4 decimal places
-        assert_eq!(Currency::CLF.number_of_digits_after_decimal_point().unwrap(), 4);
+        assert_eq!(
+            Currency::CLF
+                .number_of_digits_after_decimal_point()
+                .unwrap(),
+            4
+        );
     }
 
     #[test]

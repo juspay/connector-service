@@ -24,17 +24,25 @@ pub fn setup(
 ) -> Result<TelemetryGuard, log_utils::LoggerError> {
     let static_top_level_fields = HashMap::from_iter([
         ("service".to_string(), serde_json::json!(service_name)),
-        ("build_version".to_string(), serde_json::json!(crate::version!())),
+        (
+            "build_version".to_string(),
+            serde_json::json!(crate::version!()),
+        ),
     ]);
 
     let console_config = if config.console.enabled {
-        let console_filter_directive = config.console.filtering_directive.clone().unwrap_or_else(|| {
-            get_envfilter_directive(
-                tracing::Level::WARN,
-                config.console.level.into_level(),
-                crates_to_filter.as_ref(),
-            )
-        });
+        let console_filter_directive =
+            config
+                .console
+                .filtering_directive
+                .clone()
+                .unwrap_or_else(|| {
+                    get_envfilter_directive(
+                        tracing::Level::WARN,
+                        config.console.level.into_level(),
+                        crates_to_filter.as_ref(),
+                    )
+                });
         let log_format = match config.console.log_format {
             config::LogFormat::Default => log_utils::ConsoleLogFormat::HumanReadable,
             config::LogFormat::Json => {
@@ -85,13 +93,14 @@ pub fn setup(
             // This will cause the application to panic at startup if metric registration fails.
             tracing_kafka::init();
 
-            let kafka_filter_directive = kafka_config.filtering_directive.clone().unwrap_or_else(|| {
-                get_envfilter_directive(
-                    tracing::Level::WARN,
-                    kafka_config.level.into_level(),
-                    crates_to_filter.as_ref(),
-                )
-            });
+            let kafka_filter_directive =
+                kafka_config.filtering_directive.clone().unwrap_or_else(|| {
+                    get_envfilter_directive(
+                        tracing::Level::WARN,
+                        kafka_config.level.into_level(),
+                        crates_to_filter.as_ref(),
+                    )
+                });
 
             let brokers: Vec<&str> = kafka_config.brokers.iter().map(|s| s.as_str()).collect();
             let mut builder = KafkaLayer::builder()
@@ -141,7 +150,9 @@ pub fn setup(
         }
     }
 
-    tracing_subscriber::registry().with(subscriber_layers).init();
+    tracing_subscriber::registry()
+        .with(subscriber_layers)
+        .init();
 
     tracing::info!(
         service_name,

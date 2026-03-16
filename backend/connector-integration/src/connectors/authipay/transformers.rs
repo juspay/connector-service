@@ -11,8 +11,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -48,7 +49,10 @@ impl AuthipayAuthType {
 
         // Generate HMAC-SHA256 with API Secret as key
         let signature = crypto::HmacSha256
-            .sign_message(self.api_secret.clone().expose().as_bytes(), raw_signature.as_bytes())
+            .sign_message(
+                self.api_secret.clone().expose().as_bytes(),
+                raw_signature.as_bytes(),
+            )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         // Base64 encode the result
@@ -75,11 +79,16 @@ impl TryFrom<&ConnectorSpecificAuth> for AuthipayAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Authipay { api_key, api_secret } => Ok(Self {
+            ConnectorSpecificAuth::Authipay {
+                api_key,
+                api_secret,
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -175,13 +184,19 @@ pub struct ExpiryDate {
 // ===== REQUEST TRANSFORMATION =====
 
 impl<T: PaymentMethodDataTypes>
-    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
-    for AuthipayPaymentsRequest<T>
+    TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for AuthipayPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
         // Use FloatMajorUnitForConnector to properly convert minor to major unit
         let converter = FloatMajorUnitForConnector;
@@ -212,9 +227,11 @@ impl<T: PaymentMethodDataTypes>
                 PaymentMethod { payment_card }
             }
             _ => {
-                return Err(error_stack::report!(errors::ConnectorError::NotImplemented(
-                    "Only card payments are supported".to_string()
-                )))
+                return Err(error_stack::report!(
+                    errors::ConnectorError::NotImplemented(
+                        "Only card payments are supported".to_string()
+                    )
+                ))
             }
         };
 
@@ -226,7 +243,10 @@ impl<T: PaymentMethodDataTypes>
             .unwrap_or(false);
 
         // Generate unique merchant transaction ID using connector request reference ID
-        let merchant_transaction_id = item.resource_common_data.connector_request_reference_id.clone();
+        let merchant_transaction_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
 
         // Create order details with same ID
         let order = OrderDetails {
@@ -461,7 +481,9 @@ fn extract_connector_metadata(payment_token: Option<&PaymentToken>) -> Option<se
 }
 
 /// Extract network-specific fields from processor object
-fn extract_network_fields(processor: Option<&Processor>) -> (Option<String>, Option<String>, Option<String>) {
+fn extract_network_fields(
+    processor: Option<&Processor>,
+) -> (Option<String>, Option<String>, Option<String>) {
     if let Some(processor) = processor {
         (
             processor.network.clone(),
@@ -512,7 +534,9 @@ fn map_status(
             AuthipayPaymentStatus::Approved => match transaction_type {
                 AuthipayTransactionType::Preauth => AttemptStatus::Authorized,
                 AuthipayTransactionType::Void => AttemptStatus::Voided,
-                AuthipayTransactionType::Sale | AuthipayTransactionType::Postauth => AttemptStatus::Charged,
+                AuthipayTransactionType::Sale | AuthipayTransactionType::Postauth => {
+                    AttemptStatus::Charged
+                }
                 AuthipayTransactionType::Credit
                 | AuthipayTransactionType::ForcedTicket
                 | AuthipayTransactionType::Return
@@ -532,7 +556,9 @@ fn map_status(
                 AuthipayPaymentResult::Approved => match transaction_type {
                     AuthipayTransactionType::Preauth => AttemptStatus::Authorized,
                     AuthipayTransactionType::Void => AttemptStatus::Voided,
-                    AuthipayTransactionType::Sale | AuthipayTransactionType::Postauth => AttemptStatus::Charged,
+                    AuthipayTransactionType::Sale | AuthipayTransactionType::Postauth => {
+                        AttemptStatus::Charged
+                    }
                     AuthipayTransactionType::Credit
                     | AuthipayTransactionType::ForcedTicket
                     | AuthipayTransactionType::Return
@@ -542,9 +568,9 @@ fn map_status(
                 },
                 AuthipayPaymentResult::Waiting => AttemptStatus::Pending,
                 AuthipayPaymentResult::Partial => AttemptStatus::PartialCharged,
-                AuthipayPaymentResult::Declined | AuthipayPaymentResult::Failed | AuthipayPaymentResult::Fraud => {
-                    AttemptStatus::Failure
-                }
+                AuthipayPaymentResult::Declined
+                | AuthipayPaymentResult::Failed
+                | AuthipayPaymentResult::Fraud => AttemptStatus::Failure,
             },
             None => AttemptStatus::Pending,
         },
@@ -558,7 +584,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<AuthipayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result, state, AND transaction type
         // CRITICAL: This validates BOTH status fields and transaction state
         let status = map_status(
@@ -578,7 +606,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<AuthipayPaymentsRespo
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata,
@@ -605,7 +635,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<AuthipayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result, state, AND transaction type
         // CRITICAL: This validates BOTH status fields and transaction state
         let status = map_status(
@@ -625,7 +657,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata,
@@ -652,7 +686,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<AuthipayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map transaction status using status/result, state, AND transaction type
         // CRITICAL: This validates BOTH status fields and transaction state
         // For successful capture: transactionType=POSTAUTH, transactionResult=APPROVED, transactionState=CAPTURED
@@ -672,7 +708,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata,
@@ -703,7 +741,9 @@ pub struct AuthipayRefundRequest {
 
 // ===== REFUND REQUEST TRANSFORMATION =====
 
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>> for AuthipayRefundRequest {
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+    for AuthipayRefundRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -740,7 +780,9 @@ pub struct AuthipayVoidRequest {
 
 // ===== VOID REQUEST TRANSFORMATION =====
 
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>> for AuthipayVoidRequest {
+impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
+    for AuthipayVoidRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -811,9 +853,9 @@ fn map_refund_status(
                 RefundStatus::Success
             }
             AuthipayPaymentResult::Waiting => RefundStatus::Pending,
-            AuthipayPaymentResult::Declined | AuthipayPaymentResult::Failed | AuthipayPaymentResult::Fraud => {
-                RefundStatus::Failure
-            }
+            AuthipayPaymentResult::Declined
+            | AuthipayPaymentResult::Failed
+            | AuthipayPaymentResult::Fraud => RefundStatus::Failure,
             AuthipayPaymentResult::Partial => RefundStatus::Pending,
         };
     }
@@ -843,7 +885,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<AuthipayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map refund status with CRITICAL validation of ALL fields
         let refund_status = map_refund_status(
             Some(item.response.transaction_type.clone()),
@@ -871,7 +915,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<AuthipayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map refund status with CRITICAL validation of ALL fields
         let refund_status = map_refund_status(
             Some(item.response.transaction_type.clone()),
@@ -940,9 +986,9 @@ fn map_void_status(
         return match result {
             AuthipayPaymentResult::Approved => AttemptStatus::Voided,
             AuthipayPaymentResult::Waiting => AttemptStatus::Pending,
-            AuthipayPaymentResult::Declined | AuthipayPaymentResult::Failed | AuthipayPaymentResult::Fraud => {
-                AttemptStatus::VoidFailed
-            }
+            AuthipayPaymentResult::Declined
+            | AuthipayPaymentResult::Failed
+            | AuthipayPaymentResult::Fraud => AttemptStatus::VoidFailed,
             AuthipayPaymentResult::Partial => AttemptStatus::Pending,
         };
     }
@@ -968,7 +1014,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<AuthipayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<AuthipayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map void status with CRITICAL validation of ALL fields
         let status = map_void_status(
             item.response.transaction_type.clone(),
@@ -983,7 +1031,9 @@ impl TryFrom<ResponseRouterData<AuthipayPaymentsResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(item.response.ipg_transaction_id.clone()),
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.ipg_transaction_id.clone(),
+                ),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -1018,14 +1068,27 @@ use crate::connectors::authipay::AuthipayRouterData;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        AuthipayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        AuthipayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for AuthipayPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: AuthipayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1034,39 +1097,60 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<AuthipayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for AuthipayVoidRequest
+    TryFrom<
+        AuthipayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for AuthipayVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: AuthipayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: AuthipayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<AuthipayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for AuthipayCaptureRequest
+    TryFrom<
+        AuthipayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for AuthipayCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: AuthipayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: AuthipayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<AuthipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for AuthipayRefundRequest
+    TryFrom<
+        AuthipayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for AuthipayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: AuthipayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: AuthipayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
     }

@@ -18,10 +18,11 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
-        BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2, Currency, Identifier, PaymentAddress,
-        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-        PaymentServiceGetRequest, PaymentServiceVoidRequest, PaymentStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
+        AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2,
+        Currency, Identifier, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceVoidRequest, PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -57,22 +58,25 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Helcim metadata headers to a request
 fn add_helcim_metadata<T>(request: &mut Request<T>) {
-    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load helcim credentials");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load helcim credentials");
 
     let api_key = match auth {
         domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
         _ => panic!("Expected HeaderKey auth type for helcim"),
     };
 
-    request
-        .metadata_mut()
-        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
+    request.metadata_mut().append(
+        "x-connector",
+        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
+    );
     request
         .metadata_mut()
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
-    request
-        .metadata_mut()
-        .append("x-api-key", api_key.parse().expect("Failed to parse x-api-key"));
+    request.metadata_mut().append(
+        "x-api-key",
+        api_key.parse().expect("Failed to parse x-api-key"),
+    );
     // Add merchant ID which is required by the server
     request.metadata_mut().append(
         "x-merchant-id",
@@ -80,9 +84,10 @@ fn add_helcim_metadata<T>(request: &mut Request<T>) {
             .parse()
             .expect("Failed to parse x-merchant-id"),
     );
-    request
-        .metadata_mut()
-        .append("x-tenant-id", "default".parse().expect("Failed to parse x-tenant-id"));
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
     // Add request ID which is required by the server
     request.metadata_mut().append(
         "x-request-id",
@@ -95,30 +100,34 @@ fn add_helcim_metadata<T>(request: &mut Request<T>) {
 // Helper function to extract connector transaction ID from authorize response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
     match &response.connector_transaction_id {
-        Some(id) => match &id.id_type {
-            Some(IdType::Id(id)) => id.clone(),
-            Some(IdType::EncodedData(id)) => id.clone(),
-            Some(IdType::NoResponseIdMarker(_)) => {
-                // For manual capture, extract the transaction ID from connector metadata
-                if let Some(connector_meta) = &response.connector_feature_data {
-                    if let Ok(meta_map) =
-                        serde_json::from_str::<HashMap<String, String>>(connector_meta.as_ref().expose())
-                    {
-                        if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
-                            return preauth_id.clone();
+        Some(id) => {
+            match &id.id_type {
+                Some(IdType::Id(id)) => id.clone(),
+                Some(IdType::EncodedData(id)) => id.clone(),
+                Some(IdType::NoResponseIdMarker(_)) => {
+                    // For manual capture, extract the transaction ID from connector metadata
+                    if let Some(connector_meta) = &response.connector_feature_data {
+                        if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
+                            connector_meta.as_ref().expose(),
+                        ) {
+                            if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
+                                return preauth_id.clone();
+                            }
                         }
                     }
+                    panic!("NoResponseIdMarker found but no preauth_transaction_id in connector metadata")
                 }
-                panic!("NoResponseIdMarker found but no preauth_transaction_id in connector metadata")
+                None => panic!("ID type is None in transaction_id"),
             }
-            None => panic!("ID type is None in transaction_id"),
-        },
+        }
         None => panic!("Transaction ID is None"),
     }
 }
 
 // Helper function to extract connector transaction ID from void response
-fn extract_void_transaction_id(response: &grpc_api_types::payments::PaymentServiceVoidResponse) -> String {
+fn extract_void_transaction_id(
+    response: &grpc_api_types::payments::PaymentServiceVoidResponse,
+) -> String {
     match &response.connector_transaction_id {
         Some(id) => match &id.id_type {
             Some(IdType::Id(id)) => id.clone(),
@@ -145,8 +154,12 @@ fn extract_request_ref_id(response: &PaymentServiceAuthorizeResponse) -> String 
 fn create_test_browser_info() -> BrowserInformation {
     BrowserInformation {
         ip_address: Some("192.168.1.1".to_string()),
-        user_agent: Some("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".to_string()),
-        accept_header: Some("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string()),
+        user_agent: Some(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".to_string(),
+        ),
+        accept_header: Some(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
+        ),
         language: Some("en-US".to_string()),
         color_depth: Some(24),
         screen_height: Some(1080),
@@ -187,7 +200,9 @@ fn create_test_billing_address() -> PaymentAddress {
 }
 
 // Helper function to create a payment authorize request
-fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
+fn create_payment_authorize_request(
+    capture_method: CaptureMethod,
+) -> PaymentServiceAuthorizeRequest {
     create_payment_authorize_request_with_amount(capture_method, get_unique_amount())
 }
 
@@ -210,7 +225,10 @@ fn create_payment_authorize_request_with_amount(
         nick_name: None,
     };
     let mut metadata_map = HashMap::new();
-    metadata_map.insert("description".to_string(), "Its my first payment request".to_string());
+    metadata_map.insert(
+        "description".to_string(),
+        "Its my first payment request".to_string(),
+    );
     let metadata_json = serde_json::to_string(&metadata_map).unwrap();
 
     PaymentServiceAuthorizeRequest {
@@ -247,7 +265,11 @@ fn create_payment_authorize_request_with_amount(
 }
 
 // Helper function to create a payment sync request
-fn create_payment_sync_request(transaction_id: &str, _request_ref_id: &str, amount: i64) -> PaymentServiceGetRequest {
+fn create_payment_sync_request(
+    transaction_id: &str,
+    _request_ref_id: &str,
+    amount: i64,
+) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
         connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
@@ -271,7 +293,10 @@ fn create_payment_sync_request(transaction_id: &str, _request_ref_id: &str, amou
 }
 
 // Helper function to create a payment capture request
-fn create_payment_capture_request(transaction_id: &str, amount: i64) -> PaymentServiceCaptureRequest {
+fn create_payment_capture_request(
+    transaction_id: &str,
+    amount: i64,
+) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
         connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
@@ -338,7 +363,10 @@ async fn test_payment_authorization_auto_capture() {
             .expect("gRPC payment_authorize call failed")
             .into_inner();
         // Verify the response
-        assert!(response.connector_transaction_id.is_some(), "Resource ID should be present");
+        assert!(
+            response.connector_transaction_id.is_some(),
+            "Resource ID should be present"
+        );
 
         let error = response.error.and_then(|e| e.connector_details);
 
@@ -358,7 +386,8 @@ async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request with manual capture
         let unique_amount = get_unique_amount();
-        let auth_request = create_payment_authorize_request_with_amount(CaptureMethod::Manual, unique_amount);
+        let auth_request =
+            create_payment_authorize_request_with_amount(CaptureMethod::Manual, unique_amount);
 
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
@@ -429,8 +458,11 @@ async fn test_payment_void() {
         let request_ref_id = extract_request_ref_id(&auth_response);
 
         // After authentication, sync the payment to get updated status
-        let sync_request =
-            create_payment_sync_request(&transaction_id, &request_ref_id, auth_request.amount.unwrap().minor_amount);
+        let sync_request = create_payment_sync_request(
+            &transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
         let mut sync_grpc_request = Request::new(sync_request);
         add_helcim_metadata(&mut sync_grpc_request);
 
@@ -513,8 +545,11 @@ async fn test_payment_sync() {
         std::thread::sleep(std::time::Duration::from_secs(2));
 
         // Create sync request with the specific transaction ID
-        let sync_request =
-            create_payment_sync_request(&transaction_id, &request_ref_id, auth_request.amount.unwrap().minor_amount);
+        let sync_request = create_payment_sync_request(
+            &transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
 
         // Add metadata headers for sync request
         let mut sync_grpc_request = Request::new(sync_request);

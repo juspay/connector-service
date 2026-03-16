@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::FloatMajorUnit, Email,
+    errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::FloatMajorUnit,
+    Email,
 };
 use domain_types::{
     connector_flow::Authorize,
@@ -41,7 +42,9 @@ fn get_mid(
     currency: common_enums::Currency,
 ) -> Result<Secret<String>, error_stack::Report<ConnectorError>> {
     let cashtocode_auth = CashtocodeAuth::try_from((connector_auth_type, &currency))
-        .attach_printable_lazy(|| format!("failed to fetch cashtocode credentials for currency '{currency}'"))?;
+        .attach_printable_lazy(|| {
+            format!("failed to fetch cashtocode credentials for currency '{currency}'")
+        })?;
 
     match payment_method_type {
         Some(common_enums::PaymentMethodType::ClassicReward) => cashtocode_auth
@@ -60,7 +63,12 @@ fn get_mid(
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CashtocodeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for CashtocodePaymentsRequest
@@ -68,7 +76,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CashtocodeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -82,12 +95,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
             .change_context(ConnectorError::RequestEncodingFailed)?;
         match item.router_data.resource_common_data.payment_method {
             common_enums::PaymentMethod::Reward => Ok(Self {
                 amount,
-                transaction_id: item.router_data.resource_common_data.connector_request_reference_id,
+                transaction_id: item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id,
                 currency: item.router_data.request.currency,
                 user_id: Secret::new(customer_id.to_owned()),
                 first_name: None,
@@ -143,15 +162,20 @@ impl TryFrom<&ConnectorSpecificAuth> for CashtocodeAuthType {
 impl TryFrom<(&ConnectorSpecificAuth, &common_enums::Currency)> for CashtocodeAuth {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(value: (&ConnectorSpecificAuth, &common_enums::Currency)) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: (&ConnectorSpecificAuth, &common_enums::Currency),
+    ) -> Result<Self, Self::Error> {
         let (auth_type, currency) = value;
 
         match auth_type {
             ConnectorSpecificAuth::Cashtocode { auth_key_map } => {
-                let identity_auth_key = auth_key_map.get(currency).ok_or(ConnectorError::CurrencyNotSupported {
-                    message: currency.to_string(),
-                    connector: "CashToCode",
-                })?;
+                let identity_auth_key =
+                    auth_key_map
+                        .get(currency)
+                        .ok_or(ConnectorError::CurrencyNotSupported {
+                            message: currency.to_string(),
+                            connector: "CashToCode",
+                        })?;
 
                 identity_auth_key
                     .to_owned()
@@ -230,12 +254,16 @@ fn get_redirect_form_data(
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
-    TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
+impl<
+        F,
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<CashtocodePaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<CashtocodePaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -266,7 +294,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(
-                            router_data.resource_common_data.connector_request_reference_id.clone(),
+                            router_data
+                                .resource_common_data
+                                .connector_request_reference_id
+                                .clone(),
                         ),
                         redirection_data: Some(Box::new(redirection_data)),
                         mandate_reference: None,

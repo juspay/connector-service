@@ -5,8 +5,8 @@ use domain_types::router_response_types::RedirectForm;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -42,7 +42,9 @@ impl TryFrom<&ConnectorSpecificAuth> for HyperpgAuthType {
                 password: password.to_owned(),
                 merchant_id: merchant_id.to_owned(),
             }),
-            _other => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _other => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -152,14 +154,27 @@ pub struct HyperpgOrderData {
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        HyperpgRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        HyperpgRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for HyperpgAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         wrapper: HyperpgRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -167,48 +182,56 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 
         let payment_method_data = router_data.request.payment_method_data.clone();
 
-        let (payment_method_type, card_number, name_on_card, card_exp_month, card_exp_year, card_security_code) =
-            match payment_method_data {
-                PaymentMethodData::Card(card) => {
-                    let card_number = Some(Secret::new(card.card_number.peek().to_string()));
-                    let card_exp_month = Some(card.card_exp_month.peek().clone());
-                    let card_exp_year = Some(card.card_exp_year.peek().clone());
-                    let card_security_code = Some(card.card_cvc.clone());
-                    let name_on_card = card.card_holder_name.as_ref().map(|n| n.peek().clone());
+        let (
+            payment_method_type,
+            card_number,
+            name_on_card,
+            card_exp_month,
+            card_exp_year,
+            card_security_code,
+        ) = match payment_method_data {
+            PaymentMethodData::Card(card) => {
+                let card_number = Some(Secret::new(card.card_number.peek().to_string()));
+                let card_exp_month = Some(card.card_exp_month.peek().clone());
+                let card_exp_year = Some(card.card_exp_year.peek().clone());
+                let card_security_code = Some(card.card_cvc.clone());
+                let name_on_card = card.card_holder_name.as_ref().map(|n| n.peek().clone());
 
-                    (
-                        HyperpgPaymentMethodType::CARD,
-                        card_number,
-                        name_on_card,
-                        card_exp_month,
-                        card_exp_year,
-                        card_security_code,
-                    )
-                }
-                PaymentMethodData::Wallet(_wallet) => {
-                    return Err(error_stack::report!(errors::ConnectorError::NotSupported {
-                        message: "Wallet payment method is not supported".to_string(),
-                        connector: "hyperpg",
-                    }));
-                }
-                PaymentMethodData::PayLater(_paylater) => {
-                    return Err(error_stack::report!(errors::ConnectorError::NotSupported {
-                        message: "PayLater payment method is not supported".to_string(),
-                        connector: "hyperpg",
-                    }));
-                }
-                PaymentMethodData::Voucher(_voucher) => {
-                    return Err(error_stack::report!(errors::ConnectorError::NotSupported {
-                        message: "Voucher payment method is not supported".to_string(),
-                        connector: "hyperpg",
-                    }));
-                }
-                _ => {
-                    return Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+                (
+                    HyperpgPaymentMethodType::CARD,
+                    card_number,
+                    name_on_card,
+                    card_exp_month,
+                    card_exp_year,
+                    card_security_code,
+                )
+            }
+            PaymentMethodData::Wallet(_wallet) => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "Wallet payment method is not supported".to_string(),
+                    connector: "hyperpg",
+                }));
+            }
+            PaymentMethodData::PayLater(_paylater) => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "PayLater payment method is not supported".to_string(),
+                    connector: "hyperpg",
+                }));
+            }
+            PaymentMethodData::Voucher(_voucher) => {
+                return Err(error_stack::report!(errors::ConnectorError::NotSupported {
+                    message: "Voucher payment method is not supported".to_string(),
+                    connector: "hyperpg",
+                }));
+            }
+            _ => {
+                return Err(error_stack::report!(
+                    errors::ConnectorError::NotImplemented(
                         "This payment method is not implemented".to_string(),
-                    )));
-                }
-            };
+                    )
+                ));
+            }
+        };
 
         // Convert amount using the connector's amount_converter
         let amount = utils::convert_amount(
@@ -230,7 +253,10 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             format: JSON.to_string(),
             redirect_after_payment: true,
             order: HyperpgOrderData {
-                order_id: router_data.resource_common_data.connector_request_reference_id.clone(),
+                order_id: router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
                 amount,
                 currency: router_data.request.currency.to_string(),
                 return_url: router_data.request.router_return_url.clone(),
@@ -252,19 +278,29 @@ pub struct HyperpgRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<HyperpgRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for HyperpgRefundRequest
+    TryFrom<
+        HyperpgRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for HyperpgRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        wrapper: HyperpgRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        wrapper: HyperpgRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = wrapper.router_data;
 
         let converter = FloatMajorUnitForConnector;
         let amount = converter
-            .convert(router_data.request.minor_refund_amount, router_data.request.currency)
+            .convert(
+                router_data.request.minor_refund_amount,
+                router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
@@ -337,7 +373,9 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<HyperpgAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<HyperpgAuthorizeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = item.router_data;
 
@@ -413,7 +451,9 @@ impl TryFrom<ResponseRouterData<HyperpgRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<HyperpgRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<HyperpgRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
         // doc - The status of the refund initiated. Initial status will always be PENDING - doc link - https://docs.hyperpg.in/integration-doc/docs/base-integration/refund-order-api
         let refund_status = RefundStatus::Pending;
@@ -440,7 +480,9 @@ impl TryFrom<ResponseRouterData<HyperpgRefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<HyperpgRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<HyperpgRefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         let refund_previous_status = item.router_data.resource_common_data.status;

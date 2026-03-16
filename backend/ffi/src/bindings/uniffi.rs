@@ -14,31 +14,38 @@ mod uniffi_bindings_inner {
     use domain_types::router_data::ConnectorSpecificAuth;
     use domain_types::router_response_types::Response;
     use domain_types::utils::ForeignTryFrom;
-    use grpc_api_types::payments::{Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions};
+    use grpc_api_types::payments::{
+        Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions,
+    };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
 
     // ── Shared helpers ────────────────────────────────────────────────────────
 
     /// Build FfiMetadataPayload from FfiOptions.
-    fn parse_metadata(options: &FfiOptions) -> Result<crate::types::FfiMetadataPayload, UniffiError> {
+    fn parse_metadata(
+        options: &FfiOptions,
+    ) -> Result<crate::types::FfiMetadataPayload, UniffiError> {
         // 1. Resolve Connector (Taken from FfiOptions)
         let proto_connector = options.connector(); // Direct enum access via generated method
-        let connector =
-            ConnectorEnum::foreign_try_from(proto_connector).map_err(|e| UniffiError::MetadataParseError {
-                msg: format!("Connector mapping failed: {e}"),
-            })?;
-
-        // 2. Resolve Auth (Taken from typed Protobuf in FfiOptions)
-        let proto_auth = options.auth.as_ref().ok_or_else(|| UniffiError::MissingMetadata {
-            key: "auth".to_string(),
-        })?;
-
-        let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(proto_auth.clone()).map_err(|e| {
+        let connector = ConnectorEnum::foreign_try_from(proto_connector).map_err(|e| {
             UniffiError::MetadataParseError {
-                msg: format!("Typed auth mapping failed: {e}"),
+                msg: format!("Connector mapping failed: {e}"),
             }
         })?;
+
+        // 2. Resolve Auth (Taken from typed Protobuf in FfiOptions)
+        let proto_auth = options
+            .auth
+            .as_ref()
+            .ok_or_else(|| UniffiError::MissingMetadata {
+                key: "auth".to_string(),
+            })?;
+
+        let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(proto_auth.clone())
+            .map_err(|e| UniffiError::MetadataParseError {
+                msg: format!("Typed auth mapping failed: {e}"),
+            })?;
 
         Ok(crate::types::FfiMetadataPayload {
             connector,
@@ -81,17 +88,27 @@ mod uniffi_bindings_inner {
 
         let mut header_map = HeaderMap::new();
         for (key, value) in &response.headers {
-            if let (Ok(name), Ok(val)) = (HeaderName::from_bytes(key.as_bytes()), HeaderValue::from_str(value)) {
+            if let (Ok(name), Ok(val)) = (
+                HeaderName::from_bytes(key.as_bytes()),
+                HeaderValue::from_str(value),
+            ) {
                 header_map.insert(name, val);
             }
         }
 
         Ok(Response {
-            headers: if header_map.is_empty() { None } else { Some(header_map) },
+            headers: if header_map.is_empty() {
+                None
+            } else {
+                Some(header_map)
+            },
             response: Bytes::from(response.body),
-            status_code: response.status_code.try_into().map_err(|e| UniffiError::DecodeError {
-                msg: format!("Invalid HTTP status code: {e}"),
-            })?,
+            status_code: response
+                .status_code
+                .try_into()
+                .map_err(|e| UniffiError::DecodeError {
+                    msg: format!("Invalid HTTP status code: {e}"),
+                })?,
         })
     }
 
@@ -102,7 +119,8 @@ mod uniffi_bindings_inner {
                 msg: "FfiOptions bytes are empty".to_string(),
             });
         }
-        FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| UniffiError::DecodeError { msg: e.to_string() })
+        FfiOptions::decode(Bytes::from(options_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })
     }
 
     // ── Generic transformer runners ───────────────────────────────────────────
@@ -120,8 +138,8 @@ mod uniffi_bindings_inner {
     where
         Req: Message + Default,
     {
-        let payload =
-            Req::decode(Bytes::from(request_bytes)).map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+        let payload = Req::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
         let ffi_metadata = parse_metadata(&ffi_options)?;
@@ -134,7 +152,9 @@ mod uniffi_bindings_inner {
 
         let environment = Some(ffi_options.environment());
 
-        let result = handler(request, environment).map_err(|e| UniffiError::HandlerError { msg: format!("{e:?}") })?;
+        let result = handler(request, environment).map_err(|e| UniffiError::HandlerError {
+            msg: format!("{e:?}"),
+        })?;
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
         build_ffi_request_bytes(&connector_request)
     }
@@ -157,8 +177,8 @@ mod uniffi_bindings_inner {
     {
         let domain_response = build_domain_response(response_bytes)?;
 
-        let payload =
-            Req::decode(Bytes::from(request_bytes)).map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+        let payload = Req::decode(Bytes::from(request_bytes))
+            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
         let ffi_metadata = parse_metadata(&ffi_options)?;
@@ -171,8 +191,11 @@ mod uniffi_bindings_inner {
 
         let environment = Some(ffi_options.environment());
 
-        let proto_response = handler(request, domain_response, environment)
-            .map_err(|e| UniffiError::HandlerError { msg: format!("{e:?}") })?;
+        let proto_response = handler(request, domain_response, environment).map_err(|e| {
+            UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            }
+        })?;
         Ok(proto_response.encode_to_vec())
     }
 
@@ -232,10 +255,14 @@ mod uniffi_bindings_inner {
     /// `EventServiceHandleRequest` proto bytes and receives encoded
     /// `EventServiceHandleResponse` bytes directly.
     #[uniffi::export]
-    pub fn handle_event_transformer(request_bytes: Vec<u8>, options_bytes: Vec<u8>) -> Result<Vec<u8>, UniffiError> {
+    pub fn handle_event_transformer(
+        request_bytes: Vec<u8>,
+        options_bytes: Vec<u8>,
+    ) -> Result<Vec<u8>, UniffiError> {
         use prost::Message as _;
-        let payload = grpc_api_types::payments::EventServiceHandleRequest::decode(Bytes::from(request_bytes))
-            .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
+        let payload =
+            grpc_api_types::payments::EventServiceHandleRequest::decode(Bytes::from(request_bytes))
+                .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
         let ffi_metadata = parse_metadata(&ffi_options)?;
@@ -249,7 +276,9 @@ mod uniffi_bindings_inner {
         let environment = Some(ffi_options.environment());
 
         let response = crate::handlers::payments::handle_event_handler(request, environment)
-            .map_err(|e| UniffiError::HandlerError { msg: format!("{e:?}") })?;
+            .map_err(|e| UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            })?;
 
         Ok(response.encode_to_vec())
     }

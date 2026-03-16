@@ -140,6 +140,10 @@ where
     T: AsRef<[u8]>,
 {
     fn fmt(value: &T, fmt: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(fmt, "*** Encrypted data of length {} bytes ***", value.as_ref().len())
+        write!(
+            fmt,
+            "*** Encrypted data of length {} bytes ***",
+            value.as_ref().len()
+        )
     }
 }

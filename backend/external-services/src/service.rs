@@ -143,7 +143,8 @@ where
             let response = match body {
                 Ok(body) => {
                     let status_code = body.status_code;
-                    tracing::Span::current().record("status_code", tracing::field::display(status_code));
+                    tracing::Span::current()
+                        .record("status_code", tracing::field::display(status_code));
 
                     if all_keys_required.unwrap_or(true) {
                         let raw_response_string = strip_bom_and_convert_to_string(&body.response);
@@ -157,18 +158,24 @@ where
                             .set_connector_response_headers(body.headers.clone());
                     }
 
-                    let handle_response_result =
-                        connector.handle_response_v2(&updated_router_data, event.as_deref_mut(), body.clone());
+                    let handle_response_result = connector.handle_response_v2(
+                        &updated_router_data,
+                        event.as_deref_mut(),
+                        body.clone(),
+                    );
 
                     // Log response body and headers using properly masked data from connector
                     if let Some(evt) = event.as_deref_mut() {
                         if let Some(response_data) = &evt.response_data {
-                            tracing::Span::current()
-                                .record("response.body", tracing::field::display(response_data.inner()));
+                            tracing::Span::current().record(
+                                "response.body",
+                                tracing::field::display(response_data.inner()),
+                            );
                         }
 
                         // Log response headers from event (already masked)
-                        tracing::Span::current().record("response.headers", tracing::field::debug(&evt.headers));
+                        tracing::Span::current()
+                            .record("response.headers", tracing::field::debug(&evt.headers));
                     }
 
                     match handle_response_result {
@@ -206,8 +213,14 @@ where
                         500..=511 => connector.get_5xx_error_response(body.clone(), event)?,
                         _ => connector.get_error_response_v2(body.clone(), event)?,
                     };
-                    tracing::Span::current().record("response.error_message", tracing::field::display(&error.message));
-                    tracing::Span::current().record("response.status_code", tracing::field::display(error.status_code));
+                    tracing::Span::current().record(
+                        "response.error_message",
+                        tracing::field::display(&error.message),
+                    );
+                    tracing::Span::current().record(
+                        "response.status_code",
+                        tracing::field::display(error.status_code),
+                    );
                     updated_router_data.response = Err(error);
                     updated_router_data
                 }
@@ -308,11 +321,9 @@ where
             if let Ok(response) = parse_json_with_bom_handling(&body.response) {
                 tracing::Span::current().record(
                     "response.body",
-                    tracing::field::display(
-                        response
-                            .masked_serialize()
-                            .unwrap_or(json!({ "error": "failed to mask serialize connector response"})),
-                    ),
+                    tracing::field::display(response.masked_serialize().unwrap_or(
+                        json!({ "error": "failed to mask serialize connector response"}),
+                    )),
                 );
             }
 
@@ -325,7 +336,8 @@ where
                     .set_raw_connector_response(raw_response_string.map(Into::into));
             }
 
-            let handle_response_result = connector.handle_response_v2(&updated_router_data, None, body.clone());
+            let handle_response_result =
+                connector.handle_response_v2(&updated_router_data, None, body.clone());
 
             let response = match handle_response_result {
                 Ok(data) => {
@@ -345,7 +357,9 @@ where
                 Some(request) => {
                     updated_router_data
                         .resource_common_data
-                        .set_raw_connector_request(Some(extract_raw_connector_request(request).into()));
+                        .set_raw_connector_request(Some(
+                            extract_raw_connector_request(request).into(),
+                        ));
                     updated_router_data
                 }
                 None => updated_router_data,
@@ -391,7 +405,11 @@ where
                         req.add_header(X_API_TAG, tag.clone().into());
                     });
 
-                    tracing::info!("Test mode enabled: redirected {} to {}", original_url, test_ctx.mock_server_url);
+                    tracing::info!(
+                        "Test mode enabled: redirected {} to {}",
+                        original_url,
+                        test_ctx.mock_server_url
+                    );
                 });
                 req
             });
@@ -402,33 +420,42 @@ where
                 .unwrap_or_default();
             tracing::info!(?headers, "headers of connector request");
 
-            let event_headers: HashMap<String, String> =
-                headers.iter().map(|(k, v)| (k.clone(), format!("{v:?}"))).collect();
+            let event_headers: HashMap<String, String> = headers
+                .iter()
+                .map(|(k, v)| (k.clone(), format!("{v:?}")))
+                .collect();
 
-            let masked_headers = headers.iter().fold(serde_json::Map::new(), |mut acc, (k, v)| {
-                let value = match v {
-                    Maskable::Masked(_) => serde_json::Value::String("*** alloc::string::String ***".to_string()),
-                    Maskable::Normal(iv) => serde_json::Value::String(iv.to_owned()),
-                };
-                acc.insert(k.clone(), value);
-                acc
-            });
+            let masked_headers = headers
+                .iter()
+                .fold(serde_json::Map::new(), |mut acc, (k, v)| {
+                    let value = match v {
+                        Maskable::Masked(_) => {
+                            serde_json::Value::String("*** alloc::string::String ***".to_string())
+                        }
+                        Maskable::Normal(iv) => serde_json::Value::String(iv.to_owned()),
+                    };
+                    acc.insert(k.clone(), value);
+                    acc
+                });
             let headers = serde_json::Value::Object(masked_headers);
             tracing::Span::current().record("request.headers", tracing::field::display(&headers));
 
             let req = connector_request.as_ref().map(|connector_request| {
                 let masked_request = match connector_request.body.as_ref() {
                     Some(request) => match request {
-                        RequestContent::Json(i) | RequestContent::FormUrlEncoded(i) | RequestContent::Xml(i) => (**i)
-                            .masked_serialize()
-                            .unwrap_or(json!({ "error": "failed to mask serialize connector request"})),
+                        RequestContent::Json(i)
+                        | RequestContent::FormUrlEncoded(i)
+                        | RequestContent::Xml(i) => (**i).masked_serialize().unwrap_or(
+                            json!({ "error": "failed to mask serialize connector request"}),
+                        ),
                         RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
                     None => serde_json::Value::Null,
                 };
                 tracing::info!(request=?masked_request, "request of connector");
-                tracing::Span::current().record("request.body", tracing::field::display(&masked_request));
+                tracing::Span::current()
+                    .record("request.body", tracing::field::display(&masked_request));
 
                 masked_request
             });
@@ -446,11 +473,14 @@ where
                         .inc();
                     let external_service_start_latency = tokio::time::Instant::now();
                     tracing::Span::current().record("request.url", tracing::field::display(&url));
-                    tracing::Span::current().record("request.method", tracing::field::display(method));
+                    tracing::Span::current()
+                        .record("request.method", tracing::field::display(method));
                     let request_id = event_params.request_id.to_string();
 
                     let response = if let Some(token_data) = token_data {
-                        tracing::debug!("Creating injector request with token data using unified API");
+                        tracing::debug!(
+                            "Creating injector request with token data using unified API"
+                        );
 
                         // Extract template and combine headers
                         let template = request
@@ -477,7 +507,9 @@ where
                                 updated_router_data
                                     .resource_common_data
                                     .get_vault_headers()
-                                    .map(|headers| headers.iter().map(|(k, v)| (k.clone(), v.clone())))
+                                    .map(|headers| {
+                                        headers.iter().map(|(k, v)| (k.clone(), v.clone()))
+                                    })
                                     .into_iter()
                                     .flatten(),
                             )
@@ -530,15 +562,23 @@ where
                         }))
                     } else {
                         let test_mode = test_context.is_some();
-                        call_connector_api(proxy, request, "execute_connector_processing_step", test_mode)
-                            .await
-                            .change_context(ConnectorError::RequestEncodingFailed)
-                            .inspect_err(|err| {
-                                info_log(
-                                    "NETWORK_ERROR",
-                                    &json!(format!("Failed getting response from connector. Error: {:?}", err)),
-                                );
-                            })
+                        call_connector_api(
+                            proxy,
+                            request,
+                            "execute_connector_processing_step",
+                            test_mode,
+                        )
+                        .await
+                        .change_context(ConnectorError::RequestEncodingFailed)
+                        .inspect_err(|err| {
+                            info_log(
+                                "NETWORK_ERROR",
+                                &json!(format!(
+                                    "Failed getting response from connector. Error: {:?}",
+                                    err
+                                )),
+                            );
+                        })
                     };
                     let external_service_elapsed = external_service_start_latency.elapsed();
                     metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
@@ -556,11 +596,12 @@ where
                     });
 
                     // Construct masked request for event
-                    let masked_request_data = req
-                        .as_ref()
-                        .and_then(|r| MaskedSerdeValue::from_masked_optional(r, "connector_request"));
+                    let masked_request_data = req.as_ref().and_then(|r| {
+                        MaskedSerdeValue::from_masked_optional(r, "connector_request")
+                    });
 
-                    let latency = u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
+                    let latency =
+                        u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
 
                     // Create single event (response_data will be set by connector)
                     let mut event = Event {
@@ -635,7 +676,8 @@ pub async fn call_connector_api(
     _flow_name: &str,
     test_mode: bool,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
-    let url = reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
+    let url =
+        reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
     let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
 
@@ -661,12 +703,14 @@ pub async fn call_connector_api(
                     Some(RequestContent::Xml(payload)) => {
                         // For XML content, we need to extract the XML string properly
                         // The payload implements a custom Serialize that generates XML content
-                        let body = serde_json::to_string(&payload).change_context(ApiClientError::UrlEncodingFailed)?;
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
 
                         // Properly deserialize the JSON string to extract clean XML
                         let xml_body = if body.starts_with('"') && body.ends_with('"') {
                             // This is a JSON-encoded string, deserialize it properly
-                            serde_json::from_str::<String>(&body).change_context(ApiClientError::UrlEncodingFailed)?
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
                         } else {
                             // This is already the raw body content
                             body
@@ -677,9 +721,10 @@ pub async fn call_connector_api(
                         let (bytes, boundary) = data
                             .render_as_bytes()
                             .change_context(ApiClientError::BodySerializationFailed)?;
-                        client
-                            .body(bytes)
-                            .header("Content-Type", format!("multipart/form-data; boundary={}", boundary))
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
                     }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
@@ -691,9 +736,11 @@ pub async fn call_connector_api(
                     Some(RequestContent::Json(payload)) => client.json(&payload),
                     Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
                     Some(RequestContent::Xml(payload)) => {
-                        let body = serde_json::to_string(&payload).change_context(ApiClientError::UrlEncodingFailed)?;
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
                         let xml_body = if body.starts_with('"') && body.ends_with('"') {
-                            serde_json::from_str::<String>(&body).change_context(ApiClientError::UrlEncodingFailed)?
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
                         } else {
                             body
                         };
@@ -703,9 +750,10 @@ pub async fn call_connector_api(
                         let (bytes, boundary) = data
                             .render_as_bytes()
                             .change_context(ApiClientError::BodySerializationFailed)?;
-                        client
-                            .body(bytes)
-                            .header("Content-Type", format!("multipart/form-data; boundary={}", boundary))
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
                     }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
@@ -717,9 +765,11 @@ pub async fn call_connector_api(
                     Some(RequestContent::Json(payload)) => client.json(&payload),
                     Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
                     Some(RequestContent::Xml(payload)) => {
-                        let body = serde_json::to_string(&payload).change_context(ApiClientError::UrlEncodingFailed)?;
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
                         let xml_body = if body.starts_with('"') && body.ends_with('"') {
-                            serde_json::from_str::<String>(&body).change_context(ApiClientError::UrlEncodingFailed)?
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
                         } else {
                             body
                         };
@@ -729,9 +779,10 @@ pub async fn call_connector_api(
                         let (bytes, boundary) = data
                             .render_as_bytes()
                             .change_context(ApiClientError::BodySerializationFailed)?;
-                        client
-                            .body(bytes)
-                            .header("Content-Type", format!("multipart/form-data; boundary={}", boundary))
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
                     }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
@@ -743,9 +794,11 @@ pub async fn call_connector_api(
                     Some(RequestContent::Json(payload)) => client.json(&payload),
                     Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
                     Some(RequestContent::Xml(payload)) => {
-                        let body = serde_json::to_string(&payload).change_context(ApiClientError::UrlEncodingFailed)?;
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
                         let xml_body = if body.starts_with('"') && body.ends_with('"') {
-                            serde_json::from_str::<String>(&body).change_context(ApiClientError::UrlEncodingFailed)?
+                            serde_json::from_str::<String>(&body)
+                                .change_context(ApiClientError::UrlEncodingFailed)?
                         } else {
                             body
                         };
@@ -755,9 +808,10 @@ pub async fn call_connector_api(
                         let (bytes, boundary) = data
                             .render_as_bytes()
                             .change_context(ApiClientError::BodySerializationFailed)?;
-                        client
-                            .body(bytes)
-                            .header("Content-Type", format!("multipart/form-data; boundary={}", boundary))
+                        client.body(bytes).header(
+                            "Content-Type",
+                            format!("multipart/form-data; boundary={}", boundary),
+                        )
                     }
                     Some(RequestContent::RawBytes(payload)) => client.body(payload),
                     _ => client,
@@ -772,7 +826,10 @@ pub async fn call_connector_api(
                 error if error.is_timeout() => ApiClientError::RequestTimeoutReceived,
                 _ => ApiClientError::RequestNotSent(error.to_string()),
             };
-            info_log("REQUEST_FAILURE", &json!(format!("Unable to send request to connector.",)));
+            info_log(
+                "REQUEST_FAILURE",
+                &json!(format!("Unable to send request to connector.",)),
+            );
             report!(api_error)
         })
     };
@@ -850,16 +907,20 @@ fn get_or_create_proxy_client(
 
             match write_lock.get(&cache_key) {
                 Some(cached_client) => {
-                    tracing::debug!("Retrieved cached proxy client after write lock for config: {:?}", cache_key);
+                    tracing::debug!(
+                        "Retrieved cached proxy client after write lock for config: {:?}",
+                        cache_key
+                    );
                     cached_client.clone()
                 }
                 None => {
                     tracing::info!("Creating new proxy client for config: {:?}", cache_key);
 
-                    let new_client = get_client_builder(proxy_config, should_bypass_proxy, test_mode)?
-                        .build()
-                        .change_context(ApiClientError::ClientConstructionFailed)
-                        .attach_printable("Failed to construct proxy client")?;
+                    let new_client =
+                        get_client_builder(proxy_config, should_bypass_proxy, test_mode)?
+                            .build()
+                            .change_context(ApiClientError::ClientConstructionFailed)
+                            .attach_printable("Failed to construct proxy client")?;
 
                     write_lock.insert(cache_key.clone(), new_client.clone());
                     tracing::debug!("Cached new proxy client for config: {:?}", cache_key);
@@ -879,11 +940,20 @@ fn get_base_client(
 ) -> CustomResult<Client, ApiClientError> {
     // Check if proxy configuration is provided using cache_key extract_raw_connector_request
     if let Some(cache_key) = proxy_config.cache_key(should_bypass_proxy) {
-        tracing::debug!("Using proxy-specific client cache with key: {:?}", cache_key);
+        tracing::debug!(
+            "Using proxy-specific client cache with key: {:?}",
+            cache_key
+        );
 
         let cache = PROXY_CLIENT_CACHE.get_or_init(|| RwLock::new(HashMap::new()));
 
-        let client = get_or_create_proxy_client(cache, cache_key, proxy_config, should_bypass_proxy, test_mode)?;
+        let client = get_or_create_proxy_client(
+            cache,
+            cache_key,
+            proxy_config,
+            should_bypass_proxy,
+            test_mode,
+        )?;
 
         Ok(client)
     } else {
@@ -923,7 +993,9 @@ fn get_client_builder(
     let mut client_builder = Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .pool_idle_timeout(Duration::from_secs(
-            proxy_config.idle_pool_connection_timeout.unwrap_or_default(),
+            proxy_config
+                .idle_pool_connection_timeout
+                .unwrap_or_default(),
         ));
 
     // Disable automatic gzip decompression in test mode
@@ -940,7 +1012,8 @@ fn get_client_builder(
     if proxy_config.mitm_proxy_enabled {
         if let Some(cert_content) = &proxy_config.mitm_ca_cert {
             if !cert_content.trim().is_empty() {
-                client_builder = load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
+                client_builder =
+                    load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
             }
         }
     }
@@ -1032,10 +1105,9 @@ async fn handle_response(
                     }))
                 }
                 500..=599 => {
-                    let bytes = resp
-                        .bytes()
-                        .await
-                        .map_err(|error| report!(error).change_context(ApiClientError::ResponseDecodingFailed))?;
+                    let bytes = resp.bytes().await.map_err(|error| {
+                        report!(error).change_context(ApiClientError::ResponseDecodingFailed)
+                    })?;
 
                     Ok(Err(Response {
                         headers,
@@ -1045,10 +1117,9 @@ async fn handle_response(
                 }
 
                 400..=499 => {
-                    let bytes = resp
-                        .bytes()
-                        .await
-                        .map_err(|error| report!(error).change_context(ApiClientError::ResponseDecodingFailed))?;
+                    let bytes = resp.bytes().await.map_err(|error| {
+                        report!(error).change_context(ApiClientError::ResponseDecodingFailed)
+                    })?;
 
                     Ok(Err(Response {
                         headers,
@@ -1057,7 +1128,10 @@ async fn handle_response(
                     }))
                 }
                 _ => {
-                    info_log("UNEXPECTED_RESPONSE", &json!("Unexpected response from server."));
+                    info_log(
+                        "UNEXPECTED_RESPONSE",
+                        &json!("Unexpected response from server."),
+                    );
                     Err(report!(ApiClientError::UnexpectedServerResponse))
                 }
             }
@@ -1084,7 +1158,9 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
         Some(request) => {
             match request {
                 // For RawBytes (e.g., SOAP XML), use the string directly without JSON parsing
-                RequestContent::RawBytes(_) => serde_json::Value::String(request.get_inner_value().expose()),
+                RequestContent::RawBytes(_) => {
+                    serde_json::Value::String(request.get_inner_value().expose())
+                }
                 // For other content types, try to parse as JSON
                 RequestContent::Json(_)
                 | RequestContent::FormUrlEncoded(_)
@@ -1127,7 +1203,9 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
 
 #[cfg(feature = "injector-client")]
 /// Helper function to parse JSON from response bytes with BOM handling
-fn parse_json_with_bom_handling(response_bytes: &[u8]) -> Result<serde_json::Value, serde_json::Error> {
+fn parse_json_with_bom_handling(
+    response_bytes: &[u8],
+) -> Result<serde_json::Value, serde_json::Error> {
     // Try direct parsing first (most common case)
     match serde_json::from_slice::<serde_json::Value>(response_bytes) {
         Ok(value) => Ok(value),
@@ -1153,16 +1231,18 @@ impl HeaderExt for Headers {
     fn construct_header_map(self) -> CustomResult<reqwest::header::HeaderMap, ApiClientError> {
         use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
-        self.into_iter()
-            .try_fold(HeaderMap::new(), |mut header_map, (header_name, header_value)| {
-                let header_name =
-                    HeaderName::from_str(&header_name).change_context(ApiClientError::HeaderMapConstructionFailed)?;
+        self.into_iter().try_fold(
+            HeaderMap::new(),
+            |mut header_map, (header_name, header_value)| {
+                let header_name = HeaderName::from_str(&header_name)
+                    .change_context(ApiClientError::HeaderMapConstructionFailed)?;
                 let header_value = header_value.into_inner();
-                let header_value =
-                    HeaderValue::from_str(&header_value).change_context(ApiClientError::HeaderMapConstructionFailed)?;
+                let header_value = HeaderValue::from_str(&header_value)
+                    .change_context(ApiClientError::HeaderMapConstructionFailed)?;
                 header_map.append(header_name, header_value);
                 Ok(header_map)
-            })
+            },
+        )
     }
 }
 

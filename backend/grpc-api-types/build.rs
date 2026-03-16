@@ -12,7 +12,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = prost_build::Config::new();
     config.extern_path(".types.CardNumberType", "::cards::CardNumber");
     config.extern_path(".types.NetworkTokenType", "::cards::NetworkToken");
-    config.extern_path(".types.SecretString", "::hyperswitch_masking::Secret<String>");
+    config.extern_path(
+        ".types.SecretString",
+        "::hyperswitch_masking::Secret<String>",
+    );
 
     // Use compile_protos_with_config which handles everything internally
     // including string enum support, serde derives, and descriptor set writing

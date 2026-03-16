@@ -16,9 +16,10 @@ use rdkafka::{
 
 #[cfg(feature = "kafka-metrics")]
 use super::metrics::{
-    KAFKA_AUDIT_DROPS_MSG_TOO_LARGE, KAFKA_AUDIT_DROPS_OTHER, KAFKA_AUDIT_DROPS_QUEUE_FULL, KAFKA_AUDIT_DROPS_TIMEOUT,
-    KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT, KAFKA_AUDIT_EVENT_QUEUE_SIZE, KAFKA_DROPS_MSG_TOO_LARGE,
-    KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT, KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT,
+    KAFKA_AUDIT_DROPS_MSG_TOO_LARGE, KAFKA_AUDIT_DROPS_OTHER, KAFKA_AUDIT_DROPS_QUEUE_FULL,
+    KAFKA_AUDIT_DROPS_TIMEOUT, KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT,
+    KAFKA_AUDIT_EVENT_QUEUE_SIZE, KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER,
+    KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT, KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT,
     KAFKA_QUEUE_SIZE,
 };
 
@@ -48,25 +49,43 @@ impl ProducerContext for MetricsProducerContext {
         if let Err((kafka_error, _)) = delivery_result {
             #[cfg(feature = "kafka-metrics")]
             match (message_type, &kafka_error) {
-                (KafkaMessageType::Event, KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull)) => {
+                (
+                    KafkaMessageType::Event,
+                    KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull),
+                ) => {
                     KAFKA_AUDIT_DROPS_QUEUE_FULL.inc();
                 }
-                (KafkaMessageType::Event, KafkaError::MessageProduction(RDKafkaErrorCode::MessageSizeTooLarge)) => {
+                (
+                    KafkaMessageType::Event,
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageSizeTooLarge),
+                ) => {
                     KAFKA_AUDIT_DROPS_MSG_TOO_LARGE.inc();
                 }
-                (KafkaMessageType::Event, KafkaError::MessageProduction(RDKafkaErrorCode::MessageTimedOut)) => {
+                (
+                    KafkaMessageType::Event,
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageTimedOut),
+                ) => {
                     KAFKA_AUDIT_DROPS_TIMEOUT.inc();
                 }
                 (KafkaMessageType::Event, _) => {
                     KAFKA_AUDIT_DROPS_OTHER.inc();
                 }
-                (KafkaMessageType::Log, KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull)) => {
+                (
+                    KafkaMessageType::Log,
+                    KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull),
+                ) => {
                     KAFKA_DROPS_QUEUE_FULL.inc();
                 }
-                (KafkaMessageType::Log, KafkaError::MessageProduction(RDKafkaErrorCode::MessageSizeTooLarge)) => {
+                (
+                    KafkaMessageType::Log,
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageSizeTooLarge),
+                ) => {
                     KAFKA_DROPS_MSG_TOO_LARGE.inc();
                 }
-                (KafkaMessageType::Log, KafkaError::MessageProduction(RDKafkaErrorCode::MessageTimedOut)) => {
+                (
+                    KafkaMessageType::Log,
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageTimedOut),
+                ) => {
                     KAFKA_DROPS_TIMEOUT.inc();
                 }
                 (KafkaMessageType::Log, _) => {
@@ -93,7 +112,9 @@ pub struct KafkaWriter {
 
 impl std::fmt::Debug for KafkaWriter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("KafkaWriter").field("topic", &self.topic).finish()
+        f.debug_struct("KafkaWriter")
+            .field("topic", &self.topic)
+            .finish()
     }
 }
 

@@ -3,8 +3,9 @@ use common_utils::{consts, pii, request::Method, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, CreateAccessToken, RSync, Refund, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
@@ -75,7 +76,12 @@ impl TryFrom<&ConnectorSpecificAuth> for TruelayerAuthType {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TruelayerRouterData<
-            RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
             T,
         >,
     > for TruelayerAccessTokenRequestData
@@ -83,7 +89,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: TruelayerRouterData<
-            RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -108,7 +119,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerAccessTokenResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, T, AccessTokenResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: ResponseRouterData<TruelayerAccessTokenResponseData, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<TruelayerAccessTokenResponseData, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
                 access_token: item.response.access_token,
@@ -132,7 +145,9 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for TruelayerMetadata {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })?;
+            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                config: "metadata",
+            })?;
         Ok(metadata)
     }
 }
@@ -229,7 +244,12 @@ struct HostedPageResponse {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         TruelayerRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for TruelayerPaymentsRequestData
@@ -237,7 +257,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: TruelayerRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -254,7 +279,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )?,
                 };
 
-                let metadata = TruelayerMetadata::try_from(&item.router_data.resource_common_data.connector_meta_data)?;
+                let metadata = TruelayerMetadata::try_from(
+                    &item.router_data.resource_common_data.connector_meta_data,
+                )?;
 
                 let payment_method = PaymentMethod {
                     _type: "bank_transfer".to_string(),
@@ -268,12 +295,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                 };
 
-                let email = item
-                    .router_data
-                    .request
-                    .email
-                    .clone()
-                    .or_else(|| item.router_data.resource_common_data.get_optional_billing_email());
+                let email = item.router_data.request.email.clone().or_else(|| {
+                    item.router_data
+                        .resource_common_data
+                        .get_optional_billing_email()
+                });
 
                 let phone = item
                     .router_data
@@ -298,14 +324,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .and_then(get_address);
 
                 let user = User {
-                    id: item.router_data.resource_common_data.get_connector_customer_id().ok(),
+                    id: item
+                        .router_data
+                        .resource_common_data
+                        .get_connector_customer_id()
+                        .ok(),
                     name: item
                         .router_data
                         .request
                         .customer_name
                         .clone()
                         .map(Secret::new)
-                        .or_else(|| item.router_data.resource_common_data.get_optional_billing_full_name())
+                        .or_else(|| {
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                        })
                         .ok_or(errors::ConnectorError::MissingRequiredField {
                             field_name: "billing.first_name or customer_name",
                         })?,
@@ -322,12 +356,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     user,
                 })
             }
-            _ => Err(
-                errors::ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message(
-                    "Truelayer",
-                ))
-                .into(),
-            ),
+            _ => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Truelayer"),
+            )
+            .into()),
         }
     }
 }
@@ -336,7 +368,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: ResponseRouterData<TruelayerPaymentsResponseData, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<TruelayerPaymentsResponseData, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = get_attempt_status(item.response.status.clone());
 
         if is_payment_failure(status) {
@@ -374,9 +408,9 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
                 .hosted_page
                 .as_ref()
                 .map(|hosted_page| hosted_page.uri.clone())
-                .ok_or(errors::ConnectorError::UnexpectedResponseError(bytes::Bytes::from(
-                    "hosted_page.uri expected".to_string(),
-                )))?;
+                .ok_or(errors::ConnectorError::UnexpectedResponseError(
+                    bytes::Bytes::from("hosted_page.uri expected".to_string()),
+                ))?;
 
             let redirection_data = Some(RedirectForm::Form {
                 endpoint: redirection_url,
@@ -421,10 +455,14 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: ResponseRouterData<TruelayerPSyncResponseData, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<TruelayerPSyncResponseData, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = get_attempt_status(item.response.status.clone());
 
-        if is_payment_failure(status) && item.response.failure_reason == Some("canceled".to_string()) {
+        if is_payment_failure(status)
+            && item.response.failure_reason == Some("canceled".to_string())
+        {
             Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: AttemptStatus::Voided,
@@ -505,13 +543,20 @@ pub struct TruelayerRefundResponse {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<TruelayerRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for TruelayerRefundRequest
+    TryFrom<
+        TruelayerRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for TruelayerRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: TruelayerRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: TruelayerRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let reference = item
             .router_data
@@ -533,7 +578,9 @@ impl TryFrom<ResponseRouterData<TruelayerRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TruelayerRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<TruelayerRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.id.to_string(),
@@ -570,7 +617,9 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: ResponseRouterData<TruelayerRsyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<TruelayerRsyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = get_refund_status(item.response.status.clone());
 
         let response = if utils::is_refund_failure(status) {
@@ -618,7 +667,9 @@ impl TryFrom<ResponseRouterData<TruelayerVoidResponseData, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<TruelayerVoidResponseData, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<TruelayerVoidResponseData, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::VoidInitiated;
 
         Ok(Self {
@@ -664,17 +715,23 @@ fn get_address(billing: &domain_types::payment_address::Address) -> Option<Addre
 
 fn get_attempt_status(item: TruelayerPaymentStatus) -> AttemptStatus {
     match item {
-        TruelayerPaymentStatus::Authorized | TruelayerPaymentStatus::Executed => AttemptStatus::Authorized,
+        TruelayerPaymentStatus::Authorized | TruelayerPaymentStatus::Executed => {
+            AttemptStatus::Authorized
+        }
         TruelayerPaymentStatus::Settled => AttemptStatus::Charged,
         TruelayerPaymentStatus::AuthorizationRequired => AttemptStatus::AuthenticationPending,
-        TruelayerPaymentStatus::Failed | TruelayerPaymentStatus::AttemptFailed => AttemptStatus::Failure,
+        TruelayerPaymentStatus::Failed | TruelayerPaymentStatus::AttemptFailed => {
+            AttemptStatus::Failure
+        }
         TruelayerPaymentStatus::Authorizing => AttemptStatus::Pending,
     }
 }
 
 fn get_refund_status(item: TruelayerRefundStatus) -> common_enums::RefundStatus {
     match item {
-        TruelayerRefundStatus::Pending | TruelayerRefundStatus::Authorized => common_enums::RefundStatus::Pending,
+        TruelayerRefundStatus::Pending | TruelayerRefundStatus::Authorized => {
+            common_enums::RefundStatus::Pending
+        }
         TruelayerRefundStatus::Executed => common_enums::RefundStatus::Success,
         TruelayerRefundStatus::Failed => common_enums::RefundStatus::Failure,
     }

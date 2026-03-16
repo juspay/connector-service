@@ -5,11 +5,13 @@ use common_utils::{pii::UpiVpaMaskingStrategy, types::FloatMajorUnit, Method};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData},
+    payment_method_data::{
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
+    },
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -105,9 +107,9 @@ impl From<IatapayPaymentStatus> for AttemptStatus {
         match status {
             IatapayPaymentStatus::Created => Self::AuthenticationPending,
             IatapayPaymentStatus::Initiated => Self::Pending,
-            IatapayPaymentStatus::Authorized | IatapayPaymentStatus::Settled | IatapayPaymentStatus::Cleared => {
-                Self::Charged
-            }
+            IatapayPaymentStatus::Authorized
+            | IatapayPaymentStatus::Settled
+            | IatapayPaymentStatus::Cleared => Self::Charged,
             IatapayPaymentStatus::Failed | IatapayPaymentStatus::UnexpectedSettled => Self::Failure,
         }
     }
@@ -228,7 +230,12 @@ fn get_vpa_id_from_upi(upi_data: &UpiData) -> Option<Secret<String, UpiVpaMaskin
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         crate::connectors::iatapay::IatapayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for IatapayPaymentsRequest
@@ -237,7 +244,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: crate::connectors::iatapay::IatapayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -255,30 +267,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Extract payer info (only for UPI Collect)
         let payer_info = match payment_method_data {
-            PaymentMethodData::Upi(upi_data) => get_vpa_id_from_upi(upi_data).map(|vpa_id| PayerInfo {
-                token_id: Secret::new(vpa_id.expose()),
-            }),
+            PaymentMethodData::Upi(upi_data) => {
+                get_vpa_id_from_upi(upi_data).map(|vpa_id| PayerInfo {
+                    token_id: Secret::new(vpa_id.expose()),
+                })
+            }
             _ => None,
         };
 
         // Get return URL and webhook URL
-        let return_url =
-            item.router_data
-                .request
-                .router_return_url
-                .clone()
-                .ok_or(ConnectorError::MissingRequiredField {
-                    field_name: "router_return_url",
-                })?;
+        let return_url = item.router_data.request.router_return_url.clone().ok_or(
+            ConnectorError::MissingRequiredField {
+                field_name: "router_return_url",
+            },
+        )?;
 
-        let webhook_url = item
-            .router_data
-            .request
-            .webhook_url
-            .clone()
-            .ok_or(ConnectorError::MissingRequiredField {
+        let webhook_url = item.router_data.request.webhook_url.clone().ok_or(
+            ConnectorError::MissingRequiredField {
                 field_name: "webhook_url",
-            })?;
+            },
+        )?;
 
         // Convert amount from MinorUnit to FloatMajorUnit
         let amount = domain_types::utils::convert_amount(
@@ -316,7 +324,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<IatapayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<IatapayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -349,31 +359,35 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payments_response_data = match &response.checkout_methods {
             Some(checkout_methods) => {
                 let form_fields = HashMap::new();
-                let (connector_metadata, redirection_data) =
-                    match checkout_methods.redirect.redirect_url.to_lowercase().ends_with("qr") {
-                        true => {
-                            // QR code flow - store in metadata
-                            let mut metadata_map = HashMap::new();
-                            metadata_map.insert(
-                                "qr_code_url".to_string(),
-                                Value::String(checkout_methods.redirect.redirect_url.clone()),
-                            );
-                            let metadata_value = serde_json::to_value(metadata_map)
-                                .change_context(ConnectorError::ResponseHandlingFailed)?;
-                            (Some(metadata_value), None)
-                        }
-                        false => {
-                            // Standard redirect flow
-                            (
-                                None,
-                                Some(Box::new(RedirectForm::Form {
-                                    endpoint: checkout_methods.redirect.redirect_url.clone(),
-                                    method: Method::Get,
-                                    form_fields,
-                                })),
-                            )
-                        }
-                    };
+                let (connector_metadata, redirection_data) = match checkout_methods
+                    .redirect
+                    .redirect_url
+                    .to_lowercase()
+                    .ends_with("qr")
+                {
+                    true => {
+                        // QR code flow - store in metadata
+                        let mut metadata_map = HashMap::new();
+                        metadata_map.insert(
+                            "qr_code_url".to_string(),
+                            Value::String(checkout_methods.redirect.redirect_url.clone()),
+                        );
+                        let metadata_value = serde_json::to_value(metadata_map)
+                            .change_context(ConnectorError::ResponseHandlingFailed)?;
+                        (Some(metadata_value), None)
+                    }
+                    false => {
+                        // Standard redirect flow
+                        (
+                            None,
+                            Some(Box::new(RedirectForm::Form {
+                                endpoint: checkout_methods.redirect.redirect_url.clone(),
+                                method: Method::Get,
+                                form_fields,
+                            })),
+                        )
+                    }
+                };
 
                 PaymentsResponseData::TransactionResponse {
                     resource_id: match response.iata_payment_id.clone() {
@@ -583,13 +597,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount,
             currency: router_data.request.currency.to_string(),
             bank_transfer_description: router_data.request.reason.clone(),
-            notification_url: router_data
-                .request
-                .webhook_url
-                .clone()
-                .ok_or(ConnectorError::MissingRequiredField {
+            notification_url: router_data.request.webhook_url.clone().ok_or(
+                ConnectorError::MissingRequiredField {
                     field_name: "webhook_url",
-                })?,
+                },
+            )?,
         })
     }
 }
@@ -600,7 +612,9 @@ impl TryFrom<ResponseRouterData<IatapayRefundResponse, Self>>
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<IatapayRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<IatapayRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let mut router_data = item.router_data;
         let response = item.response;
 
@@ -610,7 +624,9 @@ impl TryFrom<ResponseRouterData<IatapayRefundResponse, Self>>
         router_data.response = if refund_status == RefundStatus::Failure {
             Err(ErrorResponse {
                 status_code: item.http_code,
-                code: response.failure_code.unwrap_or_else(|| "REFUND_FAILED".to_string()),
+                code: response
+                    .failure_code
+                    .unwrap_or_else(|| "REFUND_FAILED".to_string()),
                 message: response
                     .failure_details
                     .clone()
@@ -640,7 +656,9 @@ impl TryFrom<ResponseRouterData<IatapayRefundSyncResponse, Self>>
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<IatapayRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<IatapayRefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let mut router_data = item.router_data;
         let response = item.response;
 
@@ -651,7 +669,9 @@ impl TryFrom<ResponseRouterData<IatapayRefundSyncResponse, Self>>
         router_data.response = if refund_status == RefundStatus::Failure {
             Err(ErrorResponse {
                 status_code: item.http_code,
-                code: response.failure_code.unwrap_or_else(|| "REFUND_FAILED".to_string()),
+                code: response
+                    .failure_code
+                    .unwrap_or_else(|| "REFUND_FAILED".to_string()),
                 message: response
                     .failure_details
                     .clone()
@@ -716,7 +736,9 @@ impl TryFrom<ResponseRouterData<IatapayAuthUpdateResponse, Self>>
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<IatapayAuthUpdateResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<IatapayAuthUpdateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = item.response;
         let mut router_data = item.router_data;
 

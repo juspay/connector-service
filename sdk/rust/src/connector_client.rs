@@ -11,7 +11,8 @@ use domain_types::router_data::ConnectorSpecificAuth;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 use grpc_api_types::payments::{
-    ConnectorConfig, FfiOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, RequestConfig,
+    ConnectorConfig, FfiOptions, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+    RequestConfig,
 };
 
 /// ConnectorClient — high-level Rust wrapper for the Connector Service.
@@ -35,7 +36,10 @@ impl ConnectorClient {
     /// # Arguments
     /// * `config` - The ConnectorConfig (connector, auth, environment).
     /// * `options` - Optional RequestConfig for default http/vault settings.
-    pub fn new(config: ConnectorConfig, options: Option<RequestConfig>) -> Result<Self, HttpClientError> {
+    pub fn new(
+        config: ConnectorConfig,
+        options: Option<RequestConfig>,
+    ) -> Result<Self, HttpClientError> {
         let defaults = options.unwrap_or_default();
 
         // Map the Protobuf options to native transport options
@@ -84,7 +88,9 @@ impl ConnectorClient {
             .map(NativeHttpOptions::from);
 
         let ffi_request = build_ffi_request(request.clone(), metadata, &ffi_options)?;
-        let environment = Some(grpc_api_types::payments::Environment::try_from(ffi_options.environment)?);
+        let environment = Some(grpc_api_types::payments::Environment::try_from(
+            ffi_options.environment,
+        )?);
 
         // 2. Build the connector HTTP request via core handler
         let connector_request = authorize_req_handler(ffi_request, environment)
@@ -137,7 +143,9 @@ impl ConnectorClient {
         let ffi_request_for_res = build_ffi_request(request, metadata, &ffi_options)?;
         match authorize_res_handler(ffi_request_for_res, response, environment) {
             Ok(auth_response) => Ok(auth_response),
-            Err(error_response) => Err(format!("Authorization failed: {:?}", error_response).into()),
+            Err(error_response) => {
+                Err(format!("Authorization failed: {:?}", error_response).into())
+            }
         }
     }
 }
@@ -148,15 +156,16 @@ pub fn build_ffi_request<T>(
     metadata: &HashMap<String, String>,
     options: &FfiOptions,
 ) -> Result<FfiRequestData<T>, Box<dyn Error>> {
-    let connector = domain_types::connector_types::ConnectorEnum::foreign_try_from(options.connector())
-        .map_err(|e| format!("Connector mapping failed: {e}"))?;
+    let connector =
+        domain_types::connector_types::ConnectorEnum::foreign_try_from(options.connector())
+            .map_err(|e| format!("Connector mapping failed: {e}"))?;
 
     let auth_proto = options.auth.as_ref().ok_or("Missing auth in FfiOptions")?;
-    let connector_auth_type =
-        ConnectorSpecificAuth::foreign_try_from(auth_proto.clone()).map_err(|e| format!("Auth mapping failed: {e}"))?;
+    let connector_auth_type = ConnectorSpecificAuth::foreign_try_from(auth_proto.clone())
+        .map_err(|e| format!("Auth mapping failed: {e}"))?;
 
-    let masked_metadata =
-        ffi_headers_to_masked_metadata(metadata).map_err(|e| format!("Metadata mapping failed: {e}"))?;
+    let masked_metadata = ffi_headers_to_masked_metadata(metadata)
+        .map_err(|e| format!("Metadata mapping failed: {e}"))?;
 
     Ok(FfiRequestData {
         payload,

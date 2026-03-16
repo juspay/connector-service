@@ -9,14 +9,15 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth, ErrorResponse,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
+        ErrorResponse,
     },
     router_data_v2::RouterDataV2,
 };
@@ -33,9 +34,10 @@ pub use super::requests::{
     PayloadRepeatPaymentRequest, PayloadVoidRequest,
 };
 pub use super::responses::{
-    PayloadAuthorizeResponse, PayloadCaptureResponse, PayloadErrorResponse, PayloadEventDetails, PayloadPSyncResponse,
-    PayloadPaymentsResponse, PayloadRSyncResponse, PayloadRefundResponse, PayloadRepeatPaymentResponse,
-    PayloadSetupMandateResponse, PayloadVoidResponse, PayloadWebhookEvent, PayloadWebhooksTrigger,
+    PayloadAuthorizeResponse, PayloadCaptureResponse, PayloadErrorResponse, PayloadEventDetails,
+    PayloadPSyncResponse, PayloadPaymentsResponse, PayloadRSyncResponse, PayloadRefundResponse,
+    PayloadRepeatPaymentResponse, PayloadSetupMandateResponse, PayloadVoidResponse,
+    PayloadWebhookEvent, PayloadWebhooksTrigger,
 };
 
 type Error = error_stack::Report<errors::ConnectorError>;
@@ -125,18 +127,16 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
         let billing_address = requests::BillingAddress {
             city: resource_common_data.get_billing_city()?,
             country: resource_common_data.get_billing_country()?,
-            postal_code: billing_addr
-                .zip
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+            postal_code: billing_addr.zip.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
                     field_name: "billing.address.zip",
-                })?,
-            state_province: billing_addr
-                .state
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                },
+            )?,
+            state_province: billing_addr.state.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
                     field_name: "billing.address.state",
-                })?,
+                },
+            )?,
             street_address: resource_common_data.get_billing_line1()?,
         };
 
@@ -172,7 +172,12 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PayloadRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for PayloadCardsRequestData<T>
@@ -181,7 +186,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: PayloadRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -212,21 +222,37 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Authorize request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        PayloadRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        PayloadRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for PayloadPaymentsRequest<T>
 {
     type Error = Error;
 
     fn try_from(
         item: PayloadRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
         // Convert amount using PayloadAmountConvertor
-        let amount = PayloadAmountConvertor::convert(router_data.request.minor_amount, router_data.request.currency)?;
+        let amount = PayloadAmountConvertor::convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        )?;
 
         match &router_data.request.payment_method_data {
             PaymentMethodData::Card(_) => {
@@ -267,13 +293,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Capture request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayloadRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for PayloadCaptureRequest
+    TryFrom<
+        PayloadRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for PayloadCaptureRequest
 {
     type Error = Error;
 
     fn try_from(
-        _item: PayloadRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        _item: PayloadRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             status: responses::PayloadPaymentStatus::Processed,
@@ -283,13 +316,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Void request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayloadRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for PayloadVoidRequest
+    TryFrom<
+        PayloadRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for PayloadVoidRequest
 {
     type Error = Error;
 
     fn try_from(
-        _item: PayloadRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        _item: PayloadRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             status: responses::PayloadPaymentStatus::Voided,
@@ -327,7 +367,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Convert amount using PayloadAmountConvertor
-        let amount = PayloadAmountConvertor::convert(router_data.request.minor_amount, router_data.request.currency)?;
+        let amount = PayloadAmountConvertor::convert(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        )?;
 
         // For manual capture, set status to "authorized"
         let status = if is_manual_capture(router_data.request.capture_method) {
@@ -338,13 +381,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // RepeatPayment flow requires a mandate reference
         let mandate_id = match &router_data.request.mandate_reference {
-            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => {
-                connector_mandate_ref.get_connector_mandate_id().ok_or(
-                    errors::ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    },
-                )?
-            }
+            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
+                connector_mandate_ref,
+            ) => connector_mandate_ref.get_connector_mandate_id().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_mandate_id",
+                },
+            )?,
             _ => {
                 return Err(errors::ConnectorError::MissingRequiredField {
                     field_name: "connector_mandate_id for RepeatPayment",
@@ -353,31 +396,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        Ok(Self::PayloadMandateRequest(Box::new(requests::PayloadMandateRequestData {
-            amount,
-            transaction_types: requests::TransactionTypes::Payment,
-            payment_method_id: Secret::new(mandate_id),
-            status,
-        })))
+        Ok(Self::PayloadMandateRequest(Box::new(
+            requests::PayloadMandateRequestData {
+                amount,
+                transaction_types: requests::TransactionTypes::Payment,
+                payment_method_id: Secret::new(mandate_id),
+                status,
+            },
+        )))
     }
 }
 
 // Refund request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<PayloadRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for PayloadRefundRequest
+    TryFrom<
+        PayloadRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for PayloadRefundRequest
 {
     type Error = Error;
 
     fn try_from(
-        item: PayloadRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: PayloadRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let connector_transaction_id = router_data.request.connector_transaction_id.clone();
 
         // Convert amount using PayloadAmountConvertor
-        let amount =
-            PayloadAmountConvertor::convert(router_data.request.minor_refund_amount, router_data.request.currency)?;
+        let amount = PayloadAmountConvertor::convert(
+            router_data.request.minor_refund_amount,
+            router_data.request.currency,
+        )?;
 
         Ok(Self {
             transaction_type: requests::TransactionTypes::Refund,
@@ -395,7 +449,8 @@ impl From<responses::PayloadPaymentStatus> for common_enums::AttemptStatus {
             responses::PayloadPaymentStatus::Authorized => Self::Authorized,
             responses::PayloadPaymentStatus::Processed => Self::Charged,
             responses::PayloadPaymentStatus::Processing => Self::Pending,
-            responses::PayloadPaymentStatus::Rejected | responses::PayloadPaymentStatus::Declined => Self::Failure,
+            responses::PayloadPaymentStatus::Rejected
+            | responses::PayloadPaymentStatus::Declined => Self::Failure,
             responses::PayloadPaymentStatus::Voided => Self::Voided,
         }
     }
@@ -413,7 +468,10 @@ fn handle_payment_response<F, T>(
             let status = common_enums::AttemptStatus::from(card_response.status);
 
             let mandate_reference = if is_mandate_payment {
-                let connector_payment_method_id = card_response.connector_payment_method_id.clone().expose_option();
+                let connector_payment_method_id = card_response
+                    .connector_payment_method_id
+                    .clone()
+                    .expose_option();
                 connector_payment_method_id.map(|id| MandateReference {
                     connector_mandate_id: Some(id),
                     payment_method_id: None,
@@ -472,7 +530,9 @@ fn handle_payment_response<F, T>(
 
             // Create a mutable copy to set the status
             let mut router_data_with_status = router_data;
-            router_data_with_status.resource_common_data.set_status(status);
+            router_data_with_status
+                .resource_common_data
+                .set_status(status);
 
             Ok(RouterDataV2 {
                 resource_common_data: PaymentFlowData {
@@ -493,28 +553,43 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
-        handle_payment_response(item.response, item.router_data, item.http_code, is_mandate_payment)
+        handle_payment_response(
+            item.response,
+            item.router_data,
+            item.http_code,
+            is_mandate_payment,
+        )
     }
 }
 
 // SetupMandate response
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // SetupMandate is always a mandate payment
         handle_payment_response(item.response, item.router_data, item.http_code, true)
     }
 }
 
 // RepeatPayment response - for recurring/mandate payments
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
-    TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
+    > TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
@@ -524,7 +599,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // RepeatPayment should not return mandate_reference as the mandate already exists
         handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
@@ -541,7 +618,9 @@ impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
 }
@@ -552,7 +631,9 @@ impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
 }
@@ -563,7 +644,9 @@ impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
     }
 }
@@ -585,7 +668,9 @@ impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id.to_string(),
@@ -598,7 +683,9 @@ impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
 }
 
 // Webhook helper function to parse incoming webhook events
-pub fn parse_webhook_event(body: &[u8]) -> Result<PayloadWebhookEvent, error_stack::Report<errors::ConnectorError>> {
+pub fn parse_webhook_event(
+    body: &[u8],
+) -> Result<PayloadWebhookEvent, error_stack::Report<errors::ConnectorError>> {
     serde_json::from_slice::<PayloadWebhookEvent>(body)
         .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
 }
@@ -609,7 +696,9 @@ impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
 {
     type Error = Error;
 
-    fn try_from(item: ResponseRouterData<PayloadRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<PayloadRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id.to_string(),
@@ -622,10 +711,14 @@ impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
 }
 
 // Webhook event transformation
-pub fn get_event_type_from_trigger(trigger: PayloadWebhooksTrigger) -> domain_types::connector_types::EventType {
+pub fn get_event_type_from_trigger(
+    trigger: PayloadWebhooksTrigger,
+) -> domain_types::connector_types::EventType {
     match trigger {
         // Payment Success Events
-        PayloadWebhooksTrigger::Processed => domain_types::connector_types::EventType::PaymentIntentSuccess,
+        PayloadWebhooksTrigger::Processed => {
+            domain_types::connector_types::EventType::PaymentIntentSuccess
+        }
         PayloadWebhooksTrigger::Authorized => {
             domain_types::connector_types::EventType::PaymentIntentAuthorizationSuccess
         }
@@ -636,15 +729,21 @@ pub fn get_event_type_from_trigger(trigger: PayloadWebhooksTrigger) -> domain_ty
         // Payment Failure Events
         PayloadWebhooksTrigger::Decline
         | PayloadWebhooksTrigger::Reject
-        | PayloadWebhooksTrigger::BankAccountReject => domain_types::connector_types::EventType::PaymentIntentFailure,
+        | PayloadWebhooksTrigger::BankAccountReject => {
+            domain_types::connector_types::EventType::PaymentIntentFailure
+        }
         PayloadWebhooksTrigger::Void | PayloadWebhooksTrigger::Reversal => {
             domain_types::connector_types::EventType::PaymentIntentCancelled
         }
         // Refund Events
         PayloadWebhooksTrigger::Refund => domain_types::connector_types::EventType::RefundSuccess,
         // Dispute Events
-        PayloadWebhooksTrigger::Chargeback => domain_types::connector_types::EventType::DisputeOpened,
-        PayloadWebhooksTrigger::ChargebackReversal => domain_types::connector_types::EventType::DisputeWon,
+        PayloadWebhooksTrigger::Chargeback => {
+            domain_types::connector_types::EventType::DisputeOpened
+        }
+        PayloadWebhooksTrigger::ChargebackReversal => {
+            domain_types::connector_types::EventType::DisputeWon
+        }
         // Other payment-related events - treat as generic payment processing
         PayloadWebhooksTrigger::PaymentActivationStatus
         | PayloadWebhooksTrigger::Credit

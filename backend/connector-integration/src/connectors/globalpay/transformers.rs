@@ -8,12 +8,14 @@ use common_utils::types::StringMinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -70,7 +72,9 @@ impl TryFrom<&ConnectorSpecificAuth> for GlobalpayAuthType {
                 app_id: app_id.to_owned(),
                 app_key: app_key.to_owned(),
             }),
-            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -133,12 +137,12 @@ impl From<GlobalpayRefundStatus> for RefundStatus {
     fn from(status: GlobalpayRefundStatus) -> Self {
         match status {
             GlobalpayRefundStatus::Captured | GlobalpayRefundStatus::Funded => Self::Success,
-            GlobalpayRefundStatus::Pending | GlobalpayRefundStatus::Initiated | GlobalpayRefundStatus::ForReview => {
-                Self::Pending
-            }
-            GlobalpayRefundStatus::Declined | GlobalpayRefundStatus::Failed | GlobalpayRefundStatus::Rejected => {
-                Self::Failure
-            }
+            GlobalpayRefundStatus::Pending
+            | GlobalpayRefundStatus::Initiated
+            | GlobalpayRefundStatus::ForReview => Self::Pending,
+            GlobalpayRefundStatus::Declined
+            | GlobalpayRefundStatus::Failed
+            | GlobalpayRefundStatus::Rejected => Self::Failure,
         }
     }
 }
@@ -168,19 +172,32 @@ pub struct GlobalpayAccessTokenRequest {
     pub grant_type: String,
 }
 
-impl TryFrom<&RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>>
-    for GlobalpayAccessTokenRequest
+impl
+    TryFrom<
+        &RouterDataV2<
+            CreateAccessToken,
+            PaymentFlowData,
+            AccessTokenRequestData,
+            AccessTokenResponseData,
+        >,
+    > for GlobalpayAccessTokenRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        item: &RouterDataV2<
+            CreateAccessToken,
+            PaymentFlowData,
+            AccessTokenRequestData,
+            AccessTokenResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
         if let ConnectorSpecificAuth::Globalpay { app_id, app_key } = &item.connector_auth_type {
             use sha2::{Digest, Sha512};
 
             // Generate random alphanumeric nonce (matching Hyperswitch implementation)
-            let nonce = rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
+            let nonce =
+                rand::distributions::Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
 
             // Create secret: SHA512(nonce + app_key)
             let secret_input = format!("{}{}", nonce, app_key.peek());
@@ -198,7 +215,9 @@ impl TryFrom<&RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenReques
                 grant_type: item.request.grant_type.clone(),
             })
         } else {
-            Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType))
+            Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            ))
         }
     }
 }
@@ -216,7 +235,9 @@ impl<F, T> TryFrom<ResponseRouterData<GlobalpayAccessTokenResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GlobalpayAccessTokenResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GlobalpayAccessTokenResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(AccessTokenResponseData {
                 access_token: item.response.token.into(),
@@ -340,7 +361,12 @@ pub struct GlobalpayCard<T: PaymentMethodDataTypes> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         GlobalpayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for GlobalpayPaymentsRequest<T>
@@ -349,7 +375,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         wrapper: GlobalpayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -386,9 +417,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankRedirectData::Eps { .. } => Some(ApmProvider::Eps),
                     BankRedirectData::Ideal { .. } => Some(ApmProvider::Ideal),
                     _ => {
-                        return Err(error_stack::report!(errors::ConnectorError::NotImplemented(
-                            "Bank redirect payment method not supported".to_string()
-                        )))
+                        return Err(error_stack::report!(
+                            errors::ConnectorError::NotImplemented(
+                                "Bank redirect payment method not supported".to_string()
+                            )
+                        ))
                     }
                 };
 
@@ -396,13 +429,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     name: item.request.customer_name.clone().map(Secret::new),
                     entry_mode: constants::ENTRY_MODE_ECOM.to_string(),
                     card: None,
-                    apm: Some(GlobalpayApm { provider: apm_provider }),
+                    apm: Some(GlobalpayApm {
+                        provider: apm_provider,
+                    }),
                 }
             }
             _ => {
-                return Err(error_stack::report!(errors::ConnectorError::NotImplemented(
-                    "Payment method not supported".to_string()
-                )))
+                return Err(error_stack::report!(
+                    errors::ConnectorError::NotImplemented(
+                        "Payment method not supported".to_string()
+                    )
+                ))
             }
         };
 
@@ -419,9 +456,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or(common_enums::CountryAlpha2::US);
 
         // Build notifications object from router data
-        let notifications = if let (Some(return_url), Some(webhook_url)) =
-            (item.request.router_return_url.as_ref(), item.request.webhook_url.as_ref())
-        {
+        let notifications = if let (Some(return_url), Some(webhook_url)) = (
+            item.request.router_return_url.as_ref(),
+            item.request.webhook_url.as_ref(),
+        ) {
             Some(GlobalpayNotifications {
                 cancel_url: return_url.clone(),
                 return_url: return_url.clone(),
@@ -434,10 +472,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             account_name: constants::ACCOUNT_NAME.to_string(),
             channel: constants::CHANNEL_CNP.to_string(),
-            amount: GlobalpayAmountConvertor::convert(item.request.minor_amount, item.request.currency)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            amount: GlobalpayAmountConvertor::convert(
+                item.request.minor_amount,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             currency: item.request.currency,
-            reference: item.resource_common_data.connector_request_reference_id.clone(),
+            reference: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             country,
             capture_mode,
             initiator: None,
@@ -457,8 +501,12 @@ pub struct GlobalpayCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<GlobalpayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for GlobalpayCaptureRequest
+    TryFrom<
+        GlobalpayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for GlobalpayCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -471,8 +519,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let item = &wrapper.router_data;
 
         Ok(Self {
-            amount: GlobalpayAmountConvertor::convert(item.request.minor_amount_to_capture, item.request.currency)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            amount: GlobalpayAmountConvertor::convert(
+                item.request.minor_amount_to_capture,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             capture_sequence: item.request.multiple_capture_data.as_ref().map(|mcd| {
                 if mcd.capture_sequence == 1 {
                     Sequence::First
@@ -532,15 +583,24 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GlobalpayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Extract redirect URL from APM response for bank redirect flows
         let redirect_url = item
             .response
             .payment_method
             .as_ref()
-            .and_then(|payment_method| payment_method.apm.as_ref().and_then(|apm| apm.redirect_url.as_ref()))
+            .and_then(|payment_method| {
+                payment_method
+                    .apm
+                    .as_ref()
+                    .and_then(|apm| apm.redirect_url.as_ref())
+            })
             .filter(|redirect_str| !redirect_str.is_empty())
-            .map(|url| Url::parse(url).change_context(errors::ConnectorError::FailedToObtainIntegrationUrl))
+            .map(|url| {
+                Url::parse(url).change_context(errors::ConnectorError::FailedToObtainIntegrationUrl)
+            })
             .transpose()?;
 
         let redirection_data = redirect_url
@@ -575,12 +635,24 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GlobalpayPaymentsResp
                     .as_ref()
                     .and_then(|pm| pm.message.clone())
                     .unwrap_or_else(|| "Transaction failed".to_string()),
-                reason: item.response.payment_method.as_ref().and_then(|pm| pm.message.clone()),
+                reason: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
                 attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.id.clone()),
-                network_decline_code: item.response.payment_method.as_ref().and_then(|pm| pm.result.clone()),
+                network_decline_code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone()),
                 network_advice_code: None,
-                network_error_message: item.response.payment_method.as_ref().and_then(|pm| pm.message.clone()),
+                network_error_message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
@@ -611,7 +683,9 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GlobalpayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
         // Extract network transaction ID from card response
@@ -639,12 +713,24 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
                     .as_ref()
                     .and_then(|pm| pm.message.clone())
                     .unwrap_or_else(|| "Transaction failed".to_string()),
-                reason: item.response.payment_method.as_ref().and_then(|pm| pm.message.clone()),
+                reason: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
                 attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.id.clone()),
-                network_decline_code: item.response.payment_method.as_ref().and_then(|pm| pm.result.clone()),
+                network_decline_code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone()),
                 network_advice_code: None,
-                network_error_message: item.response.payment_method.as_ref().and_then(|pm| pm.message.clone()),
+                network_error_message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
@@ -675,7 +761,9 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GlobalpayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(item.response.status.clone());
 
         // Extract network transaction ID from card response
@@ -703,12 +791,24 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
                     .as_ref()
                     .and_then(|pm| pm.message.clone())
                     .unwrap_or_else(|| "Capture failed".to_string()),
-                reason: item.response.payment_method.as_ref().and_then(|pm| pm.message.clone()),
+                reason: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
                 attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.id.clone()),
-                network_decline_code: item.response.payment_method.as_ref().and_then(|pm| pm.result.clone()),
+                network_decline_code: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.result.clone()),
                 network_advice_code: None,
-                network_error_message: item.response.payment_method.as_ref().and_then(|pm| pm.message.clone()),
+                network_error_message: item
+                    .response
+                    .payment_method
+                    .as_ref()
+                    .and_then(|pm| pm.message.clone()),
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
@@ -743,18 +843,28 @@ pub struct GlobalpayRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<GlobalpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for GlobalpayRefundRequest
+    TryFrom<
+        GlobalpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for GlobalpayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        wrapper: GlobalpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        wrapper: GlobalpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
         Ok(Self {
-            amount: GlobalpayAmountConvertor::convert(item.request.minor_refund_amount, item.request.currency)
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            amount: GlobalpayAmountConvertor::convert(
+                item.request.minor_refund_amount,
+                item.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?,
         })
     }
 }
@@ -776,7 +886,9 @@ impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GlobalpayRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GlobalpayRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(item.response.status.clone());
 
         Ok(Self {
@@ -796,7 +908,9 @@ impl TryFrom<ResponseRouterData<GlobalpayRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GlobalpayRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GlobalpayRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(item.response.status.clone());
 
         Ok(Self {
@@ -819,18 +933,27 @@ pub struct GlobalpayVoidRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<GlobalpayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for GlobalpayVoidRequest
+    TryFrom<
+        GlobalpayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for GlobalpayVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        wrapper: GlobalpayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        wrapper: GlobalpayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &wrapper.router_data;
         // Validate that we have a connector transaction ID (required for URL construction)
         if item.request.connector_transaction_id.is_empty() {
-            return Err(error_stack::report!(errors::ConnectorError::MissingConnectorTransactionID));
+            return Err(error_stack::report!(
+                errors::ConnectorError::MissingConnectorTransactionID
+            ));
         }
 
         // Convert amount from MinorUnit to StringMinorUnit if present
@@ -855,16 +978,18 @@ impl TryFrom<ResponseRouterData<GlobalpayPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<GlobalpayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<GlobalpayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Map GlobalPay void statuses to UCS AttemptStatus
         // Void flow uses VoidFailed instead of generic Failure for failed void attempts
         let status = match item.response.status.clone() {
             // Success case - void completed
             GlobalpayPaymentStatus::Reversed => AttemptStatus::Voided,
             // Pending cases - void in progress
-            GlobalpayPaymentStatus::Pending | GlobalpayPaymentStatus::Initiated | GlobalpayPaymentStatus::ForReview => {
-                AttemptStatus::Pending
-            }
+            GlobalpayPaymentStatus::Pending
+            | GlobalpayPaymentStatus::Initiated
+            | GlobalpayPaymentStatus::ForReview => AttemptStatus::Pending,
             // Failure cases - void attempt failed or invalid states
             GlobalpayPaymentStatus::Declined
             | GlobalpayPaymentStatus::Failed

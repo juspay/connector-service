@@ -4,33 +4,38 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    customer_service_server::CustomerService, merchant_authentication_service_server::MerchantAuthenticationService,
+    customer_service_server::CustomerService,
+    merchant_authentication_service_server::MerchantAuthenticationService,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
     payment_method_service_server::PaymentMethodService, payment_service_server::PaymentService,
     recurring_payment_service_server::RecurringPaymentService, CustomerServiceCreateRequest,
     CustomerServiceCreateResponse, EventServiceHandleRequest, EventServiceHandleResponse,
-    MerchantAuthenticationServiceCreateAccessTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse,
-    MerchantAuthenticationServiceCreateSessionTokenRequest, MerchantAuthenticationServiceCreateSessionTokenResponse,
-    PaymentMethodAuthenticationServiceAuthenticateRequest, PaymentMethodAuthenticationServiceAuthenticateResponse,
+    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse,
+    MerchantAuthenticationServiceCreateSessionTokenRequest,
+    MerchantAuthenticationServiceCreateSessionTokenResponse,
+    PaymentMethodAuthenticationServiceAuthenticateRequest,
+    PaymentMethodAuthenticationServiceAuthenticateResponse,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
     PaymentMethodAuthenticationServicePostAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentMethodServiceTokenizeRequest,
-    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-    PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceCreateOrderRequest,
-    PaymentServiceCreateOrderResponse, PaymentServiceGetRequest, PaymentServiceGetResponse,
-    PaymentServiceRefundRequest, PaymentServiceReverseRequest, PaymentServiceReverseResponse,
-    PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
-    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    PaymentMethodServiceTokenizeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse, PaymentServiceGetRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceReverseRequest,
+    PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
+    PaymentServiceSetupRecurringResponse, PaymentServiceVerifyRedirectResponseRequest,
+    PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 use std::sync::Arc;
 
 use crate::http::handlers::macros::http_handler;
 use crate::http::{
-    error::HttpError, http_headers_to_grpc_metadata, state::AppState, transfer_config_to_grpc_request,
-    utils::ValidatedJson,
+    error::HttpError, http_headers_to_grpc_metadata, state::AppState,
+    transfer_config_to_grpc_request, utils::ValidatedJson,
 };
 use ucs_env::configs::Config;
 
@@ -125,7 +130,13 @@ http_handler!(
     charge,
     recurring_payment_service
 );
-http_handler!(refund, PaymentServiceRefundRequest, RefundResponse, refund, payments_service);
+http_handler!(
+    refund,
+    PaymentServiceRefundRequest,
+    RefundResponse,
+    refund,
+    payments_service
+);
 http_handler!(
     pre_authenticate,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,

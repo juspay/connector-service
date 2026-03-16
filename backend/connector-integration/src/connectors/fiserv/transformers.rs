@@ -8,8 +8,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -38,7 +39,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct FiservPaymentsRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     amount: Amount,
     merchant_details: MerchantDetails,
     #[serde(flatten)]
@@ -46,7 +49,9 @@ pub struct FiservPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + S
 }
 
 #[derive(Debug)]
-pub enum FiservCheckoutChargesRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub enum FiservCheckoutChargesRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     Checkout(CheckoutPaymentsRequest),
     Charges(ChargesPaymentRequest<T>),
 }
@@ -116,7 +121,9 @@ pub enum FiservIntent {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ChargesPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct ChargesPaymentRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
     source: Source<T>,
     transaction_interaction: Option<TransactionInteraction>,
     transaction_details: TransactionDetails,
@@ -152,7 +159,8 @@ pub enum Source<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'sta
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CardData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
+pub struct CardData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+{
     pub card_data: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
@@ -302,13 +310,13 @@ impl From<FiservPaymentStatus> for enums::AttemptStatus {
 impl From<FiservPaymentStatus> for enums::RefundStatus {
     fn from(item: FiservPaymentStatus) -> Self {
         match item {
-            FiservPaymentStatus::Captured | FiservPaymentStatus::Succeeded | FiservPaymentStatus::Authorized => {
-                Self::Success
-            }
+            FiservPaymentStatus::Captured
+            | FiservPaymentStatus::Succeeded
+            | FiservPaymentStatus::Authorized => Self::Success,
             FiservPaymentStatus::Declined | FiservPaymentStatus::Failed => Self::Failure,
-            FiservPaymentStatus::Voided | FiservPaymentStatus::Processing | FiservPaymentStatus::Created => {
-                Self::Pending
-            }
+            FiservPaymentStatus::Voided
+            | FiservPaymentStatus::Processing
+            | FiservPaymentStatus::Created => Self::Pending,
         }
     }
 }
@@ -448,13 +456,26 @@ pub struct FiservRefundSyncRequest {
 // Implementations for FiservRouterData - needed for the macro framework
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        FiservRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        FiservRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for FiservPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -469,7 +490,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let total = item
             .connector
             .amount_converter
-            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
             .change_context(ConnectorError::AmountConversionFailed)?;
         let amount = Amount {
             total,
@@ -480,11 +504,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .merchant_account_metadata
             .ok_or(ConnectorError::RequestEncodingFailed)?;
-        let session: FiservSessionObject = metadata.expose().parse_value("FiservSessionObject").change_context(
-            ConnectorError::InvalidConnectorConfig {
+        let session: FiservSessionObject = metadata
+            .expose()
+            .parse_value("FiservSessionObject")
+            .change_context(ConnectorError::InvalidConnectorConfig {
                 config: "Merchant connector account metadata",
-            },
-        )?;
+            })?;
 
         let merchant_details = MerchantDetails {
             merchant_id: auth.merchant_account,
@@ -493,40 +518,43 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let checkout_charges_request = match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(ref ccard) => {
-                Ok(FiservCheckoutChargesRequest::Charges(ChargesPaymentRequest {
-                    source: Source::PaymentCard {
-                        card: CardData {
-                            card_data: ccard.card_number.clone(),
-                            expiration_month: ccard.card_exp_month.clone(),
-                            expiration_year: ccard.get_expiry_year_4_digit(),
-                            security_code: Some(ccard.card_cvc.clone()),
+                Ok(FiservCheckoutChargesRequest::Charges(
+                    ChargesPaymentRequest {
+                        source: Source::PaymentCard {
+                            card: CardData {
+                                card_data: ccard.card_number.clone(),
+                                expiration_month: ccard.card_exp_month.clone(),
+                                expiration_year: ccard.get_expiry_year_4_digit(),
+                                security_code: Some(ccard.card_cvc.clone()),
+                            },
                         },
+                        transaction_details: TransactionDetails {
+                            capture_flag: Some(matches!(
+                                item.router_data.request.capture_method,
+                                Some(enums::CaptureMethod::Automatic)
+                                    | Some(enums::CaptureMethod::SequentialAutomatic)
+                                    | None
+                            )),
+                            reversal_reason_code: None,
+                            merchant_transaction_id: Some(
+                                item.router_data
+                                    .resource_common_data
+                                    .connector_request_reference_id
+                                    .clone(),
+                            ),
+                            operation_type: None,
+                        },
+                        transaction_interaction: Some(TransactionInteraction {
+                            //Payment is being made in online mode, card not present
+                            origin: TransactionInteractionOrigin::Ecom,
+                            // transaction encryption such as SSL/TLS, but authentication was not performed
+                            eci_indicator: TransactionInteractionEciIndicator::ChannelEncrypted,
+                            //card not present in online transaction
+                            pos_condition_code:
+                                TransactionInteractionPosConditionCode::CardNotPresentEcom,
+                        }),
                     },
-                    transaction_details: TransactionDetails {
-                        capture_flag: Some(matches!(
-                            item.router_data.request.capture_method,
-                            Some(enums::CaptureMethod::Automatic)
-                                | Some(enums::CaptureMethod::SequentialAutomatic)
-                                | None
-                        )),
-                        reversal_reason_code: None,
-                        merchant_transaction_id: Some(
-                            item.router_data
-                                .resource_common_data
-                                .connector_request_reference_id
-                                .clone(),
-                        ),
-                        operation_type: None,
-                    },
-                    transaction_interaction: Some(TransactionInteraction {
-                        //Payment is being made in online mode, card not present
-                        origin: TransactionInteractionOrigin::Ecom,
-                        // transaction encryption such as SSL/TLS, but authentication was not performed
-                        eci_indicator: TransactionInteractionEciIndicator::ChannelEncrypted,
-                        //card not present in online transaction
-                        pos_condition_code: TransactionInteractionPosConditionCode::CardNotPresentEcom,
-                    }),
-                }))
+                ))
             }
             PaymentMethodData::Wallet(_)
             | PaymentMethodData::PayLater(_)
@@ -545,9 +573,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(error_stack::report!(
-                ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message("fiserv"),)
-            )),
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(error_stack::report!(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("fiserv"),
+                )))
+            }
         }?;
 
         Ok(Self {
@@ -559,12 +589,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<FiservRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for FiservCaptureRequest
+    TryFrom<
+        FiservRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiservRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        item: FiservRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
@@ -574,11 +611,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_meta_data
             .clone()
             .ok_or(ConnectorError::RequestEncodingFailed)?;
-        let session: FiservSessionObject = metadata.expose().parse_value("FiservSessionObject").change_context(
-            ConnectorError::InvalidConnectorConfig {
+        let session: FiservSessionObject = metadata
+            .expose()
+            .parse_value("FiservSessionObject")
+            .change_context(ConnectorError::InvalidConnectorConfig {
                 config: "Merchant connector account metadata",
-            },
-        )?;
+            })?;
 
         let merchant_details = MerchantDetails {
             merchant_id: auth.merchant_account.clone(),
@@ -588,11 +626,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let total = item
             .connector
             .amount_converter
-            .convert(router_data.request.minor_amount_to_capture, router_data.request.currency)
+            .convert(
+                router_data.request.minor_amount_to_capture,
+                router_data.request.currency,
+            )
             .change_context(ConnectorError::AmountConversionFailed)?;
         let order_id = router_data.request.metadata.as_ref().and_then(|v| {
             let exposed = v.clone().expose();
-            exposed.get("order_id").and_then(|v| v.as_str()).map(|s| s.to_string())
+            exposed
+                .get("order_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
         });
 
         Ok(Self {
@@ -604,7 +648,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transaction_details: TransactionDetails {
                 capture_flag: Some(true),
                 reversal_reason_code: None,
-                merchant_transaction_id: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+                merchant_transaction_id: Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
                 operation_type: Some(OperationType::Capture),
             },
             merchant_details,
@@ -620,12 +669,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<FiservRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
-    for FiservSyncRequest
+    TryFrom<
+        FiservRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiservRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+        item: FiservRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
@@ -647,12 +703,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Implementation for the Void request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<FiservRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for FiservVoidRequest
+    TryFrom<
+        FiservRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for FiservVoidRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiservRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        item: FiservRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
@@ -663,11 +726,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_meta_data
             .clone()
             .ok_or(ConnectorError::RequestEncodingFailed)?;
-        let session: FiservSessionObject = metadata.expose().parse_value("FiservSessionObject").change_context(
-            ConnectorError::InvalidConnectorConfig {
+        let session: FiservSessionObject = metadata
+            .expose()
+            .parse_value("FiservSessionObject")
+            .change_context(ConnectorError::InvalidConnectorConfig {
                 config: "Merchant connector account metadata",
-            },
-        )?;
+            })?;
 
         Ok(Self {
             merchant_details: MerchantDetails {
@@ -680,7 +744,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transaction_details: TransactionDetails {
                 capture_flag: None,
                 reversal_reason_code: router_data.request.cancellation_reason.clone(),
-                merchant_transaction_id: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
+                merchant_transaction_id: Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
                 operation_type: None,
             },
         })
@@ -689,12 +758,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Implementation for the Refund request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for FiservRefundRequest
+    TryFrom<
+        FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for FiservRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        item: FiservRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
@@ -705,16 +778,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .merchant_account_metadata
             .clone()
             .ok_or(ConnectorError::RequestEncodingFailed)?;
-        let session: FiservSessionObject = metadata.expose().parse_value("FiservSessionObject").change_context(
-            ConnectorError::InvalidConnectorConfig {
+        let session: FiservSessionObject = metadata
+            .expose()
+            .parse_value("FiservSessionObject")
+            .change_context(ConnectorError::InvalidConnectorConfig {
                 config: "Merchant connector account metadata",
-            },
-        )?;
+            })?;
 
         // Convert minor amount to float major unit
         let converter = FloatMajorUnitForConnector;
         let amount_major = converter
-            .convert(router_data.request.minor_refund_amount, router_data.request.currency)
+            .convert(
+                router_data.request.minor_refund_amount,
+                router_data.request.currency,
+            )
             .change_context(ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
@@ -735,12 +812,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Implementation for the RefundSync request
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<FiservRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
-    for FiservRefundSyncRequest
+    TryFrom<
+        FiservRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for FiservRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiservRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+        item: FiservRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_auth_type)?;
@@ -765,7 +849,9 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<FiservPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<FiservPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -784,20 +870,30 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 gateway_resp
                     .gateway_transaction_id
                     .clone()
-                    .unwrap_or_else(|| gateway_resp.transaction_processing_details.transaction_id.clone()),
+                    .unwrap_or_else(|| {
+                        gateway_resp
+                            .transaction_processing_details
+                            .transaction_id
+                            .clone()
+                    }),
             ),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: Some(gateway_resp.transaction_processing_details.order_id.clone()),
+            connector_response_reference_id: Some(
+                gateway_resp.transaction_processing_details.order_id.clone(),
+            ),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
             router_data_out.response = Err(ErrorResponse {
-                code: gateway_resp.transaction_processing_details.transaction_id.clone(),
+                code: gateway_resp
+                    .transaction_processing_details
+                    .transaction_id
+                    .clone(),
                 message: format!("Payment status: {:?}", gateway_resp.transaction_state),
                 reason: None,
                 status_code: http_code,
@@ -821,7 +917,9 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<FiservCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<FiservCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -840,20 +938,30 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                 gateway_resp
                     .gateway_transaction_id
                     .clone()
-                    .unwrap_or_else(|| gateway_resp.transaction_processing_details.transaction_id.clone()),
+                    .unwrap_or_else(|| {
+                        gateway_resp
+                            .transaction_processing_details
+                            .transaction_id
+                            .clone()
+                    }),
             ),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: Some(gateway_resp.transaction_processing_details.order_id.clone()),
+            connector_response_reference_id: Some(
+                gateway_resp.transaction_processing_details.order_id.clone(),
+            ),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
             router_data_out.response = Err(ErrorResponse {
-                code: gateway_resp.transaction_processing_details.transaction_id.clone(),
+                code: gateway_resp
+                    .transaction_processing_details
+                    .transaction_id
+                    .clone(),
                 message: format!("Payment status: {:?}", gateway_resp.transaction_state),
                 reason: None,
                 status_code: http_code,
@@ -896,20 +1004,30 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                 gateway_resp
                     .gateway_transaction_id
                     .clone()
-                    .unwrap_or_else(|| gateway_resp.transaction_processing_details.transaction_id.clone()),
+                    .unwrap_or_else(|| {
+                        gateway_resp
+                            .transaction_processing_details
+                            .transaction_id
+                            .clone()
+                    }),
             ),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: Some(gateway_resp.transaction_processing_details.order_id.clone()),
+            connector_response_reference_id: Some(
+                gateway_resp.transaction_processing_details.order_id.clone(),
+            ),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure {
             router_data_out.response = Err(ErrorResponse {
-                code: gateway_resp.transaction_processing_details.transaction_id.clone(),
+                code: gateway_resp
+                    .transaction_processing_details
+                    .transaction_id
+                    .clone(),
                 message: format!("Void status: {:?}", gateway_resp.transaction_state),
                 reason: None,
                 status_code: http_code,
@@ -959,20 +1077,30 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                 gateway_resp
                     .gateway_transaction_id
                     .clone()
-                    .unwrap_or_else(|| gateway_resp.transaction_processing_details.transaction_id.clone()),
+                    .unwrap_or_else(|| {
+                        gateway_resp
+                            .transaction_processing_details
+                            .transaction_id
+                            .clone()
+                    }),
             ),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: Some(gateway_resp.transaction_processing_details.order_id.clone()),
+            connector_response_reference_id: Some(
+                gateway_resp.transaction_processing_details.order_id.clone(),
+            ),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
             router_data_out.response = Err(ErrorResponse {
-                code: gateway_resp.transaction_processing_details.transaction_id.clone(),
+                code: gateway_resp
+                    .transaction_processing_details
+                    .transaction_id
+                    .clone(),
                 message: format!("Payment status: {:?}", gateway_resp.transaction_state),
                 reason: None,
                 status_code: http_code,
@@ -1013,14 +1141,22 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
             connector_refund_id: gateway_resp
                 .gateway_transaction_id
                 .clone()
-                .unwrap_or_else(|| gateway_resp.transaction_processing_details.transaction_id.clone()),
+                .unwrap_or_else(|| {
+                    gateway_resp
+                        .transaction_processing_details
+                        .transaction_id
+                        .clone()
+                }),
             refund_status,
             status_code: http_code,
         };
 
         if refund_status == enums::RefundStatus::Failure {
             router_data_out.response = Err(ErrorResponse {
-                code: gateway_resp.transaction_processing_details.transaction_id.clone(),
+                code: gateway_resp
+                    .transaction_processing_details
+                    .transaction_id
+                    .clone(),
                 message: format!("Refund status: {:?}", gateway_resp.transaction_state),
                 reason: None,
                 status_code: http_code,
@@ -1044,7 +1180,9 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<FiservRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<FiservRefundSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1068,14 +1206,22 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
             connector_refund_id: gateway_resp
                 .gateway_transaction_id
                 .clone()
-                .unwrap_or_else(|| gateway_resp.transaction_processing_details.transaction_id.clone()),
+                .unwrap_or_else(|| {
+                    gateway_resp
+                        .transaction_processing_details
+                        .transaction_id
+                        .clone()
+                }),
             refund_status,
             status_code: http_code,
         };
 
         if refund_status == enums::RefundStatus::Failure {
             router_data_out.response = Err(ErrorResponse {
-                code: gateway_resp.transaction_processing_details.transaction_id.clone(),
+                code: gateway_resp
+                    .transaction_processing_details
+                    .transaction_id
+                    .clone(),
                 message: format!("Refund status: {:?}", gateway_resp.transaction_state),
                 reason: None,
                 status_code: http_code,

@@ -3,7 +3,8 @@ use std::fmt::Debug;
 use base64::Engine;
 use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBrand};
 use common_utils::{
-    ext_traits::OptionExt, new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email, ValidationError,
+    ext_traits::OptionExt, new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email,
+    ValidationError,
 };
 use error_stack::{self, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -101,11 +102,14 @@ impl<T: PaymentMethodDataTypes> Card<T> {
     }
 
     pub fn get_card_expiry_month_2_digit(&self) -> Result<Secret<String>, errors::ConnectorError> {
-        let exp_month = self.card_exp_month.peek().to_string().parse::<u8>().map_err(|_| {
-            errors::ConnectorError::InvalidDataFormat {
+        let exp_month = self
+            .card_exp_month
+            .peek()
+            .to_string()
+            .parse::<u8>()
+            .map_err(|_| errors::ConnectorError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-            }
-        })?;
+            })?;
         let month = cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
             errors::ConnectorError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
@@ -146,7 +150,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
 
     pub fn get_expiry_date_as_yyyymm(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
-        Secret::new(format!("{}{}{}", year.peek(), delimiter, self.card_exp_month.peek()))
+        Secret::new(format!(
+            "{}{}{}",
+            year.peek(),
+            delimiter,
+            self.card_exp_month.peek()
+        ))
     }
 
     pub fn get_expiry_date_as_mmyy(&self) -> Result<Secret<String>, ConnectorError> {
@@ -181,7 +190,12 @@ impl Card<DefaultPCIHolder> {
     }
     pub fn get_expiry_date_as_mmyyyy(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
-        Secret::new(format!("{}{}{}", self.card_exp_month.peek(), delimiter, year.peek()))
+        Secret::new(format!(
+            "{}{}{}",
+            self.card_exp_month.peek(),
+            delimiter,
+            year.peek()
+        ))
     }
     pub fn get_expiry_date_as_yymm(&self) -> Result<Secret<String>, ConnectorError> {
         let year = self.get_card_expiry_year_2_digit()?.expose();
@@ -417,7 +431,9 @@ impl UpiSource {
     /// Maps: UPI_CC/UPI_CL/UPI_CC_CL/UPI_PPI/UPI_VOUCHER -> "ALL", UPI_ACCOUNT -> "ACCOUNT"
     pub fn to_payment_mode(&self) -> String {
         match self {
-            Self::UpiCc | Self::UpiCl | Self::UpiCcCl | Self::UpiPpi | Self::UpiVoucher => "ALL".to_string(),
+            Self::UpiCc | Self::UpiCl | Self::UpiCcCl | Self::UpiPpi | Self::UpiVoucher => {
+                "ALL".to_string()
+            }
             Self::UpiAccount => "ACCOUNT".to_string(),
         }
     }
@@ -670,11 +686,13 @@ impl WalletData {
     pub fn get_encoded_wallet_token(&self) -> Result<String, Error> {
         match self {
             Self::GooglePay(_) => {
-                let json_token: serde_json::Value = self.get_wallet_token_as_json("Google Pay".to_owned())?;
-                let token_as_vec =
-                    serde_json::to_vec(&json_token).change_context(ConnectorError::InvalidWalletToken {
+                let json_token: serde_json::Value =
+                    self.get_wallet_token_as_json("Google Pay".to_owned())?;
+                let token_as_vec = serde_json::to_vec(&json_token).change_context(
+                    ConnectorError::InvalidWalletToken {
                         wallet_name: "Google Pay".to_string(),
-                    })?;
+                    },
+                )?;
                 let encoded_token = base64::engine::general_purpose::STANDARD.encode(token_as_vec);
                 Ok(encoded_token)
             }
@@ -821,7 +839,9 @@ impl GooglePayWalletData {
             error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_APPLICATION_PRIMARY_ACCOUNT_NUMBER".to_owned(),
                 error_identifier: 400,
-                error_message: "Google Pay tokenization data application primary account number is required".to_owned(),
+                error_message:
+                    "Google Pay tokenization data application primary account number is required"
+                        .to_owned(),
                 error_object: None,
             }))
         })
@@ -860,21 +880,28 @@ pub struct GooglePayDecryptedData {
 }
 
 impl GooglePayDecryptedData {
-    pub fn get_four_digit_expiry_year(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+    pub fn get_four_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
         let mut year = self.card_exp_year.peek().clone();
 
         if year.len() == 2 {
             year = format!("20{year}");
         } else if year.len() != 4 {
             return Err(ValidationError::InvalidValue {
-                message: format!("Invalid expiry year length: {}. Must be 2 or 4 digits", year.len()),
+                message: format!(
+                    "Invalid expiry year length: {}. Must be 2 or 4 digits",
+                    year.len()
+                ),
             }
             .into());
         }
         Ok(Secret::new(year))
     }
 
-    pub fn get_two_digit_expiry_year(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+    pub fn get_two_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
         let binding = self.card_exp_year.clone();
         let year = binding.peek();
         Ok(Secret::new(
@@ -894,9 +921,11 @@ impl GooglePayDecryptedData {
 
     pub fn get_expiry_month(&self) -> error_stack::Result<Secret<String>, ValidationError> {
         let month_str = self.card_exp_month.peek();
-        let month = month_str.parse::<u8>().map_err(|_| ValidationError::InvalidValue {
-            message: format!("Failed to parse expiry month: {month_str}"),
-        })?;
+        let month = month_str
+            .parse::<u8>()
+            .map_err(|_| ValidationError::InvalidValue {
+                message: format!("Failed to parse expiry month: {month_str}"),
+            })?;
 
         if !(1..=12).contains(&month) {
             return Err(ValidationError::InvalidValue {
@@ -925,7 +954,10 @@ impl GpayTokenizationData {
     /// Get the token from Google Pay tokenization data
     /// Returns the token string if encrypted data exists, otherwise returns an error
     pub fn get_encrypted_google_pay_token(&self) -> error_stack::Result<String, ValidationError> {
-        Ok(self.get_encrypted_google_pay_payment_data_mandatory()?.token.clone())
+        Ok(self
+            .get_encrypted_google_pay_payment_data_mandatory()?
+            .token
+            .clone())
     }
 
     /// Get the token type from Google Pay tokenization data
@@ -1032,7 +1064,9 @@ impl ApplePayPaymentData {
     }
 
     /// Get the encrypted Apple Pay payment data, returning an error if it does not exist
-    pub fn get_encrypted_apple_pay_payment_data_mandatory(&self) -> error_stack::Result<&String, ValidationError> {
+    pub fn get_encrypted_apple_pay_payment_data_mandatory(
+        &self,
+    ) -> error_stack::Result<&String, ValidationError> {
         self.get_encrypted_apple_pay_payment_data_optional()
             .get_required_value("Encrypted Apple Pay payment data")
             .attach_printable("Encrypted Apple Pay payment data is mandatory")
@@ -1050,7 +1084,9 @@ impl ApplePayPaymentData {
 
 impl ApplePayDecryptedData {
     /// Get the four-digit expiration year from the Apple Pay pre-decrypt data
-    pub fn get_two_digit_expiry_year(&self) -> error_stack::Result<Secret<String>, ValidationError> {
+    pub fn get_two_digit_expiry_year(
+        &self,
+    ) -> error_stack::Result<Secret<String>, ValidationError> {
         let binding = self.application_expiration_year.clone();
         let year = binding.peek();
         Ok(Secret::new(
@@ -1102,7 +1138,9 @@ impl ApplePayWalletData {
             error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_APPLICATION_PRIMARY_ACCOUNT_NUMBER".to_owned(),
                 error_identifier: 400,
-                error_message: "Apple Pay payment data application primary account number is required".to_owned(),
+                error_message:
+                    "Apple Pay payment data application primary account number is required"
+                        .to_owned(),
                 error_object: None,
             }))
         })
@@ -1115,7 +1153,8 @@ impl ApplePayWalletData {
             error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_APPLICATION_EXPIRATION_MONTH".to_owned(),
                 error_identifier: 400,
-                error_message: "Apple Pay payment data application expiration month is required".to_owned(),
+                error_message: "Apple Pay payment data application expiration month is required"
+                    .to_owned(),
                 error_object: None,
             }))
         })
@@ -1128,7 +1167,8 @@ impl ApplePayWalletData {
             error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_APPLICATION_EXPIRATION_YEAR".to_owned(),
                 error_identifier: 400,
-                error_message: "Apple Pay payment data application expiration year is required".to_owned(),
+                error_message: "Apple Pay payment data application expiration year is required"
+                    .to_owned(),
                 error_object: None,
             }))
         })
@@ -1147,14 +1187,18 @@ impl ApplePayWalletData {
         })?;
 
         Ok(ApplePayCryptogramData {
-            online_payment_cryptogram: decrypted_payment_data.online_payment_cryptogram.ok_or_else(|| {
-                error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_ONLINE_PAYMENT_CRYPTOGRAM".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Apple Pay payment data online payment cryptogram is required".to_owned(),
-                    error_object: None,
-                }))
-            })?,
+            online_payment_cryptogram: decrypted_payment_data
+                .online_payment_cryptogram
+                .ok_or_else(|| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "MISSING_ONLINE_PAYMENT_CRYPTOGRAM".to_owned(),
+                        error_identifier: 400,
+                        error_message:
+                            "Apple Pay payment data online payment cryptogram is required"
+                                .to_owned(),
+                        error_object: None,
+                    }))
+                })?,
             eci_indicator: decrypted_payment_data.eci_indicator,
         })
     }
@@ -1258,11 +1302,21 @@ impl CardDetailsForNetworkTransactionId {
     }
     pub fn get_expiry_date_as_yyyymm(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
-        Secret::new(format!("{}{}{}", year.peek(), delimiter, self.card_exp_month.peek()))
+        Secret::new(format!(
+            "{}{}{}",
+            year.peek(),
+            delimiter,
+            self.card_exp_month.peek()
+        ))
     }
     pub fn get_expiry_date_as_mmyyyy(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
-        Secret::new(format!("{}{}{}", self.card_exp_month.peek(), delimiter, year.peek()))
+        Secret::new(format!(
+            "{}{}{}",
+            self.card_exp_month.peek(),
+            delimiter,
+            year.peek()
+        ))
     }
     pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
         let mut year = self.card_exp_year.peek().clone();
@@ -1328,7 +1382,15 @@ pub struct CoBadgedCardData {
 }
 
 #[derive(
-    Debug, serde::Deserialize, serde::Serialize, Clone, ToSchema, strum::EnumString, strum::Display, Eq, PartialEq,
+    Debug,
+    serde::Deserialize,
+    serde::Serialize,
+    Clone,
+    ToSchema,
+    strum::EnumString,
+    strum::Display,
+    Eq,
+    PartialEq,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum CardType {

@@ -289,9 +289,12 @@ where
                     WorldpayPaymentResponseFields::DDCResponse(res) => {
                         res.actions.supply_ddc_data.href.split('/').nth_back(1)
                     }
-                    WorldpayPaymentResponseFields::ThreeDsChallenged(res) => {
-                        res.actions.complete_three_ds_challenge.href.split('/').nth_back(1)
-                    }
+                    WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
+                        .actions
+                        .complete_three_ds_challenge
+                        .href
+                        .split('/')
+                        .nth_back(1),
                     _ => None,
                 })
         })
@@ -365,7 +368,9 @@ impl RiskFactorsInner {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "camelCase")]
 pub enum RiskType {
     #[default]
@@ -374,7 +379,9 @@ pub enum RiskType {
     RiskProfile,
 }
 
-#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum Detail {
     #[default]
@@ -382,7 +389,9 @@ pub enum Detail {
     Postcode,
 }
 
-#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
+)]
 #[serde(rename_all = "camelCase")]
 pub enum Risk {
     #[default]

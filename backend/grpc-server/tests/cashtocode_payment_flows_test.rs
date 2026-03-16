@@ -12,16 +12,19 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, AuthenticationType,
-        CaptureMethod, ClassicReward, Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        AuthenticationType, CaptureMethod, ClassicReward, Currency, Identifier, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
 
 // Constants for Cashtocode connector
@@ -35,30 +38,37 @@ const TEST_EMAIL: &str = "customer@example.com";
 const TEST_AMOUNT: i64 = 1000;
 
 fn add_cashtocode_metadata<T>(request: &mut Request<T>) {
-    let auth =
-        utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load cashtocode credentials");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load cashtocode credentials");
 
     let auth_key_map = match auth {
-        domain_types::router_data::ConnectorAuthType::CurrencyAuthKey { auth_key_map } => auth_key_map,
+        domain_types::router_data::ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
+            auth_key_map
+        }
         _ => panic!("Expected CurrencyAuthKey auth type for cashtocode"),
     };
 
     // Serialize the auth_key_map to JSON for metadata
-    let auth_key_map_json = serde_json::to_string(&auth_key_map).expect("Failed to serialize auth_key_map");
+    let auth_key_map_json =
+        serde_json::to_string(&auth_key_map).expect("Failed to serialize auth_key_map");
 
-    request
-        .metadata_mut()
-        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
+    request.metadata_mut().append(
+        "x-connector",
+        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
+    );
     request
         .metadata_mut()
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
     request.metadata_mut().append(
         "x-auth-key-map",
-        auth_key_map_json.parse().expect("Failed to parse x-auth-key-map"),
+        auth_key_map_json
+            .parse()
+            .expect("Failed to parse x-auth-key-map"),
     );
-    request
-        .metadata_mut()
-        .append("x-merchant-id", MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"));
+    request.metadata_mut().append(
+        "x-merchant-id",
+        MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
+    );
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())
@@ -75,7 +85,9 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             currency: i32::from(Currency::Eur),
         }),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::ClassicReward(ClassicReward {})),
+            payment_method: Some(payment_method::PaymentMethod::ClassicReward(
+                ClassicReward {},
+            )),
         }),
         customer: Some(grpc_api_types::payments::Customer {
             email: Some(TEST_EMAIL.to_string().into()),

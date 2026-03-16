@@ -6,11 +6,14 @@ use common_utils::{
     types::{AmountConvertor, StringMinorUnit, StringMinorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void},
+    connector_flow::{
+        Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
+    },
     connector_types::{
-        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -32,14 +35,19 @@ const MAX_ORDER_ID_LENGTH: usize = 18;
 fn get_nexi_order_id(payment_id: &str) -> CustomResult<String, errors::ConnectorError> {
     if payment_id.len() > MAX_ORDER_ID_LENGTH {
         if payment_id.starts_with("pay_") {
-            Ok(payment_id.chars().take(MAX_ORDER_ID_LENGTH).collect::<String>())
+            Ok(payment_id
+                .chars()
+                .take(MAX_ORDER_ID_LENGTH)
+                .collect::<String>())
         } else {
-            Err(error_stack::Report::from(errors::ConnectorError::MaxFieldLengthViolated {
-                field_name: "payment_id".to_string(),
-                connector: "Nexixpay".to_string(),
-                max_length: MAX_ORDER_ID_LENGTH,
-                received_length: payment_id.len(),
-            }))
+            Err(error_stack::Report::from(
+                errors::ConnectorError::MaxFieldLengthViolated {
+                    field_name: "payment_id".to_string(),
+                    connector: "Nexixpay".to_string(),
+                    max_length: MAX_ORDER_ID_LENGTH,
+                    received_length: payment_id.len(),
+                },
+            ))
         }
     } else {
         Ok(payment_id.to_string())
@@ -59,7 +67,9 @@ impl TryFrom<&ConnectorSpecificAuth> for NexixpayAuthType {
             ConnectorSpecificAuth::Nexixpay { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                errors::ConnectorError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -123,8 +133,9 @@ pub fn get_payment_id(
     let connector_metadata = metadata.ok_or(errors::ConnectorError::MissingRequiredField {
         field_name: "connector_meta_data",
     })?;
-    let nexixpay_meta_data = serde_json::from_value::<NexixpayConnectorMetaData>(connector_metadata)
-        .change_context(errors::ConnectorError::ParsingFailed)?;
+    let nexixpay_meta_data =
+        serde_json::from_value::<NexixpayConnectorMetaData>(connector_metadata)
+            .change_context(errors::ConnectorError::ParsingFailed)?;
     let payment_flow = payment_intent.unwrap_or(nexixpay_meta_data.psync_flow);
     let payment_id = match payment_flow {
         NexixpayPaymentIntent::Cancel => nexixpay_meta_data.cancel_operation_id,
@@ -224,14 +235,27 @@ pub struct NexixpayThreeDSAuthData {
 // Request transformer implementation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        NexixpayRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+        NexixpayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
     > for NexixpayPaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         value: NexixpayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -248,34 +272,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Build card data structure using utility function for expiry date
         let card = NexixpayCardData {
             pan: Secret::new(card_data.card_number.peek().to_string()),
-            expiry_date: card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+            expiry_date: card_data
+                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
             cvv: Some(card_data.card_cvc.clone()),
         };
 
         // CRITICAL FIX: Extract operation_id and PaRes from authentication_data
         // This is set by PostAuthenticate and passed by Hyperswitch to Authorize
-        let authentication_data =
-            item.request
-                .authentication_data
-                .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "authentication_data (must be present for 3DS flow)",
-                })?;
+        let authentication_data = item.request.authentication_data.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "authentication_data (must be present for 3DS flow)",
+            },
+        )?;
 
-        let operation_id =
-            authentication_data
-                .transaction_id
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "authentication_data.transaction_id (operationId from PostAuthenticate)",
-                })?;
+        let operation_id = authentication_data.transaction_id.clone().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name:
+                    "authentication_data.transaction_id (operationId from PostAuthenticate)",
+            },
+        )?;
         // Extract PaRes from redirect_response.payload (same as PostAuthenticate)
         let pa_res = item
             .request
             .redirect_response
             .as_ref()
             .and_then(|redirect| redirect.payload.as_ref())
-            .and_then(|payload| serde_json::from_value::<NexixpayRedirectPayload>(payload.peek().clone()).ok())
+            .and_then(|payload| {
+                serde_json::from_value::<NexixpayRedirectPayload>(payload.peek().clone()).ok()
+            })
             .and_then(|redirect_payload| redirect_payload.pa_res)
             .map(|secret| secret.expose());
 
@@ -284,7 +308,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Do NOT send eci or xid (causes 500 error)
         let three_ds_auth_data = Some(NexixpayThreeDSAuthData {
             three_d_s_auth_response: pa_res,
-            authentication_value: authentication_data.cavv.as_ref().map(|c| c.peek().to_string()),
+            authentication_value: authentication_data
+                .cavv
+                .as_ref()
+                .map(|c| c.peek().to_string()),
         });
 
         // Build customer info with cardholder name and billing address
@@ -294,15 +321,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .get_payment_method_billing()
             .and_then(|billing| {
                 billing.address.as_ref().map(|addr| {
-                    let country = addr.country.map(common_enums::CountryAlpha2::from_alpha2_to_alpha3);
+                    let country = addr
+                        .country
+                        .map(common_enums::CountryAlpha2::from_alpha2_to_alpha3);
                     let name = match (&addr.first_name, &addr.last_name) {
-                        (Some(first), Some(last)) => Some(Secret::new(format!("{} {}", first.peek(), last.peek()))),
+                        (Some(first), Some(last)) => {
+                            Some(Secret::new(format!("{} {}", first.peek(), last.peek())))
+                        }
                         (Some(first), None) => Some(first.clone()),
                         (None, Some(last)) => Some(last.clone()),
                         (None, None) => None,
                     };
                     let street = match (&addr.line1, &addr.line2) {
-                        (Some(l1), Some(l2)) => Some(Secret::new(format!("{}, {}", l1.peek(), l2.peek()))),
+                        (Some(l1), Some(l2)) => {
+                            Some(Secret::new(format!("{}, {}", l1.peek(), l2.peek())))
+                        }
                         (Some(l1), None) => Some(l1.clone()),
                         (None, Some(l2)) => Some(l2.clone()),
                         (None, None) => None,
@@ -322,15 +355,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .address
             .get_payment_method_billing()
             .and_then(|billing| {
-                billing
-                    .address
-                    .as_ref()
-                    .and_then(|addr| match (&addr.first_name, &addr.last_name) {
-                        (Some(first), Some(last)) => Some(format!("{} {}", first.peek(), last.peek())),
+                billing.address.as_ref().and_then(|addr| {
+                    match (&addr.first_name, &addr.last_name) {
+                        (Some(first), Some(last)) => {
+                            Some(format!("{} {}", first.peek(), last.peek()))
+                        }
                         (Some(first), None) => Some(first.peek().to_string()),
                         (None, Some(last)) => Some(last.peek().to_string()),
                         (None, None) => None,
-                    })
+                    }
+                })
             })
             .unwrap_or_else(|| "Cardholder".to_string());
 
@@ -454,7 +488,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsRespo
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NexixpayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexixpayPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let operation = &item.response.operation;
 
         // Map status using From trait - matches Hyperswitch exactly
@@ -464,7 +500,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsRespo
         let network_txn_id = operation
             .additional_data
             .as_ref()
-            .and_then(|data| data.get("schemaTID").and_then(|v| v.as_str()).map(String::from))
+            .and_then(|data| {
+                data.get("schemaTID")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
             .or(operation.payment_end_to_end_id.clone());
 
         // Build connector metadata - preserve existing structural data and add payment response data
@@ -531,7 +571,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPaymentsRespo
 #[derive(Debug, Serialize)]
 pub struct NexixpaySyncRequest;
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for NexixpaySyncRequest {
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for NexixpaySyncRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -593,13 +635,20 @@ pub struct NexixpayCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NexixpayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
-    for NexixpayCaptureRequest
+    TryFrom<
+        NexixpayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for NexixpayCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: NexixpayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+        value: NexixpayRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &value.router_data;
 
@@ -627,7 +676,9 @@ impl TryFrom<ResponseRouterData<NexixpayCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NexixpayCaptureResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexixpayCaptureResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // Capture response is minimal - only operationId and time
         // Capture call does not return status in their response, so we return Pending
         // Status must be verified via PSync
@@ -696,13 +747,20 @@ pub struct NexixpayRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NexixpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for NexixpayRefundRequest
+    TryFrom<
+        NexixpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    > for NexixpayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: NexixpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+        value: NexixpayRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &value.router_data;
         // connector_transaction_id is already a String (operationId from capture/authorization)
@@ -733,7 +791,9 @@ impl TryFrom<ResponseRouterData<NexixpayRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NexixpayRefundResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexixpayRefundResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // CRITICAL: NexiXPay refund response is minimal (only operationId and time)
         // The response itself does NOT contain a status field
         // A 200 OK response indicates the refund was ACCEPTED, but NOT necessarily COMPLETED
@@ -767,31 +827,38 @@ pub struct NexixpayVoidRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<NexixpayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for NexixpayVoidRequest
+    TryFrom<
+        NexixpayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for NexixpayVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        value: NexixpayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        value: NexixpayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &value.router_data;
 
         // CRITICAL: For void, we need to send the full authorized amount
         // This is extracted from the request data (required for NexiXPay void)
-        let void_amount = item
-            .request
-            .amount
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "amount for void operation",
-            })?;
+        let void_amount =
+            item.request
+                .amount
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount for void operation",
+                })?;
 
-        let currency = item
-            .request
-            .currency
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "currency for void operation",
-            })?;
+        let currency =
+            item.request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency for void operation",
+                })?;
 
         let void_amount_string = StringMinorUnitForConnector
             .convert(void_amount, currency)
@@ -878,7 +945,9 @@ impl TryFrom<ResponseRouterData<NexixpayVoidResponse, Self>>
 #[derive(Debug, Serialize)]
 pub struct NexixpayRefundSyncRequest;
 
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>> for NexixpayRefundSyncRequest {
+impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
+    for NexixpayRefundSyncRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -939,7 +1008,9 @@ impl TryFrom<ResponseRouterData<NexixpayRSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NexixpayRSyncResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexixpayRSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         // CRITICAL: Map operation result to refund status using From trait
         // This addresses reviewer feedback:
         // - Checks operation_result status (Voided, Refunded, Executed, Pending, Failed)
@@ -1038,7 +1109,12 @@ pub enum NexixpayPaymentRequestActionType {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NexixpayRouterData<
-            RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                PreAuthenticate,
+                PaymentFlowData,
+                PaymentsPreAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for NexixpayPreAuthenticateRequest
@@ -1047,31 +1123,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         value: NexixpayRouterData<
-            RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                PreAuthenticate,
+                PaymentFlowData,
+                PaymentsPreAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let item = &value.router_data;
         // Extract card data from payment method
-        let card_data =
-            match item
-                .request
-                .payment_method_data
-                .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "payment_method_data",
-                })? {
-                PaymentMethodData::Card(card) => card,
-                payment_method_data => Err(errors::ConnectorError::NotSupported {
-                    message: format!("Payment method {payment_method_data:?} for 3DS"),
-                    connector: "Nexixpay",
-                })?,
-            };
+        let card_data = match item.request.payment_method_data.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "payment_method_data",
+            },
+        )? {
+            PaymentMethodData::Card(card) => card,
+            payment_method_data => Err(errors::ConnectorError::NotSupported {
+                message: format!("Payment method {payment_method_data:?} for 3DS"),
+                connector: "Nexixpay",
+            })?,
+        };
 
         // Build card data structure using utility function for expiry date
         let card = NexixpayCardData {
             pan: Secret::new(card_data.card_number.peek().to_string()),
-            expiry_date: card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+            expiry_date: card_data
+                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
             cvv: Some(card_data.card_cvc.clone()),
         };
 
@@ -1084,11 +1163,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|billing| {
                 billing.address.as_ref().map(|addr| {
                     // Convert CountryAlpha2 to Alpha-3
-                    let country = addr.country.map(common_enums::CountryAlpha2::from_alpha2_to_alpha3);
+                    let country = addr
+                        .country
+                        .map(common_enums::CountryAlpha2::from_alpha2_to_alpha3);
 
                     // Combine first_name and last_name for the name field
                     let name = match (&addr.first_name, &addr.last_name) {
-                        (Some(first), Some(last)) => Some(Secret::new(format!("{} {}", first.peek(), last.peek()))),
+                        (Some(first), Some(last)) => {
+                            Some(Secret::new(format!("{} {}", first.peek(), last.peek())))
+                        }
                         (Some(first), None) => Some(first.clone()),
                         (None, Some(last)) => Some(last.clone()),
                         (None, None) => None,
@@ -1096,7 +1179,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                     // Combine line1 and line2 for street
                     let street = match (&addr.line1, &addr.line2) {
-                        (Some(l1), Some(l2)) => Some(Secret::new(format!("{}, {}", l1.peek(), l2.peek()))),
+                        (Some(l1), Some(l2)) => {
+                            Some(Secret::new(format!("{}, {}", l1.peek(), l2.peek())))
+                        }
                         (Some(l1), None) => Some(l1.clone()),
                         (None, Some(l2)) => Some(l2.clone()),
                         (None, None) => None,
@@ -1118,15 +1203,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .address
             .get_payment_method_billing()
             .and_then(|billing| {
-                billing
-                    .address
-                    .as_ref()
-                    .and_then(|addr| match (&addr.first_name, &addr.last_name) {
-                        (Some(first), Some(last)) => Some(format!("{} {}", first.peek(), last.peek())),
+                billing.address.as_ref().and_then(|addr| {
+                    match (&addr.first_name, &addr.last_name) {
+                        (Some(first), Some(last)) => {
+                            Some(format!("{} {}", first.peek(), last.peek()))
+                        }
                         (Some(first), None) => Some(first.peek().to_string()),
                         (None, Some(last)) => Some(last.peek().to_string()),
                         (None, None) => None,
-                    })
+                    }
+                })
             })
             .unwrap_or_else(|| "Cardholder".to_string()); // Default fallback
 
@@ -1137,10 +1223,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Build order data
-        let currency = item
-            .request
-            .currency
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "currency" })?;
+        let currency =
+            item.request
+                .currency
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "currency",
+                })?;
 
         let order = NexixpayPreAuthOrder {
             order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
@@ -1156,7 +1244,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Following Hyperswitch pattern
         let recurrence = Some(match &item.request.mandate_reference {
             Some(MandateReferenceId::ConnectorMandateId(mandate_data)) => {
-                if let Some(contract_id) = mandate_data.get_connector_mandate_request_reference_id() {
+                if let Some(contract_id) = mandate_data.get_connector_mandate_request_reference_id()
+                {
                     NexixpayRecurrence {
                         action: NexixpayRecurringAction::ContractCreation,
                         contract_id: Some(Secret::new(contract_id)),
@@ -1210,11 +1299,18 @@ pub struct NexixpayPreAuthenticateResponse {
 
 // PreAuthenticate Response transformer
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthenticateResponse, Self>>
-    for RouterDataV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NexixpayPreAuthenticateResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexixpayPreAuthenticateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let operation = &response.operation;
 
@@ -1233,10 +1329,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthentica
         // CRITICAL FIX: Following exact Hyperswitch pattern with proper psync_flow initialization
         let connector_metadata = Some(serde_json::json!(NexixpayConnectorMetaData {
             authorization_operation_id: Some(operation.operation_id.clone()),
-            three_d_s_auth_result: None,   // Will be filled by PostAuthenticate
+            three_d_s_auth_result: None, // Will be filled by PostAuthenticate
             three_d_s_auth_response: None, // Will be filled by PostAuthenticate
-            capture_operation_id: None,    // Will be filled by Capture operation
-            cancel_operation_id: None,     // Will be filled by Void operation
+            capture_operation_id: None,  // Will be filled by Capture operation
+            cancel_operation_id: None,   // Will be filled by Void operation
             psync_flow: NexixpayPaymentIntent::Authorize, // CRITICAL: Must be present for later parsing
         }));
 
@@ -1262,11 +1358,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPreAuthentica
             // Field 3: transactionId - the operationId from NexiXPay
             form_fields.insert("transactionId".to_string(), operation.operation_id.clone());
 
-            Some(Box::new(domain_types::router_response_types::RedirectForm::Form {
-                endpoint: auth_url.clone(),
-                method: common_utils::request::Method::Post,
-                form_fields,
-            }))
+            Some(Box::new(
+                domain_types::router_response_types::RedirectForm::Form {
+                    endpoint: auth_url.clone(),
+                    method: common_utils::request::Method::Post,
+                    form_fields,
+                },
+            ))
         } else {
             None
         };
@@ -1313,7 +1411,12 @@ pub struct NexixpayRedirectPayload {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         NexixpayRouterData<
-            RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     > for NexixpayPostAuthenticateRequest
@@ -1322,19 +1425,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         value: NexixpayRouterData<
-            RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let item = &value.router_data;
         // Following Hyperswitch pattern: Parse JSON payload from redirect response
-        let redirect_response =
-            item.request
-                .redirect_response
-                .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "redirect_response",
-                })?;
+        let redirect_response = item.request.redirect_response.as_ref().ok_or(
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "redirect_response",
+            },
+        )?;
 
         // Extract JSON payload from redirect response
         let redirect_payload_value = redirect_response
@@ -1346,9 +1452,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .peek();
 
         // Parse the JSON payload into RedirectPayload struct
-        let redirect_payload: NexixpayRedirectPayload = serde_json::from_value(redirect_payload_value.clone())
-            .map_err(|_| errors::ConnectorError::MissingConnectorRedirectionPayload {
-                field_name: "redirection_payload",
+        let redirect_payload: NexixpayRedirectPayload =
+            serde_json::from_value(redirect_payload_value.clone()).map_err(|_| {
+                errors::ConnectorError::MissingConnectorRedirectionPayload {
+                    field_name: "redirection_payload",
+                }
             })?;
 
         // Extract operation_id from redirect payload (NexiXPay returns it as paymentId)
@@ -1411,11 +1519,18 @@ pub struct NexixpayThreeDSAuthResult {
 
 // PostAuthenticate Response transformer
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthenticateResponse, Self>>
-    for RouterDataV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for RouterDataV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: ResponseRouterData<NexixpayPostAuthenticateResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<NexixpayPostAuthenticateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let response = &item.response;
         let operation = &response.operation;
 

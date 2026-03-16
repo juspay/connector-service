@@ -13,8 +13,11 @@ pub enum WorldpayxmlAction {
     Sale,
     Cancel,
 }
-fn generate_soap_xml<T: Serialize>(request: &T) -> Result<String, error_stack::Report<ConnectorError>> {
-    let xml_body = quick_xml::se::to_string(request).change_context(ConnectorError::RequestEncodingFailed)?;
+fn generate_soap_xml<T: Serialize>(
+    request: &T,
+) -> Result<String, error_stack::Report<ConnectorError>> {
+    let xml_body =
+        quick_xml::se::to_string(request).change_context(ConnectorError::RequestEncodingFailed)?;
 
     Ok(format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n{}", xml_body))
 }
@@ -31,8 +34,9 @@ pub struct WorldpayxmlPaymentsRequest {
 
 impl GetSoapXml for WorldpayxmlPaymentsRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self)
-            .unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -110,7 +114,10 @@ pub struct WorldpayxmlDate {
 
 #[derive(Debug, Serialize)]
 pub struct WorldpayxmlShopper {
-    #[serde(rename = "shopperEmailAddress", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "shopperEmailAddress",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub shopper_email_address: Option<common_utils::Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub browser: Option<WorldpayxmlBrowser>,
@@ -180,8 +187,9 @@ pub struct WorldpayxmlCaptureRequest {
 
 impl GetSoapXml for WorldpayxmlCaptureRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self)
-            .unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -215,8 +223,9 @@ pub struct WorldpayxmlVoidRequest {
 
 impl GetSoapXml for WorldpayxmlVoidRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self)
-            .unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -250,8 +259,9 @@ pub struct WorldpayxmlRefundRequest {
 
 impl GetSoapXml for WorldpayxmlRefundRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self)
-            .unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
@@ -285,8 +295,9 @@ pub struct WorldpayxmlPSyncRequest {
 
 impl GetSoapXml for WorldpayxmlPSyncRequest {
     fn to_soap_xml(&self) -> String {
-        generate_soap_xml(self)
-            .unwrap_or_else(|_| String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>"))
+        generate_soap_xml(self).unwrap_or_else(|_| {
+            String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?><paymentService/>")
+        })
     }
 }
 
