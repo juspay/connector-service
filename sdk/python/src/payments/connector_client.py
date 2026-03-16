@@ -74,13 +74,12 @@ class ResponseError(Exception):
 
 
 
-def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
+def check_req(result_bytes: bytes) -> Any:
     """
     Parse FFI req_transformer bytes using FfiResult proto with enum-based type checking.
 
     Args:
         result_bytes: Raw bytes returned by the req_transformer FFI call.
-        success_cls: Protobuf message class for the expected success type.
 
     Returns:
         FfiConnectorHttpRequest on success (HTTP_REQUEST type).
@@ -107,13 +106,12 @@ def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
         raise ValueError(f"Unknown result type: {result_type}")
 
 
-def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
+def check_res(result_bytes: bytes) -> Any:
     """
     Parse FFI res_transformer bytes using FfiResult proto with enum-based type checking.
 
     Args:
         result_bytes: Raw bytes returned by the res_transformer FFI call.
-        success_cls: Protobuf message class for the expected success type.
 
     Returns:
         FfiConnectorHttpResponse on success (HTTP_RESPONSE type).
@@ -220,7 +218,7 @@ class _ConnectorClientBase:
         # 2. Build connector HTTP request via FFI
         #    Parse result bytes as FfiConnectorHttpRequest; if that fails, parse as RequestError.
         result_bytes = req_transformer(request_bytes, options_bytes)
-        connector_req = _check_req_error(result_bytes, FfiConnectorHttpRequest)
+        connector_req = check_req(result_bytes)
 
         connector_request = HttpRequest(
             url=connector_req.url,
@@ -248,7 +246,7 @@ class _ConnectorClientBase:
         # 5. Parse connector response via FFI
         #    Parse result bytes as response_cls; if that fails, parse as ResponseError.
         result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
-        return _check_res_error(result_bytes_res, response_cls)
+        return check_res(result_bytes_res)
 
 
     def _execute_direct(
@@ -287,7 +285,7 @@ class _ConnectorClientBase:
         result_bytes = transformer(request_bytes, options_bytes)
 
         # Parse result bytes as response_cls; if that fails, parse as ResponseError.
-        return _check_res_error(result_bytes, response_cls)
+        return check_res(result_bytes)
 
     async def close(self):
         """Close the underlying asynchronous connection pool."""

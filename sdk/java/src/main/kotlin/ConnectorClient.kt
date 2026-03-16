@@ -80,7 +80,7 @@ open class ConnectorClient(
      * @throws ResponseError if result type is RESPONSE_ERROR
      * @throws IllegalStateException if result type is unknown
      */
-    private fun checkReqError(resultBytes: ByteArray): FfiConnectorHttpRequest {
+    private fun checkReq(resultBytes: ByteArray): FfiConnectorHttpRequest {
         val result = types.SdkConfig.FfiResult.parseFrom(resultBytes)
         return when (result.getType()) {
             types.SdkConfig.FfiResult.Type.HTTP_REQUEST -> result.getHttpRequest()
@@ -99,7 +99,7 @@ open class ConnectorClient(
      * @throws RequestError if result type is REQUEST_ERROR
      * @throws IllegalStateException if result type is unknown
      */
-    private fun checkResError(resultBytes: ByteArray): FfiConnectorHttpResponse {
+    private fun checkRes(resultBytes: ByteArray): FfiConnectorHttpResponse {
         val result = types.SdkConfig.FfiResult.parseFrom(resultBytes)
         return when (result.getType()) {
             types.SdkConfig.FfiResult.Type.HTTP_RESPONSE -> result.getHttpResponse()
@@ -136,7 +136,7 @@ open class ConnectorClient(
 
         // 2. Build connector HTTP request via FFI
         val connectorRequestBytes = reqTransformer(requestBytes, optionsBytes)
-        val connectorRequest = checkReqError(connectorRequestBytes)
+        val connectorRequest = checkReq(connectorRequestBytes)
 
         val httpRequest = HttpRequest(
             url = connectorRequest.url,
@@ -162,7 +162,7 @@ open class ConnectorClient(
             requestBytes,
             optionsBytes,
         )
-        val httpResponse = checkResError(resultBytes)
+        val httpResponse = checkRes(resultBytes)
         return responseParser.parseFrom(httpResponse.body)
     }
 
@@ -189,7 +189,7 @@ open class ConnectorClient(
         val optionsBytes = ffiOptions.toByteArray()
 
         val resultBytes = transformer(requestBytes, optionsBytes)
-        val httpResponse = checkResError(resultBytes)
+        val httpResponse = checkRes(resultBytes)
         return responseParser.parseFrom(httpResponse.body)
     }
 }

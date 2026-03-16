@@ -213,7 +213,7 @@ mod uniffi_bindings_inner {
 
         let environment = Some(ffi_options.environment());
 
-        // Extract headers from domain_response before passing to handler
+        // Extract headers and status code from domain_response before passing to handler
         let response_headers: HashMap<String, String> = domain_response
             .headers
             .as_ref()
@@ -228,12 +228,14 @@ mod uniffi_bindings_inner {
             })
             .unwrap_or_default();
 
+        let response_status_code = u32::from(domain_response.status_code);
+
         match handler(request, domain_response, environment) {
             Ok(proto_response) => {
                 // Serialize the protobuf response and wrap it in FfiConnectorHttpResponse
                 let response_bytes = proto_response.encode_to_vec();
                 let http_response = FfiConnectorHttpResponse {
-                    status_code: 200,
+                    status_code: response_status_code,
                     headers: response_headers,
                     body: response_bytes,
                 };
