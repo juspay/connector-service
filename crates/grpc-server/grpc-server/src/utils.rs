@@ -4,27 +4,19 @@ pub use ucs_interface_common::config::*;
 pub use ucs_interface_common::flow::*;
 pub use ucs_interface_common::metadata::*;
 
+use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
     config_patch::Patch,
-    consts::{
-        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_CONNECTOR_AUTH, X_ENVIRONMENT,
-        X_KEY1, X_KEY2, X_SHADOW_MODE,
-    },
+    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
     events::{Event, EventStage, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
     superposition_config::{get_connector_urls, ConnectorUrls, SuperpositionConfig},
 };
 use domain_types::{
-    connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
-        IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        SubmitEvidence, Void, VoidPC,
-    },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     utils::ForeignTryFrom,
 };
 use error_stack::{Report, ResultExt};
@@ -32,7 +24,8 @@ use http::request::Request;
 use hyperswitch_masking;
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
-use ucs_env::{configs, error::ResultExtGrpc};
+use tonic::metadata;
+use ucs_env::{configs, configs::ConfigPatch, error::ResultExtGrpc};
 
 use crate::request::RequestData;
 
@@ -60,203 +53,6 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
         .map(|request_id| span.record("request_id", request_id));
 
     span
-}
-
-/// Struct to hold extracted metadata payload
-///
-/// SECURITY WARNING: This struct should only contain non-sensitive business metadata.
-/// For any sensitive data (API keys, tokens, credentials, etc.), always:
-/// 1. Wrap in hyperswitch_masking::Secret<T>
-/// 2. Extract via MaskedMetadata methods instead of adding here
-///
-#[derive(Clone, Debug)]
-pub struct MetadataPayload {
-    pub tenant_id: String,
-    pub request_id: String,
-    pub merchant_id: String,
-    pub connector: connector_types::ConnectorEnum,
-    pub lineage_ids: LineageIds<'static>,
-    pub connector_auth_type: ConnectorSpecificAuth,
-    pub reference_id: Option<String>,
-    pub shadow_mode: bool,
-    pub resource_id: Option<String>,
-    /// Environment dimension for superposition config resolution (e.g., "production", "sandbox")
-    pub environment: Option<String>,
-}
-
-pub fn get_metadata_payload(
-    metadata: &metadata::MetadataMap,
-    server_config: Arc<configs::Config>,
-) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
-    let connector = connector_from_metadata(metadata)?;
-    let merchant_id = merchant_id_from_metadata(metadata)?;
-    let tenant_id = tenant_id_from_metadata(metadata)?;
-    let request_id = request_id_from_metadata(metadata)?;
-    let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
-    let connector_auth_type = resolve_connector_auth(metadata, &connector)?;
-    let reference_id = reference_id_from_metadata(metadata)?;
-    let resource_id = resource_id_from_metadata(metadata)?;
-    let shadow_mode = shadow_mode_from_metadata(metadata);
-    let environment = environment_from_metadata(metadata);
-    Ok(MetadataPayload {
-        tenant_id,
-        request_id,
-        merchant_id,
-        connector,
-        lineage_ids,
-        connector_auth_type,
-        reference_id,
-        shadow_mode,
-        resource_id,
-        environment,
-    })
-}
-
-/// Extracts typed `ConnectorAuth` from the `X-Connector-Auth` header (JSON).
-///
-/// Returns `Ok(Some(...))` if header is present and valid,
-/// `Ok(None)` if header is absent (legitimate fallback case),
-/// `Err(...)` if header is present but malformed.
-fn extract_connector_auth_from_header(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<Option<grpc_api_types::payments::ConnectorAuth>, ApplicationErrorResponse> {
-    metadata
-        .get(X_CONNECTOR_AUTH)
-        .map(|value| {
-            value
-                .to_str()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CONNECTOR_AUTH_HEADER".to_string(),
-                    error_identifier: 400,
-                    error_message: "X-Connector-Auth header contains non-ASCII characters"
-                        .to_string(),
-                    error_object: None,
-                }))
-                .and_then(|header_str| {
-                    serde_json::from_str(header_str).change_context(
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_CONNECTOR_AUTH_JSON".to_string(),
-                            error_identifier: 400,
-                            error_message: "Failed to parse X-Connector-Auth header as JSON"
-                                .to_string(),
-                            error_object: None,
-                        }),
-                    )
-                })
-        })
-        .transpose()
-}
-
-/// Resolves connector auth by trying the typed `X-Connector-Auth` header first,
-/// then falling back to legacy `x-auth` / `x-api-key` / `x-key1` headers.
-fn resolve_connector_auth(
-    metadata: &metadata::MetadataMap,
-    connector: &connector_types::ConnectorEnum,
-) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
-    extract_connector_auth_from_header(metadata)?.map_or_else(
-        || {
-            logger::debug!(
-                "X-Connector-Auth header not found, falling back to legacy headers for connector: {}",
-                connector
-            );
-            auth_from_metadata(metadata, connector)
-        },
-        |typed_auth| {
-            logger::debug!(
-                "Connector specific auth found in X-Connector-Auth header for connector: {}",
-                connector
-            );
-            ConnectorSpecificAuth::foreign_try_from(typed_auth).map_err(|_| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "AUTH_CONVERSION_FAILED".to_string(),
-                    error_identifier: 400,
-                    error_message: "Failed to convert auth from X-Connector-Auth header".to_string(),
-                    error_object: None,
-                }))
-            })
-        },
-    )
-}
-
-pub fn connector_from_metadata(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_CONNECTOR_NAME).and_then(|inner| {
-        connector_types::ConnectorEnum::from_str(inner).map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CONNECTOR".to_string(),
-                error_identifier: 400,
-                error_message: format!("Invalid connector: {e}"),
-                error_object: None,
-            }))
-        })
-    })
-}
-
-pub fn merchant_id_from_metadata(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<String, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_MERCHANT_ID)
-        .map(|inner| inner.to_string())
-        .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_MERCHANT_ID".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing merchant ID in request metadata: {e}"),
-                error_object: None,
-            }))
-        })
-}
-
-pub fn request_id_from_metadata(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<String, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_REQUEST_ID)
-        .map(|inner| inner.to_string())
-        .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_REQUEST_ID".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing request ID in request metadata: {e}"),
-                error_object: None,
-            }))
-        })
-}
-
-pub fn tenant_id_from_metadata(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<String, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_TENANT_ID)
-        .map(|s| s.to_string())
-        .or_else(|_| Ok("DefaultTenantId".to_string()))
-}
-
-pub fn reference_id_from_metadata(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<Option<String>, ApplicationErrorResponse> {
-    parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
-}
-
-pub fn resource_id_from_metadata(
-    metadata: &metadata::MetadataMap,
-) -> CustomResult<Option<String>, ApplicationErrorResponse> {
-    parse_optional_metadata(metadata, consts::X_RESOURCE_ID).map(|s| s.map(|s| s.to_string()))
-}
-
-pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
-    parse_optional_metadata(metadata, X_SHADOW_MODE)
-        .ok()
-        .flatten()
-        .map(|value| value.to_lowercase() == "true")
-        .unwrap_or(false)
-}
-
-/// Extracts environment from the x-environment header for superposition config resolution.
-pub fn environment_from_metadata(metadata: &metadata::MetadataMap) -> Option<String> {
-    parse_optional_metadata(metadata, X_ENVIRONMENT)
-        .ok()
-        .flatten()
-        .map(|s| s.to_string())
 }
 
 /// Resolve connector URLs from superposition configuration.
@@ -319,9 +115,9 @@ pub fn resolve_connector_urls(
 pub fn auth_from_metadata(
     metadata: &metadata::MetadataMap,
     connector: &connector_types::ConnectorEnum,
-) -> CustomResult<ConnectorSpecificAuth, ApplicationErrorResponse> {
+) -> CustomResult<ConnectorSpecificConfig, ApplicationErrorResponse> {
     let generic_auth = generic_auth_from_metadata(metadata)?;
-    ConnectorSpecificAuth::foreign_try_from((&generic_auth, connector)).map_err(|_| {
+    ConnectorSpecificConfig::foreign_try_from((&generic_auth, connector)).map_err(|_| {
         Report::new(ApplicationErrorResponse::BadRequest(ApiError {
             sub_code: "AUTH_CONVERSION_FAILED".to_string(),
             error_identifier: 400,
@@ -479,54 +275,10 @@ pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
     }
 }
 
-fn parse_metadata<'a>(
-    metadata: &'a metadata::MetadataMap,
-    key: &str,
-) -> CustomResult<&'a str, ApplicationErrorResponse> {
-    metadata
-        .get(key)
-        .ok_or_else(|| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_METADATA".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing {key} in request metadata"),
-                error_object: None,
-            }))
-        })
-        .and_then(|value| {
-            value.to_str().map_err(|e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_METADATA".to_string(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid {key} in request metadata: {e}"),
-                    error_object: None,
-                }))
-            })
-        })
-}
-
-fn parse_optional_metadata<'a>(
-    metadata: &'a metadata::MetadataMap,
-    key: &str,
-) -> CustomResult<Option<&'a str>, ApplicationErrorResponse> {
-    metadata
-        .get(key)
-        .map(|value| value.to_str())
-        .transpose()
-        .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_METADATA".to_string(),
-                error_identifier: 400,
-                error_message: format!("Invalid {key} in request metadata: {e}"),
-                error_object: None,
-            }))
-        })
-}
-
 pub fn log_before_initialization<T>(
     request_data: &RequestData<T>,
     service_name: &str,
-) -> common_utils::errors::CustomResult<(), domain_types::errors::ApplicationErrorResponse>
+) -> CustomResult<(), ApplicationErrorResponse>
 where
     T: serde::Serialize,
 {
@@ -738,7 +490,6 @@ macro_rules! implement_connector_operation {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
             let config = request
                 .extensions
-                // .get::<std::sync::Arc<$crate::configs::Config>>()
                 .get::<std::sync::Arc<ucs_env::configs::Config>>()
                 .cloned()
                 .ok_or_else(|| tonic::Status::internal("Configuration not found in request extensions"))?;
@@ -755,12 +506,7 @@ macro_rules! implement_connector_operation {
                 extensions: _  // unused in macro
             } = request;
 
-            let (connector, request_id, connector_config) = (
-                metadata_payload.connector,
-                metadata_payload.request_id,
-                metadata_payload.connector_config,
-            );
-
+            let (connector, request_id, connector_config) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_config);
 
             // Get connector data
             let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
@@ -778,18 +524,24 @@ macro_rules! implement_connector_operation {
             let specific_request_data = $request_data_constructor(payload.clone())
                 .into_grpc_status()?;
 
-
             // Resolve connector URLs from superposition config if available
+            // Use header environment if provided, otherwise fall back to server's environment
+            let server_env = config.common.environment.to_string();
+            let effective_environment = metadata_payload.environment.as_deref()
+                .or(Some(server_env.as_str()));
+
             let connectors = if let Some(urls) = $crate::utils::resolve_connector_urls(
                 config.superposition_config.as_ref().map(|arc| arc.as_ref()),
                 &metadata_payload.connector,
-                metadata_payload.environment.as_deref(),
+                effective_environment,
             ) {
+                tracing::info!(concat!($log_prefix, "urls present from superposition"));
                 config.connectors.patch_connector_urls(
                     &metadata_payload.connector.to_string().to_lowercase(),
                     &urls,
                 )
             } else {
+                tracing::info!(concat!($log_prefix, "using static config"));
                 config.connectors.clone()
             };
 
@@ -860,6 +612,6 @@ macro_rules! implement_connector_operation {
             Ok(tonic::Response::new(final_response))
         }).await;
         result
-    }
-}
+        }
+    };
 }

@@ -29,12 +29,6 @@ exclude = [
   "examples/example-cli"
 ]
 
-
-[workspace.dependencies]
-superposition_core = { git = "https://github.com/juspay/superposition", branch = "main" }
-uuid = "^1.20.0"
-serde = "1.0.215"
-
 [profile.release]
 strip = true
 lto = "thin"
@@ -79,6 +73,8 @@ thiserror   = "1"
 tracing     = "0.1"
 bytes       = "1"
 tonic-prost = "0.14" 
+superposition_core = { git = "https://github.com/juspay/superposition", branch = "main" }
+uuid = "=1.20.0"
 
 
 [workspace.lints.rust]

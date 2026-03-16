@@ -101,6 +101,39 @@ pub fn connectors_with_connector_config_overrides(
     }
 }
 
+/// Apply connector-specific config overrides on top of an existing Connectors struct.
+/// This is useful when you want to apply overrides on a Connectors that has already been
+/// modified (e.g., with superposition URL resolution).
+pub fn connectors_with_connector_config_overrides_on_connectors(
+    connector_config: &ConnectorSpecificConfig,
+    base_connectors: Connectors,
+) -> CustomResult<Connectors, ApplicationErrorResponse> {
+    match connector_config.connector_config_override_patch() {
+        Some(config_override) => {
+            // Parse the override patch from JSON Value
+            let override_patch: ConfigPatch = serde_json::from_value(config_override.clone())
+                .map_err(|e| {
+                    Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+                        error_identifier: 400,
+                        error_message: format!("Cannot convert override config to JSON: {e}"),
+                        error_object: None,
+                    }))
+                })?;
+
+            // If there's a connectors patch, apply it
+            if let Some(connectors_patch) = override_patch.connectors {
+                let mut merged_connectors = base_connectors;
+                merged_connectors.apply(connectors_patch);
+                Ok(merged_connectors)
+            } else {
+                Ok(base_connectors)
+            }
+        }
+        None => Ok(base_connectors),
+    }
+}
+
 pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
     match (base_val, override_val) {
         (Value::Object(base_map), Value::Object(override_map)) => {

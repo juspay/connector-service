@@ -470,7 +470,6 @@ impl Connectors {
         urls: &common_utils::superposition_config::ConnectorUrls,
     ) -> Self {
         let mut patched = self.clone();
-        
         // Map connector names to their respective field in the Connectors struct
         // Note: connector_name is expected to be lowercase
         match connector_name {
@@ -522,6 +521,14 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
+            "revolut" => {
+                patched.revolut = self.revolut.patch_with_resolved_urls(
+                    urls.base_url.clone(),
+                    urls.dispute_base_url.clone(),
+                    urls.secondary_base_url.clone(),
+                    urls.third_base_url.clone(),
+                );
+            }
             "worldpay" => {
                 patched.worldpay = self.worldpay.patch_with_resolved_urls(
                     urls.base_url.clone(),
@@ -535,7 +542,10 @@ impl Connectors {
                 // We patch base_url and keep bank_redirects unchanged (no superposition support for it yet)
                 if urls.base_url.is_some() {
                     patched.trustpay = ConnectorParamsWithMoreUrls {
-                        base_url: urls.base_url.clone().unwrap_or_else(|| self.trustpay.base_url.clone()),
+                        base_url: urls
+                            .base_url
+                            .clone()
+                            .unwrap_or_else(|| self.trustpay.base_url.clone()),
                         base_url_bank_redirects: self.trustpay.base_url_bank_redirects.clone(),
                     };
                 }
@@ -550,7 +560,7 @@ impl Connectors {
                 );
             }
         }
-        
+
         patched
     }
 }

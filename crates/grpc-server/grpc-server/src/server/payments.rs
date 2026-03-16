@@ -703,18 +703,42 @@ impl Payments {
             PaymentsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let connectors =
-            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
-                |err| {
-                    tracing::error!("Failed to resolve connector overrides: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to resolve connector overrides".to_string()),
-                        Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
-                        None,
-                    )
-                },
-            )?;
+        // Resolve connector URLs from superposition config if available
+        // Use header environment if provided, otherwise fall back to server's environment
+        let server_env = config.common.environment.to_string();
+        let effective_environment = metadata_payload
+            .environment
+            .as_deref()
+            .or(Some(server_env.as_str()));
+
+        let base_connectors = if let Some(urls) = utils::resolve_connector_urls(
+            config.superposition_config.as_ref().map(|arc| arc.as_ref()),
+            &connector,
+            effective_environment,
+        ) {
+            tracing::info!("AUTHORIZE: Resolved connector URLs from superposition");
+            config
+                .connectors
+                .patch_connector_urls(&connector.to_string().to_lowercase(), &urls)
+        } else {
+            tracing::info!("AUTHORIZE: Using static config for connectors");
+            config.connectors.clone()
+        };
+
+        // Apply connector-specific config overrides from request on top of resolved URLs
+        let connectors = utils::connectors_with_connector_config_overrides_on_connectors(
+            &connector_config,
+            base_connectors,
+        )
+        .map_err(|err| {
+            tracing::error!("Failed to resolve connector overrides: {:?}", err);
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some("Failed to resolve connector overrides".to_string()),
+                Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
+                None,
+            )
+        })?;
 
         // Create common request data
         let payment_flow_data =
@@ -1564,11 +1588,35 @@ impl PaymentService for Payments {
                     let payments_sync_data =
                         PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
-                    let connectors = utils::connectors_with_connector_config_overrides(
-                        &metadata_payload.connector_config,
-                        &config,
-                    )
-                    .into_grpc_status()?;
+                    // Resolve connector URLs from superposition config if available
+                    // Use header environment if provided, otherwise fall back to server's environment
+                    let server_env = config.common.environment.to_string();
+                    let effective_environment = metadata_payload
+                        .environment
+                        .as_deref()
+                        .or(Some(server_env.as_str()));
+
+                    let base_connectors = if let Some(urls) = utils::resolve_connector_urls(
+                        config.superposition_config.as_ref().map(|arc| arc.as_ref()),
+                        &connector,
+                        effective_environment,
+                    ) {
+                        tracing::info!("PSYNC: Resolved connector URLs from superposition");
+                        config
+                            .connectors
+                            .patch_connector_urls(&connector.to_string().to_lowercase(), &urls)
+                    } else {
+                        tracing::info!("PSYNC: Using static config for connectors");
+                        config.connectors.clone()
+                    };
+
+                    // Apply connector-specific config overrides from request on top of resolved URLs
+                    let connectors =
+                        utils::connectors_with_connector_config_overrides_on_connectors(
+                            &metadata_payload.connector_config,
+                            base_connectors,
+                        )
+                        .into_grpc_status()?;
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((

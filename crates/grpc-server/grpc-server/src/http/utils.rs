@@ -1,14 +1,15 @@
 use axum::{
     extract::{FromRequest, Request},
-    http::{HeaderMap, StatusCode},
+    http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
-use tonic::metadata::MetadataMap;
+use tonic::metadata::{Ascii, MetadataMap, MetadataValue};
 
 use super::error::HttpError;
+use common_utils::consts;
 use ucs_env::configs::Config;
 
 /// Converts HTTP headers to gRPC metadata.
@@ -16,8 +17,69 @@ use ucs_env::configs::Config;
 pub fn http_headers_to_grpc_metadata(
     http_headers: &HeaderMap,
 ) -> Result<MetadataMap, Box<tonic::Status>> {
-    ucs_interface_common::headers::headers_to_metadata(http_headers)
-        .map_err(|e| Box::new(tonic::Status::from(e)))
+    let mut metadata = MetadataMap::new();
+
+    // Required headers - these must be present
+    let required_headers = [
+        consts::X_CONNECTOR_NAME,
+        consts::X_MERCHANT_ID,
+        consts::X_REQUEST_ID,
+        consts::X_TENANT_ID,
+    ];
+
+    // Optional headers - these may or may not be present
+    let optional_headers = [
+        consts::X_REFERENCE_ID,
+        consts::X_API_KEY,
+        consts::X_API_SECRET,
+        consts::X_KEY1,
+        consts::X_KEY2,
+        consts::X_AUTH_KEY_MAP,
+        consts::X_SHADOW_MODE,
+        consts::X_AUTH,
+        consts::X_CONNECTOR_CONFIG,
+        consts::X_ENVIRONMENT,
+    ];
+
+    // Process required headers - fail if missing
+    for header_name in required_headers {
+        let header_value = http_headers.get(header_name).ok_or_else(|| {
+            tonic::Status::invalid_argument(format!("Missing required header: {header_name}"))
+        })?;
+
+        let metadata_value = convert_header_to_metadata(header_name, header_value)?;
+        metadata.insert(header_name, metadata_value);
+    }
+
+    // Process optional headers - skip if missing
+    for header_name in optional_headers {
+        if let Some(header_value) = http_headers.get(header_name) {
+            let metadata_value = convert_header_to_metadata(header_name, header_value)?;
+            metadata.insert(header_name, metadata_value);
+        }
+    }
+
+    Ok(metadata)
+}
+
+fn convert_header_to_metadata(
+    header_name: &str,
+    header_value: &HeaderValue,
+) -> Result<MetadataValue<Ascii>, Box<tonic::Status>> {
+    header_value
+        .to_str()
+        .map_err(|e| {
+            Box::new(tonic::Status::invalid_argument(format!(
+                "Invalid header value for {header_name}: {e}"
+            )))
+        })
+        .and_then(|s| {
+            MetadataValue::try_from(s).map_err(|e| {
+                Box::new(tonic::Status::invalid_argument(format!(
+                    "Cannot convert header {header_name} to metadata: {e}"
+                )))
+            })
+        })
 }
 
 /// Transfers config from Axum Extension to gRPC request
