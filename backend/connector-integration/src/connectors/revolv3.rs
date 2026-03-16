@@ -124,7 +124,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         // If no webhook secret is provided, cannot verify
         let webhook_secret = match connector_webhook_secret {
@@ -189,7 +189,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
         let webhook_body: Revolv3WebhookBody = request
             .body
@@ -218,7 +218,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
         let webhook_data: Revolv3WebhookBody = request
@@ -256,7 +256,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let request_body_copy = request.body.clone();
         let webhook_data: Revolv3WebhookBody = request
