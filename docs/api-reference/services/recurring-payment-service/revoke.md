@@ -4,7 +4,7 @@
 ---
 title: Revoke
 description: Cancel an existing recurring payment mandate - stop future automatic charges on customer's stored consent for subscription cancellations
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -41,7 +41,7 @@ The `Revoke` RPC cancels an existing recurring payment mandate, stopping all fut
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_revoke_id` | Identifier | Yes | Your unique identifier for this revoke operation |
+| `merchant_revoke_id` | string | Yes | Your unique identifier for this revoke operation |
 | `mandate_id` | string | Yes | The mandate ID to revoke (your internal reference) |
 | `connector_mandate_id` | string | No | The connector's mandate ID (if different from mandate_id) |
 
@@ -54,7 +54,7 @@ The `Revoke` RPC cancels an existing recurring payment mandate, stopping all fut
 | `status_code` | uint32 | HTTP-style status code (200, 400, etc.) |
 | `response_headers` | map<string,string> | Connector-specific response headers |
 | `network_transaction_id` | string | Card network transaction reference |
-| `merchant_revoke_id` | Identifier | Your revoke reference (echoed back) |
+| `merchant_revoke_id` | string | Your revoke reference (echoed back) |
 | `raw_connector_response` | SecretString | Raw API response from connector (debugging) |
 | `raw_connector_request` | SecretString | Raw API request sent to connector (debugging) |
 
@@ -64,14 +64,14 @@ The `Revoke` RPC cancels an existing recurring payment mandate, stopping all fut
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_revoke_id": {"id": "revoke_001"},
+    "merchant_revoke_id": "revoke_001",
     "mandate_id": "mandate_sub_001",
     "connector_mandate_id": "seti_3Oxxx..."
   }' \
   localhost:8080 \
-  ucs.v2.RecurringPaymentService/Revoke
+  types.RecurringPaymentService/Revoke
 ```
 
 ### Response (Success)
@@ -80,9 +80,7 @@ grpcurl -H "x-connector: stripe" \
 {
   "status": "REVOKED",
   "status_code": 200,
-  "merchant_revoke_id": {
-    "id": "revoke_001"
-  },
+  "merchant_revoke_id": "revoke_001",
   "network_transaction_id": "txn_xxx..."
 }
 ```
@@ -93,9 +91,7 @@ grpcurl -H "x-connector: stripe" \
 {
   "status": "FAILED",
   "status_code": 404,
-  "merchant_revoke_id": {
-    "id": "revoke_001"
-  },
+  "merchant_revoke_id": "revoke_001",
   "error": {
     "code": "mandate_not_found",
     "message": "The mandate was not found or has already been revoked."

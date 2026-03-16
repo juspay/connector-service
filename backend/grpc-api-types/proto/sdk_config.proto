@@ -3,7 +3,8 @@
 //
 // Overview:
 //   Configuration options for the Connector SDK.
-//   - ConnectorConfig: Mandatory identity and environment setup.
+//   - ConnectorConfig: Connector-specific configuration with typed auth, base_url, and metadata.
+//   - SdkOptions: Environment and other SDK-level settings.
 //   - RequestConfig: Per-request overridable parameters.
 //   - FfiOptions: Internal context for UniFFI transformation engine.
 
@@ -32,17 +33,21 @@ enum Environment {
 // SDK Configuration (User-facing)
 // ============================================================
 
-// Immutable parameters for the ConnectorClient.
+// Typed per-connector configuration (auth + base_url + metadata).
+// The connector identity is inferred from which oneof variant is set.
 // Passed as the FIRST parameter during client creation.
 message ConnectorConfig {
-  // The connector to use for all requests (Immutable)
-  Connector connector = 1;
+  // Connector-specific configuration (auth credentials, base_url override, typed metadata)
+  ConnectorSpecificConfig connector_config = 1;
 
-  // Mandatory authentication for the connector (Immutable)
-  ConnectorAuth auth = 2;
+  // SDK-level options (environment, etc.)
+  SdkOptions options = 2;
+}
 
+// SDK-level options separate from connector-specific config.
+message SdkOptions {
   // Primary deployment environment (Immutable)
-  Environment environment = 3;
+  Environment environment = 1;
 }
 
 // Overridable parameters for individual SDK calls.
@@ -111,15 +116,13 @@ message VaultOptions {
 // ============================================================
 
 // Internal context passed across the FFI boundary to the UCS core.
+// The connector identity is inferred from which ConnectorSpecificConfig variant is set.
 message FfiOptions {
   // Resolved environment context
   Environment environment = 1;
 
-  // Resolved connector context
-  Connector connector = 2;
-
-  // Credentials needed to build auth headers/payloads
-  ConnectorAuth auth = 3;
+  // Typed per-connector configuration (replaces separate connector + auth fields)
+  ConnectorSpecificConfig connector_config = 2;
 }
 
 // ============================================================
@@ -154,4 +157,20 @@ message FfiConnectorHttpResponse {
   uint32 status_code = 1;
   map<string, string> headers = 2;
   bytes body = 3;
+}
+
+// Error returned by req_transformer FFI calls
+message RequestError {
+  PaymentStatus status = 1;
+  optional string error_message = 2;
+  optional string error_code = 3;
+  optional uint32 status_code = 4;
+}
+
+// Error returned by res_transformer FFI calls
+message ResponseError {
+  PaymentStatus status = 1;
+  optional string error_message = 2;
+  optional string error_code = 3;
+  optional uint32 status_code = 4;
 }

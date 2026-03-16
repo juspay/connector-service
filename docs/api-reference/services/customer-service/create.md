@@ -4,7 +4,7 @@
 ---
 title: Create
 description: Create customer record in the payment processor system for streamlined future payments
-created: 2026-03-05
+created: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -40,7 +40,7 @@ The `Create` RPC creates a customer record at the payment processor. This stores
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_customer_id` | Identifier | Yes | Your unique customer reference |
+| `merchant_customer_id` | string | Yes | Your unique customer reference |
 | `customer_name` | string | No | Full name of the customer |
 | `email` | SecretString | No | Email address of the customer |
 | `phone_number` | string | No | Phone number of the customer |
@@ -53,7 +53,7 @@ The `Create` RPC creates a customer record at the payment processor. This stores
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `merchant_customer_id` | Identifier | Your customer reference (echoed back) |
+| `merchant_customer_id` | string | Your customer reference (echoed back) |
 | `connector_customer_id` | string | Connector's customer ID (e.g., Stripe cus_xxx) |
 | `error` | ErrorInfo | Error details if creation failed |
 | `status_code` | uint32 | HTTP-style status code (200, 400, etc.) |
@@ -65,11 +65,11 @@ The `Create` RPC creates a customer record at the payment processor. This stores
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_customer_id": {"id": "cust_user_12345"},
+    "merchant_customer_id": "cust_user_12345",
     "customer_name": "John Doe",
-    "email": {"value": "john.doe@example.com"},
+    "email": "john.doe@example.com",
     "phone_number": "+1-555-123-4567",
     "address": {
       "billing_address": {
@@ -82,20 +82,18 @@ grpcurl -H "x-connector: stripe" \
         "country": "US"
       }
     },
-    "metadata": {"value": "{\"tier\": \"premium\"}"},
+    "metadata": "{\"tier\": \"premium\"}",
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.CustomerService/Create
+  types.CustomerService/Create
 ```
 
 ### Response
 
 ```json
 {
-  "merchant_customer_id": {
-    "id": "cust_user_12345"
-  },
+  "merchant_customer_id": "cust_user_12345",
   "connector_customer_id": "cus_9OhXXXXXXXXXXXX",
   "status_code": 200
 }

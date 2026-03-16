@@ -9,7 +9,7 @@ use domain_types::{
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -37,11 +37,11 @@ pub struct CashtocodePaymentsRequest {
 }
 
 fn get_mid(
-    connector_auth_type: &ConnectorSpecificAuth,
+    connector_config: &ConnectorSpecificConfig,
     payment_method_type: Option<common_enums::PaymentMethodType>,
     currency: common_enums::Currency,
 ) -> Result<Secret<String>, error_stack::Report<ConnectorError>> {
-    let cashtocode_auth = CashtocodeAuth::try_from((connector_auth_type, &currency))
+    let cashtocode_auth = CashtocodeAuth::try_from((connector_config, &currency))
         .attach_printable_lazy(|| {
             format!("failed to fetch cashtocode credentials for currency '{currency}'")
         })?;
@@ -88,7 +88,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
         let url = item.router_data.request.get_router_return_url()?;
         let mid = get_mid(
-            &item.router_data.connector_auth_type,
+            &item.router_data.connector_config,
             item.router_data.request.payment_method_type,
             item.router_data.request.currency,
         )?;
@@ -137,12 +137,12 @@ pub struct CashtocodeAuth {
     pub merchant_id_evoucher: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for CashtocodeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for CashtocodeAuthType {
     type Error = error_stack::Report<ConnectorError>; // Assuming ErrorStack is the appropriate error type
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Cashtocode { auth_key_map } => Ok(Self {
+            ConnectorSpecificConfig::Cashtocode { auth_key_map, .. } => Ok(Self {
                 auths: auth_key_map
                     .iter()
                     .map(|(currency, auth_value)| {
@@ -159,16 +159,16 @@ impl TryFrom<&ConnectorSpecificAuth> for CashtocodeAuthType {
     }
 }
 
-impl TryFrom<(&ConnectorSpecificAuth, &common_enums::Currency)> for CashtocodeAuth {
+impl TryFrom<(&ConnectorSpecificConfig, &common_enums::Currency)> for CashtocodeAuth {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        value: (&ConnectorSpecificAuth, &common_enums::Currency),
+        value: (&ConnectorSpecificConfig, &common_enums::Currency),
     ) -> Result<Self, Self::Error> {
         let (auth_type, currency) = value;
 
         match auth_type {
-            ConnectorSpecificAuth::Cashtocode { auth_key_map } => {
+            ConnectorSpecificConfig::Cashtocode { auth_key_map, .. } => {
                 let identity_auth_key =
                     auth_key_map
                         .get(currency)

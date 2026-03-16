@@ -3,7 +3,6 @@
 use common_utils::errors::ErrorSwitch;
 // use api_models::errors::types::{ Extra};
 use strum::Display;
-
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
@@ -85,6 +84,15 @@ impl ApplicationErrorResponse {
             sub_code: "MISSING_REQUIRED_FIELD".to_owned(),
             error_identifier: 400,
             error_message: format!("Missing required param: {field_name}"),
+            error_object: None,
+        })
+    }
+
+    pub fn empty_field_error(field_name: &str) -> Self {
+        Self::BadRequest(ApiError {
+            sub_code: format!("INVALID_{}", field_name.to_uppercase()),
+            error_identifier: 400,
+            error_message: format!("{} cannot be empty", field_name),
             error_object: None,
         })
     }
@@ -874,8 +882,8 @@ pub enum ConnectorError {
     FailedToObtainCertificateKey,
     #[error("Failed to verify source of the response")]
     SourceVerificationFailed,
-    #[error("Failed to decode message")]
-    DecodingFailed,
+    #[error("Failed to decode message: {0:?}")]
+    DecodingFailed(Option<String>),
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
@@ -901,6 +909,8 @@ pub enum ConnectorError {
     WebhooksNotImplemented,
     #[error("Failed to decode webhook event body")]
     WebhookBodyDecodingFailed,
+    #[error("Failed to decode webhook")]
+    WebhookDecodingFailed,
     #[error("Signature not found for incoming webhook")]
     WebhookSignatureNotFound,
     #[error("Failed to verify webhook source")]
@@ -946,7 +956,7 @@ pub enum ConnectorError {
         message: String,
         connector: &'static str,
     },
-    #[error("Invalid Configuration")]
+    #[error("Invalid Configuration: {config}")]
     InvalidConnectorConfig { config: &'static str },
     #[error("Failed to convert amount to required type")]
     AmountConversionFailed,
@@ -1066,3 +1076,50 @@ impl ErrorSwitch<ApiClientError> for HttpClientError {
         }
     }
 }
+
+// =============================================================================
+// Conversions: error_stack::Report → gRPC FFI error types
+// =============================================================================
+
+/// Trait for converting error_stack::Report to gRPC FFI error types.
+/// Needed because From<Report<T>> violates orphan rules when both From and Report are foreign.
+pub trait ReportInto<T> {
+    /// Convert the error report into the target type.
+    fn report_into(self) -> T;
+}
+
+macro_rules! impl_report_into {
+    ($source:ty, $extract:expr) => {
+        impl_report_into!(@impl $source, grpc_api_types::payments::RequestError, $extract);
+        impl_report_into!(@impl $source, grpc_api_types::payments::ResponseError, $extract);
+    };
+
+    (@impl $source:ty, $target:path, $extract:expr) => {
+        impl ReportInto<$target> for error_stack::Report<$source> {
+            fn report_into(self) -> $target {
+                let ctx = self.current_context();
+                // Print the error
+                eprintln!("Error: {:?}", ctx);
+                let (message, code, status_code) = $extract(ctx);
+                $target {
+                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                    error_message: message,
+                    error_code: code,
+                    status_code,
+                }
+            }
+        }
+    };
+}
+
+impl_report_into!(ConnectorError, |e: &ConnectorError| {
+    (Some(e.to_string()), None, Some(400))
+});
+impl_report_into!(ApplicationErrorResponse, |e: &ApplicationErrorResponse| {
+    let api_error = e.get_api_error();
+    (
+        Some(api_error.error_message.clone()),
+        Some(api_error.sub_code.clone()),
+        Some(api_error.error_identifier as u32),
+    )
+});

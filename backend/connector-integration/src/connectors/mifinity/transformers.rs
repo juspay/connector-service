@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -113,7 +113,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
             item.router_data
                 .resource_common_data
-                .connector_meta_data
+                .connector_feature_data
                 .clone(),
         )
         .change_context(ConnectorError::InvalidConnectorConfig {
@@ -263,11 +263,11 @@ pub struct MifinityAuthType {
     pub(super) key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for MifinityAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Mifinity { key } => Ok(Self {
+            ConnectorSpecificConfig::Mifinity { key, .. } => Ok(Self {
                 key: key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),

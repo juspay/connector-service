@@ -31,7 +31,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -294,7 +294,7 @@ macros::create_all_prerequisites!(
             let timestamp_ms = OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000;
             let client_request_id = Uuid::new_v4().to_string();
 
-            let auth_type_for_sig = transformers::FiservAuthType::try_from(&req.connector_auth_type)
+            let auth_type_for_sig = transformers::FiservAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             let signature = self.generate_authorization_signature(
@@ -313,7 +313,7 @@ macros::create_all_prerequisites!(
                 (headers::AUTHORIZATION.to_string(), signature.into_masked()),
             ];
 
-            let mut api_key_header = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key_header = self.get_auth_header(&req.connector_config)?;
             http_headers.append(&mut api_key_header);
 
             Ok(http_headers)
@@ -352,7 +352,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth: transformers::FiservAuthType = transformers::FiservAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

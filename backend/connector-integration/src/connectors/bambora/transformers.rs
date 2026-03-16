@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -32,14 +32,15 @@ impl BamboraAuthType {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for BamboraAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for BamboraAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Bambora {
+            ConnectorSpecificConfig::Bambora {
                 merchant_id,
                 api_key,
+                ..
             } => {
                 let auth_string = format!("{}:{}", merchant_id.peek(), api_key.peek());
                 let encoded = base64::Engine::encode(

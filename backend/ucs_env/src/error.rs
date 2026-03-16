@@ -135,7 +135,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::MissingConnectorMandateMetadata
             | Self::IntegrityCheckFailed { .. }
             | Self::SourceVerificationFailed
-            | Self::DecodingFailed
+            | Self::DecodingFailed(..)
             | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),
@@ -168,6 +168,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             }),
             Self::MissingApplePayTokenData
             | Self::WebhookBodyDecodingFailed
+            | Self::WebhookDecodingFailed
             | Self::WebhookSourceVerificationFailed
             | Self::WebhookVerificationSecretInvalid => {
                 ApplicationErrorResponse::BadRequest(ApiError {

@@ -1,0 +1,89 @@
+{
+  "connector": "volt",
+  "flows": {
+    "create_access_token": {
+      "default": {
+        "status": "supported",
+        "proto_request": {},
+        "sample": {
+          "url": "https://gateway.sandbox.volt.io/oauth",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"grant_type\":\"password\",\"client_id\":\"probe_id\",\"client_secret\":\"probe_secret\",\"username\":\"probe_user\",\"password\":\"probe_pass\"}"
+        }
+      }
+    },
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://gateway.sandbox.volt.io/payments/probe_connector_txn_001",
+          "method": "Get",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "x-volt-initiation-channel": "hosted",
+            "via": "HyperSwitch",
+            "idempotency-key": "6dc3879e-42ca-462b-97dc-45e8c64aa741",
+            "accept": "application/json",
+            "x-volt-api-version": "1"
+          },
+          "body": "null"
+        }
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api.sandbox.volt.io/payments/probe_connector_txn_001/request-refund",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "authorization": "Bearer probe_access_token",
+            "accept": "application/json",
+            "content-type": "application/json",
+            "x-volt-initiation-channel": "hosted",
+            "x-volt-api-version": "1",
+            "idempotency-key": "74338208-abb5-4e25-8618-87bd1fe810d0"
+          },
+          "body": "{\"amount\":1000,\"externalReference\":\"probe_refund_001\"}"
+        }
+      }
+    }
+  }
+}

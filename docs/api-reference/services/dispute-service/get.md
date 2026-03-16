@@ -4,7 +4,7 @@
 ---
 title: Get
 description: Retrieve dispute status and evidence submission state from the payment processor
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -41,7 +41,7 @@ The `Get` RPC retrieves the current status and details of a dispute from the pay
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_dispute_id` | Identifier | Yes | Your unique dispute reference |
+| `merchant_dispute_id` | string | Yes | Your unique dispute reference |
 | `dispute_id` | string | No | Connector's dispute identifier |
 | `connector_dispute_id` | string | Yes | Connector's dispute ID (alternative) |
 
@@ -50,7 +50,7 @@ The `Get` RPC retrieves the current status and details of a dispute from the pay
 | Field | Type | Description |
 |-------|------|-------------|
 | `connector_dispute_id` | string | Connector's unique dispute identifier |
-| `connector_transaction_id` | Identifier | Original transaction ID |
+| `connector_transaction_id` | string | Original transaction ID |
 | `dispute_status` | DisputeStatus | Current status: OPENED, EXPIRED, ACCEPTED, CHALLENGED, WON, LOST |
 | `dispute_stage` | DisputeStage | Current stage: PRE_DISPUTE, DISPUTE, PRE_ARBITRATION, ARBITRATION |
 | `connector_status_code` | string | Connector-specific status code |
@@ -72,13 +72,13 @@ The `Get` RPC retrieves the current status and details of a dispute from the pay
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_dispute_id": {"id": "dispute_001"},
+    "merchant_dispute_id": "dispute_001",
     "connector_dispute_id": "dp_1Oxxx..."
   }' \
   localhost:8080 \
-  ucs.v2.DisputeService/Get
+  types.DisputeService/Get
 ```
 
 ### Response
@@ -86,7 +86,7 @@ grpcurl -H "x-connector: stripe" \
 ```json
 {
   "connector_dispute_id": "dp_1Oxxx...",
-  "connector_transaction_id": {"id": "pi_3Oxxx..."},
+  "connector_transaction_id": "pi_3Oxxx...",
   "dispute_status": "OPENED",
   "dispute_stage": "DISPUTE",
   "dispute_amount": {

@@ -29,7 +29,7 @@ use domain_types::{
         BankRedirectData, BankTransferData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
@@ -49,13 +49,14 @@ pub struct TrustpayAuthType {
     pub(super) secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for TrustpayAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for TrustpayAuthType {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Trustpay {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Trustpay {
             api_key,
             project_id,
             secret_key,
+            ..
         } = auth_type
         {
             Ok(Self {
@@ -1561,7 +1562,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
-        let auth = TrustpayAuthType::try_from(&item.router_data.connector_auth_type)
+        let auth = TrustpayAuthType::try_from(&item.router_data.connector_config)
             .change_context(ConnectorError::FailedToObtainAuthType)?;
         match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => Ok(get_card_request_data(
@@ -1697,7 +1698,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(ConnectorError::AmountConversionFailed)?;
         match item.router_data.resource_common_data.payment_method {
             Some(enums::PaymentMethod::BankRedirect) => {
-                let auth = TrustpayAuthType::try_from(&item.router_data.connector_auth_type)
+                let auth = TrustpayAuthType::try_from(&item.router_data.connector_config)
                     .change_context(ConnectorError::FailedToObtainAuthType)?;
                 Ok(Self::BankRedirectRefund(Box::new(
                     TrustpayRefundRequestBankRedirect {

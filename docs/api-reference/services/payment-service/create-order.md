@@ -4,7 +4,7 @@
 ---
 title: CreateOrder
 description: Initialize an order in the payment processor system - sets up payment context before customer enters card details for improved authorization rates
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -42,7 +42,7 @@ The `CreateOrder` RPC initializes a payment order at the payment processor befor
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_order_id` | Identifier | Yes | Your unique identifier for this order |
+| `merchant_order_id` | string | Yes | Your unique identifier for this order |
 | `amount` | Money | Yes | The expected payment amount |
 | `webhook_url` | string | No | URL for webhook notifications |
 | `metadata` | SecretString | No | Additional metadata for the connector |
@@ -55,12 +55,12 @@ The `CreateOrder` RPC initializes a payment order at the payment processor befor
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_order_id` | Identifier | Identifier for the created order at the connector |
+| `connector_order_id` | string | Identifier for the created order at the connector |
 | `status` | PaymentStatus | Status of the order creation attempt |
 | `error` | ErrorInfo | Error details if order creation failed |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
 | `response_headers` | map<string, string> | Connector-specific response headers |
-| `merchant_order_id` | Identifier | Your order reference (echoed back) |
+| `merchant_order_id` | string | Your order reference (echoed back) |
 | `raw_connector_request` | SecretString | Raw API request sent to connector (debugging) |
 | `raw_connector_response` | SecretString | Raw API response from connector (debugging) |
 | `session_token` | SessionToken | JSON serialized session token for wallet payments |
@@ -71,9 +71,9 @@ The `CreateOrder` RPC initializes a payment order at the payment processor befor
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_order_id": {"id": "order_001"},
+    "merchant_order_id": "order_001",
     "amount": {
       "minor_amount": 1000,
       "currency": "USD"
@@ -82,21 +82,17 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/CreateOrder
+  types.PaymentService/CreateOrder
 ```
 
 ### Response
 
 ```json
 {
-  "connector_order_id": {
-    "id": "pi_3Oxxx..."
-  },
+  "connector_order_id": "pi_3Oxxx...",
   "status": "STARTED",
   "status_code": 200,
-  "merchant_order_id": {
-    "id": "order_001"
-  },
+  "merchant_order_id": "order_001",
   "session_token": {
     "client_secret": "pi_3Oxxx..._secret_xxx"
   }

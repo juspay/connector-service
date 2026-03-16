@@ -4,7 +4,7 @@
 ---
 title: Get Refund
 description: Retrieve refund status from the payment processor - track refund progress through processor settlement for accurate customer communication
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -41,8 +41,8 @@ The `Get` RPC retrieves the current status of a refund from the payment processo
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_refund_id` | Identifier | Yes | Your unique identifier for this refund |
-| `connector_transaction_id` | Identifier | Yes | The connector's transaction ID from the original payment |
+| `merchant_refund_id` | string | Yes | Your unique identifier for this refund |
+| `connector_transaction_id` | string | Yes | The connector's transaction ID from the original payment |
 | `refund_id` | string | Yes | The connector's refund ID (e.g., Stripe re_xxx) |
 | `refund_reason` | string | No | Reason for the refund (for context) |
 | `browser_info` | BrowserInformation | No | Browser information if relevant |
@@ -56,7 +56,7 @@ The `Get` RPC retrieves the current status of a refund from the payment processo
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `merchant_refund_id` | Identifier | Your refund reference (echoed back) |
+| `merchant_refund_id` | string | Your refund reference (echoed back) |
 | `connector_refund_id` | string | Connector's ID for the refund |
 | `status` | RefundStatus | Current status: PENDING, SUCCEEDED, FAILED |
 | `error` | ErrorInfo | Error details if refund failed |
@@ -75,24 +75,22 @@ The `Get` RPC retrieves the current status of a refund from the payment processo
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_refund_id": {"id": "refund_001"},
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "merchant_refund_id": "refund_001",
+    "connector_transaction_id": "pi_3Oxxx...",
     "refund_id": "re_3Oxxx...",
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.RefundService/Get
+  types.RefundService/Get
 ```
 
 ### Response
 
 ```json
 {
-  "merchant_refund_id": {
-    "id": "refund_001"
-  },
+  "merchant_refund_id": "refund_001",
   "connector_refund_id": "re_3Oxxx...",
   "status": "SUCCEEDED",
   "status_code": 200,

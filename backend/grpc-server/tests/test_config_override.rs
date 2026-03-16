@@ -8,9 +8,9 @@
 
 use cards::CardNumber;
 use grpc_api_types::payments::{
-    identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
-    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, Currency, Identifier,
-    PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentStatus,
+    payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+    BrowserInformation, CaptureMethod, CardDetails, Currency, PaymentAddress, PaymentMethod,
+    PaymentServiceAuthorizeRequest, PaymentStatus,
 };
 use grpc_server::app;
 use hyperswitch_masking::Secret;
@@ -71,9 +71,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
                 java_enabled: Some(false),
                 ..Default::default()
             }),
-            merchant_transaction_id: Some(Identifier {
-                id_type: Some(IdType::Id("payment_9089".to_string())),
-            }),
+            merchant_transaction_id: Some("payment_9089".to_string()),
             return_url: Some("www.google.com".to_string()),
             ..Default::default()
         });
@@ -355,24 +353,75 @@ mod unit {
     fn test_connectors_override() {
         let override_json = json!({
             "connectors": {
-                "razorpay": {
-                    "base_url": "https://razorpay.example",
-                    "dispute_base_url": "https://dispute.razorpay.example"
+                "adyen": {
+                    "base_url": "https://adyen.example",
+                    "dispute_base_url": "https://dispute.adyen.example"
+                },
+                "billwerk": {
+                    "secondary_base_url": "https://billwerk-secondary.example"
+                },
+                "fiuu": {
+                    "secondary_base_url": "https://fiuu-secondary.example"
+                },
+                "hipay": {
+                    "base_url": "https://hipay.example",
+                    "secondary_base_url": "https://hipay-secondary.example",
+                    "third_base_url": "https://hipay-third.example"
+                },
+                "jpmorgan": {
+                    "secondary_base_url": "https://jpmorgan-secondary.example"
+                },
+                "mollie": {
+                    "secondary_base_url": "https://mollie-secondary.example"
                 },
                 "trustpay": {
                     "base_url": "https://trustpay.example",
                     "base_url_bank_redirects": "https://trustpay-bank.example"
+                },
+                "volt": {
+                    "secondary_base_url": "https://volt-secondary.example"
+                },
+                "worldpayvantiv": {
+                    "secondary_base_url": "https://worldpayvantiv-secondary.example"
                 }
             },
         });
         let new_config = apply_override(override_json);
         assert_eq!(
-            new_config.connectors.razorpay.base_url.as_str(),
-            "https://razorpay.example"
+            new_config.connectors.adyen.base_url.as_str(),
+            "https://adyen.example"
         );
         assert_eq!(
-            new_config.connectors.razorpay.dispute_base_url.as_deref(),
-            Some("https://dispute.razorpay.example")
+            new_config.connectors.adyen.dispute_base_url.as_deref(),
+            Some("https://dispute.adyen.example")
+        );
+        assert_eq!(
+            new_config.connectors.billwerk.secondary_base_url.as_deref(),
+            Some("https://billwerk-secondary.example")
+        );
+        assert_eq!(
+            new_config.connectors.fiuu.secondary_base_url.as_deref(),
+            Some("https://fiuu-secondary.example")
+        );
+        assert_eq!(
+            new_config.connectors.hipay.base_url.as_str(),
+            "https://hipay.example"
+        );
+        assert_eq!(
+            new_config.connectors.hipay.secondary_base_url.as_deref(),
+            Some("https://hipay-secondary.example")
+        );
+        assert_eq!(
+            new_config.connectors.hipay.third_base_url.as_deref(),
+            Some("https://hipay-third.example")
+        );
+        assert_eq!(
+            new_config.connectors.jpmorgan.secondary_base_url.as_deref(),
+            Some("https://jpmorgan-secondary.example")
+        );
+        assert_eq!(
+            new_config.connectors.mollie.secondary_base_url.as_deref(),
+            Some("https://mollie-secondary.example")
         );
         assert_eq!(
             new_config.connectors.trustpay.base_url.as_str(),
@@ -385,6 +434,18 @@ mod unit {
                 .base_url_bank_redirects
                 .as_str(),
             "https://trustpay-bank.example"
+        );
+        assert_eq!(
+            new_config.connectors.volt.secondary_base_url.as_deref(),
+            Some("https://volt-secondary.example")
+        );
+        assert_eq!(
+            new_config
+                .connectors
+                .worldpayvantiv
+                .secondary_base_url
+                .as_deref(),
+            Some("https://worldpayvantiv-secondary.example")
         );
     }
 

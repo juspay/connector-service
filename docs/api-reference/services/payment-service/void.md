@@ -4,7 +4,7 @@
 ---
 title: Void
 description: Cancel an authorized payment before capture - release held funds back to customer
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -41,8 +41,8 @@ The `Void` RPC cancels an authorized payment before it has been captured. This r
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_void_id` | Identifier | Yes | Your unique identifier for this void operation |
-| `connector_transaction_id` | Identifier | Yes | The connector's transaction ID from the original authorization |
+| `merchant_void_id` | string | Yes | Your unique identifier for this void operation |
+| `connector_transaction_id` | string | Yes | The connector's transaction ID from the original authorization |
 | `cancellation_reason` | string | No | Reason for canceling the authorization |
 | `all_keys_required` | bool | No | Whether all key fields must match for void to succeed |
 | `browser_info` | BrowserInformation | No | Browser details for 3DS verification |
@@ -57,12 +57,12 @@ The `Void` RPC cancels an authorized payment before it has been captured. This r
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_transaction_id` | Identifier | Connector's transaction ID |
+| `connector_transaction_id` | string | Connector's transaction ID |
 | `status` | PaymentStatus | Current status. Values: VOIDED, VOID_INITIATED, VOID_FAILED |
 | `error` | ErrorInfo | Error details if status is VOID_FAILED |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
 | `response_headers` | map<string, string> | Connector-specific response headers |
-| `merchant_transaction_id` | Identifier | Your transaction reference (echoed back) |
+| `merchant_transaction_id` | string | Your transaction reference (echoed back) |
 | `state` | ConnectorState | State to pass to next request in multi-step flow |
 | `raw_connector_request` | SecretString | Raw API request sent to connector (debugging) |
 | `mandate_reference` | MandateReference | Mandate details if recurring payment |
@@ -75,25 +75,23 @@ The `Void` RPC cancels an authorized payment before it has been captured. This r
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_void_id": {"id": "void_001"},
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "merchant_void_id": "void_001",
+    "connector_transaction_id": "pi_3Oxxx...",
     "cancellation_reason": "Customer requested cancellation",
     "merchant_order_id": "order-001",
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/Void
+  types.PaymentService/Void
 ```
 
 ### Response
 
 ```json
 {
-  "connector_transaction_id": {
-    "id": "pi_3Oxxx..."
-  },
+  "connector_transaction_id": "pi_3Oxxx...",
   "status": "VOIDED",
   "status_code": 200
 }

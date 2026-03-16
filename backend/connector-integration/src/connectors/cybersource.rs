@@ -297,7 +297,7 @@ macros::create_all_prerequisites!(
         {
         let date = OffsetDateTime::now_utc();
         let cybersource_req = self.get_request_body(req)?;
-        let auth = cybersource::CybersourceAuthType::try_from(&req.connector_auth_type)?;
+        let auth = cybersource::CybersourceAuthType::try_from(&req.connector_config)?;
         let merchant_account = auth.merchant_account.clone();
         let base_url = self.base_url(req.resource_common_data.connectors());
         let cybersource_host =
@@ -383,7 +383,7 @@ macros::create_all_prerequisites!(
             let cybersource::CybersourceAuthType {
             api_key,
             merchant_account,
-            api_secret,
+            api_secret, ..
         } = auth;
         let is_post_method = matches!(http_method, Method::Post);
         let is_patch_method = matches!(http_method, Method::Patch);

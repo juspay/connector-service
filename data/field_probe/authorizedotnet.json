@@ -1,0 +1,335 @@
+{
+  "connector": "authorizedotnet",
+  "flows": {
+    "authorize": {
+      "Ach": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ach": {
+              "account_number": "000123456789",
+              "routing_number": "110000000",
+              "bank_account_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "shipping_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            },
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "webhook_url": "https://example.com/webhook",
+          "complete_authorize_url": "https://example.com/complete",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://apitest.authorize.net/xml/v1/request.api",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_txn_001\",\"transactionRequest\":{\"transactionType\":\"authCaptureTransaction\",\"amount\":10.0,\"currencyCode\":\"USD\",\"payment\":{\"bankAccount\":{\"accountType\":\"checking\",\"routingNumber\":\"110000000\",\"accountNumber\":\"000123456789\",\"nameOnAccount\":\"John Doe\"}},\"order\":{\"invoiceNumber\":\"1eVUl9ATAeIipTbfbqIX\",\"description\":\"probe_txn_001\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}}}}"
+        }
+      },
+      "Affirm": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "Afterpay": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "ApplePay": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "Blik": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "Card": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "shipping_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            },
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "webhook_url": "https://example.com/webhook",
+          "complete_authorize_url": "https://example.com/complete",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://apitest.authorize.net/xml/v1/request.api",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_txn_001\",\"transactionRequest\":{\"transactionType\":\"authCaptureTransaction\",\"amount\":10.0,\"currencyCode\":\"USD\",\"payment\":{\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"2030-03\",\"cardCode\":\"737\"}},\"order\":{\"invoiceNumber\":\"N7FLuujWaJ5QQL5gAdkU\",\"description\":\"probe_txn_001\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"zip\":\"98101\",\"country\":\"US\"}}}}"
+        }
+      },
+      "GooglePay": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "Ideal": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "Klarna": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "PaypalRedirect": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      },
+      "UpiCollect": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_capture_id": "probe_capture_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount_to_capture": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://apitest.authorize.net/xml/v1/request.api",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"transactionRequest\":{\"transactionType\":\"priorAuthCaptureTransaction\",\"amount\":10.0,\"refTransId\":\"probe_connector_txn_001\"}}}"
+        }
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "customer_name": "John Doe",
+          "email": "test@example.com",
+          "phone_number": "4155552671",
+          "address": {
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://apitest.authorize.net/xml/v1/request.api",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"createCustomerProfileRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"profile\":{\"email\":\"test@example.com\"}}}"
+        }
+      }
+    },
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://apitest.authorize.net/xml/v1/request.api",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"getTransactionDetailsRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"transId\":\"probe_connector_txn_001\"}}"
+        }
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "error",
+        "required_fields": [
+          "valid mandate_id format"
+        ],
+        "error": "Stuck on field: valid mandate_id format — Integration error: Missing required field: valid mandate_id format (should contain '-')"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request"
+        },
+        "sample": {
+          "url": "https://apitest.authorize.net/xml/v1/request.api",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"transactionRequest\":{\"transactionType\":\"refundTransaction\",\"amount\":10.0,\"currencyCode\":\"USD\",\"payment\":{\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"2025-12\"}},\"refTransId\":\"probe_connector_txn_001\"}}}"
+        }
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "error",
+        "required_fields": [
+          "connector_customer_id is missing"
+        ],
+        "error": "Stuck on field: connector_customer_id is missing — Integration error: Missing required field: connector_customer_id is missing"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_void_id": "probe_void_001",
+          "connector_transaction_id": "probe_connector_txn_001"
+        },
+        "sample": {
+          "url": "https://apitest.authorize.net/xml/v1/request.api",
+          "method": "Post",
+          "headers": {
+            "via": "HyperSwitch",
+            "content-type": "application/json"
+          },
+          "body": "{\"createTransactionRequest\":{\"merchantAuthentication\":{\"name\":\"probe_user\",\"transactionKey\":\"probe_key\"},\"refId\":\"probe_void_001\",\"transactionRequest\":{\"transactionType\":\"voidTransaction\",\"refTransId\":\"probe_connector_txn_001\"}}}"
+        }
+      }
+    }
+  }
+}
