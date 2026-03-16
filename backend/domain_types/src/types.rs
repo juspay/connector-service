@@ -228,7 +228,7 @@ impl ForeignTryFrom<(Secret<String>, &'static str)> for SecretSerdeValue {
     }
 }
 
-// For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
+// For decoding connector feature data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -267,7 +267,7 @@ use crate::{
     },
     router_data::{
         self, AdditionalPaymentMethodConnectorResponse, ConnectorResponseData,
-        ConnectorSpecificAuth, RecurringMandatePaymentData,
+        ConnectorSpecificConfig, RecurringMandatePaymentData,
     },
     router_data_v2::RouterDataV2,
     router_request_types,
@@ -2481,17 +2481,16 @@ impl<
         };
         let merchant_config_currency = common_enums::Currency::foreign_try_from(amount.currency())?;
 
-        // Store feature_data for connector use
-        let merchant_account_metadata = value
+        let connector_feature_data = value
             .clone()
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
             .transpose()?;
-        let merchant_account_id = merchant_account_metadata
+        let merchant_account_id = connector_feature_data
             .as_ref()
-            .and_then(|m: &Secret<serde_json::Value>| m.peek().get("merchant_account_id"))
+            .and_then(|m: &SecretSerdeValue| m.peek().get("merchant_account_id"))
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+            .map(str::to_string);
 
         let setup_future_usage = match value.setup_future_usage() {
             grpc_payment_types::FutureUsage::Unspecified => None,
@@ -2645,7 +2644,7 @@ impl<
                 .map(MandateData::foreign_try_from)
                 .transpose()?,
             request_extended_authorization: value.request_extended_authorization,
-            merchant_account_metadata,
+            connector_feature_data,
             connector_testing_data,
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
@@ -3111,8 +3110,7 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        // Extract connector_meta_data from feature_data
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
             .transpose()?;
@@ -3132,7 +3130,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -3202,7 +3200,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
 
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
             .transpose()?;
@@ -3257,14 +3255,16 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                 .and_then(|customer| customer.connector_customer_id),
             description: value.description,
             return_url: value.return_url.clone(),
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
             access_token,
             session_token: None,
             reference_id: value.merchant_order_id.clone(),
-            payment_method_token: None,
+            payment_method_token: value
+                .payment_method_token
+                .map(router_data::PaymentMethodToken::Token),
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -3350,7 +3350,7 @@ impl
             connector_customer: value.connector_customer_id,
             description: value.description,
             return_url: None,
-            connector_meta_data: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
                 .transpose()?,
@@ -3428,7 +3428,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
@@ -3481,7 +3481,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -3501,7 +3501,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -4457,7 +4457,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             )?),
         };
 
-        let connector_metadata = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
             .transpose()?;
@@ -4466,7 +4466,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             connector_transaction_id,
             encoded_data: value.encoded_data,
             capture_method,
-            connector_metadata,
+            connector_feature_data,
             sync_type,
             mandate_id: None,
             payment_method_type: None,
@@ -5128,7 +5128,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
                 .transpose()?,
@@ -5159,7 +5159,7 @@ impl
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -5192,7 +5192,7 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
-            connector_meta_data,
+            connector_feature_data,
             test_mode: value.test_mode,
             payment_method,
         })
@@ -5222,7 +5222,7 @@ impl
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
 
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -5252,7 +5252,7 @@ impl
             raw_connector_request: None,
             connector_response_headers: None,
             access_token,
-            connector_meta_data,
+            connector_feature_data,
             test_mode: value.test_mode,
             payment_method,
         })
@@ -5876,7 +5876,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
             integrity_object: None,
             amount,
             currency,
-            connector_metadata: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
@@ -5948,7 +5948,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_feature_data: None,
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
@@ -5986,7 +5986,7 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
         let connector_transaction_id =
             ResponseId::ConnectorTransactionId(value.connector_transaction_id.clone());
 
-        let connector_metadata = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|metadata| serde_json::from_str(&metadata.expose()))
             .transpose()
@@ -6009,7 +6009,7 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
         Ok(Self {
             minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
             connector_transaction_id,
-            connector_metadata,
+            connector_feature_data,
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             reason: value.reason,
         })
@@ -6058,7 +6058,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: None,
+            connector_feature_data: None,
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
@@ -6219,7 +6219,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
             refund_amount: refund_amount.minor_amount,
-            connector_metadata: value
+            connector_feature_data: value
                 .connector_feature_data
                 .clone()
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
@@ -6246,10 +6246,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                 .transpose()?,
             integrity_object: None,
             split_refunds: None,
-            merchant_account_metadata: value
-                .connector_feature_data
-                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
-                .transpose()?,
         })
     }
 }
@@ -6602,7 +6598,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 .transpose()?,
             integrity_object: None,
             capture_method,
-            connector_metadata: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "connector metadata")))
                 .transpose()?,
@@ -6634,7 +6630,7 @@ impl
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::foreign_try_from)
             .transpose()?;
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
             .transpose()?;
@@ -6651,7 +6647,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -6709,7 +6705,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|metadata| serde_json::from_str(&metadata.expose()))
                 .transpose()
@@ -7029,8 +7025,7 @@ impl
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        // Extract connector_meta_data from merchant_account_metadata
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -7062,7 +7057,7 @@ impl
                 .and_then(|customer| customer.connector_customer_id),
             description,
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -7136,7 +7131,7 @@ impl
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -7167,7 +7162,7 @@ impl
                 .and_then(|customer| customer.connector_customer_id),
             description,
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8174,8 +8169,7 @@ impl
             Some(false), // should_unify_address
         );
 
-        // Create connector metadata from the metadata field if present
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -8203,7 +8197,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8535,11 +8529,11 @@ impl ForeignTryFrom<grpc_api_types::payments::MerchantAuthenticationServiceCreat
 }
 
 // Generic implementation for access token request from connector auth
-impl ForeignTryFrom<&ConnectorSpecificAuth> for AccessTokenRequestData {
+impl ForeignTryFrom<&ConnectorSpecificConfig> for AccessTokenRequestData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        _auth_type: &ConnectorSpecificAuth,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // Default to client_credentials grant type for OAuth
         // Connectors can override this with their own specific implementations
@@ -8615,7 +8609,7 @@ impl<T: PaymentMethodDataTypes> From<&PaymentsAuthorizeData<T>>
             setup_mandate_details: data.setup_mandate_details.clone(),
             mandate_id: data.mandate_id.clone(),
             integrity_object: None,
-            merchant_account_metadata: data.merchant_account_metadata.clone(),
+            connector_feature_data: data.connector_feature_data.clone(),
         }
     }
 }
@@ -8679,8 +8673,7 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        // Extract connector_meta_data from merchant_account_metadata
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "feature_data")))
             .transpose()?;
@@ -8700,7 +8693,7 @@ impl
             connector_customer: None,
             description: None,
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -8815,7 +8808,7 @@ impl<
             setup_mandate_details: None,
             integrity_object: None,
             split_payments: None,
-            merchant_account_metadata: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
@@ -8879,7 +8872,7 @@ impl
             connector_customer: value.customer.unwrap().id,
             description: None,
             return_url: value.return_url,
-            connector_meta_data: None,
+            connector_feature_data: None,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -9008,8 +9001,7 @@ impl
             .transpose()?
             .unwrap_or_else(PaymentAddress::default);
 
-        // Extract connector_meta_data from merchant_account_metadata
-        let connector_meta_data = value
+        let connector_feature_data = value
             .connector_feature_data
             .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
             .transpose()?;
@@ -9027,7 +9019,7 @@ impl
             connector_customer: None,
             description: None, // description field not available in this proto
             return_url: None,
-            connector_meta_data,
+            connector_feature_data,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -9249,7 +9241,7 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type,
-            merchant_account_metadata: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
@@ -10466,9 +10458,9 @@ impl
             connector_customer: None,
             description: value.description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
-                .metadata
-                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            connector_feature_data: value
+                .connector_feature_data
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
@@ -10555,9 +10547,9 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
-                .metadata
-                .map(|m| ForeignTryFrom::foreign_try_from((m, "merchant account metadata")))
+            connector_feature_data: value
+                .connector_feature_data
+                .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
             amount_captured: None,
             minor_amount_captured: None,
@@ -10651,7 +10643,7 @@ impl
             connector_customer: None,
             description,
             return_url: value.return_url.clone(),
-            connector_meta_data: value
+            connector_feature_data: value
                 .connector_feature_data
                 .map(|m| ForeignTryFrom::foreign_try_from((m, "feature data")))
                 .transpose()?,
@@ -10729,7 +10721,7 @@ impl
             connector_customer: None,
             description: Some("Mandate revoke operation".to_string()),
             return_url: None,
-            connector_meta_data: None,
+            connector_feature_data: None,
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,

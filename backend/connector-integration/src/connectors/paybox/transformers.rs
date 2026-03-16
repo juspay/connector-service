@@ -14,7 +14,7 @@ use domain_types::{
     connector_types::*,
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -46,16 +46,17 @@ pub struct PayboxAuthType {
     pub merchant_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PayboxAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PayboxAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paybox {
+            ConnectorSpecificConfig::Paybox {
                 site,
                 rank,
                 key,
                 merchant_id,
+                ..
             } => Ok(Self {
                 site: site.to_owned(),
                 rank: rank.to_owned(),
@@ -217,7 +218,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let router_data = item.router_data;
         let connector = item.connector;
 
-        let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)
+        let auth = PayboxAuthType::try_from(&router_data.connector_config)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         let amount = connector
@@ -400,7 +401,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)
+        let auth = PayboxAuthType::try_from(&router_data.connector_config)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         let numappel = match &router_data.request.connector_transaction_id {
@@ -411,7 +412,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Try reading from multiple sources in order of preference
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .as_ref()
             .and_then(|meta| utils::to_connector_meta_from_secret(Some(meta.clone())).ok())
             .map(|meta: PayboxMeta| meta.connector_request_id)
@@ -535,7 +536,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
-        let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)
+        let auth = PayboxAuthType::try_from(&router_data.connector_config)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         let numappel = match &router_data.request.connector_transaction_id {
@@ -546,7 +547,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Try reading from multiple sources in order of preference
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .as_ref()
             .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.peek().clone()).ok())
             .map(|meta| meta.connector_request_id)
@@ -681,7 +682,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
-        let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)
+        let auth = PayboxAuthType::try_from(&router_data.connector_config)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         let numappel = router_data.request.connector_transaction_id.clone();
@@ -690,7 +691,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Note: connector_metadata in request may contain merchant custom data
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .clone()
             .and_then(|meta| utils::to_connector_meta_from_secret::<PayboxMeta>(Some(meta)).ok())
             .map(|meta| meta.connector_request_id)
@@ -835,14 +836,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let connector = item.connector;
-        let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)
+        let auth = PayboxAuthType::try_from(&router_data.connector_config)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         let numappel = router_data.request.connector_transaction_id.clone();
 
         let numtrans = router_data
             .request
-            .connector_metadata
+            .connector_feature_data
             .expose_option()
             .as_ref()
             .and_then(|meta| serde_json::from_value::<PayboxMeta>(meta.clone()).ok())
@@ -957,7 +958,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PayboxAuthType::try_from(&router_data.connector_auth_type)
+        let auth = PayboxAuthType::try_from(&router_data.connector_config)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         let connector_refund_id = router_data.request.connector_refund_id.clone();

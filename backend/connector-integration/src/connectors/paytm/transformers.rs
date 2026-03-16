@@ -19,7 +19,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, UpiData},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
@@ -113,16 +113,17 @@ pub struct PaytmAuthType {
     pub client_id: Option<Secret<String>>, // Unique key for each merchant
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PaytmAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PaytmAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paytm {
+            ConnectorSpecificConfig::Paytm {
                 merchant_id,
                 merchant_key,
                 website,
                 client_id,
+                ..
             } => Ok(Self {
                 merchant_id: merchant_id.to_owned(),
                 merchant_key: merchant_key.to_owned(),
@@ -179,7 +180,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_config)?;
 
         // Extract data directly from router_data
         let amount = item
@@ -432,7 +433,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_config)?;
 
         let payment_id = item
             .router_data
@@ -676,7 +677,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_config)?;
 
         // Extract data directly from router_data
         let order_id = item

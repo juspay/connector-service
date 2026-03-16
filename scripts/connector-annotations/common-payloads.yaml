@@ -1,0 +1,512 @@
+# Common sample payloads for all connectors
+# These are used by the doc generator as the default payload for each flow.
+# Per-connector annotation files may add notes, required_fields, and test_credentials
+# but should NOT duplicate these payloads unless a connector genuinely differs.
+#
+# Format mirrors the gRPC proto JSON encoding (payment.proto / payment_methods.proto).
+# All SecretString fields use the { value: "..." } wrapper.
+# All Money fields use { minor_amount: <int>, currency: "<ISO>" }.
+
+flows:
+
+  Authorize:
+    samples:
+      - title: "Card – Raw PAN (minimum payload)"
+        required_fields_table:
+          - field: amount.minor_amount
+            type: int64
+            desc: Amount in minor units (e.g. 1000 = $10.00 / €10.00)
+          - field: amount.currency
+            type: Currency enum
+            desc: ISO 4217 currency code (e.g. USD, EUR, GBP)
+          - field: payment_method.card
+            type: CardDetails
+            desc: Card number, expiry month/year, CVC
+          - field: auth_type
+            type: AuthenticationType enum
+            desc: "NO_THREE_DS or THREE_DS"
+        request:
+          amount:
+            minor_amount: 1000
+            currency: "USD"
+          payment_method:
+            card:
+              card_number:
+                value: "4242424242424242"
+              card_exp_month:
+                value: "12"
+              card_exp_year:
+                value: "2025"
+              card_cvc:
+                value: "123"
+              card_holder_name:
+                value: "Jane Doe"
+          address:
+            billing_address:
+              first_name:
+                value: "Jane"
+              last_name:
+                value: "Doe"
+              line1:
+                value: "123 Main St"
+              city:
+                value: "San Francisco"
+              state:
+                value: "CA"
+              zip_code:
+                value: "94102"
+              country_alpha2_code: "US"
+              email:
+                value: "jane@example.com"
+          auth_type: "NO_THREE_DS"
+          capture_method: "MANUAL"
+          return_url: "https://example.com/return"
+
+      - title: "Google Pay"
+        request:
+          amount:
+            minor_amount: 2500
+            currency: "USD"
+          payment_method:
+            google_pay:
+              tokenization_data:
+                type: "PAYMENT_GATEWAY"
+                token: "{\"signature\":\"...\",\"protocolVersion\":\"ECv2\",\"signedMessage\":\"...\"}"
+              info:
+                card_network: "VISA"
+                card_details: "1234"
+          address:
+            billing_address:
+              country_alpha2_code: "US"
+          auth_type: "NO_THREE_DS"
+          return_url: "https://example.com/return"
+
+      - title: "Apple Pay"
+        request:
+          amount:
+            minor_amount: 1500
+            currency: "USD"
+          payment_method:
+            apple_pay:
+              payment_data: "{\"version\":\"EC_v1\",\"data\":\"...\",\"signature\":\"...\",\"header\":{\"ephemeralPublicKey\":\"...\",\"publicKeyHash\":\"...\",\"transactionId\":\"...\"}}"
+              payment_method:
+                display_name: "Visa 1234"
+                network: "Visa"
+                type_: "debit"
+              transaction_identifier: "APPLE_PAY_TXN_ID"
+          address:
+            billing_address:
+              country_alpha2_code: "US"
+          auth_type: "NO_THREE_DS"
+          return_url: "https://example.com/return"
+
+      - title: "iDEAL (bank redirect)"
+        request:
+          amount:
+            minor_amount: 1000
+            currency: "EUR"
+          payment_method:
+            ideal: {}
+          address:
+            billing_address:
+              country_alpha2_code: "NL"
+          auth_type: "NO_THREE_DS"
+          return_url: "https://example.com/return"
+
+      - title: "SEPA Direct Debit"
+        request:
+          amount:
+            minor_amount: 3000
+            currency: "EUR"
+          payment_method:
+            sepa_bank_transfer:
+              iban:
+                value: "DE89370400440532013000"
+          address:
+            billing_address:
+              first_name:
+                value: "Hans"
+              last_name:
+                value: "Müller"
+              email:
+                value: "hans@example.de"
+              country_alpha2_code: "DE"
+          auth_type: "NO_THREE_DS"
+          return_url: "https://example.com/return"
+
+  Capture:
+    samples:
+      - title: "Capture authorized payment"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Transaction ID returned by the Authorize response
+          - field: amount_to_capture.minor_amount
+            type: int64
+            desc: Amount to capture in minor units
+          - field: amount_to_capture.currency
+            type: Currency enum
+            desc: Must match the original authorization currency
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authorize>"
+          amount_to_capture:
+            minor_amount: 1000
+            currency: "USD"
+
+  Void:
+    samples:
+      - title: "Void authorized payment"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Transaction ID returned by the Authorize response
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authorize>"
+          cancellation_reason: "requested_by_customer"
+
+  PSync:
+    samples:
+      - title: "Sync payment status"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Transaction ID from Authorize response
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authorize>"
+
+  Refund:
+    samples:
+      - title: "Full refund"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Transaction ID from Authorize/Capture
+          - field: payment_amount
+            type: int64
+            desc: Original captured amount in minor units
+          - field: refund_amount.minor_amount
+            type: int64
+            desc: Amount to refund (set equal to payment_amount for full refund)
+          - field: refund_amount.currency
+            type: Currency enum
+            desc: Must match the original payment currency
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authorize>"
+          payment_amount: 1000
+          refund_amount:
+            minor_amount: 1000
+            currency: "USD"
+          reason: "customer_request"
+
+      - title: "Partial refund"
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authorize>"
+          payment_amount: 1000
+          refund_amount:
+            minor_amount: 500
+            currency: "USD"
+          reason: "duplicate"
+
+  RSync:
+    samples:
+      - title: "Sync refund status"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Original payment transaction ID
+          - field: connector_refund_id
+            type: string
+            desc: Refund ID returned by the Refund response
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authorize>"
+          connector_refund_id: "<connector_refund_id from Refund>"
+
+  SetupMandate:
+    samples:
+      - title: "Setup recurring mandate – card"
+        required_fields_table:
+          - field: merchant_recurring_payment_id
+            type: string
+            desc: Your unique reference ID for this mandate setup
+          - field: payment_method.card
+            type: CardDetails
+            desc: Card to register for recurring use
+          - field: auth_type
+            type: AuthenticationType enum
+            desc: Authentication type
+          - field: setup_future_usage
+            type: FutureUsage enum
+            desc: "OFF_SESSION for MIT, ON_SESSION for CIT"
+        request:
+          merchant_recurring_payment_id: "mandate_setup_001"
+          amount:
+            minor_amount: 0
+            currency: "USD"
+          payment_method:
+            card:
+              card_number:
+                value: "4242424242424242"
+              card_exp_month:
+                value: "12"
+              card_exp_year:
+                value: "2025"
+              card_cvc:
+                value: "123"
+          address:
+            billing_address:
+              first_name:
+                value: "Jane"
+              last_name:
+                value: "Doe"
+              email:
+                value: "jane@example.com"
+              country_alpha2_code: "US"
+          auth_type: "NO_THREE_DS"
+          return_url: "https://example.com/mandate-return"
+          setup_future_usage: "OFF_SESSION"
+
+  RepeatPayment:
+    samples:
+      - title: "MIT charge using existing mandate"
+        required_fields_table:
+          - field: amount.minor_amount
+            type: int64
+            desc: Charge amount in minor units
+          - field: amount.currency
+            type: Currency enum
+            desc: ISO 4217 currency code
+        request:
+          amount:
+            minor_amount: 1000
+            currency: "USD"
+          payment_method:
+            token:
+              token:
+                value: "<payment_method_token from SetupMandate>"
+          auth_type: "NO_THREE_DS"
+          off_session: true
+
+  CreateConnectorCustomer:
+    samples:
+      - title: "Create customer profile"
+        required_fields_table:
+          - field: customer.email
+            type: SecretString
+            desc: Customer email address
+        request:
+          customer:
+            email:
+              value: "jane@example.com"
+            name:
+              value: "Jane Doe"
+            phone:
+              value: "+14155552671"
+
+  PaymentMethodToken:
+    samples:
+      - title: "Tokenize Apple Pay"
+        request:
+          payment_method:
+            apple_pay:
+              payment_data: "{\"version\":\"EC_v1\",\"data\":\"...\",\"signature\":\"...\"}"
+              payment_method:
+                display_name: "Visa 1234"
+                network: "Visa"
+                type_: "debit"
+              transaction_identifier: "APPLE_PAY_TXN_ID"
+
+  IncrementalAuthorization:
+    samples:
+      - title: "Increase authorized amount"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Original authorization transaction ID
+          - field: amount.minor_amount
+            type: int64
+            desc: New total authorized amount (must exceed original)
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authorize>"
+          amount:
+            minor_amount: 2000
+            currency: "USD"
+
+  Accept:
+    samples:
+      - title: "Accept dispute"
+        required_fields_table:
+          - field: connector_dispute_id
+            type: string
+            desc: Dispute ID from the connector
+        request:
+          connector_dispute_id: "<connector_dispute_id>"
+
+  SubmitEvidence:
+    samples:
+      - title: "Submit dispute evidence"
+        required_fields_table:
+          - field: connector_dispute_id
+            type: string
+            desc: Dispute ID from the connector
+        request:
+          connector_dispute_id: "<connector_dispute_id>"
+          customer_email_address: "jane@example.com"
+          product_description: "Software subscription – annual license"
+          customer_name:
+            value: "Jane Doe"
+
+  DefendDispute:
+    samples:
+      - title: "Defend dispute"
+        required_fields_table:
+          - field: connector_dispute_id
+            type: string
+            desc: Dispute ID from the connector
+        request:
+          connector_dispute_id: "<connector_dispute_id>"
+
+  CreateOrder:
+    samples:
+      - title: "Create order"
+        required_fields_table:
+          - field: amount.minor_amount
+            type: int64
+            desc: Order amount in minor units
+        request:
+          amount:
+            minor_amount: 1000
+            currency: "USD"
+          return_url: "https://example.com/return"
+
+  VoidPC:
+    samples:
+      - title: "Void post-capture (reverse)"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Captured payment transaction ID
+        request:
+          connector_transaction_id: "<connector_transaction_id from Capture>"
+
+  MandateRevoke:
+    samples:
+      - title: "Revoke mandate"
+        required_fields_table:
+          - field: connector_mandate_id
+            type: string
+            desc: Mandate ID returned by SetupMandate
+        request:
+          connector_mandate_id: "<connector_mandate_id from SetupMandate>"
+
+  CreateAccessToken:
+    samples:
+      - title: "Create connector access token"
+        request:
+          connector: "STRIPE"
+
+  CreateSessionToken:
+    samples:
+      - title: "Create web/SDK session token"
+        required_fields_table:
+          - field: amount.minor_amount
+            type: int64
+            desc: Payment amount in minor units
+          - field: amount.currency
+            type: Currency enum
+            desc: ISO 4217 currency code
+        request:
+          amount:
+            minor_amount: 1000
+            currency: "USD"
+
+  SdkSessionToken:
+    samples:
+      - title: "Create SDK session token"
+        required_fields_table:
+          - field: merchant_sdk_session_id
+            type: string
+            desc: Your unique session identifier
+          - field: amount.minor_amount
+            type: int64
+            desc: Payment amount in minor units
+        request:
+          merchant_sdk_session_id: "sdk_session_001"
+          amount:
+            minor_amount: 1000
+            currency: "USD"
+
+  PreAuthenticate:
+    samples:
+      - title: "3DS pre-authentication (Device Data Collection)"
+        required_fields_table:
+          - field: amount.minor_amount
+            type: int64
+            desc: Payment amount in minor units
+          - field: payment_method.card
+            type: CardDetails
+            desc: Card being authenticated
+          - field: enrolled_for_3ds
+            type: bool
+            desc: Whether the card is enrolled in 3DS
+        request:
+          amount:
+            minor_amount: 1000
+            currency: "USD"
+          payment_method:
+            card:
+              card_number:
+                value: "4242424242424242"
+              card_exp_month:
+                value: "12"
+              card_exp_year:
+                value: "2025"
+              card_cvc:
+                value: "123"
+          address:
+            billing_address:
+              country_alpha2_code: "US"
+          enrolled_for_3ds: true
+          return_url: "https://example.com/3ds-return"
+
+  Authenticate:
+    samples:
+      - title: "3DS authentication challenge"
+        required_fields_table:
+          - field: amount.minor_amount
+            type: int64
+            desc: Payment amount in minor units
+          - field: payment_method.card
+            type: CardDetails
+            desc: Card being authenticated
+          - field: enrolled_for_3ds
+            type: bool
+            desc: Whether the card is enrolled in 3DS
+        request:
+          amount:
+            minor_amount: 1000
+            currency: "USD"
+          payment_method:
+            card:
+              card_number:
+                value: "4242424242424242"
+              card_exp_month:
+                value: "12"
+              card_exp_year:
+                value: "2025"
+              card_cvc:
+                value: "123"
+          address:
+            billing_address:
+              country_alpha2_code: "US"
+          enrolled_for_3ds: true
+          return_url: "https://example.com/3ds-return"
+
+  PostAuthenticate:
+    samples:
+      - title: "Complete 3DS authentication"
+        required_fields_table:
+          - field: connector_transaction_id
+            type: string
+            desc: Transaction ID from the Authenticate response
+        request:
+          connector_transaction_id: "<connector_transaction_id from Authenticate>"

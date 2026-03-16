@@ -12,7 +12,7 @@ use domain_types::{
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -31,15 +31,16 @@ pub struct IatapayAuthType {
     pub(super) client_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for IatapayAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for IatapayAuthType {
     type Error = Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Iatapay {
+            ConnectorSpecificConfig::Iatapay {
                 client_id,
                 merchant_id,
                 client_secret,
+                ..
             } => Ok(Self {
                 client_id: client_id.to_owned(),
                 merchant_id: merchant_id.to_owned(),
@@ -262,7 +263,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let locale = format!("en-{country}");
 
         // Extract merchant ID from connector auth
-        let auth = IatapayAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = IatapayAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.clone();
 
         // Extract payer info (only for UPI Collect)
@@ -581,7 +582,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let connector = item.connector;
 
         // Extract merchant_id from auth
-        let auth = IatapayAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = IatapayAuthType::try_from(&router_data.connector_config)?;
         let merchant_id = auth.merchant_id.clone();
 
         // Convert amount using FloatMajorUnit

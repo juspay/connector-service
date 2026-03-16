@@ -1,0 +1,209 @@
+{
+  "connector": "barclaycard",
+  "flows": {
+    "authorize": {
+      "Card": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "name": "John Doe",
+            "email": "test@example.com",
+            "id": "cust_probe_123",
+            "phone_number": "4155552671",
+            "phone_country_code": "+1"
+          },
+          "address": {
+            "shipping_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            },
+            "billing_address": {
+              "first_name": "John",
+              "last_name": "Doe",
+              "line1": "123 Main St",
+              "city": "Seattle",
+              "state": "WA",
+              "zip_code": "98101",
+              "country_alpha2_code": "US",
+              "email": "test@example.com",
+              "phone_number": "4155552671",
+              "phone_country_code": "+1"
+            }
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "webhook_url": "https://example.com/webhook",
+          "complete_authorize_url": "https://example.com/complete",
+          "browser_info": {
+            "color_depth": 24,
+            "screen_height": 900,
+            "screen_width": 1440,
+            "java_enabled": false,
+            "java_script_enabled": true,
+            "language": "en-US",
+            "time_zone_offset_minutes": -480,
+            "accept_header": "application/json",
+            "user_agent": "Mozilla/5.0 (probe-bot)",
+            "accept_language": "en-US,en;q=0.9",
+            "ip_address": "1.2.3.4"
+          }
+        },
+        "sample": {
+          "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/",
+          "method": "Post",
+          "headers": {
+            "host": "api.smartpayfuse-test.barclaycard",
+            "digest": "SHA-256=Qbfo0Dq4zGtZf/66lea//wWCMEHcHFlHRrLHWT6vL78=",
+            "date": "2026-03-13 0:10:34.027034 +00:00:00",
+            "v-c-merchant-id": "probe_merchant",
+            "content-type": "application/json",
+            "accept": "application/hal+json;charset=utf-8",
+            "via": "HyperSwitch",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"084ADCCcFxGBzBR52d4cuiNpL49si8lCQQK95fVQls0=\""
+          },
+          "body": "{\"processingInformation\":{\"commerceIndicator\":\"internet\",\"capture\":true,\"cavvAlgorithm\":\"2\"},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":null,\"typeSelectionIndicator\":\"1\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"locality\":\"Seattle\",\"administrativeArea\":\"WA\",\"postalCode\":\"98101\",\"country\":\"US\",\"email\":\"test@example.com\"}},\"clientReferenceInformation\":{\"code\":\"probe_txn_001\"}}"
+        }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_capture_id": "probe_capture_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount_to_capture": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/probe_connector_txn_001/captures",
+          "method": "Post",
+          "headers": {
+            "accept": "application/hal+json;charset=utf-8",
+            "v-c-merchant-id": "probe_merchant",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "date": "2026-03-13 0:10:34.033428 +00:00:00",
+            "digest": "SHA-256=tOhAPHgdQGD8lGJloCadvNPCKDCu0PYVCNSw8wTDdqc=",
+            "host": "api.smartpayfuse-test.barclaycard",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"85k1UTr83Xuh72Nsni4R2qkclZPhU8PyYtEbllq9/9I=\""
+          },
+          "body": "{\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"}},\"clientReferenceInformation\":{\"code\":\"probe_capture_001\"}}"
+        }
+      }
+    },
+    "get": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "probe_connector_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://api.smartpayfuse-test.barclaycard/tss/v2/transactions/probe_connector_txn_001",
+          "method": "Get",
+          "headers": {
+            "content-type": "application/json",
+            "date": "2026-03-13 0:10:34.03399 +00:00:00",
+            "accept": "application/hal+json;charset=utf-8",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"fj1nqz3fL2oP+13Z+JdA0VDa3N7fXDoGqWTFvm0c36U=\"",
+            "host": "api.smartpayfuse-test.barclaycard",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
+          },
+          "body": null
+        }
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request"
+        },
+        "sample": {
+          "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/probe_connector_txn_001/refunds",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"iAjLBu2ioLB/GdA+eVvOwz4p3atFRyHsFt1L+30bBqs=\"",
+            "host": "api.smartpayfuse-test.barclaycard",
+            "accept": "application/hal+json;charset=utf-8",
+            "v-c-merchant-id": "probe_merchant",
+            "digest": "SHA-256=7BHdZNNrtfkeSE7pxmXUWdKP3ayikeOY2qn4mlBmToY=",
+            "via": "HyperSwitch",
+            "date": "2026-03-13 0:10:34.033607 +00:00:00"
+          },
+          "body": "{\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"}},\"clientReferenceInformation\":{\"code\":\"probe_refund_001\"}}"
+        }
+      }
+    },
+    "void": {
+      "default": {
+        "status": "supported",
+        "required_fields": [
+          "currency",
+          "cancellation_reason"
+        ],
+        "proto_request": {
+          "merchant_void_id": "probe_void_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "cancellation_reason": "requested_by_customer",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/probe_connector_txn_001/voids",
+          "method": "Post",
+          "headers": {
+            "date": "2026-03-13 0:10:34.033847 +00:00:00",
+            "accept": "application/hal+json;charset=utf-8",
+            "content-type": "application/json",
+            "host": "api.smartpayfuse-test.barclaycard",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"hBqRhmrnHcpJoWLCsSuJ+wy0z3gUWGpWeG5qG8Ty1HM=\"",
+            "via": "HyperSwitch",
+            "digest": "SHA-256=rqC9ETiTNXILMTxM529U98SQAdRAmKTCnEXqs8CAz94=",
+            "v-c-merchant-id": "probe_merchant"
+          },
+          "body": "{\"clientReferenceInformation\":{\"code\":\"probe_void_001\"},\"reversalInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"reason\":\"requested_by_customer\"}}"
+        }
+      }
+    }
+  }
+}

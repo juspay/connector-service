@@ -16,7 +16,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::{AuthoriseIntegrityObject, RefundIntegrityObject},
     router_response_types::RedirectForm,
@@ -139,11 +139,11 @@ pub struct XenditAuthType {
     pub(super) api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for XenditAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for XenditAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Xendit { api_key } => Ok(Self {
+            ConnectorSpecificConfig::Xendit { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),

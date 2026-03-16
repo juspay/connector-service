@@ -64,14 +64,14 @@ The `Revoke` RPC cancels an existing recurring payment mandate, stopping all fut
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_revoke_id": "revoke_001",
     "mandate_id": "mandate_sub_001",
     "connector_mandate_id": "seti_3Oxxx..."
   }' \
   localhost:8080 \
-  ucs.v2.RecurringPaymentService/Revoke
+  types.RecurringPaymentService/Revoke
 ```
 
 ### Response (Success)

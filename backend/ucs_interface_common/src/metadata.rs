@@ -7,14 +7,14 @@ use common_utils::{
 use domain_types::{
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
 };
 use error_stack::Report;
 use std::{str::FromStr, sync::Arc};
 use tonic::metadata;
 use ucs_env::configs;
 
-use crate::auth::connector_and_auth_from_metadata;
+use crate::auth::connector_and_config_from_metadata;
 
 /// Struct to hold extracted metadata payload.
 ///
@@ -29,7 +29,11 @@ pub struct MetadataPayload {
     pub merchant_id: String,
     pub connector: connector_types::ConnectorEnum,
     pub lineage_ids: LineageIds<'static>,
-    pub connector_auth_type: ConnectorSpecificAuth,
+    /// Typed connector integration config extracted from request metadata.
+    ///
+    /// Any URL overrides here are only inputs to config patching; connectors should read effective
+    /// URLs from the merged runtime config instead.
+    pub connector_config: ConnectorSpecificConfig,
     pub reference_id: Option<String>,
     pub shadow_mode: bool,
     pub resource_id: Option<String>,
@@ -39,9 +43,9 @@ pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
     server_config: Arc<configs::Config>,
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
-    // Resolve connector and auth: try x-connector-auth header first,
-    // fall back to x-connector and x-auth legacy headers.
-    let (connector, connector_auth_type) = connector_and_auth_from_metadata(metadata)?;
+    // Resolve connector and config: try x-connector-config header first,
+    // then fall back to legacy x-connector and x-auth headers.
+    let (connector, connector_config) = connector_and_config_from_metadata(metadata)?;
 
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
@@ -57,7 +61,7 @@ pub fn get_metadata_payload(
         merchant_id,
         connector,
         lineage_ids,
-        connector_auth_type,
+        connector_config,
         reference_id,
         shadow_mode,
         resource_id,

@@ -27,8 +27,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 try:
     from payments import (
-        authorize_req_transformer,
-        FfiConnectorHttpRequest,
         PaymentClient,
         PaymentServiceAuthorizeRequest,
         PaymentAddress,
@@ -37,9 +35,7 @@ try:
         NO_THREE_DS,
         PaymentServiceAuthorizeResponse,
         ConnectorConfig,
-        Connector,
         Environment,
-        FfiOptions,
         RequestError,
         ResponseError,
     )
@@ -199,11 +195,6 @@ async def test_connector_ffi(
         req = build_authorize_request()
         metadata = build_metadata(connector_key, auth_config)
         
-        # Get connector enum value
-        connector_enum = getattr(Connector, connector_key.upper(), None)
-        if connector_enum is None:
-            raise ValueError(f"Unknown connector: {connector_key}")
-        
         # Test 1: Low-level FFI (commented - requires proper ConnectorAuth mapping)
         # The FFI functions require a fully populated FfiOptions with auth,
         # which is complex to construct from arbitrary JSON credentials.
@@ -242,23 +233,33 @@ async def test_connector_ffi(
             return result
         
         # Create connector config with proper auth
-        config = ConnectorConfig(
-            environment=Environment.SANDBOX,
-            connector=connector_enum,
-        )
+        config = ConnectorConfig()
+        config.options.environment = Environment.SANDBOX
+
+        connector_field_name = connector_key.lower()
+        connector_config = getattr(config.connector_config, connector_field_name, None)
+        if connector_config is None:
+            raise ValueError(f"Unknown connector: {connector_key}")
         
-        # Set auth fields from creds.json
-        # Auth structure: config.auth.<connector>.<field>.value = <value>
-        connector_name_lower = connector_key.lower()
-        auth_obj = getattr(config.auth, connector_name_lower, None)
-        if auth_obj:
-            for key, value in auth_config.items():
-                if key not in ("_comment", "metadata") and isinstance(value, dict) and "value" in value:
-                    field_name = key  # e.g., "api_key"
-                    field_value = value["value"]  # The actual credential value
-                    field_obj = getattr(auth_obj, field_name, None)
-                    if field_obj and hasattr(field_obj, 'value'):
-                        field_obj.value = field_value
+        for key, value in auth_config.items():
+            if key not in ("_comment", "metadata"):
+                # Support both nested SecretString and direct string values.
+                if isinstance(value, dict) and "value" in value:
+                    field_value = value["value"]
+                    if isinstance(field_value, str):
+                        field = getattr(connector_config, key, None)
+                        if field is not None:
+                            if hasattr(field, "value"):
+                                field.value = field_value
+                            else:
+                                setattr(connector_config, key, field_value)
+                elif isinstance(value, str):
+                    field = getattr(connector_config, key, None)
+                    if field is not None:
+                        if hasattr(field, "value"):
+                            field.value = value
+                        else:
+                            setattr(connector_config, key, value)
         
         client = PaymentClient(config)
         try:
