@@ -13,12 +13,8 @@
 --   cabal run smoke-test -- --connectors stripe --dry-run
 module Main where
 
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BS8
-import Data.Maybe (fromMaybe)
 import System.Exit (exitFailure, exitSuccess)
 import System.Environment (getArgs)
-import System.Directory (doesFileExist)
 import Control.Exception (catch, SomeException, displayException)
 
 import qualified Payments.FfiClient as FFI

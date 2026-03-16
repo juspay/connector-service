@@ -20,12 +20,11 @@ module Payments.FfiClient
 
 import qualified Data.ByteString as BS
 import Data.Word (Word8, Word64)
-import Data.Int (Int8)
 import Foreign.Ptr (Ptr, FunPtr, castPtrToFunPtr, nullPtr, castPtr)
-import Foreign.Marshal.Alloc (mallocBytes, free)
+import Foreign.Marshal.Alloc (mallocBytes)
 import System.Info (os)
-import System.FilePath ((</>), takeDirectory)
-import System.Directory (doesFileExist, getCurrentDirectory)
+import System.FilePath ((</>))
+import System.Directory (doesFileExist)
 
 import Payments.Internal.RustBuffer
 

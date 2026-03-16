@@ -28,9 +28,8 @@ import Data.Word (Word8, Word64)
 import Data.Int (Int8, Int32)
 import Data.Bits (shiftR, shiftL, (.&.), (.|.))
 import Foreign.Ptr (Ptr, nullPtr, castPtr, plusPtr)
-import Foreign.Storable (peek, poke, pokeByteOff, peekByteOff)
-import Foreign.Marshal.Alloc (alloca, mallocBytes)
-import Foreign.Marshal.Array (copyArray, peekArray)
+import Foreign.Storable (pokeByteOff, peekByteOff)
+import Foreign.Marshal.Alloc (mallocBytes)
 import Foreign.Marshal.Utils (copyBytes)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Unsafe as BSU
@@ -154,6 +153,8 @@ checkCallStatus :: RustCallStatus -> IO ()
 checkCallStatus (RustCallStatus 0 _) = pure ()
 checkCallStatus (RustCallStatus code errBuf) = do
   msg <- if rbLen errBuf > 0
-         then rustBufferToByteString errBuf
+         then do
+           bs <- rustBufferToByteString errBuf
+           pure $ show bs
          else pure "Unknown Rust panic"
-  error $ "Rust FFI error (code " ++ show code ++ "): " ++ show msg
+  error $ "Rust FFI error (code " ++ show code ++ "): " ++ msg

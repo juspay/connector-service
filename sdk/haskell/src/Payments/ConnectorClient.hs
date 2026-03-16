@@ -28,12 +28,11 @@ module Payments.ConnectorClient
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Char8 as BS8
+import Data.Bits ((.&.), (.|.), shiftL, shiftR)
 import Data.Text (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
-import Data.IORef
+import Data.Word (Word)
 import Data.Maybe (fromMaybe)
-import Control.Exception (Exception, throwIO, catch, SomeException)
+import Control.Exception (Exception)
 
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
@@ -224,10 +223,6 @@ parseSimpleProto = go []
              then [byte]
              else (byte .|. 0x80) : go'' n'
 
-    (.&.) = (Data.Bits..&.)
-    (.|.) = (Data.Bits..|.)
-    shiftL = Data.Bits.shiftL
-    shiftR = Data.Bits.shiftR
 
 -- Encode a varint field (field number + varint value).
 encodeVarintField :: Int -> Word -> BS.ByteString
@@ -247,8 +242,8 @@ encodeVarint n = BS.pack (go n)
   where
     go 0 = []
     go v =
-      let byte = fromIntegral (v Data.Bits..&. 0x7f)
-          v'   = v `Data.Bits.shiftR` 7
+      let byte = fromIntegral (v .&. 0x7f)
+          v'   = v `shiftR` 7
       in if v' == 0
          then [byte]
-         else (byte Data.Bits..|. 0x80) : go v'
+         else (byte .|. 0x80) : go v'
