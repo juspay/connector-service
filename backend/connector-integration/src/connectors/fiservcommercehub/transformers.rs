@@ -945,7 +945,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-/// Response body from `POST /security/v1/keys/generate`.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubTransactionProcessingDetails {
@@ -962,7 +961,6 @@ pub struct FiservcommercehubGatewayResponse {
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubAsymmetricKeyDetails {
     pub key_id: String,
-    /// Base64-encoded RSA public key in SubjectPublicKeyInfo (SPKI/DER) format
     pub encoded_public_key: String,
 }
 
@@ -983,7 +981,9 @@ impl<F, T> TryFrom<ResponseRouterData<FiservcommercehubAccessTokenResponse, Self
     ) -> Result<Self, Self::Error> {
         let key_id = &item.response.asymmetric_key_details.key_id;
         let encoded_public_key = &item.response.asymmetric_key_details.encoded_public_key;
-        let combined_token = Secret::new(format!("{key_id}{ACCESS_TOKEN_SEPARATOR}{encoded_public_key}"));
+        let combined_token = Secret::new(format!(
+            "{key_id}{ACCESS_TOKEN_SEPARATOR}{encoded_public_key}"
+        ));
         Ok(Self {
             response: Ok(AccessTokenResponseData {
                 access_token: combined_token,

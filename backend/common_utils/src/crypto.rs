@@ -687,14 +687,7 @@ impl EncodeMessage for TripleDesEde3CBC {
 pub struct RsaPkcs1v15;
 
 impl RsaPkcs1v15 {
-    /// Encrypts the given message using an RSA public key with PKCS#1 v1.5 padding.
-    ///
-    /// # Arguments
-    /// * `public_key_der` - The RSA public key in DER/SPKI format (not Base64 encoded)
-    /// * `plaintext` - The message to encrypt
-    ///
-    /// # Returns
-    /// The encrypted ciphertext as bytes
+    /// Encrypts plaintext using RSA public key with PKCS#1 v1.5 padding.
     pub fn encrypt(
         public_key_der: &[u8],
         plaintext: &[u8],
@@ -726,17 +719,7 @@ impl RsaPkcs1v15 {
 pub struct RsaOaepSha256;
 
 impl RsaOaepSha256 {
-    /// Encrypts the given message using an RSA public key with OAEP-SHA256 padding.
-    ///
-    /// This implementation uses the PkeyCtx API to properly set SHA-256 as the
-    /// OAEP hash algorithm (the standard rsa.public_encrypt with PKCS1_OAEP uses SHA-1).
-    ///
-    /// # Arguments
-    /// * `public_key_der` - The RSA public key in DER/SPKI format (not Base64 encoded)
-    /// * `plaintext` - The message to encrypt
-    ///
-    /// # Returns
-    /// The encrypted ciphertext as bytes
+    /// Encrypts plaintext using RSA public key with OAEP-SHA256 padding.
     pub fn encrypt(
         public_key_der: &[u8],
         plaintext: &[u8],
@@ -746,42 +729,33 @@ impl RsaOaepSha256 {
         use openssl::pkey_ctx::PkeyCtx;
         use openssl::rsa::Padding;
 
-        // Parse the DER-encoded public key
         let pkey = PKey::public_key_from_der(public_key_der)
             .change_context(errors::CryptoError::EncodingFailed)
             .attach_printable("Failed to parse public key from DER format")?;
 
-        // Create encryption context
         let mut ctx = PkeyCtx::new(&pkey)
             .change_context(errors::CryptoError::EncodingFailed)
             .attach_printable("Failed to create PkeyCtx")?;
 
-        // Initialize for encryption
         ctx.encrypt_init()
             .change_context(errors::CryptoError::EncodingFailed)
             .attach_printable("Failed to initialize encryption")?;
 
-        // Set OAEP padding
         ctx.set_rsa_padding(Padding::PKCS1_OAEP)
             .change_context(errors::CryptoError::EncodingFailed)
             .attach_printable("Failed to set OAEP padding")?;
 
-        // Set SHA-256 as the OAEP hash algorithm (this is the key fix!)
-        // Md::sha256() returns &'static MdRef which is what the API expects
         ctx.set_rsa_oaep_md(Md::sha256())
             .change_context(errors::CryptoError::EncodingFailed)
             .attach_printable("Failed to set OAEP hash to SHA-256")?;
 
-        // Set SHA-256 as the MGF1 hash algorithm (must match OAEP hash for Web Crypto compatibility)
         ctx.set_rsa_mgf1_md(Md::sha256())
             .change_context(errors::CryptoError::EncodingFailed)
             .attach_printable("Failed to set MGF1 hash to SHA-256")?;
 
-        // Get the required output buffer size
         let key_size = pkey.size();
         let mut encrypted = vec![0u8; key_size];
 
-        // Perform the encryption
         let encrypted_len = ctx
             .encrypt(plaintext, Some(&mut encrypted))
             .change_context(errors::CryptoError::EncodingFailed)
