@@ -5,9 +5,8 @@ use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, SetupMandateRequestData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -166,12 +165,10 @@ pub enum WellsfargoRefundStatus {
 impl From<WellsfargoRefundStatus> for RefundStatus {
     fn from(item: WellsfargoRefundStatus) -> Self {
         match item {
-            WellsfargoRefundStatus::Succeeded | WellsfargoRefundStatus::Transmitted => {
-                Self::Success
+            WellsfargoRefundStatus::Succeeded | WellsfargoRefundStatus::Transmitted => Self::Success,
+            WellsfargoRefundStatus::Cancelled | WellsfargoRefundStatus::Failed | WellsfargoRefundStatus::Voided => {
+                Self::Failure
             }
-            WellsfargoRefundStatus::Cancelled
-            | WellsfargoRefundStatus::Failed
-            | WellsfargoRefundStatus::Voided => Self::Failure,
             WellsfargoRefundStatus::Pending => Self::Pending,
         }
     }
@@ -431,9 +428,7 @@ pub struct WellsfargoAuthType {
 impl TryFrom<&domain_types::router_data::ConnectorSpecificAuth> for WellsfargoAuthType {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        auth_type: &domain_types::router_data::ConnectorSpecificAuth,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &domain_types::router_data::ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         use domain_types::router_data::ConnectorSpecificAuth;
         match auth_type {
             ConnectorSpecificAuth::Wellsfargo {
@@ -483,18 +478,10 @@ fn build_error_response(
         .error_information
         .as_ref()
         .and_then(|info| info.message.clone())
-        .or_else(|| {
-            response
-                .error_information
-                .as_ref()
-                .and_then(|info| info.reason.clone())
-        })
+        .or_else(|| response.error_information.as_ref().and_then(|info| info.reason.clone()))
         .unwrap_or_else(|| default_error_message.to_string());
 
-    let error_code = response
-        .error_information
-        .as_ref()
-        .and_then(|info| info.reason.clone());
+    let error_code = response.error_information.as_ref().and_then(|info| info.reason.clone());
 
     ErrorResponse {
         code: error_code.unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
@@ -518,12 +505,7 @@ fn build_error_response(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WellsFargoRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for WellsfargoPaymentsRequest<T>
@@ -532,12 +514,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn try_from(
         item: WellsFargoRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -550,12 +527,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment_information = match &request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Use get_card_issuer for robust card type detection
-                let card_issuer =
-                    domain_types::utils::get_card_issuer(card_data.card_number.peek())
-                        .change_context(errors::ConnectorError::MissingRequiredField {
-                            field_name: "card_type",
-                        })
-                        .attach_printable("Unable to determine card issuer from card number")?;
+                let card_issuer = domain_types::utils::get_card_issuer(card_data.card_number.peek())
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "card_type",
+                    })
+                    .attach_printable("Unable to determine card issuer from card number")?;
                 let card_type = card_issuer_to_string(card_issuer);
 
                 let card = Card {
@@ -568,11 +544,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 PaymentInformation::Cards(Box::new(CardPaymentInformation { card }))
             }
             // Connector supports these but not yet implemented
-            PaymentMethodData::Wallet(_)
-            | PaymentMethodData::CardToken(_)
-            | PaymentMethodData::NetworkToken(_) => Err(errors::ConnectorError::NotImplemented(
-                "Payment method supported by connector but not yet implemented".to_string(),
-            ))?,
+            PaymentMethodData::Wallet(_) | PaymentMethodData::CardToken(_) | PaymentMethodData::NetworkToken(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    "Payment method supported by connector but not yet implemented".to_string(),
+                ))?
+            }
             // Connector does not support these payment methods
             PaymentMethodData::CardDetailsForNetworkTransactionId(_)
             | PaymentMethodData::CardRedirect(_)
@@ -606,19 +582,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::AmountConversionFailed)
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
-        let amount_details = Amount {
-            total_amount,
-            currency,
-        };
+        let amount_details = Amount { total_amount, currency };
 
         // Build billing information if available
         let billing = common_data.address.get_payment_billing();
         let email = request
             .email
             .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "email",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "email" })?;
 
         // Convert Email type to Secret<String>
         // Email wraps Secret<String, EmailStrategy>, we need to extract and re-wrap
@@ -709,12 +680,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // CAPTURE REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoCaptureRequest
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        WellsFargoRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for WellsfargoCaptureRequest
+    TryFrom<WellsFargoRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for WellsfargoCaptureRequest
 {
     type Error = Report<errors::ConnectorError>;
 
@@ -740,10 +707,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::AmountConversionFailed)
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
-        let amount_details = Amount {
-            total_amount,
-            currency,
-        };
+        let amount_details = Amount { total_amount, currency };
 
         // Build bill_to if billing information is available
         let billing = common_data.address.get_payment_billing();
@@ -822,20 +786,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // VOID REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoVoidRequest
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        WellsFargoRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for WellsfargoVoidRequest
+    TryFrom<WellsFargoRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for WellsfargoVoidRequest
 {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: WellsFargoRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: WellsFargoRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let common_data = &router_data.resource_common_data;
@@ -844,14 +801,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Amount information - must be provided in the request
         let amount = request
             .amount
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "amount",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "amount" })?;
         let currency = request
             .currency
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "currency",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "currency" })?;
 
         // Convert amount using the framework's amount converter
         let total_amount = item
@@ -861,10 +814,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::AmountConversionFailed)
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
-        let amount_details = Amount {
-            total_amount,
-            currency,
-        };
+        let amount_details = Amount { total_amount, currency };
 
         // Reversal information with amount and reason
         let reversal_information = ReversalInformation {
@@ -896,20 +846,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // REFUND REQUEST CONVERSION - TryFrom RouterDataV2 to WellsfargoRefundRequest
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        WellsFargoRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for WellsfargoRefundRequest
+    TryFrom<WellsFargoRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for WellsfargoRefundRequest
 {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        item: WellsFargoRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: WellsFargoRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let request = &router_data.request;
@@ -926,10 +869,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::AmountConversionFailed)
             .attach_printable("Failed to convert amount for Wells Fargo payment")?;
 
-        let amount_details = Amount {
-            total_amount,
-            currency,
-        };
+        let amount_details = Amount { total_amount, currency };
 
         let order_information = OrderInformationAmount {
             amount_details,
@@ -953,12 +893,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         WellsFargoRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
             T,
         >,
     > for WellsfargoZeroMandateRequest<T>
@@ -967,12 +902,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn try_from(
         item: WellsFargoRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -984,9 +914,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let email = request
             .email
             .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "email",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "email" })?;
         let email_secret = Secret::new(email.peek().to_string());
 
         // Create billing information from address data
@@ -1002,10 +930,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         last_name: addr_details.last_name.clone(),
                         address1: addr_details.line1.clone(),
                         locality: addr_details.city.clone(),
-                        administrative_area: addr_details
-                            .to_state_code_as_optional()
-                            .ok()
-                            .flatten(),
+                        administrative_area: addr_details.to_state_code_as_optional().ok().flatten(),
                         postal_code: addr_details.zip.clone(),
                         country: addr_details.country,
                         email: email_secret.clone(),
@@ -1071,12 +996,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Payment information from card
         let payment_information = match &request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
-                let card_issuer =
-                    domain_types::utils::get_card_issuer(card_data.card_number.peek())
-                        .change_context(errors::ConnectorError::MissingRequiredField {
-                            field_name: "card_type",
-                        })
-                        .attach_printable("Unable to determine card issuer from card number")?;
+                let card_issuer = domain_types::utils::get_card_issuer(card_data.card_number.peek())
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "card_type",
+                    })
+                    .attach_printable("Unable to determine card issuer from card number")?;
                 let card_type = card_issuer_to_string(card_issuer);
                 PaymentInformation::Cards(Box::new(CardPaymentInformation {
                     card: Card {
@@ -1117,9 +1041,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
 {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<WellsfargoPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         // For Authorize flow, determine if it's auto-capture or manual based on capture_method
         let is_auto_capture = item
@@ -1128,15 +1050,10 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsRes
             .capture_method
             .map(|method| matches!(method, common_enums::CaptureMethod::Automatic))
             .unwrap_or(false);
-        let status = map_attempt_status(
-            &response.status,
-            is_auto_capture,
-            &response.error_information,
-        );
+        let status = map_attempt_status(&response.status, is_auto_capture, &response.error_information);
 
         // Check if the payment was successful
-        let response_data = if is_payment_successful(&response.status, &response.status_information)
-        {
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
@@ -1193,9 +1110,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<WellsfargoPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // For PSync, check both status (Authorize response) and status_information (GET response)
@@ -1253,16 +1168,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<WellsfargoPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         // For Capture flow, capture=true
         let status = map_attempt_status(&response.status, true, &response.error_information);
 
         // Check if the capture was successful
-        let response_data = if is_payment_successful(&response.status, &response.status_information)
-        {
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
@@ -1306,16 +1218,13 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<WellsfargoPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         // For Void flow, capture=false
         let status = map_attempt_status(&response.status, false, &response.error_information);
 
         // Check if the void was successful
-        let response_data = if is_payment_successful(&response.status, &response.status_information)
-        {
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: None,
@@ -1356,25 +1265,17 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 // SETUPMANDATE RESPONSE CONVERSION
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
-    for RouterDataV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    >
+    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<WellsfargoPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         // For SetupMandate flow, capture=false (zero-dollar auth)
         let mut status = map_attempt_status(&response.status, false, &response.error_information);
 
         // Check if the mandate setup was successful
-        let response_data = if is_payment_successful(&response.status, &response.status_information)
-        {
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
             // Extract mandate reference from token information
             // Wells Fargo returns both payment_instrument.id and customer.id in token_information
             // We store payment_instrument.id as the connector_mandate_id for future recurring payments
@@ -1449,15 +1350,12 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
 {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<WellsfargoPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<WellsfargoPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let status = get_refund_status(&response.status, &response.error_information);
 
         // Check if the refund was successful
-        let response_data = if is_payment_successful(&response.status, &response.status_information)
-        {
+        let response_data = if is_payment_successful(&response.status, &response.status_information) {
             Ok(RefundsResponseData {
                 connector_refund_id: response.id.clone(),
                 refund_status: status,
@@ -1465,12 +1363,7 @@ impl TryFrom<ResponseRouterData<WellsfargoPaymentsResponse, Self>>
             })
         } else {
             // Build error response using helper function
-            Err(build_error_response(
-                response,
-                item.http_code,
-                None,
-                "Refund failed",
-            ))
+            Err(build_error_response(response, item.http_code, None, "Refund failed"))
         };
 
         Ok(Self {
@@ -1490,9 +1383,7 @@ impl TryFrom<ResponseRouterData<WellsfargoRSyncResponse, Self>>
 {
     type Error = Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<WellsfargoRSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<WellsfargoRSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Extract status from application_information (TSS endpoint structure)
@@ -1617,10 +1508,7 @@ impl From<&ClientProcessorInformation> for AdditionalPaymentMethodConnectorRespo
     }
 }
 
-fn is_payment_successful(
-    status: &Option<WellsfargoPaymentStatus>,
-    status_info: &Option<StatusInformation>,
-) -> bool {
+fn is_payment_successful(status: &Option<WellsfargoPaymentStatus>, status_info: &Option<StatusInformation>) -> bool {
     // Check if status field indicates success
     let status_success = matches!(
         status,
@@ -1650,8 +1538,7 @@ fn map_attempt_status(
     error_info: &Option<WellsfargoErrorInformation>,
 ) -> AttemptStatus {
     match status {
-        Some(WellsfargoPaymentStatus::Authorized)
-        | Some(WellsfargoPaymentStatus::AuthorizedPendingReview) => {
+        Some(WellsfargoPaymentStatus::Authorized) | Some(WellsfargoPaymentStatus::AuthorizedPendingReview) => {
             if capture {
                 AttemptStatus::Charged
             } else {
@@ -1666,15 +1553,11 @@ fn map_attempt_status(
             }
         }
         Some(WellsfargoPaymentStatus::Transmitted) => AttemptStatus::Charged,
-        Some(WellsfargoPaymentStatus::Voided) | Some(WellsfargoPaymentStatus::Reversed) => {
-            AttemptStatus::Voided
-        }
+        Some(WellsfargoPaymentStatus::Voided) | Some(WellsfargoPaymentStatus::Reversed) => AttemptStatus::Voided,
         Some(WellsfargoPaymentStatus::Declined)
         | Some(WellsfargoPaymentStatus::AuthorizedRiskDeclined)
         | Some(WellsfargoPaymentStatus::InvalidRequest) => AttemptStatus::Failure,
-        Some(WellsfargoPaymentStatus::PendingAuthentication) => {
-            AttemptStatus::AuthenticationPending
-        }
+        Some(WellsfargoPaymentStatus::PendingAuthentication) => AttemptStatus::AuthenticationPending,
         Some(WellsfargoPaymentStatus::PendingReview) => AttemptStatus::Pending,
         Some(WellsfargoPaymentStatus::PartialAuthorized) => {
             if capture {
@@ -1724,15 +1607,9 @@ pub fn get_error_reason(
         (Some(message), Some(details), Some(avs_message)) => Some(format!(
             "{message}, detailed_error_information: {details}, avs_message: {avs_message}",
         )),
-        (Some(message), Some(details), None) => {
-            Some(format!("{message}, detailed_error_information: {details}"))
-        }
-        (Some(message), None, Some(avs_message)) => {
-            Some(format!("{message}, avs_message: {avs_message}"))
-        }
-        (None, Some(details), Some(avs_message)) => {
-            Some(format!("{details}, avs_message: {avs_message}"))
-        }
+        (Some(message), Some(details), None) => Some(format!("{message}, detailed_error_information: {details}")),
+        (Some(message), None, Some(avs_message)) => Some(format!("{message}, avs_message: {avs_message}")),
+        (None, Some(details), Some(avs_message)) => Some(format!("{details}, avs_message: {avs_message}")),
         (Some(message), None, None) => Some(message),
         (None, Some(details), None) => Some(details),
         (None, None, Some(avs_message)) => Some(avs_message),

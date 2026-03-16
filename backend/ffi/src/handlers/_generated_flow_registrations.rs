@@ -35,6 +35,10 @@ use grpc_api_types::payments::{
     RecurringPaymentServiceChargeResponse,
     RefundResponse,
 };
+use grpc_api_types::payouts::{
+    PayoutServiceCreateRequest,
+    PayoutServiceCreateResponse,
+};
 use crate::services::payments::{
     authenticate_req_transformer, authenticate_res_transformer,
     authorize_req_transformer, authorize_res_transformer,
@@ -52,6 +56,9 @@ use crate::services::payments::{
     setup_recurring_req_transformer, setup_recurring_res_transformer,
     tokenize_req_transformer, tokenize_res_transformer,
     void_req_transformer, void_res_transformer,
+};
+use crate::services::payouts::{
+    payout_create_req_transformer, payout_create_res_transformer,
 };
 
 // authenticate: PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
@@ -86,3 +93,6 @@ impl_flow_handlers!(setup_recurring, PaymentServiceSetupRecurringRequest, Paymen
 impl_flow_handlers!(tokenize, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse, tokenize_req_transformer, tokenize_res_transformer);
 // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 impl_flow_handlers!(void, PaymentServiceVoidRequest, PaymentServiceVoidResponse, void_req_transformer, void_res_transformer);
+
+// create_payout: PayoutService.Create — Create a payout.
+impl_flow_handlers!(create_payout, PayoutServiceCreateRequest, PayoutServiceCreateResponse, payout_create_req_transformer, payout_create_res_transformer);

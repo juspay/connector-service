@@ -6,10 +6,7 @@ use syn::Type;
 
 fn used_params(ty: &str, params: &[&str]) -> HashSet<String> {
     let ty: Type = syn::parse_str(ty).expect("type should parse");
-    let generic_params = params
-        .iter()
-        .map(|param| param.to_string())
-        .collect::<HashSet<_>>();
+    let generic_params = params.iter().map(|param| param.to_string()).collect::<HashSet<_>>();
     let mut used = HashSet::new();
     collect_generic_params(&ty, &generic_params, &mut used);
     used

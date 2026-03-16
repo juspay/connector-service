@@ -29,9 +29,7 @@ pub enum GlobalPaymentMethodSessionIdError {
 
 impl GlobalPaymentMethodSessionId {
     /// Create a new GlobalPaymentMethodSessionId from cell id information
-    pub fn generate(
-        cell_id: &CellId,
-    ) -> error_stack::Result<Self, GlobalPaymentMethodSessionIdError> {
+    pub fn generate(cell_id: &CellId) -> error_stack::Result<Self, GlobalPaymentMethodSessionIdError> {
         let global_id = GlobalId::generate(cell_id, GlobalEntity::PaymentMethodSession);
         Ok(Self(global_id))
     }
@@ -69,8 +67,7 @@ impl GlobalPaymentMethodId {
 
     /// Construct a new GlobalPaymentMethodId from a string
     pub fn generate_from_string(value: String) -> CustomResult<Self, GlobalPaymentMethodIdError> {
-        let id = GlobalId::from_string(value.into())
-            .change_context(GlobalPaymentMethodIdError::ConstructionError)?;
+        let id = GlobalId::from_string(value.into()).change_context(GlobalPaymentMethodIdError::ConstructionError)?;
         Ok(Self(id))
     }
 }

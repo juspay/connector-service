@@ -1,9 +1,7 @@
 use quote::{format_ident, quote};
 use syn::{parse_quote, Attribute, Data, DeriveInput, Fields, Generics};
 
-use crate::generics::{
-    add_where_bounds, append_patch_params, build_patch_generics, GenericPatchCtx,
-};
+use crate::generics::{add_where_bounds, append_patch_params, build_patch_generics, GenericPatchCtx};
 use crate::helper::build_patch_field_specific_metadata;
 
 // Build the derive expansion for a struct.
@@ -19,9 +17,7 @@ pub(crate) fn derive_patch_impl(input: DeriveInput) -> syn::Result<proc_macro::T
     let fields = match data {
         Data::Struct(data) => match data.fields {
             Fields::Named(fields) => fields.named,
-            Fields::Unnamed(_) | Fields::Unit => {
-                return derive_replace_patch_impl(struct_name, vis, generics)
-            }
+            Fields::Unnamed(_) | Fields::Unit => return derive_replace_patch_impl(struct_name, vis, generics),
         },
         Data::Enum(_) => return derive_replace_patch_impl(struct_name, vis, generics),
         Data::Union(_) => {
@@ -54,11 +50,7 @@ pub(crate) fn derive_patch_impl(input: DeriveInput) -> syn::Result<proc_macro::T
         }
     }
 
-    let patch_generics = build_patch_generics(
-        &generics,
-        &patch_ctx.used_type_params,
-        &patch_ctx.patch_params,
-    );
+    let patch_generics = build_patch_generics(&generics, &patch_ctx.used_type_params, &patch_ctx.patch_params);
     let impl_generics_source = add_where_bounds(
         &append_patch_params(&generics, &patch_ctx.patch_params),
         &patch_ctx.where_bounds,
@@ -99,10 +91,7 @@ fn derive_replace_patch_impl(
 ) -> syn::Result<proc_macro::TokenStream> {
     let patch_name = format_ident!("{}Patch", item_name);
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-    let patch_doc = format!(
-        "Generated patch type for `{}`. This type is patched by replacement.",
-        item_name
-    );
+    let patch_doc = format!("Generated patch type for `{}`. This type is patched by replacement.", item_name);
     let patch_doc_attr: Attribute = parse_quote!(#[doc = #patch_doc]);
 
     Ok(quote! {

@@ -78,9 +78,7 @@ impl HttpClientError {
     pub fn status_code(&self) -> u16 {
         match self {
             Self::ConnectTimeout(_) | Self::ResponseTimeout(_) | Self::TotalTimeout(_) => 504,
-            Self::NetworkFailure(_)
-            | Self::InvalidConfiguration(_)
-            | Self::ClientInitialization(_) => 500,
+            Self::NetworkFailure(_) | Self::InvalidConfiguration(_) | Self::ClientInitialization(_) => 500,
         }
     }
 
@@ -108,9 +106,7 @@ impl HttpClient {
             .connect_timeout_ms
             .unwrap_or(HttpDefault::ConnectTimeoutMs as u32);
 
-        let total_timeout = options
-            .total_timeout_ms
-            .unwrap_or(HttpDefault::TotalTimeoutMs as u32);
+        let total_timeout = options.total_timeout_ms.unwrap_or(HttpDefault::TotalTimeoutMs as u32);
 
         let keep_alive_timeout = options
             .keep_alive_timeout_ms
@@ -125,28 +121,18 @@ impl HttpClient {
         if let Some(ca) = &options.ca_cert {
             let cert = match &ca.format {
                 Some(grpc_api_types::payments::ca_cert::Format::Pem(pem)) => {
-                    reqwest::Certificate::from_pem(pem.as_bytes()).map_err(|e| {
-                        HttpClientError::InvalidConfiguration(format!("Invalid PEM: {}", e))
-                    })
+                    reqwest::Certificate::from_pem(pem.as_bytes())
+                        .map_err(|e| HttpClientError::InvalidConfiguration(format!("Invalid PEM: {}", e)))
                 }
-                Some(grpc_api_types::payments::ca_cert::Format::Der(der)) => {
-                    reqwest::Certificate::from_der(der).map_err(|e| {
-                        HttpClientError::InvalidConfiguration(format!("Invalid DER: {}", e))
-                    })
-                }
-                None => Err(HttpClientError::InvalidConfiguration(
-                    "Missing cert format".to_string(),
-                )),
+                Some(grpc_api_types::payments::ca_cert::Format::Der(der)) => reqwest::Certificate::from_der(der)
+                    .map_err(|e| HttpClientError::InvalidConfiguration(format!("Invalid DER: {}", e))),
+                None => Err(HttpClientError::InvalidConfiguration("Missing cert format".to_string())),
             }?;
             builder = builder.add_root_certificate(cert);
         }
 
         if let Some(proxy_config) = &options.proxy {
-            if let Some(url) = proxy_config
-                .https_url
-                .as_ref()
-                .or(proxy_config.http_url.as_ref())
-            {
+            if let Some(url) = proxy_config.https_url.as_ref().or(proxy_config.http_url.as_ref()) {
                 if let Ok(mut proxy) = reqwest::Proxy::all(url) {
                     for bypass in &proxy_config.bypass_urls {
                         proxy = proxy.no_proxy(reqwest::NoProxy::from_string(bypass));
@@ -156,9 +142,9 @@ impl HttpClient {
             }
         }
 
-        let client = builder.build().map_err(|e| {
-            HttpClientError::ClientInitialization(format!("Failed to build HTTP client: {}", e))
-        })?;
+        let client = builder
+            .build()
+            .map_err(|e| HttpClientError::ClientInitialization(format!("Failed to build HTTP client: {}", e)))?;
 
         Ok(Self { client, options })
     }
@@ -180,15 +166,14 @@ impl HttpClient {
         };
 
         // Efficient Override: Apply total timeout directly to RequestBuilder.
-        let effective_total_timeout =
-            if let Some(total) = override_options.as_ref().and_then(|o| o.total_timeout_ms) {
-                req_builder = req_builder.timeout(Duration::from_millis(total as u64));
-                total
-            } else {
-                self.options
-                    .total_timeout_ms
-                    .unwrap_or(HttpDefault::TotalTimeoutMs as u32)
-            };
+        let effective_total_timeout = if let Some(total) = override_options.as_ref().and_then(|o| o.total_timeout_ms) {
+            req_builder = req_builder.timeout(Duration::from_millis(total as u64));
+            total
+        } else {
+            self.options
+                .total_timeout_ms
+                .unwrap_or(HttpDefault::TotalTimeoutMs as u32)
+        };
 
         for (key, value) in &request.headers {
             req_builder = req_builder.header(key, value);
@@ -218,10 +203,7 @@ impl HttpClient {
         let status_code = response.status().as_u16();
         let mut response_headers = HashMap::new();
         for (key, value) in response.headers() {
-            response_headers.insert(
-                key.to_string().to_lowercase(),
-                value.to_str().unwrap_or("").to_string(),
-            );
+            response_headers.insert(key.to_string().to_lowercase(), value.to_str().unwrap_or("").to_string());
         }
 
         let body = response

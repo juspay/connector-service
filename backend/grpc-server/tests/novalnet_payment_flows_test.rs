@@ -16,9 +16,9 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
-        AuthenticationType, CaptureMethod, CardDetails, Currency, Identifier, PaymentAddress,
-        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+        CaptureMethod, CardDetails, Currency, Identifier, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -27,10 +27,7 @@ use uuid::Uuid;
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
 // Helper function to generate a unique ID using UUID
@@ -53,8 +50,8 @@ const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_novalnet_metadata<T>(request: &mut Request<T>) {
-    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
-        .expect("Failed to load novalnet credentials");
+    let auth =
+        utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load novalnet credentials");
 
     let (api_key, key1, api_secret) = match auth {
         domain_types::router_data::ConnectorAuthType::SignatureKey {
@@ -65,28 +62,24 @@ fn add_novalnet_metadata<T>(request: &mut Request<T>) {
         _ => panic!("Expected SignatureKey auth type for novalnet"),
     };
 
-    request.metadata_mut().append(
-        "x-connector",
-        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
-    );
+    request
+        .metadata_mut()
+        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
     request
         .metadata_mut()
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
-    request.metadata_mut().append(
-        "x-api-key",
-        api_key.parse().expect("Failed to parse x-api-key"),
-    );
+    request
+        .metadata_mut()
+        .append("x-api-key", api_key.parse().expect("Failed to parse x-api-key"));
     request
         .metadata_mut()
         .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
-    request.metadata_mut().append(
-        "x-api-secret",
-        api_secret.parse().expect("Failed to parse x-api-secret"),
-    );
-    request.metadata_mut().append(
-        "x-merchant-id",
-        MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
-    );
+    request
+        .metadata_mut()
+        .append("x-api-secret", api_secret.parse().expect("Failed to parse x-api-secret"));
+    request
+        .metadata_mut()
+        .append("x-merchant-id", MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"));
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())

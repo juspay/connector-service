@@ -7,20 +7,19 @@ use domain_types::{
     connector_flow,
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        EventType, MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, PayoutFlowData, RedirectDetailsResponse,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payout_types::{PayoutCreateRequest, PayoutCreateResponse},
     router_data::ConnectorSpecificAuth,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
@@ -64,6 +63,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + MandateRevokeV2
     + VerifyWebhookSourceV2
     + VerifyRedirectResponse
+    + PayoutCreateV2
 {
 }
 
@@ -73,12 +73,7 @@ pub trait PaymentVoidV2:
 }
 
 pub trait PaymentVoidPostCaptureV2:
-    ConnectorIntegrationV2<
-    connector_flow::VoidPC,
-    PaymentFlowData,
-    PaymentsCancelPostCaptureData,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
 }
 
@@ -127,12 +122,7 @@ pub trait ValidationTrait: ConnectorCommon {
 }
 
 pub trait PaymentOrderCreate:
-    ConnectorIntegrationV2<
-    connector_flow::CreateOrder,
-    PaymentFlowData,
-    PaymentCreateOrderData,
-    PaymentCreateOrderResponse,
->
+    ConnectorIntegrationV2<connector_flow::CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
 {
 }
 
@@ -187,22 +177,12 @@ pub trait PaymentTokenV2<T: PaymentMethodDataTypes>:
 }
 
 pub trait PaymentAuthorizeV2<T: PaymentMethodDataTypes>:
-    ConnectorIntegrationV2<
-    connector_flow::Authorize,
-    PaymentFlowData,
-    PaymentsAuthorizeData<T>,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
 }
 
 pub trait PaymentSyncV2:
-    ConnectorIntegrationV2<
-    connector_flow::PSync,
-    PaymentFlowData,
-    PaymentsSyncData,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
 }
 
@@ -217,32 +197,17 @@ pub trait RefundSyncV2:
 }
 
 pub trait PaymentCapture:
-    ConnectorIntegrationV2<
-    connector_flow::Capture,
-    PaymentFlowData,
-    PaymentsCaptureData,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
 }
 
 pub trait SetupMandateV2<T: PaymentMethodDataTypes>:
-    ConnectorIntegrationV2<
-    connector_flow::SetupMandate,
-    PaymentFlowData,
-    SetupMandateRequestData<T>,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
 }
 
 pub trait RepeatPaymentV2<T: PaymentMethodDataTypes>:
-    ConnectorIntegrationV2<
-    connector_flow::RepeatPayment,
-    PaymentFlowData,
-    RepeatPaymentData<T>,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
 }
 
@@ -257,32 +222,17 @@ pub trait MandateRevokeV2:
 }
 
 pub trait AcceptDispute:
-    ConnectorIntegrationV2<
-    connector_flow::Accept,
-    DisputeFlowData,
-    AcceptDisputeData,
-    DisputeResponseData,
->
+    ConnectorIntegrationV2<connector_flow::Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
 {
 }
 
 pub trait SubmitEvidenceV2:
-    ConnectorIntegrationV2<
-    connector_flow::SubmitEvidence,
-    DisputeFlowData,
-    SubmitEvidenceData,
-    DisputeResponseData,
->
+    ConnectorIntegrationV2<connector_flow::SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
 {
 }
 
 pub trait DisputeDefend:
-    ConnectorIntegrationV2<
-    connector_flow::DefendDispute,
-    DisputeFlowData,
-    DisputeDefendData,
-    DisputeResponseData,
->
+    ConnectorIntegrationV2<connector_flow::DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
 {
 }
 
@@ -297,12 +247,7 @@ pub trait PaymentPreAuthenticateV2<T: PaymentMethodDataTypes>:
 }
 
 pub trait PaymentAuthenticateV2<T: PaymentMethodDataTypes>:
-    ConnectorIntegrationV2<
-    connector_flow::Authenticate,
-    PaymentFlowData,
-    PaymentsAuthenticateData<T>,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
 {
 }
 
@@ -333,6 +278,20 @@ pub trait VerifyWebhookSourceV2:
     VerifyWebhookSourceRequestData,
     VerifyWebhookSourceResponseData,
 >
+{
+}
+
+pub trait PayoutCreateV2:
+    ConnectorIntegrationV2<connector_flow::PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>
+{
+}
+
+impl<T> PayoutCreateV2 for T where T: ConnectorCommon + Sync + Send + 'static {}
+
+impl<T> ConnectorIntegrationV2<connector_flow::PayoutCreate, PayoutFlowData, PayoutCreateRequest, PayoutCreateResponse>
+    for T
+where
+    T: ConnectorCommon + Sync + Send + 'static,
 {
 }
 
@@ -370,10 +329,7 @@ pub trait IncomingWebhook {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
-        Err(
-            domain_types::errors::ConnectorError::NotImplemented("get_event_type".to_string())
-                .into(),
-        )
+        Err(domain_types::errors::ConnectorError::NotImplemented("get_event_type".to_string()).into())
     }
 
     fn process_payment_webhook(
@@ -381,12 +337,8 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>>
-    {
-        Err(domain_types::errors::ConnectorError::NotImplemented(
-            "process_payment_webhook".to_string(),
-        )
-        .into())
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>> {
+        Err(domain_types::errors::ConnectorError::NotImplemented("process_payment_webhook".to_string()).into())
     }
 
     fn process_refund_webhook(
@@ -394,28 +346,16 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
-    ) -> Result<
-        RefundWebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        Err(domain_types::errors::ConnectorError::NotImplemented(
-            "process_refund_webhook".to_string(),
-        )
-        .into())
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>> {
+        Err(domain_types::errors::ConnectorError::NotImplemented("process_refund_webhook".to_string()).into())
     }
     fn process_dispute_webhook(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
-    ) -> Result<
-        DisputeWebhookDetailsResponse,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
-        Err(domain_types::errors::ConnectorError::NotImplemented(
-            "process_dispute_webhook".to_string(),
-        )
-        .into())
+    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>> {
+        Err(domain_types::errors::ConnectorError::NotImplemented("process_dispute_webhook".to_string()).into())
     }
 
     /// fn get_webhook_resource_object
@@ -426,10 +366,7 @@ pub trait IncomingWebhook {
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
-        Err(domain_types::errors::ConnectorError::NotImplemented(
-            "get_webhook_resource_object".to_string(),
-        )
-        .into())
+        Err(domain_types::errors::ConnectorError::NotImplemented("get_webhook_resource_object".to_string()).into())
     }
 }
 
@@ -460,10 +397,7 @@ pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
         &self,
         _request: &RequestDetails,
     ) -> CustomResult<RedirectDetailsResponse, domain_types::errors::ConnectorError> {
-        Err(domain_types::errors::ConnectorError::NotImplemented(
-            "process_redirect_response".to_string(),
-        )
-        .into())
+        Err(domain_types::errors::ConnectorError::NotImplemented("process_redirect_response".to_string()).into())
     }
 }
 
@@ -480,12 +414,8 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
         let is_default_capture_method = [CaptureMethod::Automatic].contains(&capture_method);
         let is_feature_supported = match self.get_supported_payment_methods() {
             Some(supported_payment_methods) => {
-                let connector_payment_method_type_info = get_connector_payment_method_type_info(
-                    supported_payment_methods,
-                    payment_method,
-                    pmt,
-                    self.id(),
-                )?;
+                let connector_payment_method_type_info =
+                    get_connector_payment_method_type_info(supported_payment_methods, payment_method, pmt, self.id())?;
 
                 connector_payment_method_type_info
                     .map(|payment_method_type_info| {
@@ -551,18 +481,17 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
 }
 
 fn get_connector_payment_method_type_info(
-    supported_payment_method: &SupportedPaymentMethods,
+    supported_payment_methods: &SupportedPaymentMethods,
     payment_method: PaymentMethod,
     payment_method_type: Option<PaymentMethodType>,
     connector: &'static str,
 ) -> CustomResult<Option<PaymentMethodDetails>, domain_types::errors::ConnectorError> {
-    let payment_method_details =
-        supported_payment_method
-            .get(&payment_method)
-            .ok_or_else(|| domain_types::errors::ConnectorError::NotSupported {
-                message: payment_method.to_string(),
-                connector,
-            })?;
+    let payment_method_details = supported_payment_methods.get(&payment_method).ok_or_else(|| {
+        domain_types::errors::ConnectorError::NotSupported {
+            message: payment_method.to_string(),
+            connector,
+        }
+    })?;
 
     payment_method_type
         .map(|pmt| {

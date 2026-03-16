@@ -4,27 +4,23 @@ use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent,
-    types::StringMajorUnit,
+    errors::CustomResult, events, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,
-        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken, DefendDispute,
+        IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync,
+        Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
@@ -38,15 +34,15 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Mask;
 use hyperswitch_masking::{ExposeInterface, Maskable, Secret};
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    decode::BodyDecoding, verification::SourceVerification,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types, decode::BodyDecoding,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers as fiservemea;
 use transformers::{
-    FiservemeaAuthorizeResponse, FiservemeaCaptureResponse, FiservemeaPaymentsRequest,
-    FiservemeaRefundResponse, FiservemeaRefundSyncResponse, FiservemeaSyncResponse,
-    FiservemeaVoidResponse, PostAuthTransaction, ReturnTransaction, VoidTransaction,
+    FiservemeaAuthorizeResponse, FiservemeaCaptureResponse, FiservemeaPaymentsRequest, FiservemeaRefundResponse,
+    FiservemeaRefundSyncResponse, FiservemeaSyncResponse, FiservemeaVoidResponse, PostAuthTransaction,
+    ReturnTransaction, VoidTransaction,
 };
 
 use super::macros;
@@ -174,14 +170,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::ConnectorServiceTrait<T>
+    for Fiservemea<T>
 {
 }
 
 // ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAuthorizeV2<T>
+    for Fiservemea<T>
 {
 }
 
@@ -190,86 +186,86 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentSyncV2
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentVoidV2
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentVoidPostCaptureV2
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentCapture
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SdkSessionTokenV2
+    for Fiservemea<T>
 {
 }
 
 // ===== REFUND FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RefundV2
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RefundSyncV2
+    for Fiservemea<T>
 {
 }
 
 // ===== ADVANCED FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SetupMandateV2<T>
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RepeatPaymentV2<T>
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentOrderCreate
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentSessionToken
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAccessToken
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentTokenV2<T>
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::MandateRevokeV2
+    for Fiservemea<T>
 {
 }
 
 // ===== AUTHENTICATION FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentPreAuthenticateV2<T>
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAuthenticateV2<T>
+    for Fiservemea<T>
 {
 }
 
@@ -279,47 +275,41 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== DISPUTE FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::AcceptDispute
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::DisputeDefend
+    for Fiservemea<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SubmitEvidenceV2
+    for Fiservemea<T>
 {
 }
 
 // ===== WEBHOOK TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Fiservemea<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::VerifyRedirectResponse for Fiservemea<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::IncomingWebhook
     for Fiservemea<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::VerifyRedirectResponse
     for Fiservemea<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification for Fiservemea<T> {}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding for Fiservemea<T> {}
 // ===== VALIDATION TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::ValidationTrait
+    for Fiservemea<T>
 {
 }
 
 // ===== CONNECTOR CUSTOMER TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Fiservemea<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::CreateConnectorCustomer
+    for Fiservemea<T>
 {
 }
 
@@ -517,87 +507,60 @@ macros::macro_connector_implementation!(
 
 // Payment Void Post Capture
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Fiservemea<T>
 {
 }
 
 // Setup Mandate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Fiservemea<T>
 {
 }
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
+    for Fiservemea<T>
 {
 }
 
 // Order Create
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+    for Fiservemea<T>
 {
 }
 
 // Session Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Fiservemea<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
+    for Fiservemea<T>
 {
 }
 
 // Dispute Accept
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Fiservemea<T>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Fiservemea<T>
 {
 }
 
 // Dispute Defend
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Fiservemea<T>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Fiservemea<T>
 {
 }
 
 // Submit Evidence
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Fiservemea<T>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Fiservemea<T>
 {
 }
 
@@ -614,56 +577,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Access Token (required by PaymentAccessToken trait)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
+    for Fiservemea<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>
+    for Fiservemea<T>
 {
 }
 
 // ===== AUTHENTICATION FLOW CONNECTOR INTEGRATIONS =====
 // Pre Authentication
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Fiservemea<T>
 {
 }
 
 // Authentication
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Fiservemea<T>
 {
 }
 
 // Post Authentication
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Fiservemea<T>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Fiservemea<T>
 {
 }
 
@@ -686,9 +629,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // ===== CONNECTOR CUSTOMER SOURCE VERIFICATION =====
 
 // ===== CONNECTOR COMMON IMPLEMENTATION =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Fiservemea<T>
-{
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Fiservemea<T> {
     fn id(&self) -> &'static str {
         "fiservemea"
     }
@@ -733,9 +674,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         // Map specific error codes to attempt statuses
         let attempt_status = match response.code.as_deref() {
-            Some("AUTHENTICATION_FAILED") => {
-                Some(common_enums::AttemptStatus::AuthenticationFailed)
-            }
+            Some("AUTHENTICATION_FAILED") => Some(common_enums::AttemptStatus::AuthenticationFailed),
             Some("AUTHORIZATION_FAILED") => Some(common_enums::AttemptStatus::AuthorizationFailed),
             Some("NETWORK_ERROR") => Some(common_enums::AttemptStatus::Pending),
             _ => Some(common_enums::AttemptStatus::Failure),

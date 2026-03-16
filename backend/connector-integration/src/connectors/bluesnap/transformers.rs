@@ -4,9 +4,8 @@ use common_utils::errors::CustomResult;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
@@ -27,22 +26,20 @@ const WALLET_TYPE_GOOGLE_PAY: &str = "GOOGLE_PAY";
 // Re-export request types
 pub use requests::{
     BluesnapAchAuthorizeRequest, BluesnapAchData, BluesnapAuthorizeRequest, BluesnapCaptureRequest,
-    BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreditCard,
-    BluesnapEcpTransaction, BluesnapMetadata, BluesnapPayerInfo, BluesnapPaymentMethodDetails,
-    BluesnapPaymentsRequest, BluesnapPaymentsTokenRequest, BluesnapRefundRequest,
-    BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest, BluesnapWallet,
-    RequestMetadata, TransactionFraudInfo,
+    BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreditCard, BluesnapEcpTransaction,
+    BluesnapMetadata, BluesnapPayerInfo, BluesnapPaymentMethodDetails, BluesnapPaymentsRequest,
+    BluesnapPaymentsTokenRequest, BluesnapRefundRequest, BluesnapThreeDSecureInfo, BluesnapTxnType,
+    BluesnapVoidRequest, BluesnapWallet, RequestMetadata, TransactionFraudInfo,
 };
 
 // Re-export response types
 pub use responses::{
-    BluesnapAuthorizeResponse, BluesnapCaptureResponse, BluesnapChargebackStatus,
-    BluesnapCreditCardResponse, BluesnapDisputeWebhookBody, BluesnapErrorResponse,
-    BluesnapPSyncResponse, BluesnapPaymentsResponse, BluesnapProcessingInfo,
-    BluesnapProcessingStatus, BluesnapRedirectionResponse, BluesnapRefundResponse,
-    BluesnapRefundStatus, BluesnapRefundSyncResponse, BluesnapThreeDsReference,
-    BluesnapThreeDsResult, BluesnapVoidResponse, BluesnapWebhookBody, BluesnapWebhookEvent,
-    BluesnapWebhookObjectResource, RedirectErrorMessage,
+    BluesnapAuthorizeResponse, BluesnapCaptureResponse, BluesnapChargebackStatus, BluesnapCreditCardResponse,
+    BluesnapDisputeWebhookBody, BluesnapErrorResponse, BluesnapPSyncResponse, BluesnapPaymentsResponse,
+    BluesnapProcessingInfo, BluesnapProcessingStatus, BluesnapRedirectionResponse, BluesnapRefundResponse,
+    BluesnapRefundStatus, BluesnapRefundSyncResponse, BluesnapThreeDsReference, BluesnapThreeDsResult,
+    BluesnapVoidResponse, BluesnapWebhookBody, BluesnapWebhookEvent, BluesnapWebhookObjectResource,
+    RedirectErrorMessage,
 };
 
 const DISPLAY_METADATA: &str = "Y";
@@ -96,12 +93,8 @@ fn map_ecp_account_type(
     bank_holder_type: Option<common_enums::BankHolderType>,
 ) -> String {
     match (bank_holder_type, bank_type) {
-        (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Checking)) => {
-            "BUSINESS_CHECKING"
-        }
-        (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Savings)) => {
-            "BUSINESS_SAVINGS"
-        }
+        (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Checking)) => "BUSINESS_CHECKING",
+        (Some(common_enums::BankHolderType::Business), Some(common_enums::BankType::Savings)) => "BUSINESS_SAVINGS",
         (Some(common_enums::BankHolderType::Personal), Some(common_enums::BankType::Savings))
         | (None, Some(common_enums::BankType::Savings)) => "CONSUMER_SAVINGS",
         (Some(common_enums::BankHolderType::Personal), Some(common_enums::BankType::Checking))
@@ -135,9 +128,7 @@ impl TryFrom<&ConnectorSpecificAuth> for BluesnapAuthType {
                 username: username.to_owned(),
                 password: password.to_owned(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -152,16 +143,12 @@ fn get_attempt_status_from_bluesnap_status(
         BluesnapProcessingStatus::Success => match txn_type {
             Some(BluesnapTxnType::AuthOnly) => AttemptStatus::Authorized,
             Some(BluesnapTxnType::AuthReversal) => AttemptStatus::Voided,
-            Some(BluesnapTxnType::AuthCapture) | Some(BluesnapTxnType::Capture) => {
-                AttemptStatus::Charged
-            }
+            Some(BluesnapTxnType::AuthCapture) | Some(BluesnapTxnType::Capture) => AttemptStatus::Charged,
             Some(BluesnapTxnType::Refund) => AttemptStatus::Charged,
             // Default for ACH/ECP (no transaction type) - treat as charged on success
             None => AttemptStatus::Charged,
         },
-        BluesnapProcessingStatus::Pending | BluesnapProcessingStatus::PendingMerchantReview => {
-            AttemptStatus::Pending
-        }
+        BluesnapProcessingStatus::Pending | BluesnapProcessingStatus::PendingMerchantReview => AttemptStatus::Pending,
         BluesnapProcessingStatus::Fail => AttemptStatus::Failure,
     }
 }
@@ -181,12 +168,7 @@ impl From<BluesnapRefundStatus> for common_enums::RefundStatus {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BluesnapRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for BluesnapAuthorizeRequest
@@ -195,21 +177,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::BluesnapRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let billing_address = router_data
-            .resource_common_data
-            .address
-            .get_payment_method_billing();
+        let billing_address = router_data.resource_common_data.address.get_payment_method_billing();
 
         // Build request based on payment method type
         match &router_data.request.payment_method_data {
@@ -220,14 +194,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     _ => BluesnapTxnType::AuthCapture,
                 };
 
-                let card_holder_info =
-                    billing_address
-                        .and_then(|addr| addr.address.as_ref())
-                        .and_then(|details| {
-                            router_data.request.email.clone().and_then(|email| {
-                                get_card_holder_info(details, email).ok().flatten()
-                            })
-                        });
+                let card_holder_info = billing_address
+                    .and_then(|addr| addr.address.as_ref())
+                    .and_then(|details| {
+                        router_data
+                            .request
+                            .email
+                            .clone()
+                            .and_then(|email| get_card_holder_info(details, email).ok().flatten())
+                    });
 
                 // Convert card number to Secret<String>
                 let card_number = Secret::new(
@@ -246,16 +221,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     },
                 };
 
-                let transaction_meta_data =
-                    router_data
-                        .request
-                        .metadata
-                        .as_ref()
-                        .map(|metadata| BluesnapMetadata {
-                            meta_data: convert_metadata_to_request_metadata(
-                                metadata.clone().expose(),
-                            ),
-                        });
+                let transaction_meta_data = router_data.request.metadata.as_ref().map(|metadata| BluesnapMetadata {
+                    meta_data: convert_metadata_to_request_metadata(metadata.clone().expose()),
+                });
 
                 let amount = super::BluesnapAmountConvertor::convert(
                     router_data.request.minor_amount,
@@ -269,16 +237,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     payment_method_details,
                     card_holder_info,
                     transaction_fraud_info: Some(TransactionFraudInfo {
-                        fraud_session_id: router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
+                        fraud_session_id: router_data.resource_common_data.connector_request_reference_id.clone(),
                     }),
                     merchant_transaction_id: Some(
-                        router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
+                        router_data.resource_common_data.connector_request_reference_id.clone(),
                     ),
                     transaction_meta_data,
                 }))
@@ -290,14 +252,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     _ => BluesnapTxnType::AuthCapture,
                 };
 
-                let card_holder_info =
-                    billing_address
-                        .and_then(|addr| addr.address.as_ref())
-                        .and_then(|details| {
-                            router_data.request.email.clone().and_then(|email| {
-                                get_card_holder_info(details, email).ok().flatten()
-                            })
-                        });
+                let card_holder_info = billing_address
+                    .and_then(|addr| addr.address.as_ref())
+                    .and_then(|details| {
+                        router_data
+                            .request
+                            .email
+                            .clone()
+                            .and_then(|email| get_card_holder_info(details, email).ok().flatten())
+                    });
 
                 let payment_method_details = match wallet_data {
                     domain_types::payment_method_data::WalletData::ApplePay(apple_pay_data) => {
@@ -307,9 +270,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         );
                         BluesnapPaymentMethodDetails::Wallet {
                             wallet: BluesnapWallet {
-                                apple_pay: Some(requests::BluesnapApplePayWallet {
-                                    encoded_payment_token,
-                                }),
+                                apple_pay: Some(requests::BluesnapApplePayWallet { encoded_payment_token }),
                                 google_pay: None,
                                 wallet_type: WALLET_TYPE_APPLE_PAY.to_string(),
                             },
@@ -323,9 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         BluesnapPaymentMethodDetails::Wallet {
                             wallet: BluesnapWallet {
                                 apple_pay: None,
-                                google_pay: Some(requests::BluesnapGooglePayWallet {
-                                    encoded_payment_token,
-                                }),
+                                google_pay: Some(requests::BluesnapGooglePayWallet { encoded_payment_token }),
                                 wallet_type: WALLET_TYPE_GOOGLE_PAY.to_string(),
                             },
                         }
@@ -335,16 +294,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ))?,
                 };
 
-                let transaction_meta_data =
-                    router_data
-                        .request
-                        .metadata
-                        .as_ref()
-                        .map(|metadata| BluesnapMetadata {
-                            meta_data: convert_metadata_to_request_metadata(
-                                metadata.clone().expose(),
-                            ),
-                        });
+                let transaction_meta_data = router_data.request.metadata.as_ref().map(|metadata| BluesnapMetadata {
+                    meta_data: convert_metadata_to_request_metadata(metadata.clone().expose()),
+                });
 
                 let amount = super::BluesnapAmountConvertor::convert(
                     router_data.request.minor_amount,
@@ -358,16 +310,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     payment_method_details,
                     card_holder_info,
                     transaction_fraud_info: Some(TransactionFraudInfo {
-                        fraud_session_id: router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
+                        fraud_session_id: router_data.resource_common_data.connector_request_reference_id.clone(),
                     }),
                     merchant_transaction_id: Some(
-                        router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
+                        router_data.resource_common_data.connector_request_reference_id.clone(),
                     ),
                     transaction_meta_data,
                 }))
@@ -381,13 +327,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..
                 } => {
                     // Get payer info from billing address (required for ACH)
-                    let address_details = billing_address
-                        .and_then(|addr| addr.address.as_ref())
-                        .ok_or_else(|| {
-                            error_stack::report!(errors::ConnectorError::MissingRequiredField {
-                                field_name: "billing_address"
-                            })
-                        })?;
+                    let address_details = billing_address.and_then(|addr| addr.address.as_ref()).ok_or_else(|| {
+                        error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                            field_name: "billing_address"
+                        })
+                    })?;
 
                     let payer_info = get_payer_info(address_details)?;
 
@@ -400,10 +344,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )?;
 
                     let transaction_fraud_info = Some(TransactionFraudInfo {
-                        fraud_session_id: router_data
-                            .resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
+                        fraud_session_id: router_data.resource_common_data.connector_request_reference_id.clone(),
                     });
 
                     Ok(Self::Ach(BluesnapAchAuthorizeRequest {
@@ -437,10 +378,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::BluesnapRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        super::BluesnapRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     > for BluesnapCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -507,20 +445,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::BluesnapRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for BluesnapRefundRequest
+    TryFrom<super::BluesnapRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for BluesnapRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::BluesnapRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: super::BluesnapRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -543,9 +474,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BluesnapAuthorizeResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BluesnapAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
             item.response.card_transaction_type.clone(),
             item.response.processing_info.processing_status.clone(),
@@ -553,9 +482,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BluesnapAuthorizeResp
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.transaction_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -578,9 +505,7 @@ impl TryFrom<ResponseRouterData<BluesnapCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BluesnapCaptureResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BluesnapCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
             item.response.card_transaction_type.clone(),
             item.response.processing_info.processing_status.clone(),
@@ -588,9 +513,7 @@ impl TryFrom<ResponseRouterData<BluesnapCaptureResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.transaction_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -626,9 +549,7 @@ impl TryFrom<ResponseRouterData<BluesnapVoidResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.transaction_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -651,9 +572,7 @@ impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BluesnapPSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BluesnapPSyncResponse, Self>) -> Result<Self, Self::Error> {
         let status = get_attempt_status_from_bluesnap_status(
             item.response.card_transaction_type.clone(),
             item.response.processing_info.processing_status.clone(),
@@ -661,9 +580,7 @@ impl TryFrom<ResponseRouterData<BluesnapPSyncResponse, Self>>
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.transaction_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_id.clone()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -686,9 +603,7 @@ impl TryFrom<ResponseRouterData<BluesnapRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BluesnapRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BluesnapRefundResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = item.response.refund_status.clone().into();
 
         Ok(Self {
@@ -707,14 +622,11 @@ pub fn map_chargeback_status_to_event_type(
 ) -> CustomResult<domain_types::connector_types::EventType, errors::ConnectorError> {
     use domain_types::connector_types::EventType;
 
-    let status: BluesnapChargebackStatus =
-        serde_json::from_value(serde_json::Value::String(cb_status.to_string()))
-            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+    let status: BluesnapChargebackStatus = serde_json::from_value(serde_json::Value::String(cb_status.to_string()))
+        .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
 
     Ok(match status {
-        BluesnapChargebackStatus::New | BluesnapChargebackStatus::Working => {
-            EventType::DisputeOpened
-        }
+        BluesnapChargebackStatus::New | BluesnapChargebackStatus::Working => EventType::DisputeOpened,
         BluesnapChargebackStatus::Closed => EventType::DisputeExpired,
         BluesnapChargebackStatus::CompletedLost => EventType::DisputeLost,
         BluesnapChargebackStatus::CompletedPending => EventType::DisputeChallenged,
@@ -728,14 +640,10 @@ pub fn map_webhook_event_to_incoming_webhook_event(
     use domain_types::connector_types::EventType;
 
     match webhook_event {
-        BluesnapWebhookEvent::Decline | BluesnapWebhookEvent::CcChargeFailed => {
-            EventType::PaymentIntentFailure
-        }
+        BluesnapWebhookEvent::Decline | BluesnapWebhookEvent::CcChargeFailed => EventType::PaymentIntentFailure,
         BluesnapWebhookEvent::Charge => EventType::PaymentIntentSuccess,
         BluesnapWebhookEvent::Refund => EventType::RefundSuccess,
-        BluesnapWebhookEvent::Chargeback | BluesnapWebhookEvent::ChargebackStatusChanged => {
-            EventType::DisputeOpened
-        }
+        BluesnapWebhookEvent::Chargeback | BluesnapWebhookEvent::ChargebackStatusChanged => EventType::DisputeOpened,
         BluesnapWebhookEvent::Unknown => EventType::PaymentIntentFailure,
     }
 }
@@ -745,9 +653,7 @@ impl TryFrom<ResponseRouterData<BluesnapRefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BluesnapRefundSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BluesnapRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         let refund_status = match item.response.processing_info.processing_status {
             BluesnapProcessingStatus::Success => common_enums::RefundStatus::Success,
             BluesnapProcessingStatus::Pending | BluesnapProcessingStatus::PendingMerchantReview => {

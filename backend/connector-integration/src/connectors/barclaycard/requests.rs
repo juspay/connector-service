@@ -8,8 +8,7 @@ use crate::utils::MerchantDefinedInformation;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BarclaycardPaymentsRequest<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize>
-{
+pub struct BarclaycardPaymentsRequest<T: PaymentMethodDataTypes + Sync + Send + 'static + Serialize> {
     pub processing_information: ProcessingInformation,
     pub payment_information: PaymentInformation<T>,
     pub order_information: OrderInformationWithBill,

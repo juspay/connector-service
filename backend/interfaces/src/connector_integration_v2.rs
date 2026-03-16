@@ -16,23 +16,16 @@ pub type BoxedConnectorIntegrationV2<'a, Flow, ResourceCommonData, Req, Resp> =
     Box<&'a (dyn ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp> + Send + Sync)>;
 
 /// trait with a function that returns BoxedConnectorIntegrationV2
-pub trait ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp>:
-    Send + Sync + 'static
-{
+pub trait ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp>: Send + Sync + 'static {
     /// function what returns BoxedConnectorIntegrationV2
-    fn get_connector_integration_v2(
-        &self,
-    ) -> BoxedConnectorIntegrationV2<'_, Flow, ResourceCommonData, Req, Resp>;
+    fn get_connector_integration_v2(&self) -> BoxedConnectorIntegrationV2<'_, Flow, ResourceCommonData, Req, Resp>;
 }
 
-impl<S, Flow, ResourceCommonData, Req, Resp>
-    ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp> for S
+impl<S, Flow, ResourceCommonData, Req, Resp> ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp> for S
 where
     S: ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp> + Send + Sync,
 {
-    fn get_connector_integration_v2(
-        &self,
-    ) -> BoxedConnectorIntegrationV2<'_, Flow, ResourceCommonData, Req, Resp> {
+    fn get_connector_integration_v2(&self) -> BoxedConnectorIntegrationV2<'_, Flow, ResourceCommonData, Req, Resp> {
         Box::new(self)
     }
 }
@@ -109,10 +102,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
         event_builder: Option<&mut events::Event>,
         _res: domain_types::router_response_types::Response,
-    ) -> CustomResult<
-        RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-        domain_types::errors::ConnectorError,
-    >
+    ) -> CustomResult<RouterDataV2<Flow, ResourceCommonData, Req, Resp>, domain_types::errors::ConnectorError>
     where
         Flow: Clone,
         ResourceCommonData: Clone,
@@ -132,7 +122,9 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
         if let Some(event) = event_builder {
-            event.set_connector_response(&json!({"error": "Error response parsing not implemented", "status_code": res.status_code}))
+            event.set_connector_response(
+                &json!({"error": "Error response parsing not implemented", "status_code": res.status_code}),
+            )
         }
         Ok(ErrorResponse::get_not_implemented())
     }
@@ -159,9 +151,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         };
 
         if let Some(event) = event_builder {
-            event.set_connector_response(
-                &json!({"error": error_message, "status_code": res.status_code}),
-            )
+            event.set_connector_response(&json!({"error": error_message, "status_code": res.status_code}))
         }
 
         Ok(ErrorResponse {
@@ -188,10 +178,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_certificate(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<
-        Option<hyperswitch_masking::Secret<String>>,
-        domain_types::errors::ConnectorError,
-    > {
+    ) -> CustomResult<Option<hyperswitch_masking::Secret<String>>, domain_types::errors::ConnectorError> {
         Ok(None)
     }
 
@@ -199,10 +186,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_certificate_key(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<
-        Option<hyperswitch_masking::Secret<String>>,
-        domain_types::errors::ConnectorError,
-    > {
+    ) -> CustomResult<Option<hyperswitch_masking::Secret<String>>, domain_types::errors::ConnectorError> {
         Ok(None)
     }
 }

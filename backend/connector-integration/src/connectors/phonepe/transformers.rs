@@ -7,9 +7,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
-    },
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
     router_data::ConnectorSpecificAuth,
@@ -140,10 +138,7 @@ pub struct PhonepeResponseData {
     instrument_response: Option<PhonepeInstrumentResponse>,
     #[serde(rename = "responseCode", skip_serializing_if = "Option::is_none")]
     response_code: Option<String>,
-    #[serde(
-        rename = "responseCodeDescription",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "responseCodeDescription", skip_serializing_if = "Option::is_none")]
     response_code_description: Option<String>,
 }
 
@@ -174,10 +169,7 @@ pub struct PhonepePaymentInstrumentSync {
     pub account_type: Option<String>,
     #[serde(rename = "upiCreditLine", skip_serializing_if = "Option::is_none")]
     pub upi_credit_line: Option<bool>,
-    #[serde(
-        rename = "maskedAccountNumber",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "maskedAccountNumber", skip_serializing_if = "Option::is_none")]
     pub masked_account_number: Option<String>,
 }
 
@@ -185,10 +177,7 @@ pub struct PhonepePaymentInstrumentSync {
 pub struct PhonepeSyncResponseData {
     #[serde(rename = "merchantId", skip_serializing_if = "Option::is_none")]
     merchant_id: Option<String>,
-    #[serde(
-        rename = "merchantTransactionId",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "merchantTransactionId", skip_serializing_if = "Option::is_none")]
     merchant_transaction_id: Option<String>,
     #[serde(rename = "transactionId", skip_serializing_if = "Option::is_none")]
     transaction_id: Option<String>,
@@ -207,27 +196,14 @@ pub struct PhonepeSyncResponseData {
 // TryFrom implementation for macro-generated PhonepeRouterData wrapper (owned)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        PhonepeRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        PhonepeRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for PhonepePaymentsRequest
 {
     type Error = Error;
 
     fn try_from(
         wrapper: PhonepeRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -238,10 +214,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_in_minor_units = wrapper
             .connector
             .amount_converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         // Get customer mobile number from billing address
@@ -254,8 +227,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
                 UpiData::UpiIntent(intent_data) => {
-                    let target_app =
-                        get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    let target_app = get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
                     PhonepePaymentInstrument {
                         instrument_type: constants::UPI_INTENT.to_string(),
                         target_app,
@@ -319,10 +291,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
-            merchant_transaction_id: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            merchant_transaction_id: router_data.resource_common_data.connector_request_reference_id.clone(),
             merchant_user_id: router_data
                 .resource_common_data
                 .customer_id
@@ -337,8 +306,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Convert to JSON and encode
-        let json_payload = Encode::encode_to_string_of_json(&payload)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let json_payload =
+            Encode::encode_to_string_of_json(&payload).change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
@@ -350,8 +319,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             constants::API_PAY_ENDPOINT
         };
         let api_path = format!("/{}", api_endpoint);
-        let checksum =
-            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+        let checksum = generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
             request: Secret::new(base64_payload),
@@ -364,12 +332,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         &PhonepeRouterData<
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for PhonepePaymentsRequest
@@ -378,12 +341,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: &PhonepeRouterData<
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -394,10 +352,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount_in_minor_units = item
             .connector
             .amount_converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         // Get customer mobile number from billing address
@@ -410,8 +365,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let payment_instrument = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
                 UpiData::UpiIntent(intent_data) => {
-                    let target_app =
-                        get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
+                    let target_app = get_target_app_for_phonepe(intent_data, &router_data.request.browser_info);
                     PhonepePaymentInstrument {
                         instrument_type: constants::UPI_INTENT.to_string(),
                         target_app,
@@ -475,10 +429,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
-            merchant_transaction_id: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            merchant_transaction_id: router_data.resource_common_data.connector_request_reference_id.clone(),
             merchant_user_id: router_data
                 .resource_common_data
                 .customer_id
@@ -493,8 +444,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Convert to JSON and encode
-        let json_payload = Encode::encode_to_string_of_json(&payload)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let json_payload =
+            Encode::encode_to_string_of_json(&payload).change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         // Base64 encode the payload
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
@@ -506,8 +457,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             constants::API_PAY_ENDPOINT
         };
         let api_path = format!("/{}", api_endpoint);
-        let checksum =
-            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+        let checksum = generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
             request: Secret::new(base64_payload),
@@ -524,40 +474,36 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = Error;
 
-    fn try_from(
-        item: ResponseRouterData<PhonepePaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PhonepePaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         if response.success {
             if let Some(data) = &response.data {
                 if let Some(instrument_response) = &data.instrument_response {
                     // Handle different UPI flow responses
-                    let (redirect_form, connector_metadata) =
-                        match instrument_response.instrument_type.as_str() {
-                            instrument_type if instrument_type == constants::UPI_INTENT => {
-                                let redirect_form = instrument_response
-                                    .intent_url
-                                    .as_ref()
-                                    .map(|url| RedirectForm::Uri { uri: url.clone() });
-                                (redirect_form, None)
-                            }
-                            instrument_type if instrument_type == constants::UPI_QR => {
-                                let redirect_form = instrument_response
-                                    .intent_url
-                                    .as_ref()
-                                    .map(|url| RedirectForm::Uri { uri: url.clone() });
+                    let (redirect_form, connector_metadata) = match instrument_response.instrument_type.as_str() {
+                        instrument_type if instrument_type == constants::UPI_INTENT => {
+                            let redirect_form = instrument_response
+                                .intent_url
+                                .as_ref()
+                                .map(|url| RedirectForm::Uri { uri: url.clone() });
+                            (redirect_form, None)
+                        }
+                        instrument_type if instrument_type == constants::UPI_QR => {
+                            let redirect_form = instrument_response
+                                .intent_url
+                                .as_ref()
+                                .map(|url| RedirectForm::Uri { uri: url.clone() });
 
-                                let connector_metadata =
-                                    instrument_response.qr_data.as_ref().map(|qr| {
-                                        serde_json::json!({
-                                            "qr_data": qr
-                                        })
-                                    });
-                                (redirect_form, connector_metadata)
-                            }
-                            _ => (None, None),
-                        };
+                            let connector_metadata = instrument_response.qr_data.as_ref().map(|qr| {
+                                serde_json::json!({
+                                    "qr_data": qr
+                                })
+                            });
+                            (redirect_form, connector_metadata)
+                        }
+                        _ => (None, None),
+                    };
 
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
@@ -569,9 +515,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             mandate_reference: None,
                             connector_metadata,
                             network_txn_id: None,
-                            connector_response_reference_id: Some(
-                                data.merchant_transaction_id.clone(),
-                            ),
+                            connector_response_reference_id: Some(data.merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                         }),
@@ -593,9 +537,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             mandate_reference: None,
                             connector_metadata: get_wait_screen_metadata(),
                             network_txn_id: None,
-                            connector_response_reference_id: Some(
-                                data.merchant_transaction_id.clone(),
-                            ),
+                            connector_response_reference_id: Some(data.merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                         }),
@@ -621,20 +563,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             );
 
             // Get merchant transaction ID from data if available for better tracking
-            let connector_transaction_id = response
-                .data
-                .as_ref()
-                .map(|data| data.merchant_transaction_id.clone());
+            let connector_transaction_id = response.data.as_ref().map(|data| data.merchant_transaction_id.clone());
 
             // Map specific PhonePe error codes to attempt status if needed
             let attempt_status = match error_code.as_str() {
-                "INVALID_TRANSACTION_ID"
-                | "TRANSACTION_NOT_FOUND"
-                | "INVALID_REQUEST"
-                | "PAYMENT_DECLINED" => Some(common_enums::AttemptStatus::Failure),
-                "INTERNAL_SERVER_ERROR" | "PAYMENT_PENDING" => {
-                    Some(common_enums::AttemptStatus::Pending)
+                "INVALID_TRANSACTION_ID" | "TRANSACTION_NOT_FOUND" | "INVALID_REQUEST" | "PAYMENT_DECLINED" => {
+                    Some(common_enums::AttemptStatus::Failure)
                 }
+                "INTERNAL_SERVER_ERROR" | "PAYMENT_PENDING" => Some(common_enums::AttemptStatus::Pending),
                 _ => Some(common_enums::AttemptStatus::Pending),
             };
 
@@ -719,32 +655,20 @@ fn generate_phonepe_checksum(
     });
 
     // Format: hash###keyIndex
-    Ok(format!(
-        "{}{}{}",
-        hash,
-        constants::CHECKSUM_SEPARATOR,
-        key_index
-    ))
+    Ok(format!("{}{}{}", hash, constants::CHECKSUM_SEPARATOR, key_index))
 }
 
 // ===== SYNC REQUEST BUILDING =====
 
 // TryFrom implementation for owned PhonepeRouterData wrapper (sync)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        PhonepeRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PhonepeSyncRequest
+    TryFrom<PhonepeRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for PhonepeSyncRequest
 {
     type Error = Error;
 
     fn try_from(
-        wrapper: PhonepeRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        wrapper: PhonepeRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
         let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
@@ -757,12 +681,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         } else {
             constants::API_STATUS_ENDPOINT
         };
-        let api_path = format!(
-            "/{}/{}/{}",
-            api_endpoint,
-            auth.merchant_id.peek(),
-            merchant_transaction_id
-        );
+        let api_path = format!("/{}/{}/{}", api_endpoint, auth.merchant_id.peek(), merchant_transaction_id);
         let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
@@ -774,20 +693,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // TryFrom implementation for borrowed PhonepeRouterData wrapper (sync header generation)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        &PhonepeRouterData<
-            &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PhonepeSyncRequest
+    TryFrom<&PhonepeRouterData<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for PhonepeSyncRequest
 {
     type Error = Error;
 
     fn try_from(
-        item: &PhonepeRouterData<
-            &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: &PhonepeRouterData<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
@@ -800,12 +712,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         } else {
             constants::API_STATUS_ENDPOINT
         };
-        let api_path = format!(
-            "/{}/{}/{}",
-            api_endpoint,
-            auth.merchant_id.peek(),
-            merchant_transaction_id
-        );
+        let api_path = format!("/{}/{}/{}", api_endpoint, auth.merchant_id.peek(), merchant_transaction_id);
         let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
@@ -840,9 +747,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                         ) => {
                             let upi_mode = extract_upi_mode_from_sync_data(data);
                             let bin = data.payment_instrument.as_ref().and_then(|payment_inst| {
-                                extract_bin_from_masked_account_number(
-                                    payment_inst.masked_account_number.as_deref(),
-                                )
+                                extract_bin_from_masked_account_number(payment_inst.masked_account_number.as_deref())
                             });
                             (upi_mode, bin)
                         }
@@ -916,10 +821,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                     reason: None,
                     status_code: item.http_code,
                     attempt_status,
-                    connector_transaction_id: response
-                        .data
-                        .as_ref()
-                        .and_then(|data| data.transaction_id.clone()),
+                    connector_transaction_id: response.data.as_ref().and_then(|data| data.transaction_id.clone()),
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
@@ -930,11 +832,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
     }
 }
 
-fn generate_phonepe_sync_checksum(
-    api_path: &str,
-    salt_key: &Secret<String>,
-    key_index: &str,
-) -> Result<String, Error> {
+fn generate_phonepe_sync_checksum(api_path: &str, salt_key: &Secret<String>, key_index: &str) -> Result<String, Error> {
     // PhonePe sync checksum algorithm: SHA256(apiPath + saltKey) + "###" + keyIndex
     let checksum_input = format!("{}{}", api_path, salt_key.peek());
 
@@ -949,12 +847,7 @@ fn generate_phonepe_sync_checksum(
     });
 
     // Format: hash###keyIndex
-    Ok(format!(
-        "{}{}{}",
-        hash,
-        constants::CHECKSUM_SEPARATOR,
-        key_index
-    ))
+    Ok(format!("{}{}{}", hash, constants::CHECKSUM_SEPARATOR, key_index))
 }
 
 pub fn get_phonepe_error_status(error_code: &str) -> Option<common_enums::AttemptStatus> {
@@ -962,9 +855,7 @@ pub fn get_phonepe_error_status(error_code: &str) -> Option<common_enums::Attemp
         "TRANSACTION_NOT_FOUND" => Some(common_enums::AttemptStatus::Failure),
         "401" => Some(common_enums::AttemptStatus::AuthenticationFailed),
         "400" | "BAD_REQUEST" => Some(common_enums::AttemptStatus::Failure),
-        "PAYMENT_ERROR" | "PAYMENT_DECLINED" | "TIMED_OUT" => {
-            Some(common_enums::AttemptStatus::Failure)
-        }
+        "PAYMENT_ERROR" | "PAYMENT_DECLINED" | "TIMED_OUT" => Some(common_enums::AttemptStatus::Failure),
         "AUTHORIZATION_FAILED" => Some(common_enums::AttemptStatus::AuthenticationFailed),
         _ => None,
     }
@@ -1064,13 +955,9 @@ fn determine_upi_mode(
         response_code.map(|s| s.as_str()),
     ) {
         (Some(true), _, _, _) => Some(UpiSource::UpiCl),
-        (_, Some(constants::ACCOUNT_TYPE_CREDIT), Some(constants::CARD_NETWORK_RUPAY), _) => {
-            Some(UpiSource::UpiCc)
-        }
+        (_, Some(constants::ACCOUNT_TYPE_CREDIT), Some(constants::CARD_NETWORK_RUPAY), _) => Some(UpiSource::UpiCc),
         (_, Some(constants::ACCOUNT_TYPE_SAVINGS), _, _) => Some(UpiSource::UpiAccount),
-        (_, _, _, Some(constants::RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED)) => {
-            Some(UpiSource::UpiCc)
-        }
+        (_, _, _, Some(constants::RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED)) => Some(UpiSource::UpiCc),
         (_, _, _, Some(constants::RESPONSE_CODE_PAY0071)) => Some(UpiSource::UpiCl),
         _ => None,
     }
@@ -1082,19 +969,14 @@ fn extract_upi_mode_from_sync_data(sync_data: &PhonepeSyncResponseData) -> Optio
     sync_data
         .payment_instrument
         .as_ref()
-        .and_then(|payment_instrument| {
-            determine_upi_mode(payment_instrument, sync_data.response_code.as_ref())
-        })
+        .and_then(|payment_instrument| determine_upi_mode(payment_instrument, sync_data.response_code.as_ref()))
         // Fallback: determine from response_code alone
         .or_else(|| {
-            sync_data
-                .response_code
-                .as_deref()
-                .and_then(|code| match code {
-                    constants::RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED => Some(UpiSource::UpiCc),
-                    constants::RESPONSE_CODE_PAY0071 => Some(UpiSource::UpiCl),
-                    _ => None,
-                })
+            sync_data.response_code.as_deref().and_then(|code| match code {
+                constants::RESPONSE_CODE_CREDIT_ACCOUNT_NOT_ALLOWED => Some(UpiSource::UpiCc),
+                constants::RESPONSE_CODE_PAY0071 => Some(UpiSource::UpiCl),
+                _ => None,
+            })
         })
 }
 
@@ -1104,9 +986,7 @@ fn get_connector_response_with_upi_mode(
 ) -> Option<domain_types::router_data::ConnectorResponseData> {
     upi_mode.map(|mode| {
         domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
-            domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                upi_mode: Some(mode),
-            },
+            domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi { upi_mode: Some(mode) },
         )
     })
 }

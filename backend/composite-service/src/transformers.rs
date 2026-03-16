@@ -2,13 +2,10 @@ use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
     CompositeAuthorizeRequest, CompositeGetRequest, ConnectorState, CustomerServiceCreateRequest,
     CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
-    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceGetRequest,
+    MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest, PaymentServiceGetRequest,
 };
 
-use crate::utils::{
-    get_access_token, get_connector_customer_id, grpc_connector_from_connector_enum,
-};
+use crate::utils::{get_access_token, get_connector_customer_id, grpc_connector_from_connector_enum};
 
 pub trait ForeignFrom<F>: Sized {
     fn foreign_from(item: F) -> Self;
@@ -43,10 +40,7 @@ impl ForeignFrom<&CompositeAuthorizeRequest> for CustomerServiceCreateRequest {
                 .customer_name
                 .clone()
                 .or_else(|| customer.and_then(|c| c.name.clone())),
-            email: item
-                .email
-                .clone()
-                .or_else(|| customer.and_then(|c| c.email.clone())),
+            email: item.email.clone().or_else(|| customer.and_then(|c| c.email.clone())),
             phone_number: item
                 .phone_number
                 .clone()
@@ -78,13 +72,9 @@ impl
             .as_ref()
             .and_then(|state| state.connector_customer_id.clone());
 
-        let connector_customer_id =
-            get_connector_customer_id(connector_customer_id_from_req, create_customer_response);
+        let connector_customer_id = get_connector_customer_id(connector_customer_id_from_req, create_customer_response);
 
-        let access_token_from_req = item
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.clone());
+        let access_token_from_req = item.state.as_ref().and_then(|state| state.access_token.clone());
 
         let access_token = get_access_token(access_token_from_req, access_token_response);
 
@@ -141,9 +131,7 @@ impl
     }
 }
 
-impl ForeignFrom<(&CompositeGetRequest, &ConnectorEnum)>
-    for MerchantAuthenticationServiceCreateAccessTokenRequest
-{
+impl ForeignFrom<(&CompositeGetRequest, &ConnectorEnum)> for MerchantAuthenticationServiceCreateAccessTokenRequest {
     fn foreign_from((item, connector): (&CompositeGetRequest, &ConnectorEnum)) -> Self {
         Self {
             merchant_access_token_id: item.merchant_access_token_id.clone(),
@@ -167,10 +155,7 @@ impl
             Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
         ),
     ) -> Self {
-        let access_token_from_req = item
-            .state
-            .as_ref()
-            .and_then(|state| state.access_token.clone());
+        let access_token_from_req = item.state.as_ref().and_then(|state| state.access_token.clone());
 
         let access_token = get_access_token(access_token_from_req, access_token_response);
 

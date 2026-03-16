@@ -10,8 +10,7 @@
 use crate::connectors::*;
 use domain_types::{
     connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
-    payment_method_data::PaymentMethodDataTypes,
-    router_request_types::VerifyWebhookSourceRequestData,
+    payment_method_data::PaymentMethodDataTypes, router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
 };
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;

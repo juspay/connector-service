@@ -124,19 +124,14 @@ pub async fn grpc_logging_wrapper<T, F, Fut, R>(
     handler: F,
 ) -> Result<tonic::Response<R>, tonic::Status>
 where
-    T: serde::Serialize
-        + std::fmt::Debug
-        + Send
-        + 'static
-        + hyperswitch_masking::ErasedMaskSerialize,
+    T: serde::Serialize + std::fmt::Debug + Send + 'static + hyperswitch_masking::ErasedMaskSerialize,
     F: FnOnce(RequestData<T>) -> Fut + Send,
     Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,
     R: serde::Serialize + std::fmt::Debug + hyperswitch_masking::ErasedMaskSerialize,
 {
     let current_span = tracing::Span::current();
     let start_time = tokio::time::Instant::now();
-    let masked_request_data =
-        MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
+    let masked_request_data = MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
     let mut event_metadata_payload = None;
     let mut event_headers = HashMap::new();
 
@@ -195,14 +190,11 @@ fn create_and_emit_grpc_event<R>(
         response_data: None,
         headers: masked_headers,
         additional_fields: HashMap::new(),
-        lineage_ids: metadata_payload
-            .map_or_else(|| LineageIds::empty(""), |md| md.lineage_ids.clone()),
+        lineage_ids: metadata_payload.map_or_else(|| LineageIds::empty(""), |md| md.lineage_ids.clone()),
     };
 
-    grpc_event
-        .add_reference_id(metadata_payload.and_then(|metadata| metadata.reference_id.as_deref()));
-    grpc_event
-        .add_resource_id(metadata_payload.and_then(|metadata| metadata.resource_id.as_deref()));
+    grpc_event.add_reference_id(metadata_payload.and_then(|metadata| metadata.reference_id.as_deref()));
+    grpc_event.add_resource_id(metadata_payload.and_then(|metadata| metadata.resource_id.as_deref()));
     grpc_event.add_service_type(service_type_str(&config.server.type_));
     grpc_event.add_service_name(service_name);
 
@@ -215,9 +207,7 @@ fn create_and_emit_grpc_event<R>(
 }
 
 #[allow(clippy::result_large_err)]
-pub fn get_config_from_request<T>(
-    request: &tonic::Request<T>,
-) -> Result<Arc<configs::Config>, tonic::Status>
+pub fn get_config_from_request<T>(request: &tonic::Request<T>) -> Result<Arc<configs::Config>, tonic::Status>
 where
     T: serde::Serialize,
 {
@@ -228,9 +218,7 @@ where
         }
         None => {
             tracing::info!("Configuration not found in request extensions, using default config.");
-            Err(tonic::Status::internal(
-                "Configuration not found in request extensions",
-            ))
+            Err(tonic::Status::internal("Configuration not found in request extensions"))
         }
     }
 }
@@ -267,100 +255,103 @@ macro_rules! implement_connector_operation {
                 .get::<String>()
                 .cloned()
                 .unwrap_or_else(|| "unknown_service".to_string());
-            let result = Box::pin(async{
-            let $crate::request::RequestData {
-                payload,
-                extracted_metadata: metadata_payload,
-                masked_metadata,
-                extensions: _  // unused in macro
-            } = request;
+            let result = Box::pin(async {
+                let $crate::request::RequestData {
+                    payload,
+                    extracted_metadata: metadata_payload,
+                    masked_metadata,
+                    extensions: _, // unused in macro
+                } = request;
 
-            let (connector, request_id, connector_auth_details) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_auth_type);
+                let (connector, request_id, connector_auth_details) = (
+                    metadata_payload.connector,
+                    metadata_payload.request_id,
+                    metadata_payload.connector_auth_type,
+                );
 
+                // Get connector data
+                let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> =
+                    connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
-            // Get connector data
-            let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+                // Get connector integration
+                let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
+                    '_,
+                    $flow_marker,
+                    $resource_common_data_type,
+                    $request_data_type,
+                    $response_data_type,
+                > = connector_data.connector.get_connector_integration_v2();
 
-            // Get connector integration
-            let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-                '_,
-                $flow_marker,
-                $resource_common_data_type,
-                $request_data_type,
-                $response_data_type,
-            > = connector_data.connector.get_connector_integration_v2();
+                // Create connector request data
+                let specific_request_data = $request_data_constructor(payload.clone()).into_grpc_status()?;
 
-            // Create connector request data
-            let specific_request_data = $request_data_constructor(payload.clone())
+                // Create common request data
+                let common_flow_data =
+                    $common_flow_data_constructor((payload.clone(), config.connectors.clone(), &masked_metadata))
+                        .into_grpc_status()?;
+
+                // Create router data
+                let router_data = domain_types::router_data_v2::RouterDataV2::<
+                    $flow_marker,
+                    $resource_common_data_type,
+                    $request_data_type,
+                    $response_data_type,
+                > {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: common_flow_data,
+                    connector_auth_type: connector_auth_details,
+                    request: specific_request_data,
+                    response: Err(domain_types::router_data::ErrorResponse::default()),
+                };
+
+                // Calculate flow name for dynamic flow-specific configurations
+                let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+
+                // Get API tag for the current flow
+                // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
+                let api_tag = config.api_tags.get_tag(flow_name, None);
+
+                // Create test context if test mode is enabled
+                let test_context = config
+                    .test
+                    .create_test_context(&request_id)
+                    .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
+
+                // Execute connector processing
+                let event_params = external_services::service::EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    service_type: $crate::utils::service_type_str(&config.server.type_),
+                    flow_name,
+                    event_config: &config.events,
+                    request_id: &request_id,
+                    lineage_ids: &metadata_payload.lineage_ids,
+                    reference_id: &metadata_payload.reference_id,
+                    resource_id: &metadata_payload.resource_id,
+                    shadow_mode: metadata_payload.shadow_mode,
+                };
+                let response_result = external_services::service::execute_connector_processing_step(
+                    &config.proxy,
+                    connector_integration,
+                    router_data,
+                    $all_keys_required,
+                    event_params,
+                    None,
+                    common_enums::CallConnectorAction::Trigger,
+                    test_context,
+                    api_tag,
+                )
+                .await
+                .switch()
                 .into_grpc_status()?;
 
-            // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone(), &masked_metadata))
-                .into_grpc_status()?;
+                // Generate response
+                let final_response = $generate_response_fn(response_result).into_grpc_status()?;
 
-            // Create router data
-            let router_data = domain_types::router_data_v2::RouterDataV2::<
-                $flow_marker,
-                $resource_common_data_type,
-                $request_data_type,
-                $response_data_type,
-            > {
-                flow: std::marker::PhantomData,
-                resource_common_data: common_flow_data,
-                connector_auth_type: connector_auth_details,
-                request: specific_request_data,
-                response: Err(domain_types::router_data::ErrorResponse::default()),
-            };
-
-            // Calculate flow name for dynamic flow-specific configurations
-            let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
-
-            // Get API tag for the current flow
-            // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
-            let api_tag = config
-                .api_tags
-                .get_tag(flow_name, None);
-
-            // Create test context if test mode is enabled
-            let test_context = config.test.create_test_context(&request_id).map_err(|e| {
-                tonic::Status::internal(format!("Test mode configuration error: {e}"))
-            })?;
-
-            // Execute connector processing
-            let event_params = external_services::service::EventProcessingParams {
-                connector_name: &connector.to_string(),
-                service_name: &service_name,
-                service_type: $crate::utils::service_type_str(&config.server.type_),
-                flow_name,
-                event_config: &config.events,
-                request_id: &request_id,
-                lineage_ids: &metadata_payload.lineage_ids,
-                reference_id: &metadata_payload.reference_id,
-                resource_id: &metadata_payload.resource_id,
-                shadow_mode: metadata_payload.shadow_mode,
-            };
-            let response_result = external_services::service::execute_connector_processing_step(
-                &config.proxy,
-                connector_integration,
-                router_data,
-                $all_keys_required,
-                event_params,
-                None,
-                common_enums::CallConnectorAction::Trigger,
-                test_context,
-                api_tag,
-            )
-            .await
-            .switch()
-            .into_grpc_status()?;
-
-            // Generate response
-            let final_response = $generate_response_fn(response_result)
-                .into_grpc_status()?;
-
-            Ok(tonic::Response::new(final_response))
-        }).await;
-        result
-    }
-}
+                Ok(tonic::Response::new(final_response))
+            })
+            .await;
+            result
+        }
+    };
 }

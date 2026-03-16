@@ -2,9 +2,8 @@ use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -58,17 +57,13 @@ impl TryFrom<&ConnectorSpecificAuth> for PlacetopayAuth {
             .change_context(ConnectorError::RequestEncodingFailed)?;
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
-        let nonce_b64 = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            nonce_bytes.clone(),
-        );
+        let nonce_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, nonce_bytes.clone());
 
         let mut hasher = ring::digest::Context::new(&ring::digest::SHA256);
         hasher.update(&nonce_bytes);
         hasher.update(seed.as_bytes());
         hasher.update(placetopay_auth.tran_key.peek().as_bytes());
-        let encoded_digest =
-            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hasher.finish());
+        let encoded_digest = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hasher.finish());
 
         let nonce = Secret::new(nonce_b64);
 
@@ -83,9 +78,7 @@ impl TryFrom<&ConnectorSpecificAuth> for PlacetopayAuth {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PlacetopayPaymentsRequest<
-    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct PlacetopayPaymentsRequest<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     auth: PlacetopayAuth,
     payment: PlacetopayPayment,
     instrument: PlacetopayInstrument<T>,
@@ -110,9 +103,7 @@ pub struct PlacetopayAmount {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PlacetopayInstrument<
-    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct PlacetopayInstrument<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     card: PlacetopayCard<T>,
 }
 
@@ -127,12 +118,7 @@ pub struct PlacetopayCard<T: PaymentMethodDataTypes + Debug + Sync + Send + 'sta
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PlacetopayRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for PlacetopayPaymentsRequest<T>
@@ -140,12 +126,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: PlacetopayRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -180,9 +161,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     user_agent,
                     auth,
                     payment,
-                    instrument: PlacetopayInstrument {
-                        card: card.to_owned(),
-                    },
+                    instrument: PlacetopayInstrument { card: card.to_owned() },
                 })
             }
             PaymentMethodData::Wallet(_)
@@ -202,30 +181,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("Placetopay"),
-                )
-                .into())
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Placetopay"),
+            )
+            .into()),
         }
     }
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        PlacetopayRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for PlacetopayNextActionRequest
+    TryFrom<PlacetopayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for PlacetopayNextActionRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: PlacetopayRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: PlacetopayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
         let internal_reference = item
@@ -259,9 +229,7 @@ pub enum PlacetopayTransactionStatus {
 impl From<PlacetopayTransactionStatus> for common_enums::AttemptStatus {
     fn from(item: PlacetopayTransactionStatus) -> Self {
         match item {
-            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
-                Self::Charged
-            }
+            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => Self::Charged,
             PlacetopayTransactionStatus::Failed
             | PlacetopayTransactionStatus::Rejected
             | PlacetopayTransactionStatus::Error => Self::Failure,
@@ -291,18 +259,14 @@ impl<F, T> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<PlacetopayPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PlacetopayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: common_enums::AttemptStatus::from(item.response.status.status),
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.internal_reference.to_string(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(item.response.internal_reference.to_string()),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: item
@@ -328,19 +292,12 @@ pub struct PlacetopayPsyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        PlacetopayRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PlacetopayPsyncRequest
+    TryFrom<PlacetopayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for PlacetopayPsyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: PlacetopayRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: PlacetopayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
 
@@ -377,12 +334,8 @@ pub enum PlacetopayNextAction {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        PlacetopayRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for PlacetopayNextActionRequest
+    TryFrom<PlacetopayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for PlacetopayNextActionRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -419,20 +372,14 @@ pub struct PlacetopayRefundRequest {
 }
 
 impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for PlacetopayRefundRequest
+    TryFrom<PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for PlacetopayRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: PlacetopayRouterData<
-            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        if item.router_data.request.minor_refund_amount
-            == item.router_data.request.minor_payment_amount
-        {
+        if item.router_data.request.minor_refund_amount == item.router_data.request.minor_payment_amount {
             let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
 
             let internal_reference = item
@@ -479,12 +426,12 @@ pub enum PlacetopayRefundStatus {
 impl From<PlacetopayRefundStatus> for common_enums::RefundStatus {
     fn from(item: PlacetopayRefundStatus) -> Self {
         match item {
-            PlacetopayRefundStatus::Ok
-            | PlacetopayRefundStatus::Approved
-            | PlacetopayRefundStatus::Refunded => Self::Success,
-            PlacetopayRefundStatus::Failed
-            | PlacetopayRefundStatus::Rejected
-            | PlacetopayRefundStatus::Error => Self::Failure,
+            PlacetopayRefundStatus::Ok | PlacetopayRefundStatus::Approved | PlacetopayRefundStatus::Refunded => {
+                Self::Success
+            }
+            PlacetopayRefundStatus::Failed | PlacetopayRefundStatus::Rejected | PlacetopayRefundStatus::Error => {
+                Self::Failure
+            }
             PlacetopayRefundStatus::Pending
             | PlacetopayRefundStatus::PendingProcess
             | PlacetopayRefundStatus::PendingValidation => Self::Pending,
@@ -509,9 +456,7 @@ impl<F> TryFrom<ResponseRouterData<PlacetopayRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<PlacetopayRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PlacetopayRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.internal_reference.to_string(),
@@ -531,19 +476,12 @@ pub struct PlacetopayRsyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        PlacetopayRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for PlacetopayRsyncRequest
+    TryFrom<PlacetopayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for PlacetopayRsyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: PlacetopayRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        item: PlacetopayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
         let internal_reference = item
@@ -563,9 +501,7 @@ impl<F> TryFrom<ResponseRouterData<PlacetopayRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<PlacetopayRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PlacetopayRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.internal_reference.to_string(),

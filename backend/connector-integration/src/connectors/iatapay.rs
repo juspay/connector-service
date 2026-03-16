@@ -7,22 +7,19 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync,
-        PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken, DefendDispute,
+        IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync,
+        Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData, MandateRevokeRequestData,
+        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+        PaymentsResponseData, PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self},
@@ -35,14 +32,14 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    decode::BodyDecoding, verification::SourceVerification,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types, decode::BodyDecoding,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{
-    IatapayAuthUpdateRequest, IatapayAuthUpdateResponse, IatapayErrorResponse,
-    IatapayPaymentsRequest, IatapayPaymentsResponse, IatapayRefundRequest, IatapayRefundResponse,
-    IatapayRefundSyncResponse, IatapaySyncResponse,
+    IatapayAuthUpdateRequest, IatapayAuthUpdateResponse, IatapayErrorResponse, IatapayPaymentsRequest,
+    IatapayPaymentsResponse, IatapayRefundRequest, IatapayRefundResponse, IatapayRefundSyncResponse,
+    IatapaySyncResponse,
 };
 
 use super::macros;
@@ -67,102 +64,99 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SdkSessionTokenV2
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::ConnectorServiceTrait<T>
+    for Iatapay<T>
 {
 }
 
 // ===== PAYMENT FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAuthorizeV2<T>
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentSyncV2
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentVoidV2
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentVoidPostCaptureV2
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentCapture
+    for Iatapay<T>
 {
 }
 
 // ===== REFUND FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Iatapay<T>
-{
-}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RefundV2 for Iatapay<T> {}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentIncrementalAuthorization for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RefundSyncV2
+    for Iatapay<T>
 {
 }
 
 // ===== ADVANCED FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SetupMandateV2<T>
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RepeatPaymentV2<T>
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::MandateRevokeV2
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentOrderCreate
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentSessionToken
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAccessToken
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentTokenV2<T>
+    for Iatapay<T>
 {
 }
 
 // ===== AUTHENTICATION FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentPreAuthenticateV2<T>
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAuthenticateV2<T>
+    for Iatapay<T>
 {
 }
 
@@ -172,42 +166,36 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== DISPUTE FLOW TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::AcceptDispute
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::DisputeDefend
+    for Iatapay<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SubmitEvidenceV2
+    for Iatapay<T>
 {
 }
 
 // ===== WEBHOOK TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Iatapay<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::VerifyRedirectResponse for Iatapay<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::IncomingWebhook
     for Iatapay<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::VerifyRedirectResponse
     for Iatapay<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification for Iatapay<T> {}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding for Iatapay<T> {}
 
 // ===== VALIDATION TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::ValidationTrait
+    for Iatapay<T>
 {
     fn should_do_access_token(&self, _payment_method: Option<common_enums::PaymentMethod>) -> bool {
         true
@@ -215,8 +203,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // ===== CONNECTOR CUSTOMER TRAIT IMPLEMENTATIONS =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Iatapay<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::CreateConnectorCustomer
+    for Iatapay<T>
 {
 }
 
@@ -328,9 +316,7 @@ macros::create_all_prerequisites!(
 );
 
 // ===== CONNECTOR COMMON IMPLEMENTATION =====
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Iatapay<T>
-{
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Iatapay<T> {
     fn id(&self) -> &'static str {
         "iatapay"
     }
@@ -349,10 +335,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = transformers::IatapayAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            auth.client_id.into_masked(),
-        )])
+        Ok(vec![(headers::AUTHORIZATION.to_string(), auth.client_id.into_masked())])
     }
 
     fn build_error_response(
@@ -372,9 +355,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error,
-            message: response
-                .message
-                .unwrap_or_else(|| "Unknown error".to_string()),
+            message: response.message.unwrap_or_else(|| "Unknown error".to_string()),
             reason: response.reason,
             attempt_status: None,
             connector_transaction_id: None,
@@ -460,26 +441,20 @@ macros::macro_connector_implementation!(
 
 // Payment Void
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Iatapay<T>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Iatapay<T>
 {
 }
 
 // Payment Void Post Capture
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Iatapay<T>
 {
 }
 
 // Payment Capture
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Iatapay<T>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Iatapay<T>
 {
 }
 
@@ -608,76 +583,52 @@ macros::macro_connector_implementation!(
 
 // Setup Mandate
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+    for Iatapay<T>
 {
 }
 
 // Repeat Payment
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData<T>,
-        PaymentsResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData> for Iatapay<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>
+    for Iatapay<T>
 {
 }
 
 // Order Create
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+    for Iatapay<T>
 {
 }
 
 // Session Token
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Iatapay<T>
 {
 }
 
 // Dispute Accept
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Iatapay<T>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Iatapay<T>
 {
 }
 
 // Dispute Defend
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Iatapay<T>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Iatapay<T>
 {
 }
 
 // Submit Evidence
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Iatapay<T>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Iatapay<T>
 {
 }
 
@@ -695,34 +646,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // ===== AUTHENTICATION FLOW CONNECTOR INTEGRATIONS =====
 // Pre Authentication
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Iatapay<T>
 {
 }
 
 // Authentication
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Iatapay<T>
 {
 }
 
 // Post Authentication
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Iatapay<T>
 {
 }
 
@@ -747,11 +686,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // ===== ACCESS TOKEN SOURCE VERIFICATION =====
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Iatapay<T>
+    ConnectorIntegrationV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
+    for Iatapay<T>
 {
 }

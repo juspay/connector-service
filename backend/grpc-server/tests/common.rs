@@ -3,14 +3,11 @@ use std::{future::Future, sync::Arc};
 use grpc_api_types::{
     health_check::health_client::HealthClient,
     payments::{
-        customer_service_client::CustomerServiceClient,
-        dispute_service_client::DisputeServiceClient,
+        customer_service_client::CustomerServiceClient, dispute_service_client::DisputeServiceClient,
         merchant_authentication_service_client::MerchantAuthenticationServiceClient,
         payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
-        payment_method_service_client::PaymentMethodServiceClient,
-        payment_service_client::PaymentServiceClient,
-        recurring_payment_service_client::RecurringPaymentServiceClient,
-        refund_service_client::RefundServiceClient,
+        payment_method_service_client::PaymentMethodServiceClient, payment_service_client::PaymentServiceClient,
+        recurring_payment_service_client::RecurringPaymentServiceClient, refund_service_client::RefundServiceClient,
     },
 };
 use http::Uri;
@@ -174,9 +171,7 @@ where
     let uds = UnixListener::bind(&*socket)?;
     let stream = UnixListenerStream::new(uds);
 
-    let interceptor = ConfigInterceptor {
-        config: base_config,
-    };
+    let interceptor = ConfigInterceptor { config: base_config };
 
     let router = build_server(service, interceptor);
 
@@ -220,9 +215,7 @@ pub async fn server_and_channel_stub(
     let uds = UnixListener::bind(&*socket)?;
     let stream = UnixListenerStream::new(uds);
 
-    let interceptor = ConfigInterceptor {
-        config: base_config,
-    };
+    let interceptor = ConfigInterceptor { config: base_config };
 
     let router = build_server(service, interceptor);
 

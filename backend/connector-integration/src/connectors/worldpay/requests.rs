@@ -5,12 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayAuthorizeRequest<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + Sync
-        + Send
-        + 'static
-        + Serialize,
+    T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     pub transaction_reference: String,
     pub merchant: Merchant,
@@ -32,12 +27,7 @@ pub struct Merchant {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Instruction<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + Sync
-        + Send
-        + 'static
-        + Serialize,
+    T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub settlement: Option<AutoSettlement>,
@@ -95,12 +85,7 @@ pub enum StoredCardUsageType {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PaymentInstrument<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + Sync
-        + Send
-        + 'static
-        + Serialize,
+    T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     Card(CardPayment<T>),
     CardToken(CardToken),
@@ -112,12 +97,7 @@ pub enum PaymentInstrument<
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CardPayment<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + Sync
-        + Send
-        + 'static
-        + Serialize,
+    T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     #[serde(flatten)]
     pub raw_card_details: RawCardDetails<T>,
@@ -131,12 +111,7 @@ pub struct CardPayment<
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawCardDetails<
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + Sync
-        + Send
-        + 'static
-        + Serialize,
+    T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
     #[serde(rename = "type")]
     pub payment_type: PaymentType,
@@ -164,9 +139,7 @@ pub struct WalletPayment {
     pub billing_address: Option<BillingAddress>,
 }
 
-#[derive(
-    Clone, Copy, Debug, Eq, Default, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Debug, Eq, Default, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PaymentType {
     #[default]
@@ -197,9 +170,7 @@ pub struct BillingAddress {
     pub country_code: common_enums::CountryAlpha2,
 }
 
-#[derive(
-    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Channel {
     #[default]
@@ -235,9 +206,7 @@ pub struct ThreeDS {
     pub auth_type: CustomerAuthType,
 }
 
-#[derive(
-    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum ThreeDSVersion {
     #[default]
     #[serde(rename = "1")]
@@ -246,9 +215,7 @@ pub enum ThreeDSVersion {
     Two,
 }
 
-#[derive(
-    Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum CustomerAuthType {
     #[serde(rename = "3DS")]
     #[default]

@@ -128,20 +128,12 @@ impl From<RefundStatus> for common_enums::RefundStatus {
 }
 
 impl From<(JpmorganResponseStatus, JpmorganTransactionState)> for RefundStatus {
-    fn from(
-        (response_status, transaction_state): (JpmorganResponseStatus, JpmorganTransactionState),
-    ) -> Self {
+    fn from((response_status, transaction_state): (JpmorganResponseStatus, JpmorganTransactionState)) -> Self {
         match response_status {
             JpmorganResponseStatus::Success => match transaction_state {
-                JpmorganTransactionState::Voided | JpmorganTransactionState::Closed => {
-                    Self::Succeeded
-                }
-                JpmorganTransactionState::Declined | JpmorganTransactionState::Error => {
-                    Self::Failed
-                }
-                JpmorganTransactionState::Pending | JpmorganTransactionState::Authorized => {
-                    Self::Processing
-                }
+                JpmorganTransactionState::Voided | JpmorganTransactionState::Closed => Self::Succeeded,
+                JpmorganTransactionState::Declined | JpmorganTransactionState::Error => Self::Failed,
+                JpmorganTransactionState::Pending | JpmorganTransactionState::Authorized => Self::Processing,
             },
             JpmorganResponseStatus::Denied | JpmorganResponseStatus::Error => Self::Failed,
         }

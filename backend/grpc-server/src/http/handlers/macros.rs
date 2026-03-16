@@ -10,8 +10,8 @@ use tonic;
 
 #[allow(unused_imports)]
 use crate::http::{
-    error::HttpError, http_headers_to_grpc_metadata, state::AppState,
-    transfer_config_to_grpc_request, utils::ValidatedJson,
+    error::HttpError, http_headers_to_grpc_metadata, state::AppState, transfer_config_to_grpc_request,
+    utils::ValidatedJson,
 };
 #[allow(unused_imports)]
 use std::sync::Arc;
@@ -28,11 +28,10 @@ macro_rules! http_handler {
         ) -> Result<Json<$resp_type>, HttpError> {
             let mut grpc_request = tonic::Request::new(payload);
             transfer_config_to_grpc_request(&config, &mut grpc_request);
-            let grpc_metadata =
-                http_headers_to_grpc_metadata(&headers).map_err(|status| HttpError {
-                    status: StatusCode::BAD_REQUEST,
-                    message: status.message().to_string(),
-                })?;
+            let grpc_metadata = http_headers_to_grpc_metadata(&headers).map_err(|status| HttpError {
+                status: StatusCode::BAD_REQUEST,
+                message: status.message().to_string(),
+            })?;
             *grpc_request.metadata_mut() = grpc_metadata;
             let grpc_response = state.$service_field.$service_method(grpc_request).await?;
             Ok(Json(grpc_response.into_inner()))

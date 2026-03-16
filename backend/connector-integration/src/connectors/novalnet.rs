@@ -13,24 +13,22 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence,
+        Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, DisputeWebhookDetailsResponse, EventType, MandateRevokeRequestData,
-        MandateRevokeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        DisputeWebhookDetailsResponse, EventType, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
         PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -42,19 +40,17 @@ use domain_types::{
 };
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    decode::BodyDecoding, verification::SourceVerification,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types, decode::BodyDecoding,
+    verification::SourceVerification,
 };
 use serde::Serialize;
 use transformers::{
-    self as novalnet, NovalnetCancelRequest, NovalnetCancelResponse, NovalnetCaptureRequest,
-    NovalnetCaptureResponse, NovalnetPSyncResponse, NovalnetPaymentsRequest,
-    NovalnetPaymentsRequest as NovalnetPaymentsRequestMandate,
+    self as novalnet, NovalnetCancelRequest, NovalnetCancelResponse, NovalnetCaptureRequest, NovalnetCaptureResponse,
+    NovalnetPSyncResponse, NovalnetPaymentsRequest, NovalnetPaymentsRequest as NovalnetPaymentsRequestMandate,
     NovalnetPaymentsRequest as NovalnetRepeatPaymentsRequest, NovalnetPaymentsResponse,
     NovalnetPaymentsResponse as NovalnetPaymentsResponseMandate,
-    NovalnetPaymentsResponse as NovalnetRepeatPaymentsResponse, NovalnetRefundRequest,
-    NovalnetRefundResponse, NovalnetRefundSyncResponse, NovalnetSyncRequest,
-    NovalnetSyncRequest as NovalnetRSyncRequest,
+    NovalnetPaymentsResponse as NovalnetRepeatPaymentsResponse, NovalnetRefundRequest, NovalnetRefundResponse,
+    NovalnetRefundSyncResponse, NovalnetSyncRequest, NovalnetSyncRequest as NovalnetRSyncRequest,
 };
 
 use super::macros;
@@ -81,110 +77,97 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SdkSessionTokenV2
+    for Novalnet<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::ConnectorServiceTrait<T>
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAuthorizeV2<T>
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentSyncV2
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentVoidV2
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RefundSyncV2
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Novalnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RefundV2 for Novalnet<T> {}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentCapture
+    for Novalnet<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentIncrementalAuthorization for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::ValidationTrait
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentOrderCreate
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SetupMandateV2<T>
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::RepeatPaymentV2<T>
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidPostCaptureV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentVoidPostCaptureV2
+    for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Novalnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Novalnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Novalnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Novalnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Novalnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::VerifyRedirectResponse for Novalnet<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
     for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::AcceptDispute
     for Novalnet<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::SubmitEvidenceV2
+    for Novalnet<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::DisputeDefend
+    for Novalnet<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentTokenV2<T>
+    for Novalnet<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::VerifyRedirectResponse
+    for Novalnet<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification for Novalnet<T> {}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding for Novalnet<T> {}
 
 // Authentication trait implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentPreAuthenticateV2<T>
+    for Novalnet<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAuthenticateV2<T>
+    for Novalnet<T>
 {
 }
 
@@ -193,8 +176,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::MandateRevokeV2
+    for Novalnet<T>
 {
 }
 macros::create_all_prerequisites!(
@@ -290,9 +273,7 @@ macros::create_all_prerequisites!(
 
 // After adding the ConnectorIntegrationV2 implementation, we can now implement PaymentSessionToken
 // Type alias for non-generic trait implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Novalnet<T>
-{
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Novalnet<T> {
     fn id(&self) -> &'static str {
         "novalnet"
     }
@@ -317,10 +298,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         let api_key: String = auth.payment_access_key.expose();
         let encoded_api_key = BASE64_ENGINE.encode(api_key);
-        Ok(vec![(
-            headers::X_NN_ACCESS_KEY.to_string(),
-            encoded_api_key.into_masked(),
-        )])
+        Ok(vec![(headers::X_NN_ACCESS_KEY.to_string(), encoded_api_key.into_masked())])
     }
 
     fn build_error_response(
@@ -602,8 +580,8 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::IncomingWebhook
+    for Novalnet<T>
 {
     fn get_webhook_source_verification_signature(
         &self,
@@ -613,8 +591,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif_item = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
-        hex::decode(notif_item.event.checksum)
-            .change_context(errors::ConnectorError::WebhookVerificationSecretInvalid)
+        hex::decode(notif_item.event.checksum).change_context(errors::ConnectorError::WebhookVerificationSecretInvalid)
     }
 
     fn get_webhook_source_verification_message(
@@ -626,27 +603,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
         let (amount, currency) = match notif.transaction {
-            novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
-                (data.amount, data.currency)
-            }
-            novalnet::NovalnetWebhookTransactionData::CancelTransactionData(data) => {
-                (data.amount, data.currency)
-            }
+            novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => (data.amount, data.currency),
+            novalnet::NovalnetWebhookTransactionData::CancelTransactionData(data) => (data.amount, data.currency),
 
-            novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => {
-                (data.amount, data.currency)
-            }
+            novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => (data.amount, data.currency),
 
-            novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => {
-                (data.amount, data.currency)
-            }
+            novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => (data.amount, data.currency),
         };
-        let amount = amount
-            .map(|amount| amount.to_string())
-            .unwrap_or("".to_string());
-        let currency = currency
-            .map(|amount| amount.to_string())
-            .unwrap_or("".to_string());
+        let amount = amount.map(|amount| amount.to_string()).unwrap_or("".to_string());
+        let currency = currency.map(|amount| amount.to_string()).unwrap_or("".to_string());
 
         let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
             .change_context(errors::ConnectorError::WebhookVerificationSecretInvalid)
@@ -655,12 +620,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let message = format!(
             "{}{}{}{}{}{}",
-            notif.event.tid,
-            notif.event.event_type,
-            notif.result.status,
-            amount,
-            currency,
-            reversed_secret_auth
+            notif.event.tid, notif.event.event_type, notif.result.status, amount, currency, reversed_secret_auth
         );
 
         Ok(message.into_bytes())
@@ -685,9 +645,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
 
-        let signature = match self
-            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
-        {
+        let signature = match self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets) {
             Ok(sig) => sig,
             Err(error) => {
                 tracing::warn!(
@@ -699,9 +657,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
         };
 
-        let message = match self
-            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
-        {
+        let message = match self.get_webhook_source_verification_message(&request, &connector_webhook_secrets) {
             Ok(msg) => msg,
             Err(error) => {
                 tracing::warn!(
@@ -736,28 +692,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
 
         let optional_transaction_status = match notif.transaction {
-            novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
-                Some(data.status)
-            }
+            novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => Some(data.status),
             novalnet::NovalnetWebhookTransactionData::CancelTransactionData(data) => data.status,
-            novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => {
-                Some(data.status)
-            }
-            novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => {
-                Some(data.status)
-            }
+            novalnet::NovalnetWebhookTransactionData::RefundsTransactionData(data) => Some(data.status),
+            novalnet::NovalnetWebhookTransactionData::SyncTransactionData(data) => Some(data.status),
         };
 
-        let transaction_status =
-            optional_transaction_status.ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "transaction_status",
-            })?;
+        let transaction_status = optional_transaction_status.ok_or(errors::ConnectorError::MissingRequiredField {
+            field_name: "transaction_status",
+        })?;
         // NOTE: transaction_status will always be present for Webhooks
         // But we are handling optional type here, since we are reusing TransactionData Struct from NovalnetPaymentsResponseTransactionData for Webhooks response too
         // In NovalnetPaymentsResponseTransactionData, transaction_status is optional
 
-        let incoming_webhook_event =
-            novalnet::get_incoming_webhook_event(notif.event.event_type, transaction_status);
+        let incoming_webhook_event = novalnet::get_incoming_webhook_event(notif.event.event_type, transaction_status);
         Ok(incoming_webhook_event)
     }
 
@@ -770,12 +718,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)?;
 
-        let response = WebhookDetailsResponse::try_from(notif)
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed);
+        let response =
+            WebhookDetailsResponse::try_from(notif).change_context(errors::ConnectorError::WebhookBodyDecodingFailed);
 
         response.map(|mut response| {
-            response.raw_connector_response =
-                Some(String::from_utf8_lossy(&request.body).to_string());
+            response.raw_connector_response = Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
     }
@@ -795,8 +742,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed);
 
         response.map(|mut response| {
-            response.raw_connector_response =
-                Some(String::from_utf8_lossy(&request.body).to_string());
+            response.raw_connector_response = Some(String::from_utf8_lossy(&request.body).to_string());
             response
         })
     }
@@ -807,9 +753,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificAuth>,
     ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
-        let notif: transformers::NovalnetWebhookNotificationResponse =
-            get_webhook_object_from_body(&request.body)
-                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        let notif: transformers::NovalnetWebhookNotificationResponse = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
         let (amount, currency, reason, reason_code) = match notif.transaction {
             novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
                 (data.amount, data.currency, None, None)
@@ -861,60 +806,41 @@ fn get_webhook_object_from_body(
 
 // Stub implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Novalnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
     for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Novalnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Novalnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Novalnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
     for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
     for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Novalnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Novalnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    > for Novalnet<T>
+    ConnectorIntegrationV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
+    for Novalnet<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -927,66 +853,46 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentSessionToken
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::PaymentAccessToken
+    for Novalnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::CreateConnectorCustomer for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> connector_types::CreateConnectorCustomer
+    for Novalnet<T>
 {
 }
 
 // Authentication flow implementations
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Novalnet<T>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Novalnet<T>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Novalnet<T>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Novalnet<T>
+    ConnectorIntegrationV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
+    for Novalnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Novalnet<T>
+    ConnectorIntegrationV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>
+    for Novalnet<T>
 {
 }

@@ -7,6 +7,7 @@ pub mod errors;
 pub mod mandates;
 pub mod payment_address;
 pub mod payment_method_data;
+pub mod payout_types;
 pub mod router_data;
 pub mod router_data_v2;
 pub mod router_flow_types;

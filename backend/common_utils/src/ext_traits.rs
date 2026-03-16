@@ -78,11 +78,9 @@ where
         Result<P, <P as TryFrom<&'e Self>>::Error>: ResultExt,
         <Result<P, <P as TryFrom<&'e Self>>::Error> as ResultExt>::Ok: Serialize,
     {
-        serde_json::to_string(
-            &P::try_from(self).change_context(errors::ParsingError::UnknownError)?,
-        )
-        .change_context(errors::ParsingError::EncodeError("string"))
-        .attach_printable_lazy(|| format!("Unable to convert {self:?} to a request"))
+        serde_json::to_string(&P::try_from(self).change_context(errors::ParsingError::UnknownError)?)
+            .change_context(errors::ParsingError::EncodeError("string"))
+            .attach_printable_lazy(|| format!("Unable to convert {self:?} to a request"))
     }
 
     fn convert_and_url_encode<P>(&'e self) -> CustomResult<String, errors::ParsingError>
@@ -91,11 +89,9 @@ where
         Result<P, <P as TryFrom<&'e Self>>::Error>: ResultExt,
         <Result<P, <P as TryFrom<&'e Self>>::Error> as ResultExt>::Ok: Serialize,
     {
-        serde_urlencoded::to_string(
-            &P::try_from(self).change_context(errors::ParsingError::UnknownError)?,
-        )
-        .change_context(errors::ParsingError::EncodeError("url-encoded"))
-        .attach_printable_lazy(|| format!("Unable to convert {self:?} to a request"))
+        serde_urlencoded::to_string(&P::try_from(self).change_context(errors::ParsingError::UnknownError)?)
+            .change_context(errors::ParsingError::EncodeError("url-encoded"))
+            .attach_printable_lazy(|| format!("Unable to convert {self:?} to a request"))
     }
 
     fn url_encode(&'e self) -> CustomResult<String, errors::ParsingError>
@@ -147,19 +143,13 @@ where
 /// Extending functionalities of `bytes::Bytes`
 pub trait BytesExt {
     /// Convert `bytes::Bytes` into type `<T>` using `serde::Deserialize`
-    fn parse_struct<'de, T>(
-        &'de self,
-        type_name: &'static str,
-    ) -> CustomResult<T, errors::ParsingError>
+    fn parse_struct<'de, T>(&'de self, type_name: &'static str) -> CustomResult<T, errors::ParsingError>
     where
         T: Deserialize<'de>;
 }
 
 impl BytesExt for bytes::Bytes {
-    fn parse_struct<'de, T>(
-        &'de self,
-        type_name: &'static str,
-    ) -> CustomResult<T, errors::ParsingError>
+    fn parse_struct<'de, T>(&'de self, type_name: &'static str) -> CustomResult<T, errors::ParsingError>
     where
         T: Deserialize<'de>,
     {
@@ -177,20 +167,14 @@ impl BytesExt for bytes::Bytes {
 /// Extending functionalities of `[u8]` for performing parsing
 pub trait ByteSliceExt {
     /// Convert `[u8]` into type `<T>` by using `serde::Deserialize`
-    fn parse_struct<'de, T>(
-        &'de self,
-        type_name: &'static str,
-    ) -> CustomResult<T, errors::ParsingError>
+    fn parse_struct<'de, T>(&'de self, type_name: &'static str) -> CustomResult<T, errors::ParsingError>
     where
         T: Deserialize<'de>;
 }
 
 impl ByteSliceExt for [u8] {
     #[track_caller]
-    fn parse_struct<'de, T>(
-        &'de self,
-        type_name: &'static str,
-    ) -> CustomResult<T, errors::ParsingError>
+    fn parse_struct<'de, T>(&'de self, type_name: &'static str) -> CustomResult<T, errors::ParsingError>
     where
         T: Deserialize<'de>,
     {
@@ -305,10 +289,7 @@ impl ValueExt for serde_json::Value {
     where
         T: serde::de::DeserializeOwned,
     {
-        let debug = format!(
-            "Unable to parse {type_name} from serde_json::Value: {:?}",
-            &self
-        );
+        let debug = format!("Unable to parse {type_name} from serde_json::Value: {:?}", &self);
         serde_json::from_value::<T>(self)
             .change_context(errors::ParsingError::StructParseFailure(type_name))
             .attach_printable_lazy(|| debug)
@@ -431,16 +412,10 @@ impl<A: Send> AsyncExt<A> for Option<A> {
 
 pub trait OptionExt<T> {
     /// check if the current option is Some
-    fn check_value_present(
-        &self,
-        field_name: &'static str,
-    ) -> CustomResult<(), errors::ValidationError>;
+    fn check_value_present(&self, field_name: &'static str) -> CustomResult<(), errors::ValidationError>;
 
     /// Throw missing required field error when the value is None
-    fn get_required_value(
-        self,
-        field_name: &'static str,
-    ) -> CustomResult<T, errors::ValidationError>;
+    fn get_required_value(self, field_name: &'static str) -> CustomResult<T, errors::ValidationError>;
 
     /// Try parsing the option as Enum
     fn parse_enum<E>(self, enum_name: &'static str) -> CustomResult<E, errors::ParsingError>
@@ -465,10 +440,7 @@ where
     T: std::fmt::Debug,
 {
     #[track_caller]
-    fn check_value_present(
-        &self,
-        field_name: &'static str,
-    ) -> CustomResult<(), errors::ValidationError> {
+    fn check_value_present(&self, field_name: &'static str) -> CustomResult<(), errors::ValidationError> {
         when(self.is_none(), || {
             Err(errors::ValidationError::MissingRequiredField {
                 field_name: field_name.to_string(),
@@ -479,10 +451,7 @@ where
 
     // This will allow the error message that was generated in this function to point to the call site
     #[track_caller]
-    fn get_required_value(
-        self,
-        field_name: &'static str,
-    ) -> CustomResult<T, errors::ValidationError> {
+    fn get_required_value(self, field_name: &'static str) -> CustomResult<T, errors::ValidationError> {
         match self {
             Some(v) => Ok(v),
             None => Err(errors::ValidationError::MissingRequiredField {
@@ -537,10 +506,7 @@ pub trait StringExt<T> {
         <T as std::str::FromStr>::Err: std::error::Error + Send + Sync + 'static;
 
     /// Convert `serde_json::Value` into type `<T>` by using `serde::Deserialize`
-    fn parse_struct<'de>(
-        &'de self,
-        type_name: &'static str,
-    ) -> CustomResult<T, errors::ParsingError>
+    fn parse_struct<'de>(&'de self, type_name: &'static str) -> CustomResult<T, errors::ParsingError>
     where
         T: Deserialize<'de>;
 }
@@ -556,17 +522,12 @@ impl<T> StringExt<T> for String {
             .attach_printable_lazy(|| format!("Invalid enum variant {self:?} for enum {enum_name}"))
     }
 
-    fn parse_struct<'de>(
-        &'de self,
-        type_name: &'static str,
-    ) -> CustomResult<T, errors::ParsingError>
+    fn parse_struct<'de>(&'de self, type_name: &'static str) -> CustomResult<T, errors::ParsingError>
     where
         T: Deserialize<'de>,
     {
         serde_json::from_str::<T>(self)
             .change_context(errors::ParsingError::StructParseFailure(type_name))
-            .attach_printable_lazy(|| {
-                format!("Unable to parse {type_name} from string {:?}", &self)
-            })
+            .attach_printable_lazy(|| format!("Unable to parse {type_name} from string {:?}", &self))
     }
 }

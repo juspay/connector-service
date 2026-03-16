@@ -2,14 +2,12 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii::Email, types::MinorUnit};
 use domain_types::{
-    connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,
-    },
+    connector_flow::{Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
-        ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        ConnectorCustomerData, ConnectorCustomerResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -44,9 +42,7 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
                 merchant_id: key2.to_owned(),
                 merchant_identity_id: key1.to_owned(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -67,20 +63,14 @@ impl TryFrom<&ConnectorSpecificAuth> for FinixAuthType {
                 merchant_id: merchant_id.clone(),
                 merchant_identity_id: merchant_identity_id.clone(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
 
 impl FinixAuthType {
     pub fn generate_basic_auth(&self) -> String {
-        let credentials = format!(
-            "{}:{}",
-            self.finix_user_name.peek(),
-            self.finix_password.peek()
-        );
+        let credentials = format!("{}:{}", self.finix_user_name.peek(), self.finix_password.peek());
         base64::Engine::encode(&base64::engine::general_purpose::STANDARD, credentials)
     }
 }
@@ -328,12 +318,7 @@ impl From<&FinixPaymentStatus> for AttemptStatus {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::FinixRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for FinixAuthorizeRequest
@@ -342,12 +327,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::FinixRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -359,11 +339,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // For Finix, we need a payment instrument ID (source)
         // First try to get token from payment_method_token, otherwise create instrument inline
-        let source = match router_data
-            .resource_common_data
-            .payment_method_token
-            .clone()
-        {
+        let source = match router_data.resource_common_data.payment_method_token.clone() {
             Some(token) => match token {
                 router_data::PaymentMethodToken::Token(secret) => secret.expose(),
             },
@@ -381,12 +357,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: router_data.request.currency,
             source,
             merchant: merchant_id,
-            idempotency_id: Some(
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
+            idempotency_id: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
             tags: None,
         })
     }
@@ -398,9 +369,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FinixAuthorizeResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         // Handle error vs success responses
@@ -431,9 +400,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     (FinixId::Transfer(_), FinixPaymentStatus::Succeeded) => AttemptStatus::Charged,
                     (FinixId::Transfer(_), FinixPaymentStatus::Pending) => AttemptStatus::Pending,
                     (FinixId::Auth(_), FinixPaymentStatus::Succeeded) => AttemptStatus::Authorized,
-                    (FinixId::Auth(_), FinixPaymentStatus::Pending) => {
-                        AttemptStatus::AuthenticationPending
-                    }
+                    (FinixId::Auth(_), FinixPaymentStatus::Pending) => AttemptStatus::AuthenticationPending,
                     (_, FinixPaymentStatus::Failed) => AttemptStatus::Failure,
                     (_, FinixPaymentStatus::Canceled) => AttemptStatus::Voided,
                     (_, FinixPaymentStatus::Unknown) => AttemptStatus::Pending,
@@ -444,10 +411,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // - Authorization (AU*): Use transfer field if present (for refunds), else use ID
                 let connector_transaction_id = match &finix_id {
                     FinixId::Transfer(_) => response.id.clone(),
-                    FinixId::Auth(_) => response
-                        .transfer
-                        .clone()
-                        .unwrap_or_else(|| response.id.clone()),
+                    FinixId::Auth(_) => response.transfer.clone().unwrap_or_else(|| response.id.clone()),
                 };
 
                 Ok(Self {
@@ -513,10 +477,7 @@ impl TryFrom<ResponseRouterData<FinixPSyncResponse, Self>>
 
         // For transfers (TR...), use the transfer ID directly
         // For authorizations (AU...), use transfer ID if available for refunds
-        let connector_transaction_id = response
-            .transfer
-            .clone()
-            .unwrap_or_else(|| response.id.clone());
+        let connector_transaction_id = response.transfer.clone().unwrap_or_else(|| response.id.clone());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -554,10 +515,7 @@ pub type FinixCaptureResponse = FinixPaymentsResponse;
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::FinixRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        super::FinixRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     > for FinixCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -663,20 +621,13 @@ impl TryFrom<ResponseRouterData<FinixRSyncResponse, Self>>
 // TRYFROM IMPLEMENTATIONS - VOID REQUEST
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::FinixRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for FinixVoidRequest
+    TryFrom<super::FinixRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for FinixVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: super::FinixRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        _item: super::FinixRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self { void_me: true })
     }
@@ -723,20 +674,13 @@ impl TryFrom<ResponseRouterData<FinixVoidResponse, Self>>
 // TRYFROM IMPLEMENTATIONS - REFUND REQUEST
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::FinixRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for FinixRefundRequest
+    TryFrom<super::FinixRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for FinixRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::FinixRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: super::FinixRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             refund_amount: item.router_data.request.minor_refund_amount,
@@ -778,12 +722,7 @@ impl TryFrom<ResponseRouterData<FinixRefundResponse, Self>>
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::FinixRouterData<
-            RouterDataV2<
-                CreateConnectorCustomer,
-                PaymentFlowData,
-                ConnectorCustomerData,
-                ConnectorCustomerResponse,
-            >,
+            RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
             T,
         >,
     > for FinixCreateIdentityRequest
@@ -792,12 +731,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::FinixRouterData<
-            RouterDataV2<
-                CreateConnectorCustomer,
-                PaymentFlowData,
-                ConnectorCustomerData,
-                ConnectorCustomerResponse,
-            >,
+            RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -810,10 +744,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .map(|name| {
                 let name_str = name.peek().trim();
                 match name_str.rsplit_once(' ') {
-                    Some((first, last)) => (
-                        Some(Secret::new(first.to_string())),
-                        Some(Secret::new(last.to_string())),
-                    ),
+                    Some((first, last)) => (Some(Secret::new(first.to_string())), Some(Secret::new(last.to_string()))),
                     None => (Some(Secret::new(name_str.to_string())), None),
                 }
             })
@@ -836,18 +767,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // TRYFROM IMPLEMENTATIONS - CREATE CONNECTOR CUSTOMER RESPONSE
 
 impl TryFrom<ResponseRouterData<FinixIdentityResponse, Self>>
-    for RouterDataV2<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
-    >
+    for RouterDataV2<CreateConnectorCustomer, PaymentFlowData, ConnectorCustomerData, ConnectorCustomerResponse>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FinixIdentityResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixIdentityResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         Ok(Self {
             response: Ok(ConnectorCustomerResponse {
@@ -889,14 +813,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let token_data = &item.router_data.request;
 
         // Get customer_id from connector metadata stored in resource_common_data
-        let customer_id = item
-            .router_data
-            .resource_common_data
-            .connector_customer
-            .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+        let customer_id = item.router_data.resource_common_data.connector_customer.clone().ok_or(
+            errors::ConnectorError::MissingRequiredField {
                 field_name: "connector_customer_id",
-            })?;
+            },
+        )?;
 
         match &token_data.payment_method_data {
             PaymentMethodData::Card(card) => Ok(Self {
@@ -904,20 +825,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 name: card.card_holder_name.clone(),
                 number: Some(Secret::new(card.card_number.peek().to_string())),
                 security_code: Some(card.card_cvc.clone()),
-                expiration_month: Some(Secret::new(
-                    card.card_exp_month.peek().parse::<i8>().map_err(|_| {
-                        errors::ConnectorError::InvalidDataFormat {
-                            field_name: "card_exp_month",
-                        }
-                    })?,
-                )),
-                expiration_year: Some(Secret::new(
-                    card.card_exp_year.peek().parse::<i32>().map_err(|_| {
-                        errors::ConnectorError::InvalidDataFormat {
-                            field_name: "card_exp_year",
-                        }
-                    })?,
-                )),
+                expiration_month: Some(Secret::new(card.card_exp_month.peek().parse::<i8>().map_err(|_| {
+                    errors::ConnectorError::InvalidDataFormat {
+                        field_name: "card_exp_month",
+                    }
+                })?)),
+                expiration_year: Some(Secret::new(card.card_exp_year.peek().parse::<i32>().map_err(|_| {
+                    errors::ConnectorError::InvalidDataFormat {
+                        field_name: "card_exp_year",
+                    }
+                })?)),
                 identity: customer_id,
                 tags: None,
                 address: None,
@@ -938,9 +855,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         ..
                     } => {
                         // Determine account holder name: prefer bank_account_holder_name, fall back to card_holder_name
-                        let name = bank_account_holder_name
-                            .clone()
-                            .or_else(|| card_holder_name.clone());
+                        let name = bank_account_holder_name.clone().or_else(|| card_holder_name.clone());
 
                         // Map bank_holder_type to account_type (CHECKING or SAVINGS)
                         // Default to CHECKING if not specified
@@ -969,10 +884,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             account_type,
                         })
                     }
-                    _ => Err(errors::ConnectorError::NotImplemented(
-                        "Only ACH Bank Debit is supported".to_string(),
-                    )
-                    .into()),
+                    _ => Err(
+                        errors::ConnectorError::NotImplemented("Only ACH Bank Debit is supported".to_string()).into(),
+                    ),
                 }
             }
             _ => Err(errors::ConnectorError::NotImplemented(
@@ -987,18 +901,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<FinixInstrumentResponse, Self>>
-    for RouterDataV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    >
+    for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FinixInstrumentResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FinixInstrumentResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse { token: response.id }),

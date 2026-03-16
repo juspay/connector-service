@@ -90,14 +90,9 @@ impl CellId {
     }
 
     /// Create a new cell id from a string
-    pub fn from_string(
-        input_string: impl AsRef<str>,
-    ) -> error_stack::Result<Self, errors::ValidationError> {
-        Self::from_str(input_string).change_context(
-            errors::ValidationError::IncorrectValueProvided {
-                field_name: "cell_id",
-            },
-        )
+    pub fn from_string(input_string: impl AsRef<str>) -> error_stack::Result<Self, errors::ValidationError> {
+        Self::from_str(input_string)
+            .change_context(errors::ValidationError::IncorrectValueProvided { field_name: "cell_id" })
     }
 
     /// Get the string representation of the cell id
@@ -120,7 +115,9 @@ impl<'de> serde::Deserialize<'de> for CellId {
 #[derive(Debug, Error, PartialEq, Eq)]
 pub(crate) enum GlobalIdError {
     /// The format for the global id is invalid
-    #[error("The id format is invalid, expected format is {{cell_id:5}}_{{entity_prefix:3}}_{{uuid:32}}_{{random:24}}")]
+    #[error(
+        "The id format is invalid, expected format is {{cell_id:5}}_{{entity_prefix:3}}_{{uuid:32}}_{{random:24}}"
+    )]
     InvalidIdFormat,
 
     /// LengthIdError and AlphanumericIdError
@@ -142,14 +139,10 @@ impl GlobalId {
         Self(LengthId::new_unchecked(alphanumeric_id))
     }
 
-    pub(crate) fn from_string(
-        input_string: std::borrow::Cow<'static, str>,
-    ) -> Result<Self, GlobalIdError> {
+    pub(crate) fn from_string(input_string: std::borrow::Cow<'static, str>) -> Result<Self, GlobalIdError> {
         let length_id = LengthId::from(input_string)?;
         let input_string = &length_id.0 .0;
-        let (cell_id, _remaining) = input_string
-            .split_once("_")
-            .ok_or(GlobalIdError::InvalidIdFormat)?;
+        let (cell_id, _remaining) = input_string.split_once("_").ok_or(GlobalIdError::InvalidIdFormat)?;
 
         CellId::from_str(cell_id)?;
 
@@ -208,26 +201,22 @@ mod global_id_tests {
 
     #[test]
     fn test_global_id_deser() {
-        let input_string_for_serde_json_conversion =
-            r#""12345_cus_abcdefghijklmnopqrstuvwxyz1234567890""#;
+        let input_string_for_serde_json_conversion = r#""12345_cus_abcdefghijklmnopqrstuvwxyz1234567890""#;
 
         let input_string = "12345_cus_abcdefghijklmnopqrstuvwxyz1234567890";
-        let global_id =
-            serde_json::from_str::<GlobalId>(input_string_for_serde_json_conversion).unwrap();
+        let global_id = serde_json::from_str::<GlobalId>(input_string_for_serde_json_conversion).unwrap();
         assert_eq!(global_id.0 .0 .0, input_string);
     }
 
     #[test]
     fn test_global_id_deser_error() {
-        let input_string_for_serde_json_conversion =
-            r#""123_45_cus_abcdefghijklmnopqrstuvwxyz1234567890""#;
+        let input_string_for_serde_json_conversion = r#""123_45_cus_abcdefghijklmnopqrstuvwxyz1234567890""#;
 
         let global_id = serde_json::from_str::<GlobalId>(input_string_for_serde_json_conversion);
         assert!(global_id.is_err());
 
-        let expected_error_message = format!(
-            "cell id error: the minimum required length for this field is {CELL_IDENTIFIER_LENGTH}"
-        );
+        let expected_error_message =
+            format!("cell id error: the minimum required length for this field is {CELL_IDENTIFIER_LENGTH}");
 
         let error_message = global_id.unwrap_err().to_string();
         assert_eq!(error_message, expected_error_message);

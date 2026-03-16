@@ -17,11 +17,10 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
-        RefundStatus,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, Currency,
+        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentStatus,
+        RefundResponse, RefundServiceGetRequest, RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -29,10 +28,7 @@ use tonic::{transport::Channel, Request};
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
 // Constants for Xendit connector - Updated to match provided JSON payload
@@ -51,30 +47,25 @@ const TEST_EMAIL: &str = "test@t.com";
 const TEST_REQUEST_REF_ID: &str = "12345678_123";
 
 fn add_xendit_metadata<T>(request: &mut Request<T>) {
-    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
-        .expect("Failed to load xendit credentials");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load xendit credentials");
 
     let api_key = match auth {
         domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
         _ => panic!("Expected HeaderKey auth type for xendit"),
     };
 
-    request.metadata_mut().append(
-        "x-connector",
-        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
-    );
-    request.metadata_mut().append(
-        "x-auth",
-        "header-key".parse().expect("Failed to parse x-auth"),
-    );
-    request.metadata_mut().append(
-        "x-api-key",
-        api_key.parse().expect("Failed to parse x-api-key"),
-    );
-    request.metadata_mut().append(
-        "x-merchant-id",
-        MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
-    );
+    request
+        .metadata_mut()
+        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
+    request
+        .metadata_mut()
+        .append("x-auth", "header-key".parse().expect("Failed to parse x-auth"));
+    request
+        .metadata_mut()
+        .append("x-api-key", api_key.parse().expect("Failed to parse x-api-key"));
+    request
+        .metadata_mut()
+        .append("x-merchant-id", MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"));
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())
@@ -115,7 +106,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         nick_name: None,
     };
     PaymentServiceAuthorizeRequest {
-        amount:  Some(grpc_api_types::payments::Money {
+        amount: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Idr),
         }),
@@ -123,11 +114,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some(
-            "http://localhost:8080/payments/pay_h6dmtWPxiJ4jgtFpk8JK/merchant_1753672298/redirect/response/novalnet".to_string(),
+            "http://localhost:8080/payments/pay_h6dmtWPxiJ4jgtFpk8JK/merchant_1753672298/redirect/response/novalnet"
+                .to_string(),
         ),
-        webhook_url: Some(
-            "http://localhost:8080/webhooks/merchant_1753672298/mca_8rIwEeXmFvrIA59fMH75".to_string(),
-        ),
+        webhook_url: Some("http://localhost:8080/webhooks/merchant_1753672298/mca_8rIwEeXmFvrIA59fMH75".to_string()),
         address: Some(grpc_api_types::payments::PaymentAddress {
             billing_address: Some(grpc_api_types::payments::Address {
                 phone_number: Some(Secret::new("9123456789".to_string())),

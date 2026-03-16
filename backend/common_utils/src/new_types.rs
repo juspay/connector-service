@@ -17,16 +17,14 @@ fn apply_mask(val: &str, unmasked_char_count: usize, min_masked_char_count: usiz
     let mask_end_index = len - unmasked_char_count - 1;
     let range = mask_start_index..=mask_end_index;
 
-    val.chars()
-        .enumerate()
-        .fold(String::new(), |mut acc, (index, ch)| {
-            if ch.is_alphanumeric() && range.contains(&index) {
-                acc.push('*');
-            } else {
-                acc.push(ch);
-            }
-            acc
-        })
+    val.chars().enumerate().fold(String::new(), |mut acc, (index, ch)| {
+        if ch.is_alphanumeric() && range.contains(&index) {
+            acc.push('*');
+        } else {
+            acc.push(ch);
+        }
+        acc
+    })
 }
 
 /// Masked bank account

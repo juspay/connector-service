@@ -1,30 +1,25 @@
 pub mod transformers;
 
 use common_enums;
-use common_utils::{
-    consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit,
-};
+use common_utils::{consts, errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
+        CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
+        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence,
+        Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, MandateRevokeRequestData, MandateRevokeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -39,11 +34,10 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        self, AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook,
-        PaymentAccessToken, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
-        PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidPostCaptureV2,
-        PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2,
-        ValidationTrait,
+        self, AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAccessToken,
+        PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2, PaymentTokenV2,
+        PaymentVoidPostCaptureV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2,
+        SubmitEvidenceV2, ValidationTrait,
     },
     decode::BodyDecoding,
     verification::SourceVerification,
@@ -51,15 +45,13 @@ use interfaces::{
 use serde::Serialize;
 
 use self::transformers::{
-    get_trans_id, AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
-    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateConnectorCustomerRequest,
-    AuthorizedotnetCreateConnectorCustomerResponse, AuthorizedotnetCreateSyncRequest,
-    AuthorizedotnetPSyncResponse, AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest,
-    AuthorizedotnetRSyncResponse, AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
-    AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,
-    AuthorizedotnetSetupMandateRequest, AuthorizedotnetSetupMandateResponse,
-    AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse, AuthorizedotnetWebhookEventType,
-    AuthorizedotnetWebhookObjectId,
+    get_trans_id, AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest, AuthorizedotnetCaptureResponse,
+    AuthorizedotnetCreateConnectorCustomerRequest, AuthorizedotnetCreateConnectorCustomerResponse,
+    AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse, AuthorizedotnetPaymentsRequest,
+    AuthorizedotnetRSyncRequest, AuthorizedotnetRSyncResponse, AuthorizedotnetRefundRequest,
+    AuthorizedotnetRefundResponse, AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,
+    AuthorizedotnetSetupMandateRequest, AuthorizedotnetSetupMandateResponse, AuthorizedotnetVoidRequest,
+    AuthorizedotnetVoidResponse, AuthorizedotnetWebhookEventType, AuthorizedotnetWebhookObjectId,
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
@@ -78,28 +70,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    connector_types::SdkSessionTokenV2 for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> connector_types::SdkSessionTokenV2
+    for Authorizedotnet<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorServiceTrait<T> for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ConnectorServiceTrait<T>
+    for Authorizedotnet<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    PaymentSessionToken for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentSessionToken
+    for Authorizedotnet<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    PaymentAccessToken for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentAccessToken
+    for Authorizedotnet<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SetupMandateV2<T> for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> SetupMandateV2<T>
+    for Authorizedotnet<T>
 {
 }
 
@@ -108,15 +100,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ValidationTrait for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ValidationTrait
+    for Authorizedotnet<T>
 {
     fn should_create_connector_customer(&self) -> bool {
         true
     }
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    IncomingWebhook for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> IncomingWebhook
+    for Authorizedotnet<T>
 {
     fn verify_webhook_source(
         &self,
@@ -176,8 +168,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Compute HMAC-SHA512 of request body
         use common_utils::crypto::{HmacSha512, SignMessage};
         let crypto_algorithm = HmacSha512;
-        let computed_signature = match crypto_algorithm.sign_message(&webhook_secret, &request.body)
-        {
+        let computed_signature = match crypto_algorithm.sign_message(&webhook_secret, &request.body) {
             Ok(sig) => sig,
             Err(crypto_error) => {
                 tracing::error!(
@@ -203,9 +194,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .body
             .parse_struct("AuthorizedotnetWebhookEventType")
             .change_context(ConnectorError::WebhookEventTypeNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse webhook event type from Authorize.Net webhook body"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse webhook event type from Authorize.Net webhook body")?;
 
         Ok(match webhook_body.event_type {
             transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated => {
@@ -218,12 +207,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated => {
                 EventType::PaymentIntentSuccess // Combined auth+capture
             }
-            transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated => {
-                EventType::PaymentIntentCancelled
-            }
-            transformers::AuthorizedotnetIncomingWebhookEventType::RefundCreated => {
-                EventType::RefundSuccess
-            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated => EventType::PaymentIntentCancelled,
+            transformers::AuthorizedotnetIncomingWebhookEventType::RefundCreated => EventType::RefundSuccess,
             transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
             | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
                 EventType::MandateActive
@@ -233,10 +218,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     target: "authorizedotnet_webhook",
                     "Received unknown webhook event type from Authorize.Net - rejecting webhook"
                 );
-                return Err(
-                    error_stack::report!(ConnectorError::WebhookEventTypeNotFound)
-                        .attach_printable("Unknown webhook event type"),
-                )
+                return Err(error_stack::report!(ConnectorError::WebhookEventTypeNotFound)
+                    .attach_printable("Unknown webhook event type"));
             }
         })
     }
@@ -252,9 +235,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
             .change_context(ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse Authorize.Net payment webhook body structure"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse Authorize.Net payment webhook body structure")?;
 
         let transaction_id = get_trans_id(&webhook_body).attach_printable_lazy(|| {
             format!(
@@ -293,9 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
             .change_context(ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse Authorize.Net refund webhook body structure"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse Authorize.Net refund webhook body structure")?;
 
         let transaction_id = get_trans_id(&webhook_body).attach_printable_lazy(|| {
             format!(
@@ -316,8 +295,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         })
     }
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SubmitEvidenceV2 for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> SubmitEvidenceV2
+    for Authorizedotnet<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> DisputeDefend
@@ -332,20 +311,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     for Authorizedotnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    RepeatPaymentV2<T> for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> RepeatPaymentV2<T>
+    for Authorizedotnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    PaymentVoidPostCaptureV2 for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentVoidPostCaptureV2
+    for Authorizedotnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    PaymentOrderCreate for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentOrderCreate
+    for Authorizedotnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    PaymentAuthorizeV2<T> for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentAuthorizeV2<T>
+    for Authorizedotnet<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentSyncV2
@@ -356,16 +335,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     for Authorizedotnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> RefundV2
-    for Authorizedotnet<T>
-{
-}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> RefundV2 for Authorizedotnet<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentCapture
     for Authorizedotnet<T>
 {
 }
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    PaymentTokenV2<T> for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> PaymentTokenV2<T>
+    for Authorizedotnet<T>
 {
 }
 
@@ -389,8 +365,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    connector_types::MandateRevokeV2 for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> connector_types::MandateRevokeV2
+    for Authorizedotnet<T>
 {
 }
 
@@ -399,8 +375,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    SourceVerification for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Authorizedotnet<T>
 {
 }
 
@@ -410,8 +386,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 // Basic connector implementation
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorCommon for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Authorizedotnet<T>
 {
     fn id(&self) -> &'static str {
         "authorizedotnet"
@@ -845,38 +821,25 @@ macros::macro_connector_implementation!(
 );
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Authorizedotnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
     for Authorizedotnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Authorizedotnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>
+    for Authorizedotnet<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Authorizedotnet<T>
 {
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -900,66 +863,42 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
+    ConnectorIntegrationV2<PreAuthenticate, PaymentFlowData, PaymentsPreAuthenticateData<T>, PaymentsResponseData>
+    for Authorizedotnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
+    ConnectorIntegrationV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>
+    for Authorizedotnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
+    ConnectorIntegrationV2<PostAuthenticate, PaymentFlowData, PaymentsPostAuthenticateData<T>, PaymentsResponseData>
+    for Authorizedotnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        SdkSessionToken,
-        PaymentFlowData,
-        PaymentsSdkSessionTokenData,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
+    ConnectorIntegrationV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
+    for Authorizedotnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        MandateRevoke,
-        PaymentFlowData,
-        MandateRevokeRequestData,
-        MandateRevokeResponseData,
-    > for Authorizedotnet<T>
+    ConnectorIntegrationV2<MandateRevoke, PaymentFlowData, MandateRevokeRequestData, MandateRevokeResponseData>
+    for Authorizedotnet<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        VoidPC,
-        PaymentFlowData,
-        PaymentsCancelPostCaptureData,
-        PaymentsResponseData,
-    > for Authorizedotnet<T>
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Authorizedotnet<T>
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    ConnectorSpecifications for Authorizedotnet<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Authorizedotnet<T>
 {
 }

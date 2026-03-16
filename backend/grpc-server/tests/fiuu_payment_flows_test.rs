@@ -17,11 +17,10 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
-        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
-        RefundServiceGetRequest, RefundStatus,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, Currency,
+        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
+        PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -30,10 +29,7 @@ use uuid::Uuid;
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
 // Helper function to generate a unique ID using UUID
@@ -56,8 +52,7 @@ const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_fiuu_metadata<T>(request: &mut Request<T>) {
-    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
-        .expect("Failed to load fiuu credentials");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load fiuu credentials");
 
     let (api_key, key1, api_secret) = match auth {
         domain_types::router_data::ConnectorAuthType::SignatureKey {
@@ -68,28 +63,24 @@ fn add_fiuu_metadata<T>(request: &mut Request<T>) {
         _ => panic!("Expected SignatureKey auth type for fiuu"),
     };
 
-    request.metadata_mut().append(
-        "x-connector",
-        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
-    );
+    request
+        .metadata_mut()
+        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
     request
         .metadata_mut()
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
-    request.metadata_mut().append(
-        "x-api-key",
-        api_key.parse().expect("Failed to parse x-api-key"),
-    );
+    request
+        .metadata_mut()
+        .append("x-api-key", api_key.parse().expect("Failed to parse x-api-key"));
     request
         .metadata_mut()
         .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
-    request.metadata_mut().append(
-        "x-api-secret",
-        api_secret.parse().expect("Failed to parse x-api-secret"),
-    );
-    request.metadata_mut().append(
-        "x-merchant-id",
-        MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
-    );
+    request
+        .metadata_mut()
+        .append("x-api-secret", api_secret.parse().expect("Failed to parse x-api-secret"));
+    request
+        .metadata_mut()
+        .append("x-merchant-id", MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"));
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())
@@ -137,12 +128,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
-        return_url: Some(
-            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
-        ),
-        webhook_url: Some(
-            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
-        ),
+        return_url: Some("https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string()),
+        webhook_url: Some("https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string()),
         customer: Some(grpc_api_types::payments::Customer {
             email: Some(TEST_EMAIL.to_string().into()),
             name: None,
@@ -239,9 +226,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
-        webhook_url: Some(
-            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
-        ),
+        webhook_url: Some("https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string()),
         ..Default::default()
     }
 }
@@ -523,8 +508,7 @@ async fn test_refund_sync() {
                 .expect("gRPC refund sync call failed")
                 .into_inner();
 
-            let is_valid_status = refund_sync_response.status
-                == i32::from(RefundStatus::RefundPending)
+            let is_valid_status = refund_sync_response.status == i32::from(RefundStatus::RefundPending)
                 || refund_sync_response.status == i32::from(RefundStatus::RefundSuccess);
 
             assert!(

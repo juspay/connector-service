@@ -20,8 +20,7 @@ use crate::metadata::{connector_from_metadata, parse_metadata};
 /// If not present, falls back to legacy `x-connector` and `x-auth` (+ keys) headers.
 pub fn connector_and_auth_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificAuth), ApplicationErrorResponse>
-{
+) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificAuth), ApplicationErrorResponse> {
     if let Some(header_value) = metadata.get(X_CONNECTOR_AUTH) {
         let typed_auth: grpc_api_types::payments::ConnectorAuth = header_value
             .to_str()
@@ -32,15 +31,12 @@ pub fn connector_and_auth_from_metadata(
                 error_object: None,
             }))
             .and_then(|header_str| {
-                serde_json::from_str(header_str).change_context(
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_CONNECTOR_AUTH_JSON".to_string(),
-                        error_identifier: 400,
-                        error_message: "Failed to parse X-Connector-Auth JSON into ConnectorAuth"
-                            .to_string(),
-                        error_object: None,
-                    }),
-                )
+                serde_json::from_str(header_str).change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CONNECTOR_AUTH_JSON".to_string(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse X-Connector-Auth JSON into ConnectorAuth".to_string(),
+                    error_object: None,
+                }))
             })?;
 
         let auth_type = typed_auth.auth_type.as_ref().ok_or_else(|| {
@@ -126,27 +122,23 @@ pub fn generic_auth_from_metadata(
         "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
         "currency-auth-key" => {
             let auth_key_map_str = parse_metadata(metadata, X_AUTH_KEY_MAP)?;
-            let auth_key_map: HashMap<
-                common_enums::enums::Currency,
-                common_utils::pii::SecretSerdeValue,
-            > = serde_json::from_str(auth_key_map_str).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_AUTH_KEY_MAP".to_string(),
-                    error_identifier: 400,
-                    error_message: "Invalid auth-key-map format".to_string(),
-                    error_object: None,
-                }),
-            )?;
+            let auth_key_map: HashMap<common_enums::enums::Currency, common_utils::pii::SecretSerdeValue> =
+                serde_json::from_str(auth_key_map_str).change_context(ApplicationErrorResponse::BadRequest(
+                    ApiError {
+                        sub_code: "INVALID_AUTH_KEY_MAP".to_string(),
+                        error_identifier: 400,
+                        error_message: "Invalid auth-key-map format".to_string(),
+                        error_object: None,
+                    },
+                ))?;
             Ok(ConnectorAuthType::CurrencyAuthKey { auth_key_map })
         }
-        "certificate-auth" | _ => Err(Report::new(ApplicationErrorResponse::BadRequest(
-            ApiError {
-                sub_code: "INVALID_AUTH_TYPE".to_string(),
-                error_identifier: 400,
-                error_message: format!("Invalid auth type: {auth}"),
-                error_object: None,
-            },
-        ))),
+        "certificate-auth" | _ => Err(Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "INVALID_AUTH_TYPE".to_string(),
+            error_identifier: 400,
+            error_message: format!("Invalid auth type: {auth}"),
+            error_object: None,
+        }))),
     }
 }
 
@@ -161,38 +153,23 @@ mod tests {
 
     /// Build JSON for a Stripe ConnectorAuth header value.
     fn stripe_auth_json(api_key: &str) -> String {
-        format!(
-            r#"{{"auth_type":{{"Stripe":{{"api_key":"{}"}}}}}}"#,
-            api_key
-        )
+        format!(r#"{{"auth_type":{{"Stripe":{{"api_key":"{}"}}}}}}"#, api_key)
     }
 
     /// Build a MetadataMap with a typed `X-Connector-Auth` JSON header for Stripe.
     fn metadata_with_typed_auth(api_key: &str) -> MetadataMap {
         let mut metadata = MetadataMap::new();
         let json = stripe_auth_json(api_key);
-        metadata.insert(
-            consts::X_CONNECTOR_AUTH,
-            json.parse().expect("valid x-connector-auth header"),
-        );
+        metadata.insert(consts::X_CONNECTOR_AUTH, json.parse().expect("valid x-connector-auth header"));
         metadata
     }
 
     /// Build a MetadataMap with legacy `x-auth` / `x-api-key` headers and `x-connector` header.
     fn metadata_with_legacy_auth(api_key: &str) -> MetadataMap {
         let mut metadata = MetadataMap::new();
-        metadata.insert(
-            consts::X_AUTH,
-            "header-key".parse().expect("valid x-auth header"),
-        );
-        metadata.insert(
-            consts::X_API_KEY,
-            api_key.parse().expect("valid x-api-key header"),
-        );
-        metadata.insert(
-            consts::X_CONNECTOR_NAME,
-            "stripe".parse().expect("valid x-connector header"),
-        );
+        metadata.insert(consts::X_AUTH, "header-key".parse().expect("valid x-auth header"));
+        metadata.insert(consts::X_API_KEY, api_key.parse().expect("valid x-api-key header"));
+        metadata.insert(consts::X_CONNECTOR_NAME, "stripe".parse().expect("valid x-connector header"));
         metadata
     }
 
@@ -200,8 +177,7 @@ mod tests {
     fn connector_auth_resolves_from_typed_header() {
         let metadata = metadata_with_typed_auth("typed-key-value");
 
-        let (connector, auth) =
-            connector_and_auth_from_metadata(&metadata).expect("typed header auth should resolve");
+        let (connector, auth) = connector_and_auth_from_metadata(&metadata).expect("typed header auth should resolve");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
@@ -216,8 +192,7 @@ mod tests {
     fn connector_auth_falls_back_to_legacy_headers() {
         let metadata = metadata_with_legacy_auth("legacy-key-value");
 
-        let (connector, auth) =
-            connector_and_auth_from_metadata(&metadata).expect("legacy header auth should resolve");
+        let (connector, auth) = connector_and_auth_from_metadata(&metadata).expect("legacy header auth should resolve");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {
@@ -232,13 +207,10 @@ mod tests {
     fn connector_auth_prefers_typed_header_over_legacy() {
         let mut metadata = metadata_with_legacy_auth("legacy-key-value");
         let json = stripe_auth_json("typed-key-value");
-        metadata.insert(
-            consts::X_CONNECTOR_AUTH,
-            json.parse().expect("valid x-connector-auth header"),
-        );
+        metadata.insert(consts::X_CONNECTOR_AUTH, json.parse().expect("valid x-connector-auth header"));
 
-        let (connector, auth) = connector_and_auth_from_metadata(&metadata)
-            .expect("typed header should take precedence");
+        let (connector, auth) =
+            connector_and_auth_from_metadata(&metadata).expect("typed header should take precedence");
 
         assert_eq!(connector, connector_types::ConnectorEnum::Stripe);
         match auth {

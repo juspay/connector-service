@@ -7,11 +7,8 @@ use prometheus::{register_int_counter, register_int_gauge, IntCounter, IntGauge}
 /// Total number of logs successfully sent to Kafka
 #[allow(clippy::expect_used)]
 pub static KAFKA_LOGS_SENT: LazyLock<IntCounter> = LazyLock::new(|| {
-    register_int_counter!(
-        "kafka_logs_sent_total",
-        "Total number of logs successfully sent to Kafka"
-    )
-    .expect("Failed to register kafka_logs_sent_total metric")
+    register_int_counter!("kafka_logs_sent_total", "Total number of logs successfully sent to Kafka")
+        .expect("Failed to register kafka_logs_sent_total metric")
 });
 
 /// Total number of logs dropped due to Kafka queue full or errors
@@ -27,11 +24,8 @@ pub static KAFKA_LOGS_DROPPED: LazyLock<IntCounter> = LazyLock::new(|| {
 /// Current size of Kafka producer queue
 #[allow(clippy::expect_used)]
 pub static KAFKA_QUEUE_SIZE: LazyLock<IntGauge> = LazyLock::new(|| {
-    register_int_gauge!(
-        "kafka_producer_queue_size",
-        "Current size of Kafka producer queue"
-    )
-    .expect("Failed to register kafka_producer_queue_size metric")
+    register_int_gauge!("kafka_producer_queue_size", "Current size of Kafka producer queue")
+        .expect("Failed to register kafka_producer_queue_size metric")
 });
 
 /// Logs dropped due to queue full
@@ -57,21 +51,15 @@ pub static KAFKA_DROPS_MSG_TOO_LARGE: LazyLock<IntCounter> = LazyLock::new(|| {
 /// Logs dropped due to timeout
 #[allow(clippy::expect_used)]
 pub static KAFKA_DROPS_TIMEOUT: LazyLock<IntCounter> = LazyLock::new(|| {
-    register_int_counter!(
-        "kafka_drops_timeout_total",
-        "Total number of logs dropped due to timeout"
-    )
-    .expect("Failed to register kafka_drops_timeout_total metric")
+    register_int_counter!("kafka_drops_timeout_total", "Total number of logs dropped due to timeout")
+        .expect("Failed to register kafka_drops_timeout_total metric")
 });
 
 /// Logs dropped due to other errors
 #[allow(clippy::expect_used)]
 pub static KAFKA_DROPS_OTHER: LazyLock<IntCounter> = LazyLock::new(|| {
-    register_int_counter!(
-        "kafka_drops_other_total",
-        "Total number of logs dropped due to other errors"
-    )
-    .expect("Failed to register kafka_drops_other_total metric")
+    register_int_counter!("kafka_drops_other_total", "Total number of logs dropped due to other errors")
+        .expect("Failed to register kafka_drops_other_total metric")
 });
 
 /// Total number of audit events successfully sent to Kafka

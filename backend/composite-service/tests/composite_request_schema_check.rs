@@ -3,9 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use prost::Message as _;
-use prost_types::{
-    field_descriptor_proto::Label, DescriptorProto, FieldDescriptorProto, FileDescriptorSet,
-};
+use prost_types::{field_descriptor_proto::Label, DescriptorProto, FieldDescriptorProto, FileDescriptorSet};
 
 // Fields intentionally present in granular requests but excluded from composite request.
 const DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS: &[&str] = &["connector"];
@@ -60,10 +58,7 @@ fn decode_descriptor_set() -> FileDescriptorSet {
         .expect("failed to decode embedded proto descriptor set")
 }
 
-fn find_message<'a>(
-    descriptor_set: &'a FileDescriptorSet,
-    message_name: &str,
-) -> &'a DescriptorProto {
+fn find_message<'a>(descriptor_set: &'a FileDescriptorSet, message_name: &str) -> &'a DescriptorProto {
     descriptor_set
         .file
         .iter()
@@ -73,10 +68,7 @@ fn find_message<'a>(
 }
 
 fn field_name(field: &FieldDescriptorProto) -> String {
-    field
-        .name
-        .clone()
-        .unwrap_or_else(|| "<unnamed_field>".to_string())
+    field.name.clone().unwrap_or_else(|| "<unnamed_field>".to_string())
 }
 
 fn field_shape(field: &FieldDescriptorProto) -> FieldShape {
@@ -88,10 +80,7 @@ fn field_shape(field: &FieldDescriptorProto) -> FieldShape {
     }
 }
 
-fn message_field_map(
-    message: &DescriptorProto,
-    ignored_fields: &BTreeSet<&str>,
-) -> BTreeMap<String, FieldShape> {
+fn message_field_map(message: &DescriptorProto, ignored_fields: &BTreeSet<&str>) -> BTreeMap<String, FieldShape> {
     message
         .field
         .iter()
@@ -135,19 +124,12 @@ fn merge_into_union(
 
 fn validate_composite_flow_schema(spec: &CompositeFlowSpec, descriptor_set: &FileDescriptorSet) {
     let composite_message = find_message(descriptor_set, spec.composite_request_message);
-    let ignored_granular_only: BTreeSet<&str> =
-        spec.ignore_granular_only_fields.iter().copied().collect();
-    let ignored_composite_only: BTreeSet<&str> =
-        spec.ignore_composite_only_fields.iter().copied().collect();
+    let ignored_granular_only: BTreeSet<&str> = spec.ignore_granular_only_fields.iter().copied().collect();
+    let ignored_composite_only: BTreeSet<&str> = spec.ignore_composite_only_fields.iter().copied().collect();
     let mut granular_union: BTreeMap<String, FieldShape> = BTreeMap::new();
     for granular_message_name in spec.granular_request_messages {
         let granular_message = find_message(descriptor_set, granular_message_name);
-        merge_into_union(
-            &mut granular_union,
-            granular_message,
-            &ignored_granular_only,
-            spec.name,
-        );
+        merge_into_union(&mut granular_union, granular_message, &ignored_granular_only, spec.name);
     }
 
     let composite_fields = message_field_map(composite_message, &ignored_composite_only);

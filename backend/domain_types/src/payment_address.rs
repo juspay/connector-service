@@ -2,9 +2,7 @@ use common_enums::ProductType;
 use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
 use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
-use crate::utils::{
-    convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error,
-};
+use crate::utils::{convert_canada_state_to_code, convert_us_state_to_code, missing_field_err, Error};
 
 #[derive(Clone, Default, Debug)]
 pub struct PaymentAddress {
@@ -32,11 +30,7 @@ impl PaymentAddress {
             // Unify the billing details with `payment_method_data.billing`
             payment_method_billing
                 .as_ref()
-                .map(|payment_method_billing| {
-                    payment_method_billing
-                        .clone()
-                        .unify_address(billing.as_ref())
-                })
+                .map(|payment_method_billing| payment_method_billing.clone().unify_address(billing.as_ref()))
                 .or(billing.clone())
         } else {
             payment_method_billing.clone()
@@ -59,10 +53,7 @@ impl PaymentAddress {
     }
 
     /// Unify the billing details from `payment_method_data.[payment_method_data].billing details`.
-    pub fn unify_with_payment_method_data_billing(
-        self,
-        payment_method_data_billing: Option<Address>,
-    ) -> Self {
+    pub fn unify_with_payment_method_data_billing(self, payment_method_data_billing: Option<Address>) -> Self {
         // Unify the billing details with `payment_method_data.billing_details`
         let unified_payment_method_billing = payment_method_data_billing
             .map(|payment_method_data_billing| {
@@ -193,11 +184,9 @@ pub struct AddressDetails {
 impl AddressDetails {
     pub fn get_optional_full_name(&self) -> Option<Secret<String>> {
         match (self.first_name.as_ref(), self.last_name.as_ref()) {
-            (Some(first_name), Some(last_name)) => Some(Secret::new(format!(
-                "{} {}",
-                first_name.peek(),
-                last_name.peek()
-            ))),
+            (Some(first_name), Some(last_name)) => {
+                Some(Secret::new(format!("{} {}", first_name.peek(), last_name.peek())))
+            }
             (Some(name), None) | (None, Some(name)) => Some(name.to_owned()),
             _ => None,
         }
@@ -267,39 +256,27 @@ impl AddressDetails {
     }
 
     pub fn get_line1(&self) -> Result<&Secret<String>, Error> {
-        self.line1
-            .as_ref()
-            .ok_or_else(missing_field_err("address.line1"))
+        self.line1.as_ref().ok_or_else(missing_field_err("address.line1"))
     }
 
     pub fn get_city(&self) -> Result<&Secret<String>, Error> {
-        self.city
-            .as_ref()
-            .ok_or_else(missing_field_err("address.city"))
+        self.city.as_ref().ok_or_else(missing_field_err("address.city"))
     }
 
     pub fn get_state(&self) -> Result<&Secret<String>, Error> {
-        self.state
-            .as_ref()
-            .ok_or_else(missing_field_err("address.state"))
+        self.state.as_ref().ok_or_else(missing_field_err("address.state"))
     }
 
     pub fn get_line2(&self) -> Result<&Secret<String>, Error> {
-        self.line2
-            .as_ref()
-            .ok_or_else(missing_field_err("address.line2"))
+        self.line2.as_ref().ok_or_else(missing_field_err("address.line2"))
     }
 
     pub fn get_zip(&self) -> Result<&Secret<String>, Error> {
-        self.zip
-            .as_ref()
-            .ok_or_else(missing_field_err("address.zip"))
+        self.zip.as_ref().ok_or_else(missing_field_err("address.zip"))
     }
 
     pub fn get_country(&self) -> Result<&common_enums::CountryAlpha2, Error> {
-        self.country
-            .as_ref()
-            .ok_or_else(missing_field_err("address.country"))
+        self.country.as_ref().ok_or_else(missing_field_err("address.country"))
     }
 
     pub fn get_combined_address_line(&self) -> Result<Secret<String>, Error> {
@@ -321,12 +298,12 @@ impl AddressDetails {
         let country = self.get_country()?;
         let state = self.get_state()?;
         match country {
-            common_enums::CountryAlpha2::US => Ok(Secret::new(
-                convert_us_state_to_code(&state.peek().to_string()).to_string(),
-            )),
-            common_enums::CountryAlpha2::CA => Ok(Secret::new(
-                convert_canada_state_to_code(&state.peek().to_string()).to_string(),
-            )),
+            common_enums::CountryAlpha2::US => {
+                Ok(Secret::new(convert_us_state_to_code(&state.peek().to_string()).to_string()))
+            }
+            common_enums::CountryAlpha2::CA => {
+                Ok(Secret::new(convert_canada_state_to_code(&state.peek().to_string()).to_string()))
+            }
             _ => Ok(state.clone()),
         }
     }
@@ -360,8 +337,7 @@ impl PhoneDetails {
             .ok_or_else(missing_field_err("billing.phone.country_code"))
     }
     pub fn extract_country_code(&self) -> Result<String, Error> {
-        self.get_country_code()
-            .map(|cc| cc.trim_start_matches('+').to_string())
+        self.get_country_code().map(|cc| cc.trim_start_matches('+').to_string())
     }
     pub fn get_number(&self) -> Result<Secret<String>, Error> {
         self.number
@@ -377,11 +353,7 @@ impl PhoneDetails {
         let number = self.get_number()?;
         let country_code = self.get_country_code()?;
         let number_without_plus = country_code.trim_start_matches('+');
-        Ok(Secret::new(format!(
-            "{}#{}",
-            number_without_plus,
-            number.peek()
-        )))
+        Ok(Secret::new(format!("{}#{}", number_without_plus, number.peek())))
     }
 }
 

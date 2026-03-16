@@ -4,14 +4,11 @@ use common_utils::{pii, request::Method, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{
-        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
+    payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -37,9 +34,7 @@ impl TryFrom<&ConnectorSpecificAuth> for Shift4AuthType {
             ConnectorSpecificAuth::Shift4 { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -132,19 +127,13 @@ pub struct Shift4Address {
 
 // BankRedirect Data Transformation
 impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for Shift4BankRedirectMethod
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for Shift4BankRedirectMethod
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let payment_type = match &router_data.request.payment_method_data {
             PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
@@ -152,10 +141,7 @@ impl<T: PaymentMethodDataTypes>
                 BankRedirectData::Eps { .. } => "eps",
                 _ => {
                     return Err(error_stack::report!(errors::ConnectorError::NotSupported {
-                        message: format!(
-                            "BankRedirect type {:?} is not supported by Shift4",
-                            bank_redirect_data
-                        ),
+                        message: format!("BankRedirect type {:?} is not supported by Shift4", bank_redirect_data),
                         connector: "Shift4",
                     }))
                 }
@@ -169,10 +155,7 @@ impl<T: PaymentMethodDataTypes>
         };
 
         // Extract billing information
-        let billing = router_data
-            .resource_common_data
-            .address
-            .get_payment_method_billing();
+        let billing = router_data.resource_common_data.address.get_payment_method_billing();
         let name = billing.as_ref().and_then(|b| b.get_optional_full_name());
 
         // Extract email from request - prioritize from payment data, fallback to address
@@ -195,11 +178,7 @@ impl<T: PaymentMethodDataTypes>
                 country: addr.country.as_ref().map(|c| c.to_string()),
             });
 
-        let billing_info = Shift4Billing {
-            name,
-            email,
-            address,
-        };
+        let billing_info = Shift4Billing { name, email, address };
 
         Ok(Self {
             payment_type: payment_type.to_string(),
@@ -209,19 +188,13 @@ impl<T: PaymentMethodDataTypes>
 }
 
 impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for Shift4PaymentsRequest<T>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for Shift4PaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let captured = item
             .request
@@ -334,9 +307,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsRespons
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<Shift4PaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<Shift4PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Match Hyperswitch status mapping logic exactly
         let status = match item.response.status {
             Shift4PaymentStatus::Successful => {
@@ -348,16 +319,9 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<Shift4PaymentsRespons
             }
             Shift4PaymentStatus::Failed => AttemptStatus::Failure,
             Shift4PaymentStatus::Pending => {
-                match item
-                    .response
-                    .flow
-                    .as_ref()
-                    .and_then(|flow| flow.next_action.as_ref())
-                {
+                match item.response.flow.as_ref().and_then(|flow| flow.next_action.as_ref()) {
                     Some(NextAction::Redirect) => AttemptStatus::AuthenticationPending,
-                    Some(NextAction::Wait) | Some(NextAction::None) | None => {
-                        AttemptStatus::Pending
-                    }
+                    Some(NextAction::Wait) | Some(NextAction::None) | None => AttemptStatus::Pending,
                 }
             }
         };
@@ -400,9 +364,7 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<Shift4PaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<Shift4PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Match Hyperswitch status mapping logic exactly
         let status = match item.response.status {
             Shift4PaymentStatus::Successful => {
@@ -414,16 +376,9 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
             }
             Shift4PaymentStatus::Failed => AttemptStatus::Failure,
             Shift4PaymentStatus::Pending => {
-                match item
-                    .response
-                    .flow
-                    .as_ref()
-                    .and_then(|flow| flow.next_action.as_ref())
-                {
+                match item.response.flow.as_ref().and_then(|flow| flow.next_action.as_ref()) {
                     Some(NextAction::Redirect) => AttemptStatus::AuthenticationPending,
-                    Some(NextAction::Wait) | Some(NextAction::None) | None => {
-                        AttemptStatus::Pending
-                    }
+                    Some(NextAction::Wait) | Some(NextAction::None) | None => AttemptStatus::Pending,
                 }
             }
         };
@@ -454,9 +409,7 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<Shift4PaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<Shift4PaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Match Hyperswitch status mapping logic exactly
         let status = match item.response.status {
             Shift4PaymentStatus::Successful => {
@@ -468,16 +421,9 @@ impl TryFrom<ResponseRouterData<Shift4PaymentsResponse, Self>>
             }
             Shift4PaymentStatus::Failed => AttemptStatus::Failure,
             Shift4PaymentStatus::Pending => {
-                match item
-                    .response
-                    .flow
-                    .as_ref()
-                    .and_then(|flow| flow.next_action.as_ref())
-                {
+                match item.response.flow.as_ref().and_then(|flow| flow.next_action.as_ref()) {
                     Some(NextAction::Redirect) => AttemptStatus::AuthenticationPending,
-                    Some(NextAction::Wait) | Some(NextAction::None) | None => {
-                        AttemptStatus::Pending
-                    }
+                    Some(NextAction::Wait) | Some(NextAction::None) | None => AttemptStatus::Pending,
                 }
             }
         };
@@ -511,9 +457,7 @@ pub struct Shift4RefundRequest {
     pub amount: MinorUnit,
 }
 
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for Shift4RefundRequest
-{
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>> for Shift4RefundRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -609,20 +553,13 @@ pub struct Shift4RSyncRequest {}
 
 // PSync Request - converts from Shift4RouterData to empty request struct
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        Shift4RouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for Shift4PSyncRequest
+    TryFrom<Shift4RouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for Shift4PSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: Shift4RouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        _item: Shift4RouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self::default())
     }
@@ -630,20 +567,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // RSync Request - converts from Shift4RouterData to empty request struct
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        Shift4RouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for Shift4RSyncRequest
+    TryFrom<Shift4RouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for Shift4RSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: Shift4RouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        _item: Shift4RouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self::default())
     }
@@ -652,27 +582,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Authorize Request - delegates to existing implementation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        Shift4RouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        Shift4RouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for Shift4PaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: Shift4RouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -688,20 +605,13 @@ pub struct Shift4CaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        Shift4RouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for Shift4CaptureRequest
+    TryFrom<Shift4RouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for Shift4CaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: Shift4RouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        _item: Shift4RouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
@@ -709,17 +619,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Refund Request - delegates to existing implementation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        Shift4RouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for Shift4RefundRequest
+    TryFrom<Shift4RouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for Shift4RefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: Shift4RouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: Shift4RouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         // Delegate to the existing TryFrom<&RouterDataV2> implementation
         Self::try_from(&item.router_data)

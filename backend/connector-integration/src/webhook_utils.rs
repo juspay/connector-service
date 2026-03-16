@@ -8,8 +8,8 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    DisputeResponse, EventResponse, EventServiceHandleResponse, PaymentServiceGetResponse,
-    RefundResponse, WebhookEventStatus, WebhookEventType,
+    DisputeResponse, EventResponse, EventServiceHandleResponse, PaymentServiceGetResponse, RefundResponse,
+    WebhookEventStatus, WebhookEventType,
 };
 
 use crate::types::ConnectorData;
@@ -44,11 +44,7 @@ pub fn process_webhook_event<
 ) -> error_stack::Result<EventServiceHandleResponse, ApplicationErrorResponse> {
     let event_type = connector_data
         .connector
-        .get_event_type(
-            request_details.clone(),
-            webhook_secrets.clone(),
-            connector_auth_details.clone(),
-        )
+        .get_event_type(request_details.clone(), webhook_secrets.clone(), connector_auth_details.clone())
         .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "WEBHOOK_EVENT_TYPE_ERROR".to_string(),
             error_identifier: 500,
@@ -66,34 +62,14 @@ pub fn process_webhook_event<
     )?;
 
     let event_response = if event_type.is_payment_event() {
-        get_payments_webhook_content(
-            connector_data,
-            request_details,
-            webhook_secrets,
-            connector_auth_details,
-        )?
+        get_payments_webhook_content(connector_data, request_details, webhook_secrets, connector_auth_details)?
     } else if event_type.is_refund_event() {
-        get_refunds_webhook_content(
-            connector_data,
-            request_details,
-            webhook_secrets,
-            connector_auth_details,
-        )?
+        get_refunds_webhook_content(connector_data, request_details, webhook_secrets, connector_auth_details)?
     } else if event_type.is_dispute_event() {
-        get_disputes_webhook_content(
-            connector_data,
-            request_details,
-            webhook_secrets,
-            connector_auth_details,
-        )?
+        get_disputes_webhook_content(connector_data, request_details, webhook_secrets, connector_auth_details)?
     } else {
         // Default: treat as payment event (mandate, payout, recovery, misc).
-        get_payments_webhook_content(
-            connector_data,
-            request_details,
-            webhook_secrets,
-            connector_auth_details,
-        )?
+        get_payments_webhook_content(connector_data, request_details, webhook_secrets, connector_auth_details)?
     };
 
     let webhook_status = match event_response.content {
@@ -112,9 +88,7 @@ pub fn process_webhook_event<
     })
 }
 
-pub fn get_payments_webhook_content<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Default + Send + Sync + 'static,
->(
+pub fn get_payments_webhook_content<T: PaymentMethodDataTypes + std::fmt::Debug + Default + Send + Sync + 'static>(
     connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
@@ -122,11 +96,7 @@ pub fn get_payments_webhook_content<
 ) -> error_stack::Result<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_payment_webhook(
-            request_details.clone(),
-            webhook_secrets,
-            connector_auth_details,
-        )
+        .process_payment_webhook(request_details.clone(), webhook_secrets, connector_auth_details)
         .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "WEBHOOK_PROCESSING_ERROR".to_string(),
             error_identifier: 500,
@@ -136,18 +106,17 @@ pub fn get_payments_webhook_content<
 
     match webhook_details.transformation_status {
         WebhookTransformationStatus::Complete => {
-            let response = PaymentServiceGetResponse::foreign_try_from(webhook_details)
-                .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
+            let response = PaymentServiceGetResponse::foreign_try_from(webhook_details).change_context(
+                ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
                     error_identifier: 500,
                     error_message: "Error while constructing response".to_string(),
                     error_object: None,
-                }))?;
+                }),
+            )?;
 
             Ok(EventResponse {
-                content: Some(
-                    grpc_api_types::payments::event_response::Content::PaymentsResponse(response),
-                ),
+                content: Some(grpc_api_types::payments::event_response::Content::PaymentsResponse(response)),
             })
         }
         WebhookTransformationStatus::Incomplete => {
@@ -170,14 +139,12 @@ pub fn get_payments_webhook_content<
             )?;
 
             Ok(EventResponse {
-                content: Some(
-                    grpc_api_types::payments::event_response::Content::IncompleteTransformation(
-                        grpc_api_types::payments::IncompleteTransformationResponse {
-                            resource_object: resource_object_vec,
-                            reason: "Payment information required".to_string(),
-                        },
-                    ),
-                ),
+                content: Some(grpc_api_types::payments::event_response::Content::IncompleteTransformation(
+                    grpc_api_types::payments::IncompleteTransformationResponse {
+                        resource_object: resource_object_vec,
+                        reason: "Payment information required".to_string(),
+                    },
+                )),
             })
         }
     }
@@ -263,8 +230,6 @@ pub fn get_disputes_webhook_content<
     )?;
 
     Ok(EventResponse {
-        content: Some(
-            grpc_api_types::payments::event_response::Content::DisputesResponse(response),
-        ),
+        content: Some(grpc_api_types::payments::event_response::Content::DisputesResponse(response)),
     })
 }

@@ -13,19 +13,13 @@ use ucs_env::configs::Config;
 
 /// Converts HTTP headers to gRPC metadata.
 /// Delegates to the shared `headers_to_metadata` implementation.
-pub fn http_headers_to_grpc_metadata(
-    http_headers: &HeaderMap,
-) -> Result<MetadataMap, Box<tonic::Status>> {
-    ucs_interface_common::headers::headers_to_metadata(http_headers)
-        .map_err(|e| Box::new(tonic::Status::from(e)))
+pub fn http_headers_to_grpc_metadata(http_headers: &HeaderMap) -> Result<MetadataMap, Box<tonic::Status>> {
+    ucs_interface_common::headers::headers_to_metadata(http_headers).map_err(|e| Box::new(tonic::Status::from(e)))
 }
 
 /// Transfers config from Axum Extension to gRPC request
 /// Copies the Arc<Config> from Axum Extension to gRPC request extensions
-pub fn transfer_config_to_grpc_request<T>(
-    config: &Arc<Config>,
-    grpc_request: &mut tonic::Request<T>,
-) {
+pub fn transfer_config_to_grpc_request<T>(config: &Arc<Config>, grpc_request: &mut tonic::Request<T>) {
     grpc_request.extensions_mut().insert(config.clone());
 }
 

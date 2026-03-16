@@ -18,14 +18,8 @@ pub struct RequestData<T> {
 
 impl<T> RequestData<T> {
     #[allow(clippy::result_large_err)]
-    pub fn from_grpc_request(
-        request: tonic::Request<T>,
-        config: Arc<configs::Config>,
-    ) -> Result<Self, tonic::Status> {
-        let interface_data =
-            ucs_interface_common::request::InterfaceRequestData::from_grpc_request(
-                request, config,
-            )?;
+    pub fn from_grpc_request(request: tonic::Request<T>, config: Arc<configs::Config>) -> Result<Self, tonic::Status> {
+        let interface_data = ucs_interface_common::request::InterfaceRequestData::from_grpc_request(request, config)?;
 
         Ok(Self {
             payload: interface_data.payload,

@@ -46,12 +46,7 @@ pub struct CryptopayPaymentsRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CryptopayRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for CryptopayPaymentsRequest
@@ -59,12 +54,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CryptopayRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -109,11 +99,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    get_unimplemented_payment_method_error_message("CryptoPay"),
-                ))
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
+                get_unimplemented_payment_method_error_message("CryptoPay"),
+            )),
         }?;
         Ok(cryptopay_request)
     }
@@ -128,11 +116,7 @@ pub struct CryptopayAuthType {
 impl TryFrom<&ConnectorSpecificAuth> for CryptopayAuthType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Cryptopay {
-            api_key,
-            api_secret,
-        } = auth_type
-        {
+        if let ConnectorSpecificAuth::Cryptopay { api_key, api_secret } = auth_type {
             Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
@@ -159,9 +143,7 @@ impl From<CryptopayPaymentStatus> for common_enums::AttemptStatus {
             CryptopayPaymentStatus::New => Self::AuthenticationPending,
             CryptopayPaymentStatus::Completed => Self::Charged,
             CryptopayPaymentStatus::Cancelled => Self::Failure,
-            CryptopayPaymentStatus::Unresolved | CryptopayPaymentStatus::Refunded => {
-                Self::Unresolved
-            } //mapped refunded to Unresolved because refund api is not available, also merchant has done the action on the connector dashboard.
+            CryptopayPaymentStatus::Unresolved | CryptopayPaymentStatus::Refunded => Self::Unresolved, //mapped refunded to Unresolved because refund api is not available, also merchant has done the action on the connector dashboard.
         }
     }
 }
@@ -176,9 +158,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<CryptopayPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CryptopayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response: cryptopay_response,
             router_data,
@@ -215,10 +195,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: cryptopay_response
-                    .data
-                    .custom_id
-                    .or(Some(cryptopay_response.data.id)),
+                connector_response_reference_id: cryptopay_response.data.custom_id.or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             })
@@ -314,9 +291,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<CryptopayPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CryptopayPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response: cryptopay_response,
             router_data,
@@ -353,10 +328,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: cryptopay_response
-                    .data
-                    .custom_id
-                    .or(Some(cryptopay_response.data.id)),
+                connector_response_reference_id: cryptopay_response.data.custom_id.or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
                 status_code: http_code,
             })
@@ -401,13 +373,7 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
         let status = common_enums::AttemptStatus::from(notif.data.status.clone());
         if is_payment_failure(status) {
             Ok(Self {
-                error_code: Some(
-                    notif
-                        .data
-                        .name
-                        .clone()
-                        .unwrap_or(consts::NO_ERROR_CODE.to_string()),
-                ),
+                error_code: Some(notif.data.name.clone().unwrap_or(consts::NO_ERROR_CODE.to_string())),
                 error_message: Some(
                     notif
                         .data
@@ -429,13 +395,10 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                 network_txn_id: None,
             })
         } else {
-            let amount_captured_in_minor_units =
-                match (notif.data.price_amount, notif.data.price_currency) {
-                    (Some(amount), Some(currency)) => {
-                        Some(CryptopayAmountConvertor::convert_back(amount, currency)?)
-                    }
-                    _ => None,
-                };
+            let amount_captured_in_minor_units = match (notif.data.price_amount, notif.data.price_currency) {
+                (Some(amount), Some(currency)) => Some(CryptopayAmountConvertor::convert_back(amount, currency)?),
+                _ => None,
+            };
             match (amount_captured_in_minor_units, status) {
                 (Some(minor_amount), common_enums::AttemptStatus::Charged) => {
                     let amount_captured = Some(minor_amount.get_amount_as_i64());
@@ -443,16 +406,11 @@ impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
                         amount_captured,
                         minor_amount_captured: amount_captured_in_minor_units,
                         status,
-                        resource_id: Some(ResponseId::ConnectorTransactionId(
-                            notif.data.id.clone(),
-                        )),
+                        resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
                         error_reason: None,
                         mandate_reference: None,
                         status_code: 200,
-                        connector_response_reference_id: notif
-                            .data
-                            .custom_id
-                            .or(Some(notif.data.id)),
+                        connector_response_reference_id: notif.data.custom_id.or(Some(notif.data.id)),
                         error_code: None,
                         error_message: None,
                         raw_connector_response: None,

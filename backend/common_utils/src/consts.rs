@@ -10,10 +10,9 @@ pub const ID_LENGTH: usize = 20;
 
 /// Characters to use for generating NanoID
 pub(crate) const ALPHABETS: [char; 62] = [
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
-    'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B',
-    'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
-    'V', 'W', 'X', 'Y', 'Z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+    'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 ];
 
 /// Max Length for MerchantReferenceId
@@ -59,12 +58,10 @@ pub const X_SHADOW_MODE: &str = "x-shadow-mode";
 /// General purpose base64 engine
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 /// General purpose base64 engine standard nopad
-pub const BASE64_ENGINE_STD_NO_PAD: base64::engine::GeneralPurpose =
-    base64::engine::general_purpose::STANDARD_NO_PAD;
+pub const BASE64_ENGINE_STD_NO_PAD: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD_NO_PAD;
 
 /// URL Safe base64 engine
-pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
-    base64::engine::general_purpose::URL_SAFE;
+pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose = base64::engine::general_purpose::URL_SAFE;
 
 /// URL Safe base64 engine without padding
 pub const BASE64_ENGINE_URL_SAFE_NO_PAD: base64::engine::GeneralPurpose =

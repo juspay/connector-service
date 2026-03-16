@@ -18,14 +18,12 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         identifier::IdType, mandate_reference::MandateIdType, payment_method,
-        payment_service_client::PaymentServiceClient,
-        recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
-        AuthenticationType, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
-        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
-        RecurringPaymentServiceChargeRequest, RefundStatus,
+        payment_service_client::PaymentServiceClient, recurring_payment_service_client::RecurringPaymentServiceClient,
+        AcceptanceType, Address, AuthenticationType, CaptureMethod, CardDetails, ConnectorMandateReferenceId,
+        CountryAlpha2, Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
+        PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceSetupRecurringRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RecurringPaymentServiceChargeRequest, RefundStatus,
     },
 };
 use rand::Rng;
@@ -46,10 +44,7 @@ const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn get_timestamp() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs()
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
 fn generate_unique_id(prefix: &str) -> String {
@@ -58,8 +53,8 @@ fn generate_unique_id(prefix: &str) -> String {
 
 fn add_payload_metadata<T>(request: &mut Request<T>) {
     // Get API credentials using the common credential loading utility
-    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
-        .expect("Failed to load Payload credentials");
+    let auth =
+        utils::credential_utils::load_connector_auth(CONNECTOR_NAME).expect("Failed to load Payload credentials");
 
     let auth_key_map_json = match auth {
         domain_types::router_data::ConnectorAuthType::CurrencyAuthKey { auth_key_map } => {
@@ -69,23 +64,19 @@ fn add_payload_metadata<T>(request: &mut Request<T>) {
         _ => panic!("Expected CurrencyAuthKey auth type for Payload"),
     };
 
-    request.metadata_mut().append(
-        "x-connector",
-        CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
-    );
+    request
+        .metadata_mut()
+        .append("x-connector", CONNECTOR_NAME.parse().expect("Failed to parse x-connector"));
     request
         .metadata_mut()
         .append("x-auth", AUTH_TYPE.parse().expect("Failed to parse x-auth"));
     request.metadata_mut().append(
         "x-auth-key-map",
-        auth_key_map_json
-            .parse()
-            .expect("Failed to parse x-auth-key-map"),
+        auth_key_map_json.parse().expect("Failed to parse x-auth-key-map"),
     );
-    request.metadata_mut().append(
-        "x-merchant-id",
-        MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"),
-    );
+    request
+        .metadata_mut()
+        .append("x-merchant-id", MERCHANT_ID.parse().expect("Failed to parse x-merchant-id"));
     request.metadata_mut().append(
         "x-request-id",
         format!("test_request_{}", get_timestamp())
@@ -186,10 +177,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
     }
 }
 
-fn create_payment_capture_request(
-    transaction_id: &str,
-    amount: i64,
-) -> PaymentServiceCaptureRequest {
+fn create_payment_capture_request(transaction_id: &str, amount: i64) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
         connector_transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
@@ -259,13 +247,11 @@ fn create_repeat_payment_request(mandate_id: &str) -> RecurringPaymentServiceCha
     let unique_amount = rng.gen_range(1000..10000); // Amount between $10.00 and $100.00
 
     let mandate_reference = MandateReference {
-        mandate_id_type: Some(MandateIdType::ConnectorMandateId(
-            ConnectorMandateReferenceId {
-                connector_mandate_request_reference_id: None,
-                connector_mandate_id: Some(mandate_id.to_string()),
-                payment_method_id: None,
-            },
-        )),
+        mandate_id_type: Some(MandateIdType::ConnectorMandateId(ConnectorMandateReferenceId {
+            connector_mandate_request_reference_id: None,
+            connector_mandate_id: Some(mandate_id.to_string()),
+            payment_method_id: None,
+        })),
     };
 
     let mut metadata_map = HashMap::new();
@@ -418,8 +404,7 @@ async fn test_authorize_psync_void() {
         );
 
         // Step 2: PSync
-        let sync_request =
-            create_payment_sync_request(&transaction_id, amount.unwrap().minor_amount);
+        let sync_request = create_payment_sync_request(&transaction_id, amount.unwrap().minor_amount);
         let mut sync_grpc_request = Request::new(sync_request);
         add_payload_metadata(&mut sync_grpc_request);
 
@@ -435,8 +420,7 @@ async fn test_authorize_psync_void() {
         );
 
         // Step 3: Void
-        let void_request =
-            create_payment_void_request(&transaction_id, amount.unwrap().minor_amount);
+        let void_request = create_payment_void_request(&transaction_id, amount.unwrap().minor_amount);
         let mut void_grpc_request = Request::new(void_request);
         add_payload_metadata(&mut void_grpc_request);
 
@@ -481,8 +465,7 @@ async fn test_authorize_capture_refund_rsync() {
         );
 
         // Step 2: Capture
-        let capture_request =
-            create_payment_capture_request(&transaction_id, amount.unwrap().minor_amount);
+        let capture_request = create_payment_capture_request(&transaction_id, amount.unwrap().minor_amount);
         let mut capture_grpc_request = Request::new(capture_request);
         add_payload_metadata(&mut capture_grpc_request);
 
@@ -569,17 +552,13 @@ async fn test_setup_mandate() {
             .into_inner();
 
         // Verify we got a mandate reference
-        assert!(
-            response.mandate_reference.is_some(),
-            "Mandate reference should be present"
-        );
+        assert!(response.mandate_reference.is_some(), "Mandate reference should be present");
 
         if let Some(MandateIdType::ConnectorMandateId(mandate_ref)) =
             &response.mandate_reference.and_then(|m| m.mandate_id_type)
         {
             assert!(
-                mandate_ref.connector_mandate_id.is_some()
-                    || mandate_ref.payment_method_id.is_some(),
+                mandate_ref.connector_mandate_id.is_some() || mandate_ref.payment_method_id.is_some(),
                 "Mandate ID or payment method ID should be present"
             );
 

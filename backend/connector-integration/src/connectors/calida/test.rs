@@ -16,18 +16,14 @@ mod tests {
         use domain_types::{
             self,
             connector_flow::Authorize,
-            connector_types::{
-                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-            },
+            connector_types::{ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, WalletData},
             router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
         use hyperswitch_masking::Secret;
-        use interfaces::{
-            connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector,
-        };
+        use interfaces::{connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector};
         use serde_json::json;
 
         use crate::{connectors::Calida, types::ConnectorData};
@@ -115,10 +111,7 @@ mod tests {
                     payment_method_data: PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}),
                     amount: MinorUnit::new(1000),
                     order_tax_amount: None,
-                    email: Some(
-                        Email::try_from("test@example.com".to_string())
-                            .expect("Failed to parse email"),
-                    ),
+                    email: Some(Email::try_from("test@example.com".to_string()).expect("Failed to parse email")),
                     customer_name: None,
                     currency: common_enums::Currency::USD,
                     confirm: true,
@@ -138,10 +131,7 @@ mod tests {
                     payment_experience: None,
                     payment_method_type: None,
                     customer_id: Some(
-                        common_utils::id_type::CustomerId::try_from(Cow::from(
-                            "cus_123456789".to_string(),
-                        ))
-                        .unwrap(),
+                        common_utils::id_type::CustomerId::try_from(Cow::from("cus_123456789".to_string())).unwrap(),
                     ),
                     request_incremental_authorization: Some(false),
                     metadata: None,
@@ -187,11 +177,9 @@ mod tests {
             let req_body = request.as_ref().map(|request_val| {
                 let masked_request = match request_val.body.as_ref() {
                     Some(request_content) => match request_content {
-                        RequestContent::Json(i)
-                        | RequestContent::FormUrlEncoded(i)
-                        | RequestContent::Xml(i) => i.masked_serialize().unwrap_or(
-                            json!({ "error": "failed to mask serialize connector request"}),
-                        ),
+                        RequestContent::Json(i) | RequestContent::FormUrlEncoded(i) | RequestContent::Xml(i) => i
+                            .masked_serialize()
+                            .unwrap_or(json!({ "error": "failed to mask serialize connector request"})),
                         RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
@@ -200,10 +188,7 @@ mod tests {
                 masked_request
             });
             println!("request: {req_body:?}");
-            assert_eq!(
-                req_body.as_ref().unwrap()["reference"],
-                "conn_ref_123456789"
-            );
+            assert_eq!(req_body.as_ref().unwrap()["reference"], "conn_ref_123456789");
         }
 
         #[test]
@@ -228,9 +213,7 @@ mod tests {
                     description: None,
                     return_url: None,
                     order_details: None,
-                    address: domain_types::payment_address::PaymentAddress::new(
-                        None, None, None, None,
-                    ),
+                    address: domain_types::payment_address::PaymentAddress::new(None, None, None, None),
                     auth_type: common_enums::AuthenticationType::NoThreeDs,
                     connector_meta_data: None,
                     amount_captured: None,

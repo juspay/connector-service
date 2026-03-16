@@ -54,9 +54,7 @@ impl ConnectorAuthType {
     ) -> common_utils::errors::CustomResult<Self, common_utils::errors::ParsingError> {
         value
             .parse_value::<Self>("ConnectorAuthType")
-            .change_context(common_utils::errors::ParsingError::StructParseFailure(
-                "ConnectorAuthType",
-            ))
+            .change_context(common_utils::errors::ParsingError::StructParseFailure("ConnectorAuthType"))
     }
 
     pub fn from_secret_value(
@@ -64,9 +62,7 @@ impl ConnectorAuthType {
     ) -> common_utils::errors::CustomResult<Self, common_utils::errors::ParsingError> {
         value
             .parse_value::<Self>("ConnectorAuthType")
-            .change_context(common_utils::errors::ParsingError::StructParseFailure(
-                "ConnectorAuthType",
-            ))
+            .change_context(common_utils::errors::ParsingError::StructParseFailure("ConnectorAuthType"))
     }
 
     // show only first and last two digits of the key and mask others with *
@@ -827,9 +823,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
     }
 }
 
-impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
-    for ConnectorSpecificAuth
-{
+impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)> for ConnectorSpecificAuth {
     type Error = errors::ConnectorError;
 
     fn foreign_try_from(
@@ -866,9 +860,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 _ => Err(err().into()),
             },
             ConnectorEnum::Mifinity => match auth {
-                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Mifinity {
-                    key: api_key.clone(),
-                }),
+                ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Mifinity { key: api_key.clone() }),
                 _ => Err(err().into()),
             },
             ConnectorEnum::Multisafepay => match auth {
@@ -1795,16 +1787,12 @@ pub struct ConnectorResponseData {
 impl ConnectorResponseData {
     pub fn with_auth_code(auth_code: String, pmt: common_enums::PaymentMethodType) -> Self {
         let additional_payment_method_data = match pmt {
-            common_enums::PaymentMethodType::GooglePay => {
-                AdditionalPaymentMethodConnectorResponse::GooglePay {
-                    auth_code: Some(auth_code),
-                }
-            }
-            common_enums::PaymentMethodType::ApplePay => {
-                AdditionalPaymentMethodConnectorResponse::ApplePay {
-                    auth_code: Some(auth_code),
-                }
-            }
+            common_enums::PaymentMethodType::GooglePay => AdditionalPaymentMethodConnectorResponse::GooglePay {
+                auth_code: Some(auth_code),
+            },
+            common_enums::PaymentMethodType::ApplePay => AdditionalPaymentMethodConnectorResponse::ApplePay {
+                auth_code: Some(auth_code),
+            },
             _ => AdditionalPaymentMethodConnectorResponse::Card {
                 authentication_data: None,
                 payment_checks: None,
@@ -1840,9 +1828,7 @@ impl ConnectorResponseData {
         }
     }
 
-    pub fn get_extended_authorization_response_data(
-        &self,
-    ) -> Option<&ExtendedAuthorizationResponseData> {
+    pub fn get_extended_authorization_response_data(&self) -> Option<&ExtendedAuthorizationResponseData> {
         self.extended_authorization_response_data.as_ref()
     }
 

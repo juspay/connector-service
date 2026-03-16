@@ -39,21 +39,21 @@ macro_rules! build_router_data {
             $response_data_type,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let flow_data: $resource_common_data_type =
-            domain_types::utils::ForeignTryFrom::foreign_try_from((
-                $payload.clone(),
-                $config.connectors.clone(),
-                $metadata,
-            ))
-            .map_err(|err| FfiError::IntegrationError {
-                    message: err.to_string(),
-            })?;
+        let flow_data: $resource_common_data_type = domain_types::utils::ForeignTryFrom::foreign_try_from((
+            $payload.clone(),
+            $config.connectors.clone(),
+            $metadata,
+        ))
+        .map_err(|err| FfiError::IntegrationError {
+            message: err.to_string(),
+        })?;
 
         let payment_request_data: $request_data_type =
-            domain_types::utils::ForeignTryFrom::foreign_try_from($payload.clone())
-                .map_err(|err| FfiError::IntegrationError {
-                        message: err.to_string(),
-                })?;
+            domain_types::utils::ForeignTryFrom::foreign_try_from($payload.clone()).map_err(|err| {
+                FfiError::IntegrationError {
+                    message: err.to_string(),
+                }
+            })?;
 
         let router_data = domain_types::router_data_v2::RouterDataV2 {
             flow: std::marker::PhantomData,
@@ -118,11 +118,11 @@ macro_rules! req_transformer {
                 $response_data_type,
             )?;
 
-            let connector_request = connector_integration
-                .build_request_v2(&router_data)
-                .map_err(|err| FfiError::IntegrationError {
+            let connector_request = connector_integration.build_request_v2(&router_data).map_err(
+                |err: error_stack::Report<domain_types::errors::ConnectorError>| FfiError::IntegrationError {
                     message: err.to_string(),
-                })?;
+                },
+            )?;
 
             Ok(connector_request)
         }
@@ -195,16 +195,14 @@ macro_rules! res_transformer {
                 "".to_string(),
                 None,
             )
-            .map_err(
-                |e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                    FfiPaymentError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some(e.to_string()),
-                        None,
-                        Some(500),
-                    )
-                },
-            )?;
+            .map_err(|e: error_stack::Report<domain_types::errors::ConnectorError>| {
+                FfiPaymentError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(e.to_string()),
+                    None,
+                    Some(500),
+                )
+            })?;
 
             domain_types::types::$generate_response_fn(response).map_err(|e| {
                 FfiPaymentError::new(

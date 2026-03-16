@@ -4,16 +4,11 @@ use common_enums::AttemptStatus;
 use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
-    },
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors,
-    payment_method_data::{
-        BankRedirectData, CustomerInfoDetails, PaymentMethodData, PaymentMethodDataTypes,
-    },
+    payment_method_data::{BankRedirectData, CustomerInfoDetails, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
-        InteracCustomerInfo,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth, InteracCustomerInfo,
     },
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -43,9 +38,7 @@ impl TryFrom<&ConnectorSpecificAuth> for LoonioAuthType {
                 merchant_id: merchant_id.to_owned(),
                 merchant_token: merchant_token.to_owned(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -109,26 +102,13 @@ pub struct LoonioAuthorizeRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        LoonioRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        LoonioRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for LoonioAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: LoonioRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -145,15 +125,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .router_data
                     .resource_common_data
                     .get_billing()
-                    .change_context(errors::ConnectorError::MissingRequiredField {
-                        field_name: "billing",
-                    })
+                    .change_context(errors::ConnectorError::MissingRequiredField { field_name: "billing" })
                     .attach_printable("Failed to get billing details")?;
 
-                let billing_address = item
-                    .router_data
-                    .resource_common_data
-                    .get_billing_address()?;
+                let billing_address = item.router_data.resource_common_data.get_billing_address()?;
 
                 // Extract optional address fields with proper Secret wrapping
                 let phone = billing
@@ -161,30 +136,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .as_ref()
                     .and_then(|p| p.number.as_ref())
                     .map(|n| Secret::new(n.peek().clone()));
-                let address_a = billing_address
-                    .line1
-                    .as_ref()
-                    .map(|l| Secret::new(l.peek().clone()));
+                let address_a = billing_address.line1.as_ref().map(|l| Secret::new(l.peek().clone()));
                 let city = billing_address.city.as_ref().map(|c| c.peek().clone());
-                let province = billing_address
-                    .state
-                    .as_ref()
-                    .map(|s| Secret::new(s.peek().clone()));
-                let postal_code = billing_address
-                    .zip
-                    .as_ref()
-                    .map(|z| Secret::new(z.peek().clone()));
+                let province = billing_address.state.as_ref().map(|s| Secret::new(s.peek().clone()));
+                let postal_code = billing_address.zip.as_ref().map(|z| Secret::new(z.peek().clone()));
                 let country = billing_address.country.as_ref().map(|c| c.to_string());
 
                 let customer_profile = LoonioCustomerProfile {
-                    first_name: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_first_name()?,
-                    last_name: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_last_name()?,
+                    first_name: item.router_data.resource_common_data.get_billing_first_name()?,
+                    last_name: item.router_data.resource_common_data.get_billing_last_name()?,
                     email: item.router_data.resource_common_data.get_billing_email()?,
                     phone,
                     address_a,
@@ -201,10 +161,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let amount = item
                     .connector
                     .amount_converter
-                    .convert(
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )
+                    .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
                     .change_context(errors::ConnectorError::AmountConversionFailed)?;
                 Ok(Self {
                     currency_code: item.router_data.request.currency,
@@ -255,9 +212,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<LoonioAuthorizeRespon
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<LoonioAuthorizeResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<LoonioAuthorizeResponse, Self>) -> Result<Self, Self::Error> {
         // For redirect-based flows, status should be AuthenticationPending
         let status = AttemptStatus::AuthenticationPending;
 
@@ -355,26 +310,18 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<LoonioPaymentResponseData, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<LoonioPaymentResponseData, Self>) -> Result<Self, Self::Error> {
         match item.response {
             LoonioPaymentResponseData::Sync(sync_response) => {
-                let connector_response =
-                    sync_response
-                        .customer_bank_info
-                        .as_ref()
-                        .map(|customer_info| {
-                            ConnectorResponseData::with_additional_payment_method_data(
-                                AdditionalPaymentMethodConnectorResponse::BankRedirect {
-                                    interac: Some(InteracCustomerInfo {
-                                        customer_info: Some(CustomerInfoDetails::from(
-                                            customer_info,
-                                        )),
-                                    }),
-                                },
-                            )
-                        });
+                let connector_response = sync_response.customer_bank_info.as_ref().map(|customer_info| {
+                    ConnectorResponseData::with_additional_payment_method_data(
+                        AdditionalPaymentMethodConnectorResponse::BankRedirect {
+                            interac: Some(InteracCustomerInfo {
+                                customer_info: Some(CustomerInfoDetails::from(customer_info)),
+                            }),
+                        },
+                    )
+                });
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status: AttemptStatus::from(sync_response.state),
@@ -382,9 +329,7 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
                         ..item.router_data.resource_common_data
                     },
                     response: Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            sync_response.transaction_id,
-                        ),
+                        resource_id: ResponseId::ConnectorTransactionId(sync_response.transaction_id),
                         redirection_data: None,
                         mandate_reference: None,
                         connector_metadata: None,
@@ -414,9 +359,7 @@ impl TryFrom<ResponseRouterData<LoonioPaymentResponseData, Self>>
                         ..item.router_data.resource_common_data
                     },
                     response: Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            webhook_body.api_transaction_id,
-                        ),
+                        resource_id: ResponseId::ConnectorTransactionId(webhook_body.api_transaction_id),
                         redirection_data: None,
                         mandate_reference: None,
                         connector_metadata: None,
@@ -478,11 +421,9 @@ pub enum LoonioWebhookTransactionType {
 impl From<&LoonioWebhookEventCode> for AttemptStatus {
     fn from(event_code: &LoonioWebhookEventCode) -> Self {
         match event_code {
-            LoonioWebhookEventCode::TransactionSettled
-            | LoonioWebhookEventCode::TransactionAvailable => Self::Charged,
+            LoonioWebhookEventCode::TransactionSettled | LoonioWebhookEventCode::TransactionAvailable => Self::Charged,
 
-            LoonioWebhookEventCode::TransactionPending
-            | LoonioWebhookEventCode::TransactionPrepared => Self::Pending,
+            LoonioWebhookEventCode::TransactionPending | LoonioWebhookEventCode::TransactionPrepared => Self::Pending,
 
             LoonioWebhookEventCode::TransactionFailed
             | LoonioWebhookEventCode::TransactionRejected

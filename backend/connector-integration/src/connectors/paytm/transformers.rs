@@ -33,27 +33,23 @@ use ring::{
 use serde_json;
 use url::Url;
 
-use crate::{
-    connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,
-};
+use crate::{connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData};
 use serde::{Deserialize, Serialize};
 
 pub use super::request::{
-    PaytmAmount, PaytmAuthorizeRequest, PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo,
-    PaytmInitiateReqBody, PaytmInitiateTxnRequest, PaytmNativeProcessRequestBody,
-    PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes, PaytmProcessHeadTypes,
-    PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo, PaytmTransactionStatusReqBody,
-    PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,
+    PaytmAmount, PaytmAuthorizeRequest, PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo, PaytmInitiateReqBody,
+    PaytmInitiateTxnRequest, PaytmNativeProcessRequestBody, PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes,
+    PaytmProcessHeadTypes, PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo,
+    PaytmTransactionStatusReqBody, PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,
 };
 pub use super::response::{
-    PaytmBankForm, PaytmBankFormBody, PaytmBankFormResponse, PaytmCallbackErrorBody,
-    PaytmCallbackErrorResponse, PaytmDeepLinkInfo, PaytmErrorBody, PaytmErrorResponse,
-    PaytmInitiateTxnResponse, PaytmNativeProcessFailureResp, PaytmNativeProcessRespBodyTypes,
-    PaytmNativeProcessSuccessResp, PaytmNativeProcessTxnResponse, PaytmProcessFailureResp,
-    PaytmProcessHead, PaytmProcessRespBodyTypes, PaytmProcessSuccessResp, PaytmProcessTxnResponse,
-    PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo, PaytmSessionTokenErrorBody,
-    PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody, PaytmSuccessTransactionResponse,
-    PaytmTransactionStatusRespBody, PaytmTransactionStatusRespBodyTypes,
+    PaytmBankForm, PaytmBankFormBody, PaytmBankFormResponse, PaytmCallbackErrorBody, PaytmCallbackErrorResponse,
+    PaytmDeepLinkInfo, PaytmErrorBody, PaytmErrorResponse, PaytmInitiateTxnResponse, PaytmNativeProcessFailureResp,
+    PaytmNativeProcessRespBodyTypes, PaytmNativeProcessSuccessResp, PaytmNativeProcessTxnResponse,
+    PaytmProcessFailureResp, PaytmProcessHead, PaytmProcessRespBodyTypes, PaytmProcessSuccessResp,
+    PaytmProcessTxnResponse, PaytmResBodyTypes, PaytmRespBody, PaytmRespHead, PaytmResultInfo,
+    PaytmSessionTokenErrorBody, PaytmSessionTokenErrorResponse, PaytmSuccessTransactionBody,
+    PaytmSuccessTransactionResponse, PaytmTransactionStatusRespBody, PaytmTransactionStatusRespBodyTypes,
     PaytmTransactionStatusResponse, PaytmTxnInfo,
 };
 
@@ -147,21 +143,11 @@ pub enum UpiFlowType {
 // PaytmInitiateTxnRequest TryFrom CreateSessionToken RouterData
 // Using the macro-generated PaytmRouterData type from the paytm module
 impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
+        T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         MacroPaytmRouterData<
-            RouterDataV2<
-                CreateSessionToken,
-                PaymentFlowData,
-                SessionTokenRequestData,
-                SessionTokenResponseData,
-            >,
+            RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
             T,
         >,
     > for PaytmInitiateTxnRequest
@@ -170,12 +156,7 @@ impl<
 
     fn try_from(
         item: MacroPaytmRouterData<
-            RouterDataV2<
-                CreateSessionToken,
-                PaymentFlowData,
-                SessionTokenRequestData,
-                SessionTokenResponseData,
-            >,
+            RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -185,10 +166,7 @@ impl<
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.amount, item.router_data.request.currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         let paytm_amount = PaytmAmount {
@@ -205,18 +183,9 @@ impl<
                 .router_data
                 .resource_common_data
                 .get_optional_billing_phone_number(),
-            email: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_email(),
-            first_name: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_first_name(),
-            last_name: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_last_name(),
+            email: item.router_data.resource_common_data.get_optional_billing_email(),
+            first_name: item.router_data.resource_common_data.get_optional_billing_first_name(),
+            last_name: item.router_data.resource_common_data.get_optional_billing_last_name(),
         };
         let return_url = item.router_data.resource_common_data.get_return_url();
 
@@ -261,46 +230,19 @@ impl<
             ),
             carrier: None,
             charge_amount: Some(paytm_amount.clone()),
-            country_name: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_country(),
-            state_name: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_state(),
-            city_name: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_city(),
-            address1: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_line1(),
-            address2: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_line2(),
-            first_name: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_first_name(),
-            last_name: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_last_name(),
+            country_name: item.router_data.resource_common_data.get_optional_shipping_country(),
+            state_name: item.router_data.resource_common_data.get_optional_shipping_state(),
+            city_name: item.router_data.resource_common_data.get_optional_shipping_city(),
+            address1: item.router_data.resource_common_data.get_optional_shipping_line1(),
+            address2: item.router_data.resource_common_data.get_optional_shipping_line2(),
+            first_name: item.router_data.resource_common_data.get_optional_shipping_first_name(),
+            last_name: item.router_data.resource_common_data.get_optional_shipping_last_name(),
             mobile_no: item
                 .router_data
                 .resource_common_data
                 .get_optional_shipping_phone_number(),
-            zip_code: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_zip(),
-            email: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_email(),
+            zip_code: item.router_data.resource_common_data.get_optional_shipping_zip(),
+            email: item.router_data.resource_common_data.get_optional_shipping_email(),
         };
 
         let body = PaytmInitiateReqBody {
@@ -328,8 +270,7 @@ impl<
         };
 
         // Create header with actual signature
-        let channel_id =
-            get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
+        let channel_id = get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
         let head = create_paytm_header(&body, &auth, channel_id.as_deref())?;
 
         Ok(Self { head, body })
@@ -338,18 +279,11 @@ impl<
 
 // CreateSessionToken response transformation
 impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, Self>>
-    for RouterDataV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    >
+    for RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<PaytmInitiateTxnResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PaytmInitiateTxnResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let mut router_data = item.router_data;
 
@@ -375,19 +309,17 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, Self>>
                     })
                 }
             }
-            PaytmResBodyTypes::FailureBody(failure_body) => {
-                Err(domain_types::router_data::ErrorResponse {
-                    code: failure_body.result_info.result_code.clone(),
-                    message: failure_body.result_info.result_msg.clone(),
-                    reason: Some(failure_body.result_info.result_msg.clone()),
-                    status_code: item.http_code,
-                    attempt_status: Some(AttemptStatus::Failure),
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                })
-            }
+            PaytmResBodyTypes::FailureBody(failure_body) => Err(domain_types::router_data::ErrorResponse {
+                code: failure_body.result_info.result_code.clone(),
+                message: failure_body.result_info.result_msg.clone(),
+                reason: Some(failure_body.result_info.result_msg.clone()),
+                status_code: item.http_code,
+                attempt_status: Some(AttemptStatus::Failure),
+                connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            }),
         };
 
         Ok(router_data)
@@ -400,21 +332,11 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, Self>>
 
 // PaytmAuthorizeRequest TryFrom Authorize RouterData
 impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
+        T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     >
     TryFrom<
         MacroPaytmRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for PaytmAuthorizeRequest
@@ -423,12 +345,7 @@ impl<
 
     fn try_from(
         item: MacroPaytmRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -455,9 +372,7 @@ impl<
                     .as_secs()
                     .to_string();
 
-                let channel_id = get_channel_id_from_browser_info(
-                    item.router_data.request.browser_info.as_ref(),
-                );
+                let channel_id = get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
                 let head = PaytmProcessHeadTypes {
                     version: constants::API_VERSION.to_string(),
                     request_timestamp: timestamp,
@@ -481,21 +396,14 @@ impl<
             UpiFlowType::Collect => {
                 let vpa = match extract_upi_vpa(payment_method_data)? {
                     Some(vpa) => vpa,
-                    None => {
-                        return Err(ConnectorError::MissingRequiredField {
-                            field_name: "vpa_id",
-                        }
-                        .into())
-                    }
+                    None => return Err(ConnectorError::MissingRequiredField { field_name: "vpa_id" }.into()),
                 };
 
                 let head = PaytmTxnTokenType {
                     txn_token: Secret::new(session_token.clone()),
                 };
 
-                let channel_id = get_channel_id_from_browser_info(
-                    item.router_data.request.browser_info.as_ref(),
-                );
+                let channel_id = get_channel_id_from_browser_info(item.router_data.request.browser_info.as_ref());
                 let body = PaytmNativeProcessRequestBody {
                     request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
                     mid: auth.merchant_id.clone(),
@@ -517,20 +425,13 @@ impl<
 
 // Authorize response transformation
 impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
+        T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
     > TryFrom<ResponseRouterData<PaytmProcessTxnResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<PaytmProcessTxnResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PaytmProcessTxnResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let mut router_data = item.router_data;
 
@@ -560,43 +461,28 @@ impl<
                 };
 
                 // Extract transaction IDs from deep_link_info or use fallback
-                let (connector_ref_id, connector_txn_id) =
-                    if let Some(deep_link_info) = &success_body.deep_link_info {
-                        let connector_txn_id =
-                            ResponseId::ConnectorTransactionId(deep_link_info.trans_id.clone());
-                        let connector_ref_id = Some(deep_link_info.order_id.clone());
-                        (connector_ref_id, connector_txn_id)
-                    } else {
-                        // Fallback when deep_link_info is not present
-                        let connector_ref_id = Some(
-                            router_data
-                                .resource_common_data
-                                .connector_request_reference_id
-                                .clone(),
-                        );
-                        (connector_ref_id, ResponseId::NoResponseId)
-                    };
+                let (connector_ref_id, connector_txn_id) = if let Some(deep_link_info) = &success_body.deep_link_info {
+                    let connector_txn_id = ResponseId::ConnectorTransactionId(deep_link_info.trans_id.clone());
+                    let connector_ref_id = Some(deep_link_info.order_id.clone());
+                    (connector_ref_id, connector_txn_id)
+                } else {
+                    // Fallback when deep_link_info is not present
+                    let connector_ref_id =
+                        Some(router_data.resource_common_data.connector_request_reference_id.clone());
+                    (connector_ref_id, ResponseId::NoResponseId)
+                };
 
                 (redirection_data, connector_ref_id, connector_txn_id)
             }
             PaytmProcessRespBodyTypes::FailureBody(_failure_body) => {
-                let connector_ref_id = Some(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                );
+                let connector_ref_id = Some(router_data.resource_common_data.connector_request_reference_id.clone());
                 (None, connector_ref_id, ResponseId::NoResponseId)
             }
         };
         // Get result code for status mapping
         let result_code = match &response.body {
-            PaytmProcessRespBodyTypes::SuccessBody(success_body) => {
-                &success_body.result_info.result_code
-            }
-            PaytmProcessRespBodyTypes::FailureBody(failure_body) => {
-                &failure_body.result_info.result_code
-            }
+            PaytmProcessRespBodyTypes::SuccessBody(success_body) => &success_body.result_info.result_code,
+            PaytmProcessRespBodyTypes::FailureBody(failure_body) => &failure_body.result_info.result_code,
         };
 
         // Map status using the result code
@@ -609,20 +495,12 @@ impl<
             Err(domain_types::router_data::ErrorResponse {
                 code: result_code.clone(),
                 message: match &response.body {
-                    PaytmProcessRespBodyTypes::SuccessBody(body) => {
-                        body.result_info.result_msg.clone()
-                    }
-                    PaytmProcessRespBodyTypes::FailureBody(body) => {
-                        body.result_info.result_msg.clone()
-                    }
+                    PaytmProcessRespBodyTypes::SuccessBody(body) => body.result_info.result_msg.clone(),
+                    PaytmProcessRespBodyTypes::FailureBody(body) => body.result_info.result_msg.clone(),
                 },
                 reason: match &response.body {
-                    PaytmProcessRespBodyTypes::SuccessBody(body) => {
-                        Some(body.result_info.result_msg.clone())
-                    }
-                    PaytmProcessRespBodyTypes::FailureBody(body) => {
-                        Some(body.result_info.result_msg.clone())
-                    }
+                    PaytmProcessRespBodyTypes::SuccessBody(body) => Some(body.result_info.result_msg.clone()),
+                    PaytmProcessRespBodyTypes::FailureBody(body) => Some(body.result_info.result_msg.clone()),
                 },
                 status_code: item.http_code,
                 attempt_status: Some(attempt_status),
@@ -654,27 +532,14 @@ impl<
 
 // PaytmTransactionStatusRequest TryFrom PSync RouterData
 impl<
-        T: domain_types::payment_method_data::PaymentMethodDataTypes
-            + std::fmt::Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        MacroPaytmRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PaytmTransactionStatusRequest
+        T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+    > TryFrom<MacroPaytmRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for PaytmTransactionStatusRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: MacroPaytmRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: MacroPaytmRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
 
@@ -704,9 +569,7 @@ impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<PaytmTransactionStatusResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PaytmTransactionStatusResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let mut router_data = item.router_data;
 
@@ -714,29 +577,19 @@ impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, Self>>
         let (connector_ref_id, connector_txn_id) = match &response.body {
             PaytmTransactionStatusRespBodyTypes::SuccessBody(success_body) => {
                 let connector_ref_id = Some(success_body.order_id.clone());
-                let connector_txn_id =
-                    ResponseId::ConnectorTransactionId(success_body.txn_id.clone());
+                let connector_txn_id = ResponseId::ConnectorTransactionId(success_body.txn_id.clone());
                 (connector_ref_id, connector_txn_id)
             }
             PaytmTransactionStatusRespBodyTypes::FailureBody(_failure_body) => {
-                let connector_ref_id = Some(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                );
+                let connector_ref_id = Some(router_data.resource_common_data.connector_request_reference_id.clone());
                 (connector_ref_id, ResponseId::NoResponseId)
             }
         };
 
         // Get result code for status mapping
         let result_code = match &response.body {
-            PaytmTransactionStatusRespBodyTypes::SuccessBody(success_body) => {
-                &success_body.result_info.result_code
-            }
-            PaytmTransactionStatusRespBodyTypes::FailureBody(failure_body) => {
-                &failure_body.result_info.result_code
-            }
+            PaytmTransactionStatusRespBodyTypes::SuccessBody(success_body) => &success_body.result_info.result_code,
+            PaytmTransactionStatusRespBodyTypes::FailureBody(failure_body) => &failure_body.result_info.result_code,
         };
 
         // Map status and set response accordingly
@@ -749,20 +602,12 @@ impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, Self>>
             Err(domain_types::router_data::ErrorResponse {
                 code: result_code.clone(),
                 message: match &response.body {
-                    PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => {
-                        body.result_info.result_msg.clone()
-                    }
-                    PaytmTransactionStatusRespBodyTypes::FailureBody(body) => {
-                        body.result_info.result_msg.clone()
-                    }
+                    PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => body.result_info.result_msg.clone(),
+                    PaytmTransactionStatusRespBodyTypes::FailureBody(body) => body.result_info.result_msg.clone(),
                 },
                 reason: Some(match &response.body {
-                    PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => {
-                        body.result_info.result_status.clone()
-                    }
-                    PaytmTransactionStatusRespBodyTypes::FailureBody(body) => {
-                        body.result_info.result_status.clone()
-                    }
+                    PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => body.result_info.result_status.clone(),
+                    PaytmTransactionStatusRespBodyTypes::FailureBody(body) => body.result_info.result_status.clone(),
                 }),
                 status_code: item.http_code,
                 attempt_status: Some(attempt_status),
@@ -800,10 +645,7 @@ pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDat
                     if collect_data.vpa_id.is_some() {
                         Ok(UpiFlowType::Collect)
                     } else {
-                        Err(ConnectorError::MissingRequiredField {
-                            field_name: "vpa_id",
-                        }
-                        .into())
+                        Err(ConnectorError::MissingRequiredField { field_name: "vpa_id" }.into())
                     }
                 }
                 UpiData::UpiIntent(_) | UpiData::UpiQr(_) => Ok(UpiFlowType::Intent),
@@ -828,16 +670,13 @@ pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTy
                 if vpa.contains('@') && vpa.len() > 3 {
                     Ok(Some(vpa))
                 } else {
-                    Err(ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_INVALID_VPA.to_string(),
+                    Err(
+                        ConnectorError::RequestEncodingFailedWithReason(constants::ERROR_INVALID_VPA.to_string())
+                            .into(),
                     )
-                    .into())
                 }
             } else {
-                Err(ConnectorError::MissingRequiredField {
-                    field_name: "vpa_id",
-                }
-                .into())
+                Err(ConnectorError::MissingRequiredField { field_name: "vpa_id" }.into())
             }
         }
         _ => Ok(None),
@@ -846,18 +685,12 @@ pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTy
 
 // Paytm signature generation algorithm implementation
 // Following exact PayTM v2 algorithm from Haskell codebase
-pub fn generate_paytm_signature(
-    payload: &str,
-    merchant_key: &str,
-) -> CustomResult<String, ConnectorError> {
+pub fn generate_paytm_signature(payload: &str, merchant_key: &str) -> CustomResult<String, ConnectorError> {
     // Step 1: Generate random salt bytes using ring (same logic, different implementation)
     let rng = SystemRandom::new();
     let mut salt_bytes = [0u8; constants::SALT_LENGTH];
-    rng.fill(&mut salt_bytes).map_err(|_| {
-        ConnectorError::RequestEncodingFailedWithReason(
-            constants::ERROR_SALT_GENERATION.to_string(),
-        )
-    })?;
+    rng.fill(&mut salt_bytes)
+        .map_err(|_| ConnectorError::RequestEncodingFailedWithReason(constants::ERROR_SALT_GENERATION.to_string()))?;
 
     // Step 2: Convert salt to Base64 (same logic)
     let salt_b64 = general_purpose::STANDARD.encode(salt_bytes);
@@ -908,9 +741,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorError> {
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
                 .map_err(|_| {
-                    ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_AES_128_ENCRYPTION.to_string(),
-                    )
+                    ConnectorError::RequestEncodingFailedWithReason(constants::ERROR_AES_128_ENCRYPTION.to_string())
                 })?
                 .len();
 
@@ -932,9 +763,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorError> {
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
                 .map_err(|_| {
-                    ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_AES_192_ENCRYPTION.to_string(),
-                    )
+                    ConnectorError::RequestEncodingFailedWithReason(constants::ERROR_AES_192_ENCRYPTION.to_string())
                 })?
                 .len();
 
@@ -948,9 +777,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorError> {
             // For AES-256, we need exactly 32 bytes, so pad or truncate the key
             let mut aes256_key = [0u8; constants::AES_256_KEY_LENGTH];
             let copy_len = cmp::min(key_bytes.len(), constants::AES_256_KEY_LENGTH);
-            if let (Some(dest), Some(src)) =
-                (aes256_key.get_mut(..copy_len), key_bytes.get(..copy_len))
-            {
+            if let (Some(dest), Some(src)) = (aes256_key.get_mut(..copy_len), key_bytes.get(..copy_len)) {
                 dest.copy_from_slice(src);
             }
 
@@ -963,9 +790,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, ConnectorError> {
             let encrypted_len = encryptor
                 .encrypt_padded_mut::<Pkcs7>(&mut buffer, data_bytes.len())
                 .map_err(|_| {
-                    ConnectorError::RequestEncodingFailedWithReason(
-                        constants::ERROR_AES_256_ENCRYPTION.to_string(),
-                    )
+                    ConnectorError::RequestEncodingFailedWithReason(constants::ERROR_AES_256_ENCRYPTION.to_string())
                 })?
                 .len();
 
@@ -1005,8 +830,7 @@ pub fn create_paytm_header(
     auth: &PaytmAuthType,
     channel_id: Option<&str>,
 ) -> CustomResult<PaytmRequestHeader, ConnectorError> {
-    let _payload = serde_json::to_string(request_body)
-        .change_context(ConnectorError::RequestEncodingFailed)?;
+    let _payload = serde_json::to_string(request_body).change_context(ConnectorError::RequestEncodingFailed)?;
     let signature = generate_paytm_signature(&_payload, auth.merchant_key.peek())?;
     let timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -1078,9 +902,7 @@ pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStat
         // 401: Payment declined by bank
         // 501: Server Down
         // 810: Transaction Failed
-        "235" | "295" | "334" | "267" | "331" | "820" | "227" | "401" | "501" | "810" => {
-            AttemptStatus::Failure
-        }
+        "235" | "295" | "334" | "267" | "331" | "820" | "227" | "401" | "501" | "810" => AttemptStatus::Failure,
 
         // Default to Pending for unknown codes to be safe
         _ => AttemptStatus::Pending,
@@ -1090,9 +912,7 @@ pub fn map_paytm_sync_status_to_attempt_status(result_code: &str) -> AttemptStat
 fn is_failure_status(status: AttemptStatus) -> bool {
     matches!(
         status,
-        AttemptStatus::Failure
-            | AttemptStatus::AuthenticationFailed
-            | AttemptStatus::AuthorizationFailed
+        AttemptStatus::Failure | AttemptStatus::AuthenticationFailed | AttemptStatus::AuthorizationFailed
     )
 }
 

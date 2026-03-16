@@ -448,22 +448,16 @@ impl Currency {
     }
 
     pub fn to_currency_lower_unit(self, amount: String) -> Result<String, CurrencyError> {
-        let amount_decimal =
-            amount
-                .parse::<f64>()
-                .map_err(|_| CurrencyError::UnsupportedCurrency {
-                    currency: format!("Invalid amount format: {amount}"),
-                })?;
+        let amount_decimal = amount.parse::<f64>().map_err(|_| CurrencyError::UnsupportedCurrency {
+            currency: format!("Invalid amount format: {amount}"),
+        })?;
         let exponent = self.number_of_digits_after_decimal_point()?;
         let multiplier = 10_u32.pow(exponent.into());
         let final_amount = amount_decimal * f64::from(multiplier);
         Ok(final_amount.to_string())
     }
 
-    pub fn to_currency_base_unit_with_zero_decimal_check(
-        self,
-        amount: i64,
-    ) -> Result<String, CurrencyError> {
+    pub fn to_currency_base_unit_with_zero_decimal_check(self, amount: i64) -> Result<String, CurrencyError> {
         if self.is_zero_decimal_currency() {
             Ok(amount.to_string())
         } else {
@@ -659,10 +653,7 @@ impl Currency {
     }
 
     pub fn is_three_decimal_currency(self) -> bool {
-        matches!(
-            self,
-            Self::BHD | Self::JOD | Self::KWD | Self::OMR | Self::TND
-        )
+        matches!(self, Self::BHD | Self::JOD | Self::KWD | Self::OMR | Self::TND)
     }
 
     pub fn is_four_decimal_currency(self) -> bool {
@@ -1112,6 +1103,64 @@ pub enum RefundStatus {
     TransactionFailure,
 }
 
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Eq,
+    Hash,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PayoutStatus {
+    Success,
+    Failure,
+    Cancelled,
+    Initiated,
+    Expired,
+    Reversed,
+    #[default]
+    Pending,
+    Ineligible,
+    RequiresCreation,
+    RequiresConfirmation,
+    RequiresPayoutMethodData,
+    RequiresFulfillment,
+    RequiresVendorAccountCreation,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Hash,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    strum::EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum PayoutPriority {
+    Instant,
+    Fast,
+    #[default]
+    Regular,
+    Wire,
+    CrossBorder,
+    Internal,
+}
+
 /// The status of the attempt
 #[derive(
     Clone,
@@ -1543,15 +1592,7 @@ impl ApiClientError {
 }
 
 #[derive(
-    serde::Serialize,
-    serde::Deserialize,
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    strum::EnumString,
-    strum::Display,
+    serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq, strum::EnumString, strum::Display,
 )]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
@@ -1816,15 +1857,7 @@ pub enum CallConnectorAction {
 }
 
 #[derive(
-    Clone,
-    Debug,
-    Eq,
-    PartialEq,
-    serde::Deserialize,
-    serde::Serialize,
-    strum::Display,
-    strum::EnumString,
-    Hash,
+    Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize, strum::Display, strum::EnumString, Hash,
 )]
 pub enum PaymentChargeType {
     #[serde(untagged)]
@@ -1832,16 +1865,7 @@ pub enum PaymentChargeType {
 }
 
 #[derive(
-    Clone,
-    Debug,
-    Default,
-    Hash,
-    Eq,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize,
-    strum::Display,
-    strum::EnumString,
+    Clone, Debug, Default, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize, strum::Display, strum::EnumString,
 )]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]
@@ -1895,9 +1919,7 @@ pub enum DynamicContentType {
 
 /// US States Abbreviations (2-letter codes)
 /// Used for converting full state names to abbreviations for connectors that require 2-letter codes
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString)]
 pub enum UsStatesAbbreviation {
     AL, // Alabama
     AK, // Alaska
@@ -1964,9 +1986,7 @@ impl UsStatesAbbreviation {
     /// Convert full state name to abbreviation
     /// Supports common variations like "New York" -> "NY", "newyork" -> "NY", etc.
     pub fn from_state_name(state_name: &str) -> Option<Self> {
-        let normalized = state_name
-            .to_lowercase()
-            .replace(|c: char| !c.is_alphanumeric(), "");
+        let normalized = state_name.to_lowercase().replace(|c: char| !c.is_alphanumeric(), "");
 
         match normalized.as_str() {
             "alabama" => Some(Self::AL),
@@ -2034,9 +2054,7 @@ impl UsStatesAbbreviation {
 }
 
 /// Canada States/Provinces Abbreviations (2-letter codes)
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString)]
 pub enum CanadaStatesAbbreviation {
     AB, // Alberta
     BC, // British Columbia
@@ -2056,9 +2074,7 @@ pub enum CanadaStatesAbbreviation {
 impl CanadaStatesAbbreviation {
     /// Convert full province name to abbreviation
     pub fn from_province_name(province_name: &str) -> Option<Self> {
-        let normalized = province_name
-            .to_lowercase()
-            .replace(|c: char| !c.is_alphanumeric(), "");
+        let normalized = province_name.to_lowercase().replace(|c: char| !c.is_alphanumeric(), "");
 
         match normalized.as_str() {
             "alberta" => Some(Self::AB),
@@ -2121,17 +2137,7 @@ pub enum MandateStatus {
 
 /// The type of tokenization to use for the payment method
 #[derive(
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    PartialEq,
-    Deserialize,
-    Serialize,
-    strum::Display,
-    strum::EnumString,
-    ToSchema,
+    Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize, Serialize, strum::Display, strum::EnumString, ToSchema,
 )]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]

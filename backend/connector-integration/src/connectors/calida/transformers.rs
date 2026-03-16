@@ -7,9 +7,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::Authorize,
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
-    },
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::{self},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificAuth, ErrorResponse},
@@ -123,16 +121,16 @@ impl TryFrom<&pii::SecretSerdeValue> for CalidaMetadataObject {
 
     fn try_from(secret_value: &pii::SecretSerdeValue) -> Result<Self, Self::Error> {
         match secret_value.peek() {
-            Value::String(s) => serde_json::from_str(s).change_context(
-                errors::ConnectorError::InvalidConnectorConfig {
+            Value::String(s) => {
+                serde_json::from_str(s).change_context(errors::ConnectorError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data string",
-                },
-            ),
-            value => serde_json::from_value(value.clone()).change_context(
-                errors::ConnectorError::InvalidConnectorConfig {
+                })
+            }
+            value => {
+                serde_json::from_value(value.clone()).change_context(errors::ConnectorError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data value",
-                },
-            ),
+                })
+            }
         }
     }
 }
@@ -141,12 +139,7 @@ impl TryFrom<&pii::SecretSerdeValue> for CalidaMetadataObject {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::CalidaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for CalidaPaymentsRequest
@@ -154,12 +147,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: super::CalidaRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -171,14 +159,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let amount = item
                     .connector
                     .amount_converter
-                    .convert(
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )
+                    .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-                let calida_mca_metadata = CalidaMetadataObject::try_from(
-                    &item.router_data.resource_common_data.get_connector_meta()?,
-                )?;
+                let calida_mca_metadata =
+                    CalidaMetadataObject::try_from(&item.router_data.resource_common_data.get_connector_meta()?)?;
 
                 Ok(Self {
                     amount,
@@ -191,40 +175,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector_request_reference_id
                         .clone(),
                     ip_address: item.router_data.request.get_ip_address_as_optional(),
-                    first_name: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_first_name()?,
-                    last_name: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_last_name()?,
-                    billing_address_country_code_iso: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_country()?,
-                    billing_address_city: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_city()?,
-                    billing_address_line1: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_line1()?,
-                    billing_address_postal_code: item
-                        .router_data
-                        .resource_common_data
-                        .get_optional_billing_zip(),
+                    first_name: item.router_data.resource_common_data.get_billing_first_name()?,
+                    last_name: item.router_data.resource_common_data.get_billing_last_name()?,
+                    billing_address_country_code_iso: item.router_data.resource_common_data.get_billing_country()?,
+                    billing_address_city: item.router_data.resource_common_data.get_billing_city()?,
+                    billing_address_line1: item.router_data.resource_common_data.get_billing_line1()?,
+                    billing_address_postal_code: item.router_data.resource_common_data.get_optional_billing_zip(),
                     webhook_url: url::Url::parse(&item.router_data.request.get_webhook_url()?)
                         .change_context(errors::ConnectorError::ParsingFailed)?,
-                    success_url: url::Url::parse(
-                        &item.router_data.request.get_router_return_url()?,
-                    )
-                    .change_context(errors::ConnectorError::ParsingFailed)?,
-                    failure_url: url::Url::parse(
-                        &item.router_data.request.get_router_return_url()?,
-                    )
-                    .change_context(errors::ConnectorError::ParsingFailed)?,
+                    success_url: url::Url::parse(&item.router_data.request.get_router_return_url()?)
+                        .change_context(errors::ConnectorError::ParsingFailed)?,
+                    failure_url: url::Url::parse(&item.router_data.request.get_router_return_url()?)
+                        .change_context(errors::ConnectorError::ParsingFailed)?,
                 })
             }
             _ => Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
@@ -270,9 +232,7 @@ impl From<CalidaPaymentStatus> for AttemptStatus {
     fn from(item: CalidaPaymentStatus) -> Self {
         match item {
             CalidaPaymentStatus::ManualProcessing => Self::Pending,
-            CalidaPaymentStatus::Pending | CalidaPaymentStatus::PaymentInitiated => {
-                Self::AuthenticationPending
-            }
+            CalidaPaymentStatus::Pending | CalidaPaymentStatus::PaymentInitiated => Self::AuthenticationPending,
             CalidaPaymentStatus::Failed => Self::Failure,
             CalidaPaymentStatus::Completed => Self::Charged,
         }
@@ -286,9 +246,7 @@ where
     T: Clone,
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<CalidaPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<CalidaPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let redirection_data = Some(domain_types::router_response_types::RedirectForm::Form {
             endpoint: item.response.payment_link.to_string(),
             method: Method::Get,
@@ -382,10 +340,8 @@ pub fn sort_and_minify_json(value: &Value) -> Result<String, errors::ConnectorEr
                 let mut entries: Vec<_> = map.iter().collect();
                 entries.sort_by_key(|(k, _)| k.to_owned());
 
-                let sorted_map: Map<String, Value> = entries
-                    .into_iter()
-                    .map(|(k, v)| (k.clone(), sort_value(v)))
-                    .collect();
+                let sorted_map: Map<String, Value> =
+                    entries.into_iter().map(|(k, v)| (k.clone(), sort_value(v))).collect();
 
                 Value::Object(sorted_map)
             }
@@ -395,6 +351,5 @@ pub fn sort_and_minify_json(value: &Value) -> Result<String, errors::ConnectorEr
     }
 
     let sorted_value = sort_value(value);
-    serde_json::to_string(&sorted_value)
-        .map_err(|_| errors::ConnectorError::WebhookBodyDecodingFailed)
+    serde_json::to_string(&sorted_value).map_err(|_| errors::ConnectorError::WebhookBodyDecodingFailed)
 }

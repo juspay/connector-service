@@ -1,8 +1,7 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    parse_quote, punctuated::Punctuated, Attribute, GenericArgument, Meta, PathArguments, Token,
-    Type, TypePath,
+    parse_quote, punctuated::Punctuated, Attribute, GenericArgument, Meta, PathArguments, Token, Type, TypePath,
 };
 
 use crate::generics::GenericPatchCtx;
@@ -59,13 +58,8 @@ pub(crate) fn build_patch_field_specific_metadata(
         _ => field_doc_attrs(&field_ident, &field_kind),
     };
 
-    let (patch_field_ty, apply_stmt) = build_patch_field_specification(
-        &field_ident,
-        &field.ty,
-        &field_kind,
-        patch_ctx,
-        patch_type_override,
-    )?;
+    let (patch_field_ty, apply_stmt) =
+        build_patch_field_specification(&field_ident, &field.ty, &field_kind, patch_ctx, patch_type_override)?;
 
     let serde_attrs = build_serde_attributes(&field.attrs, &field.ty, &patch_field_ty)?;
 
@@ -137,10 +131,7 @@ fn get_field_patch_config(attrs: &[Attribute]) -> syn::Result<FieldPatchConfig> 
     }
 }
 
-fn field_patch_kind<'a>(
-    field_ty: &'a Type,
-    patch_type_override: Option<&'a Type>,
-) -> FieldPatchKind<'a> {
+fn field_patch_kind<'a>(field_ty: &'a Type, patch_type_override: Option<&'a Type>) -> FieldPatchKind<'a> {
     match option_inner_type(field_ty) {
         Some(inner_ty) => {
             if option_inner_type(inner_ty).is_some() {
@@ -150,8 +141,7 @@ fn field_patch_kind<'a>(
             } else if patch_type_override.is_some() {
                 if is_replaceable_scalar(inner_ty) || is_replaceable_container(inner_ty) {
                     FieldPatchKind::Unsupported {
-                        detail: "patch_type can only be used with nested patchable types"
-                            .to_string(),
+                        detail: "patch_type can only be used with nested patchable types".to_string(),
                     }
                 } else {
                     FieldPatchKind::OptionalNested(inner_ty)
@@ -160,9 +150,7 @@ fn field_patch_kind<'a>(
                 match classify_non_optional(inner_ty) {
                     FieldPatchKind::Replace => FieldPatchKind::OptionalReplace(inner_ty),
                     FieldPatchKind::Nested => FieldPatchKind::OptionalNested(inner_ty),
-                    FieldPatchKind::Unsupported { detail } => {
-                        FieldPatchKind::Unsupported { detail }
-                    }
+                    FieldPatchKind::Unsupported { detail } => FieldPatchKind::Unsupported { detail },
                     _ => FieldPatchKind::Unsupported {
                         detail: format!("`{}`", type_display(inner_ty)),
                     },
@@ -173,8 +161,7 @@ fn field_patch_kind<'a>(
             if patch_type_override.is_some() {
                 if is_replaceable_scalar(field_ty) || is_replaceable_container(field_ty) {
                     FieldPatchKind::Unsupported {
-                        detail: "patch_type can only be used with nested patchable types"
-                            .to_string(),
+                        detail: "patch_type can only be used with nested patchable types".to_string(),
                     }
                 } else {
                     FieldPatchKind::Nested
@@ -219,10 +206,7 @@ fn replaceable_container_ident(ty: &Type) -> Option<String> {
 
     let last = path.path.segments.last()?;
     let name = last.ident.to_string();
-    let is_allowed = matches!(
-        name.as_str(),
-        "Vec" | "HashMap" | "BTreeMap" | "HashSet" | "BTreeSet"
-    );
+    let is_allowed = matches!(name.as_str(), "Vec" | "HashMap" | "BTreeMap" | "HashSet" | "BTreeSet");
 
     match (is_allowed, &last.arguments) {
         (true, PathArguments::AngleBracketed(args)) if !args.args.is_empty() => Some(name),
@@ -257,23 +241,13 @@ fn build_patch_field_specification(
         FieldPatchKind::OptionalReplace(inner_ty) => {
             build_optional_replace_spec(field_ident, field_ty, inner_ty, patch_ctx)
         }
-        FieldPatchKind::Nested => build_patch_specification_for_plain_nested_field(
-            field_ident,
-            field_ty,
-            patch_ctx,
-            patch_type_override,
-        ),
+        FieldPatchKind::Nested => {
+            build_patch_specification_for_plain_nested_field(field_ident, field_ty, patch_ctx, patch_type_override)
+        }
         FieldPatchKind::OptionalNested(inner_ty) => {
-            build_patch_specification_for_optional_nested_field(
-                field_ident,
-                inner_ty,
-                patch_ctx,
-                patch_type_override,
-            )
+            build_patch_specification_for_optional_nested_field(field_ident, inner_ty, patch_ctx, patch_type_override)
         }
-        FieldPatchKind::Unsupported { detail } => {
-            Err(nested_unsupported_error(field_ident, field_ty, detail))
-        }
+        FieldPatchKind::Unsupported { detail } => Err(nested_unsupported_error(field_ident, field_ty, detail)),
     }
 }
 
@@ -459,9 +433,7 @@ fn add_option_deserializer(serde_attrs: &mut Vec<Attribute>) {
 }
 
 /// Creates a deserialize bound attribute for the inner type
-fn create_deserialize_bound(
-    patch_field_ty: &proc_macro2::TokenStream,
-) -> syn::Result<Option<Attribute>> {
+fn create_deserialize_bound(patch_field_ty: &proc_macro2::TokenStream) -> syn::Result<Option<Attribute>> {
     let ty = syn::parse2::<Type>(patch_field_ty.clone()).ok();
     let bound_ty = ty.and_then(|ty| option_option_inner_type(&ty).cloned());
 
@@ -507,9 +479,7 @@ fn serde_attr_flags(serde_attrs: &[Attribute]) -> SerdeAttrFlags {
 
         for meta in args {
             match meta {
-                Meta::NameValue(nv)
-                    if nv.path.is_ident("deserialize_with") || nv.path.is_ident("with") =>
-                {
+                Meta::NameValue(nv) if nv.path.is_ident("deserialize_with") || nv.path.is_ident("with") => {
                     flags.has_deserialize_with = true;
                 }
                 Meta::List(list) if list.path.is_ident("bound") => {
@@ -587,19 +557,14 @@ fn has_type_args(ty: &Type) -> bool {
             .path
             .segments
             .last()
-            .map(|segment| {
-                matches!(&segment.arguments, PathArguments::AngleBracketed(args) if !args.args.is_empty())
-            })
+            .map(|segment| matches!(&segment.arguments, PathArguments::AngleBracketed(args) if !args.args.is_empty()))
             .unwrap_or(false),
         _ => false,
     }
 }
 
 // Return the ident if the type matches a generic param.
-fn generic_param_ident(
-    ty: &Type,
-    generic_params: &std::collections::HashSet<String>,
-) -> Option<syn::Ident> {
+fn generic_param_ident(ty: &Type, generic_params: &std::collections::HashSet<String>) -> Option<syn::Ident> {
     let ident = match ty {
         Type::Path(path) => path
             .path
@@ -619,20 +584,14 @@ fn generic_param_ident(
 // Detect primitive-ish types that should be replace-patched.
 fn replaceable_scalar_ident(ty: &Type) -> Option<String> {
     let last_ident = match ty {
-        Type::Path(path) if path.qself.is_none() => path
-            .path
-            .segments
-            .last()
-            .map(|segment| segment.ident.to_string()),
+        Type::Path(path) if path.qself.is_none() => path.path.segments.last().map(|segment| segment.ident.to_string()),
         _ => None,
     };
 
     match last_ident.as_deref() {
-        Some("String") | Some("str") | Some("bool") | Some("char") | Some("usize") | Some("u8")
-        | Some("u16") | Some("u32") | Some("u64") | Some("u128") | Some("isize") | Some("i8")
-        | Some("i16") | Some("i32") | Some("i64") | Some("i128") | Some("f32") | Some("f64") => {
-            last_ident
-        }
+        Some("String") | Some("str") | Some("bool") | Some("char") | Some("usize") | Some("u8") | Some("u16")
+        | Some("u32") | Some("u64") | Some("u128") | Some("isize") | Some("i8") | Some("i16") | Some("i32")
+        | Some("i64") | Some("i128") | Some("f32") | Some("f64") => last_ident,
         _ => None,
     }
 }
@@ -641,10 +600,7 @@ fn replaceable_scalar_ident(ty: &Type) -> Option<String> {
 fn patch_type(ty: &Type) -> syn::Result<Type> {
     let type_path = match ty {
         Type::Path(path) => Ok(path),
-        _ => Err(syn::Error::new_spanned(
-            ty,
-            "nested patch fields must be a path type",
-        )),
+        _ => Err(syn::Error::new_spanned(ty, "nested patch fields must be a path type")),
     }?;
 
     let type_path = match type_path.qself.is_some() {

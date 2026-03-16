@@ -108,14 +108,12 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::FailedAtConnector { .. }
             | Self::AmountConversionFailed
             | Self::GenericError { .. }
-            | Self::MandatePaymentDataMismatch { .. } => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
-                    error_identifier: 500,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+            | Self::MandatePaymentDataMismatch { .. } => ApplicationErrorResponse::InternalServerError(ApiError {
+                sub_code: "INTERNAL_SERVER_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
             Self::InvalidConnectorName
             | Self::InvalidWallet
             | Self::MissingRequiredField { .. }
@@ -136,67 +134,57 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::IntegrityCheckFailed { .. }
             | Self::SourceVerificationFailed
             | Self::DecodingFailed
-            | Self::InvalidConnectorConfig { .. } => {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "BAD_REQUEST".to_string(),
-                    error_identifier: 400,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+            | Self::InvalidConnectorConfig { .. } => ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "BAD_REQUEST".to_string(),
+                error_identifier: 400,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
             Self::NoConnectorMetaData
             | Self::MaxFieldLengthViolated { .. }
             | Self::MissingConnectorMandateID
             | Self::MissingConnectorTransactionID
             | Self::MissingConnectorRefundID
             | Self::MissingConnectorRelatedTransactionID { .. }
-            | Self::InSufficientBalanceInPaymentMethod => {
-                ApplicationErrorResponse::Unprocessable(ApiError {
-                    sub_code: "UNPROCESSABLE_ENTITY".to_string(),
-                    error_identifier: 422,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-            Self::NotImplemented(_)
-            | Self::CaptureMethodNotSupported
-            | Self::WebhooksNotImplemented => ApplicationErrorResponse::NotImplemented(ApiError {
-                sub_code: "NOT_IMPLEMENTED".to_string(),
-                error_identifier: 501,
+            | Self::InSufficientBalanceInPaymentMethod => ApplicationErrorResponse::Unprocessable(ApiError {
+                sub_code: "UNPROCESSABLE_ENTITY".to_string(),
+                error_identifier: 422,
                 error_message: self.to_string(),
                 error_object: None,
             }),
+            Self::NotImplemented(_) | Self::CaptureMethodNotSupported | Self::WebhooksNotImplemented => {
+                ApplicationErrorResponse::NotImplemented(ApiError {
+                    sub_code: "NOT_IMPLEMENTED".to_string(),
+                    error_identifier: 501,
+                    error_message: self.to_string(),
+                    error_object: None,
+                })
+            }
             Self::MissingApplePayTokenData
             | Self::WebhookBodyDecodingFailed
             | Self::WebhookSourceVerificationFailed
-            | Self::WebhookVerificationSecretInvalid => {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_WEBHOOK_DATA".to_string(),
-                    error_identifier: 400,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-            Self::RequestTimeoutReceived => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "REQUEST_TIMEOUT".to_string(),
-                    error_identifier: 504,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+            | Self::WebhookVerificationSecretInvalid => ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_WEBHOOK_DATA".to_string(),
+                error_identifier: 400,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
+            Self::RequestTimeoutReceived => ApplicationErrorResponse::InternalServerError(ApiError {
+                sub_code: "REQUEST_TIMEOUT".to_string(),
+                error_identifier: 504,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
             Self::WebhookEventTypeNotFound
             | Self::WebhookSignatureNotFound
             | Self::WebhookReferenceIdNotFound
             | Self::WebhookResourceObjectNotFound
-            | Self::WebhookVerificationSecretNotFound => {
-                ApplicationErrorResponse::NotFound(ApiError {
-                    sub_code: "WEBHOOK_DETAILS_NOT_FOUND".to_string(),
-                    error_identifier: 404,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+            | Self::WebhookVerificationSecretNotFound => ApplicationErrorResponse::NotFound(ApiError {
+                sub_code: "WEBHOOK_DETAILS_NOT_FOUND".to_string(),
+                error_identifier: 404,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
         }
     }
 }
@@ -217,14 +205,12 @@ impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
             | Self::BadGatewayReceived
             | Self::ServiceUnavailableReceived
             | Self::UrlParsingFailed
-            | Self::UnexpectedServerResponse => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
-                    error_identifier: 500,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+            | Self::UnexpectedServerResponse => ApplicationErrorResponse::InternalServerError(ApiError {
+                sub_code: "INTERNAL_SERVER_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
             Self::RequestTimeoutReceived | Self::GatewayTimeoutReceived => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "REQUEST_TIMEOUT".to_string(),
@@ -233,14 +219,12 @@ impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
                     error_object: None,
                 })
             }
-            Self::ConnectionClosedIncompleteMessage => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
-                    error_identifier: 500,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+            Self::ConnectionClosedIncompleteMessage => ApplicationErrorResponse::InternalServerError(ApiError {
+                sub_code: "INTERNAL_SERVER_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
         }
     }
 }
@@ -249,9 +233,7 @@ impl IntoGrpcStatus for error_stack::Report<ApplicationErrorResponse> {
     fn into_grpc_status(self) -> Status {
         logger::error!(error=?self);
         match self.current_context() {
-            ApplicationErrorResponse::Unauthorized(api_error) => {
-                Status::unauthenticated(&api_error.error_message)
-            }
+            ApplicationErrorResponse::Unauthorized(api_error) => Status::unauthenticated(&api_error.error_message),
             ApplicationErrorResponse::ForbiddenCommonResource(api_error)
             | ApplicationErrorResponse::ForbiddenPrivateResource(api_error) => {
                 Status::permission_denied(&api_error.error_message)
@@ -261,18 +243,10 @@ impl IntoGrpcStatus for error_stack::Report<ApplicationErrorResponse> {
             | ApplicationErrorResponse::Unprocessable(api_error)
             | ApplicationErrorResponse::InternalServerError(api_error)
             | ApplicationErrorResponse::MethodNotAllowed(api_error)
-            | ApplicationErrorResponse::DomainError(api_error) => {
-                Status::internal(&api_error.error_message)
-            }
-            ApplicationErrorResponse::NotImplemented(api_error) => {
-                Status::unimplemented(&api_error.error_message)
-            }
-            ApplicationErrorResponse::NotFound(api_error) => {
-                Status::not_found(&api_error.error_message)
-            }
-            ApplicationErrorResponse::BadRequest(api_error) => {
-                Status::invalid_argument(&api_error.error_message)
-            }
+            | ApplicationErrorResponse::DomainError(api_error) => Status::internal(&api_error.error_message),
+            ApplicationErrorResponse::NotImplemented(api_error) => Status::unimplemented(&api_error.error_message),
+            ApplicationErrorResponse::NotFound(api_error) => Status::not_found(&api_error.error_message),
+            ApplicationErrorResponse::BadRequest(api_error) => Status::invalid_argument(&api_error.error_message),
         }
     }
 }

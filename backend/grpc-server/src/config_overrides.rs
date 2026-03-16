@@ -51,22 +51,14 @@ where
     }
 
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
-        let config_override = req
-            .headers()
-            .get("x-config-override")
-            .and_then(|h| h.to_str().ok());
+        let config_override = req.headers().get("x-config-override").and_then(|h| h.to_str().ok());
 
-        match ucs_interface_common::middleware::extract_and_merge_config(
-            config_override,
-            &self.base_config,
-        ) {
+        match ucs_interface_common::middleware::extract_and_merge_config(config_override, &self.base_config) {
             Ok(cfg) => {
                 req.extensions_mut().insert(cfg);
             }
             Err(e) => {
-                let err = tonic::Status::internal(format!(
-                    "Failed to merge config with override config: {e:?}"
-                ));
+                let err = tonic::Status::internal(format!("Failed to merge config with override config: {e:?}"));
                 let fut = async move { Err(err) };
                 return Box::pin(fut);
             }

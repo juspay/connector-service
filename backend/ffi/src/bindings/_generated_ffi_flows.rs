@@ -19,6 +19,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidRequest,
     RecurringPaymentServiceChargeRequest,
 };
+use grpc_api_types::payouts::PayoutServiceCreateRequest;
 use crate::handlers::payments::{
     authenticate_req_handler, authenticate_res_handler,
     authorize_req_handler, authorize_res_handler,
@@ -36,6 +37,7 @@ use crate::handlers::payments::{
     setup_recurring_req_handler, setup_recurring_res_handler,
     tokenize_req_handler, tokenize_res_handler,
     void_req_handler, void_res_handler,
+    create_payout_req_handler, create_payout_res_handler,
 };
 
 // authenticate: PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
@@ -70,3 +72,6 @@ define_ffi_flow!(setup_recurring, PaymentServiceSetupRecurringRequest, setup_rec
 define_ffi_flow!(tokenize, PaymentMethodServiceTokenizeRequest, tokenize_req_handler, tokenize_res_handler);
 // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 define_ffi_flow!(void, PaymentServiceVoidRequest, void_req_handler, void_res_handler);
+
+// create_payout: PayoutService.Create — Create a payout.
+define_ffi_flow!(create_payout, PayoutServiceCreateRequest, create_payout_req_handler, create_payout_res_handler);

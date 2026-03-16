@@ -127,10 +127,7 @@ impl FromStr for MerchantId {
     }
 }
 
-crate::id_type!(
-    PaymentId,
-    "A type for payment_id that can be used for payment ids"
-);
+crate::id_type!(PaymentId, "A type for payment_id that can be used for payment ids");
 crate::impl_id_type_methods!(PaymentId, "payment_id");
 
 // This is to display the `PaymentId` as PaymentId(abcd)
@@ -147,8 +144,7 @@ impl PaymentId {
     // This function should be removed once we have a better way to handle mandatory payment id in other flows
     /// Get payment id in the format of irrelevant_payment_id_in_{flow}
     pub fn get_irrelevant_id(flow: &str) -> Self {
-        let alphanumeric_id =
-            AlphaNumericId::new_unchecked(format!("irrelevant_payment_id_in_{flow}"));
+        let alphanumeric_id = AlphaNumericId::new_unchecked(format!("irrelevant_payment_id_in_{flow}"));
         let id = LengthId::new_unchecked(alphanumeric_id);
         Self(id)
     }
@@ -195,8 +191,8 @@ impl<const MAX_LENGTH: u8, const MIN_LENGTH: u8> LengthId<MAX_LENGTH, MIN_LENGTH
     /// Generates new [MerchantReferenceId] from the given input string
     pub fn from(input_string: Cow<'static, str>) -> Result<Self, LengthIdError> {
         let trimmed_input_string = input_string.trim().to_string();
-        let length_of_input_string = u8::try_from(trimmed_input_string.len())
-            .map_err(|_| LengthIdError::MaxLengthViolated(MAX_LENGTH))?;
+        let length_of_input_string =
+            u8::try_from(trimmed_input_string.len()).map_err(|_| LengthIdError::MaxLengthViolated(MAX_LENGTH))?;
 
         when(length_of_input_string > MAX_LENGTH, || {
             Err(LengthIdError::MaxLengthViolated(MAX_LENGTH))
@@ -225,12 +221,10 @@ impl<const MAX_LENGTH: u8, const MIN_LENGTH: u8> LengthId<MAX_LENGTH, MIN_LENGTH
     }
 
     /// Create a new LengthId from aplhanumeric id
-    pub(crate) fn from_alphanumeric_id(
-        alphanumeric_id: AlphaNumericId,
-    ) -> Result<Self, LengthIdError> {
+    pub(crate) fn from_alphanumeric_id(alphanumeric_id: AlphaNumericId) -> Result<Self, LengthIdError> {
         let length_of_input_string = alphanumeric_id.0.len();
-        let length_of_input_string = u8::try_from(length_of_input_string)
-            .map_err(|_| LengthIdError::MaxLengthViolated(MAX_LENGTH))?;
+        let length_of_input_string =
+            u8::try_from(length_of_input_string).map_err(|_| LengthIdError::MaxLengthViolated(MAX_LENGTH))?;
 
         when(length_of_input_string > MAX_LENGTH, || {
             Err(LengthIdError::MaxLengthViolated(MAX_LENGTH))
@@ -267,10 +261,7 @@ impl From<AlphaNumericIdError> for LengthIdError {
 
 use std::str::FromStr;
 
-crate::id_type!(
-    ProfileId,
-    "A type for profile_id that can be used for business profile ids"
-);
+crate::id_type!(ProfileId, "A type for profile_id that can be used for business profile ids");
 crate::impl_id_type_methods!(ProfileId, "profile_id");
 
 // This is to display the `ProfileId` as ProfileId(abcd)
@@ -303,10 +294,7 @@ pub trait GenerateId {
     fn generate() -> Self;
 }
 
-crate::id_type!(
-    ClientSecretId,
-    "A type for key_id that can be used for Ephemeral key IDs"
-);
+crate::id_type!(ClientSecretId, "A type for key_id that can be used for Ephemeral key IDs");
 crate::impl_id_type_methods!(ClientSecretId, "key_id");
 
 // This is to display the `ClientSecretId` as ClientSecretId(abcd)
@@ -318,9 +306,7 @@ crate::impl_serializable_secret_id_type!(ClientSecretId);
 
 impl crate::events::ApiEventMetric for ClientSecretId {
     fn get_api_event_type(&self) -> Option<crate::events::ApiEventsType> {
-        Some(crate::events::ApiEventsType::ClientSecret {
-            key_id: self.clone(),
-        })
+        Some(crate::events::ApiEventsType::ClientSecret { key_id: self.clone() })
     }
 }
 
@@ -333,10 +319,7 @@ impl ClientSecretId {
     }
 }
 
-crate::id_type!(
-    ApiKeyId,
-    "A type for key_id that can be used for API key IDs"
-);
+crate::id_type!(ApiKeyId, "A type for key_id that can be used for API key IDs");
 crate::impl_id_type_methods!(ApiKeyId, "key_id");
 
 // This is to display the `ApiKeyId` as ApiKeyId(abcd)
@@ -354,25 +337,19 @@ impl ApiKeyId {
 
 impl crate::events::ApiEventMetric for ApiKeyId {
     fn get_api_event_type(&self) -> Option<crate::events::ApiEventsType> {
-        Some(crate::events::ApiEventsType::ApiKey {
-            key_id: self.clone(),
-        })
+        Some(crate::events::ApiEventsType::ApiKey { key_id: self.clone() })
     }
 }
 
 impl crate::events::ApiEventMetric for (MerchantId, ApiKeyId) {
     fn get_api_event_type(&self) -> Option<crate::events::ApiEventsType> {
-        Some(crate::events::ApiEventsType::ApiKey {
-            key_id: self.1.clone(),
-        })
+        Some(crate::events::ApiEventsType::ApiKey { key_id: self.1.clone() })
     }
 }
 
 impl crate::events::ApiEventMetric for (&MerchantId, &ApiKeyId) {
     fn get_api_event_type(&self) -> Option<crate::events::ApiEventsType> {
-        Some(crate::events::ApiEventsType::ApiKey {
-            key_id: self.1.clone(),
-        })
+        Some(crate::events::ApiEventsType::ApiKey { key_id: self.1.clone() })
     }
 }
 

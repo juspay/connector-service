@@ -8,15 +8,12 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
@@ -37,57 +34,39 @@ pub struct StaxVoidRequest {}
 pub struct StaxRSyncRequest {}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        StaxRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for StaxPSyncRequest
+    TryFrom<StaxRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for StaxPSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: StaxRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        _item: StaxRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self::default())
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        StaxRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for StaxVoidRequest
+    TryFrom<StaxRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for StaxVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: StaxRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        _item: StaxRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self::default())
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        StaxRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
-    > for StaxRSyncRequest
+    TryFrom<StaxRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for StaxRSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: StaxRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        _item: StaxRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self::default())
     }
@@ -127,9 +106,7 @@ impl TryFrom<&ConnectorSpecificAuth> for StaxAuthType {
             ConnectorSpecificAuth::Stax { api_key } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -180,17 +157,9 @@ impl StaxErrorResponse {
         self.message
             .clone()
             .or_else(|| self.id.as_ref().and_then(extract_array_msg))
-            .or_else(|| {
-                self.error
-                    .as_ref()
-                    .and_then(|v| v.as_str().map(String::from))
-            })
+            .or_else(|| self.error.as_ref().and_then(|v| v.as_str().map(String::from)))
             .or_else(|| self.error.as_ref().and_then(extract_array_msg))
-            .or_else(|| {
-                self.validation
-                    .as_ref()
-                    .and_then(|v| v.as_str().map(String::from))
-            })
+            .or_else(|| self.validation.as_ref().and_then(|v| v.as_str().map(String::from)))
             .or_else(|| self.validation.as_ref().and_then(extract_array_msg))
             .or_else(|| {
                 // Check field-level validation errors (e.g., {"card_number": ["Invalid Card Number"]})
@@ -236,50 +205,27 @@ pub struct StaxMeta {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        StaxRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for StaxAuthorizeRequest
+    TryFrom<StaxRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    for StaxAuthorizeRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: StaxRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let converter = FloatMajorUnitForConnector;
         let total = converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let payment_method_id = match item.router_data.request.payment_method_data {
             PaymentMethodData::Card(_) | PaymentMethodData::BankDebit(_) => {
-                if let Ok(pm_token) = item
-                    .router_data
-                    .resource_common_data
-                    .get_payment_method_token()
-                {
+                if let Ok(pm_token) = item.router_data.resource_common_data.get_payment_method_token() {
                     match pm_token {
-                        domain_types::router_data::PaymentMethodToken::Token(token) => {
-                            token.expose()
-                        }
+                        domain_types::router_data::PaymentMethodToken::Token(token) => token.expose(),
                     }
                 } else if let Some(mandate_id) = item.router_data.request.connector_mandate_id() {
                     mandate_id
@@ -307,9 +253,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             payment_method_id,
             is_refundable: true,
             pre_auth: !is_auto_capture,
-            meta: StaxMeta {
-                tax: MinorUnit::zero(),
-            },
+            meta: StaxMeta { tax: MinorUnit::zero() },
             idempotency_id: Some(
                 item.router_data
                     .resource_common_data
@@ -390,17 +334,16 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxPaymentResponse, 
         let status = get_payment_status(response)?;
 
         // Store capture_id in metadata when pre-auth is captured (following HS pattern)
-        let connector_metadata = if response.transaction_type == StaxTransactionType::PreAuth
-            && response.is_captured != 0
-        {
-            response.child_captures.first().map(|child_captures| {
-                serde_json::json!(StaxMetaData {
-                    capture_id: child_captures.id.clone()
+        let connector_metadata =
+            if response.transaction_type == StaxTransactionType::PreAuth && response.is_captured != 0 {
+                response.child_captures.first().map(|child_captures| {
+                    serde_json::json!(StaxMetaData {
+                        capture_id: child_captures.id.clone()
+                    })
                 })
-            })
-        } else {
-            None
-        };
+            } else {
+                None
+            };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -434,17 +377,16 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
         let status = get_payment_status(response)?;
 
         // Store capture_id in metadata when pre-auth is captured (following HS pattern)
-        let connector_metadata = if response.transaction_type == StaxTransactionType::PreAuth
-            && response.is_captured != 0
-        {
-            response.child_captures.first().map(|child_captures| {
-                serde_json::json!(StaxMetaData {
-                    capture_id: child_captures.id.clone()
+        let connector_metadata =
+            if response.transaction_type == StaxTransactionType::PreAuth && response.is_captured != 0 {
+                response.child_captures.first().map(|child_captures| {
+                    serde_json::json!(StaxMetaData {
+                        capture_id: child_captures.id.clone()
+                    })
                 })
-            })
-        } else {
-            None
-        };
+            } else {
+                None
+            };
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -479,20 +421,13 @@ pub struct StaxCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        StaxRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for StaxCaptureRequest
+    TryFrom<StaxRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for StaxCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: StaxRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        item: StaxRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let converter = FloatMajorUnitForConnector;
         let total = converter
@@ -540,9 +475,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
     }
 }
 
-fn get_payment_status(
-    response: &StaxPaymentResponse,
-) -> Result<AttemptStatus, errors::ConnectorError> {
+fn get_payment_status(response: &StaxPaymentResponse) -> Result<AttemptStatus, errors::ConnectorError> {
     let mut status = if !response.success {
         AttemptStatus::Failure
     } else {
@@ -563,9 +496,7 @@ fn get_payment_status(
     Ok(status)
 }
 
-fn get_capture_status(
-    response: &StaxPaymentResponse,
-) -> Result<AttemptStatus, errors::ConnectorError> {
+fn get_capture_status(response: &StaxPaymentResponse) -> Result<AttemptStatus, errors::ConnectorError> {
     get_payment_status(response)
 }
 
@@ -582,24 +513,17 @@ pub struct StaxRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        StaxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for StaxRefundRequest
+    TryFrom<StaxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for StaxRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: StaxRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: StaxRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let converter = FloatMajorUnitForConnector;
         let total = converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self { total })
@@ -622,10 +546,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
         // Convert refund amount to FloatMajorUnit for filtering (like HS does)
         let converter = FloatMajorUnitForConnector;
         let refund_amount = converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
             .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
 
         // MUST find and validate child transaction with type="refund"
@@ -685,10 +606,7 @@ fn get_refund_status(
     let filtered_refunds: Vec<&ChildTransaction> = response
         .child_transactions
         .iter()
-        .filter(|child| {
-            child.transaction_type == StaxTransactionType::Refund
-                && (child.total == Some(refund_amount))
-        })
+        .filter(|child| child.transaction_type == StaxTransactionType::Refund && (child.total == Some(refund_amount)))
         .collect();
 
     let mut refund_child = filtered_refunds
@@ -697,9 +615,7 @@ fn get_refund_status(
 
     // Find most recent refund by comparing created_at timestamps
     for child in filtered_refunds.iter() {
-        if let (Some(child_created_at), Some(current_created_at)) =
-            (&child.created_at, &refund_child.created_at)
-        {
+        if let (Some(child_created_at), Some(current_created_at)) = (&child.created_at, &refund_child.created_at) {
             if child_created_at > current_created_at {
                 refund_child = child;
             }
@@ -721,10 +637,7 @@ fn extract_refund_id(
     let filtered_refunds: Vec<&ChildTransaction> = response
         .child_transactions
         .iter()
-        .filter(|child| {
-            child.transaction_type == StaxTransactionType::Refund
-                && (child.total == Some(refund_amount))
-        })
+        .filter(|child| child.transaction_type == StaxTransactionType::Refund && (child.total == Some(refund_amount)))
         .collect();
 
     let mut refund_child = filtered_refunds
@@ -733,9 +646,7 @@ fn extract_refund_id(
 
     // Find most recent refund by comparing created_at timestamps
     for child in filtered_refunds.iter() {
-        if let (Some(child_created_at), Some(current_created_at)) =
-            (&child.created_at, &refund_child.created_at)
-        {
+        if let (Some(child_created_at), Some(current_created_at)) = (&child.created_at, &refund_child.created_at) {
             if child_created_at > current_created_at {
                 refund_child = child;
             }
@@ -821,12 +732,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?
         } else {
             Ok(Self {
-                email: item
-                    .router_data
-                    .request
-                    .email
-                    .as_ref()
-                    .map(|e| e.peek().clone()),
+                email: item.router_data.request.email.as_ref().map(|e| e.peek().clone()),
                 firstname: item.router_data.request.name.clone(),
             })
         }
@@ -927,22 +833,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         // Get customer_id from connector metadata or error
-        let customer_id = item
-            .router_data
-            .resource_common_data
-            .connector_customer
-            .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+        let customer_id = item.router_data.resource_common_data.connector_customer.clone().ok_or(
+            errors::ConnectorError::MissingRequiredField {
                 field_name: "connector_customer_id",
-            })?;
+            },
+        )?;
 
         // Extract card data from payment_method_data
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Format expiry as MMYY (Stax requirement)
                 // Use card data helper method to format as MMYY (no delimiter)
-                let card_exp =
-                    card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
+                let card_exp = card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
 
                 // Get cardholder name - Stax requires full name (first + last)
                 // Try to construct from billing address first, then fallback to card_holder_name
@@ -963,10 +865,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }
                         (Some(first), None) => {
                             // Only first name - use card_holder_name if available, otherwise just first
-                            card_data
-                                .card_holder_name
-                                .clone()
-                                .unwrap_or_else(|| first.clone())
+                            card_data.card_holder_name.clone().unwrap_or_else(|| first.clone())
                         }
                         (None, Some(last)) => {
                             // Only last name (unusual) - use it
@@ -1020,17 +919,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .or_else(|| bank_account_holder_name.clone())
                     .or_else(|| card_holder_name.clone())
                     .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "billing.first_name or bank_account_holder_name (required by Stax for bank tokenization)",
+                        field_name:
+                            "billing.first_name or bank_account_holder_name (required by Stax for bank tokenization)",
                     })?;
 
                 // bank_name is already None if Unspecified was sent in gRPC request
                 let bank_type = bank_type.ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "bank_type",
                 })?;
-                let bank_holder_type =
-                    bank_holder_type.ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "bank_holder_type",
-                    })?;
+                let bank_holder_type = bank_holder_type.ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "bank_holder_type",
+                })?;
 
                 Ok(Self::Bank(StaxBankTokenizeData {
                     person_name,
@@ -1059,11 +958,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
-                    "Only card and ACH bank debit tokenization are supported for Stax".to_string(),
-                ))?
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(errors::ConnectorError::NotImplemented(
+                "Only card and ACH bank debit tokenization are supported for Stax".to_string(),
+            ))?,
         }
     }
 }
@@ -1075,12 +972,7 @@ pub struct StaxTokenResponse {
 }
 
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StaxTokenResponse, Self>>
-    for RouterDataV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    >
+    for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 

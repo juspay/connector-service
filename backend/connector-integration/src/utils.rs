@@ -2,10 +2,7 @@ pub mod qr_code;
 pub mod xml_utils;
 use base64::Engine;
 use common_utils::{
-    consts::{
-        BASE64_ENGINE, BASE64_ENGINE_STD_NO_PAD, BASE64_ENGINE_URL_SAFE,
-        BASE64_ENGINE_URL_SAFE_NO_PAD,
-    },
+    consts::{BASE64_ENGINE, BASE64_ENGINE_STD_NO_PAD, BASE64_ENGINE_URL_SAFE, BASE64_ENGINE_URL_SAFE_NO_PAD},
     errors::{ParsingError, ReportSwitchExt},
     ext_traits::ValueExt,
     request::MultipartData,
@@ -14,8 +11,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_types::{
-        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsSyncData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -32,12 +29,9 @@ type Error = Report<errors::ConnectorError>;
 use common_enums::enums;
 use serde::{Deserialize, Serialize};
 
-pub fn build_form_from_struct<T: Serialize>(
-    data: T,
-) -> Result<MultipartData, errors::ParsingError> {
+pub fn build_form_from_struct<T: Serialize>(data: T) -> Result<MultipartData, errors::ParsingError> {
     let mut form = MultipartData::new();
-    let serialized =
-        serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
+    let serialized = serde_json::to_value(&data).map_err(|_| errors::ParsingError::EncodeError("json-value"))?;
     let serialized_object = serialized
         .as_object()
         .ok_or(errors::ParsingError::EncodeError("Expected object"))?;
@@ -78,8 +72,8 @@ pub trait PaymentsAuthorizeRequestData {
     fn get_router_return_url(&self) -> Result<String, Error>;
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static>
-    PaymentsAuthorizeRequestData for PaymentsAuthorizeData<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static> PaymentsAuthorizeRequestData
+    for PaymentsAuthorizeData<T>
 {
     fn get_router_return_url(&self) -> Result<String, Error> {
         self.router_return_url
@@ -88,38 +82,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static>
     }
 }
 
-pub fn missing_field_err(
-    message: &'static str,
-) -> Box<dyn Fn() -> Report<errors::ConnectorError> + 'static> {
-    Box::new(move || {
-        errors::ConnectorError::MissingRequiredField {
-            field_name: message,
-        }
-        .into()
-    })
+pub fn missing_field_err(message: &'static str) -> Box<dyn Fn() -> Report<errors::ConnectorError> + 'static> {
+    Box::new(move || errors::ConnectorError::MissingRequiredField { field_name: message }.into())
 }
 
 pub(crate) fn get_unimplemented_payment_method_error_message(connector: &str) -> String {
     format!("Selected payment method through {connector}")
 }
 
-pub(crate) fn to_connector_meta_from_secret<T>(
-    connector_meta: Option<Secret<Value>>,
-) -> Result<T, Error>
+pub(crate) fn to_connector_meta_from_secret<T>(connector_meta: Option<Secret<Value>>) -> Result<T, Error>
 where
     T: serde::de::DeserializeOwned,
 {
-    let connector_meta_secret =
-        connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
+    let connector_meta_secret = connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
 
     let json_value = connector_meta_secret.expose();
 
     let parsed: T = match json_value {
-        Value::String(json_str) => serde_json::from_str(&json_str)
-            .map_err(Report::from)
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+        Value::String(json_str) => serde_json::from_str(&json_str).map_err(Report::from).change_context(
+            errors::ConnectorError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
-            })?,
+            },
+        )?,
         _ => serde_json::from_value(json_value.clone())
             .map_err(Report::from)
             .change_context(errors::ConnectorError::InvalidConnectorConfig {
@@ -158,9 +142,7 @@ pub(crate) fn handle_json_response_deserialization_failure(
 
 pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
     match status {
-        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
-            true
-        }
+        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => true,
         common_enums::RefundStatus::ManualReview
         | common_enums::RefundStatus::Pending
         | common_enums::RefundStatus::Success => false,
@@ -176,22 +158,12 @@ pub(crate) fn safe_base64_decode(base64_data: String) -> Result<Vec<u8>, Error> 
         &BASE64_ENGINE_URL_SAFE_NO_PAD,
     ]
     .iter()
-    .find_map(|engine| {
-        engine
-            .decode(&base64_data)
-            .map_err(|e| error_stack.push(e))
-            .ok()
-    })
+    .find_map(|engine| engine.decode(&base64_data).map_err(|e| error_stack.push(e)).ok())
     .ok_or(errors::ConnectorError::ResponseDeserializationFailed)
-    .attach_printable(format!(
-        "Base64 decoding failed for all engines. Errors: {:?}",
-        error_stack
-    ))
+    .attach_printable(format!("Base64 decoding failed for all engines. Errors: {:?}", error_stack))
 }
 
-pub fn deserialize_zero_minor_amount_as_none<'de, D>(
-    deserializer: D,
-) -> Result<Option<MinorUnit>, D::Error>
+pub fn deserialize_zero_minor_amount_as_none<'de, D>(deserializer: D) -> Result<Option<MinorUnit>, D::Error>
 where
     D: serde::de::Deserializer<'de>,
 {
@@ -214,62 +186,46 @@ where
 }
 
 pub trait SplitPaymentData {
-    fn get_split_payment_data(&self)
-        -> Option<domain_types::connector_types::SplitPaymentsRequest>;
+    fn get_split_payment_data(&self) -> Option<domain_types::connector_types::SplitPaymentsRequest>;
 }
 
 impl SplitPaymentData for PaymentsCaptureData {
-    fn get_split_payment_data(
-        &self,
-    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+    fn get_split_payment_data(&self) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         None
     }
 }
 
 impl<T: PaymentMethodDataTypes> SplitPaymentData for PaymentsAuthorizeData<T> {
-    fn get_split_payment_data(
-        &self,
-    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+    fn get_split_payment_data(&self) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         self.split_payments.clone()
     }
 }
 
 impl<T: PaymentMethodDataTypes> SplitPaymentData for RepeatPaymentData<T> {
-    fn get_split_payment_data(
-        &self,
-    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+    fn get_split_payment_data(&self) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         self.split_payments.clone()
     }
 }
 
 impl SplitPaymentData for PaymentsSyncData {
-    fn get_split_payment_data(
-        &self,
-    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+    fn get_split_payment_data(&self) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         self.split_payments.clone()
     }
 }
 
 impl SplitPaymentData for PaymentVoidData {
-    fn get_split_payment_data(
-        &self,
-    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+    fn get_split_payment_data(&self) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         None
     }
 }
 
 impl<T: PaymentMethodDataTypes> SplitPaymentData for SetupMandateRequestData<T> {
-    fn get_split_payment_data(
-        &self,
-    ) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
+    fn get_split_payment_data(&self) -> Option<domain_types::connector_types::SplitPaymentsRequest> {
         None
     }
 }
 
-pub fn serialize_to_xml_string_with_root<T: Serialize>(
-    root_name: &str,
-    data: &T,
-) -> Result<String, Error> {
+pub fn serialize_to_xml_string_with_root<T: Serialize>(root_name: &str, data: &T) -> Result<String, Error> {
     let xml_content = quick_xml::se::to_string_with_root(root_name, data)
         .change_context(errors::ConnectorError::RequestEncodingFailed)
         .attach_printable("Failed to serialize XML with root")?;
@@ -284,10 +240,7 @@ pub fn get_error_code_error_message_based_on_priority(
 ) -> Option<ErrorCodeAndMessage> {
     let error_type_list = error_list
         .iter()
-        .map(|error| {
-            connector
-                .get_connector_error_type(error.error_code.clone(), error.error_message.clone())
-        })
+        .map(|error| connector.get_connector_error_type(error.error_code.clone(), error.error_message.clone()))
         .collect::<Vec<ConnectorErrorType>>();
     let mut error_zip_list = error_list
         .iter()
@@ -301,11 +254,7 @@ pub fn get_error_code_error_message_based_on_priority(
 }
 
 pub trait ConnectorErrorTypeMapping {
-    fn get_connector_error_type(
-        &self,
-        _error_code: String,
-        _error_message: String,
-    ) -> ConnectorErrorType {
+    fn get_connector_error_type(&self, _error_code: String, _error_message: String) -> ConnectorErrorType {
         ConnectorErrorType::UnknownError
     }
 }
@@ -358,14 +307,11 @@ where
                 CaptureSyncResponse::Success {
                     resource_id: ResponseId::ConnectorTransactionId(connector_capture_id),
                     status: capture_sync_response.get_capture_attempt_status(),
-                    connector_response_reference_id: capture_sync_response
-                        .get_connector_reference_id(),
+                    connector_response_reference_id: capture_sync_response.get_connector_reference_id(),
                     amount: capture_sync_response
                         .get_amount_captured()
                         .change_context(errors::ConnectorError::AmountConversionFailed)
-                        .attach_printable(
-                            "failed to convert back captured response amount to minor unit",
-                        )?,
+                        .attach_printable("failed to convert back captured response amount to minor unit")?,
                 },
             );
         }
@@ -375,8 +321,7 @@ where
 }
 
 pub(crate) fn is_manual_capture(capture_method: Option<enums::CaptureMethod>) -> bool {
-    capture_method == Some(enums::CaptureMethod::Manual)
-        || capture_method == Some(enums::CaptureMethod::ManualMultiple)
+    capture_method == Some(enums::CaptureMethod::Manual) || capture_method == Some(enums::CaptureMethod::ManualMultiple)
 }
 
 pub fn get_token_expiry_month_year_2_digit_with_delimiter(
@@ -406,20 +351,16 @@ pub struct MerchantDefinedInformation {
 /// - Metadata is optional and non-critical for payment processing
 /// - Input is already valid JSON (serde_json::Value), so parsing rarely fails
 /// - Better to continue payment without metadata than to fail the entire payment
-pub fn convert_metadata_to_merchant_defined_info(
-    metadata: Value,
-) -> Vec<MerchantDefinedInformation> {
+pub fn convert_metadata_to_merchant_defined_info(metadata: Value) -> Vec<MerchantDefinedInformation> {
     serde_json::from_str::<std::collections::BTreeMap<String, Value>>(&metadata.to_string())
         .unwrap_or_default()
         .into_iter()
         .enumerate()
         .filter_map(|(index, (key, value))| {
-            u8::try_from(index + 1)
-                .ok()
-                .map(|key_num| MerchantDefinedInformation {
-                    key: key_num,
-                    value: format!("{key}={value}"),
-                })
+            u8::try_from(index + 1).ok().map(|key_num| MerchantDefinedInformation {
+                key: key_num,
+                value: format!("{key}={value}"),
+            })
         })
         .collect()
 }
@@ -444,8 +385,7 @@ pub fn get_state_code_for_country(
         match country {
             Some(common_enums::CountryAlpha2::US) => {
                 // Try to convert US state name to abbreviation
-                common_enums::UsStatesAbbreviation::from_state_name(state_str)
-                    .map(|abbr| Secret::new(abbr.to_string()))
+                common_enums::UsStatesAbbreviation::from_state_name(state_str).map(|abbr| Secret::new(abbr.to_string()))
             }
             Some(common_enums::CountryAlpha2::CA) => {
                 // Try to convert Canada province name to abbreviation
@@ -471,10 +411,7 @@ pub fn get_state_code_for_country(
 ///
 /// # Returns
 /// Sorted vector of all values (excluding the signature)
-pub fn collect_and_sort_values_by_removing_signature(
-    value: &Value,
-    signature: &str,
-) -> Vec<String> {
+pub fn collect_and_sort_values_by_removing_signature(value: &Value, signature: &str) -> Vec<String> {
     let mut values = collect_values_by_removing_signature(value, signature);
     values.sort();
     values

@@ -7,19 +7,15 @@ use common_utils::{
     types::{MinorUnit, StringMajorUnit},
 };
 use domain_types::{
-    connector_flow::{
-        Authorize, Capture, PSync, PaymentMethodToken, RSync, RepeatPayment, SdkSessionToken, Void,
-    },
+    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, RepeatPayment, SdkSessionToken, Void},
     connector_types::{
-        self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
-        ApplepaySessionTokenResponse, GooglePaySessionResponse, GpayMerchantInfo,
-        GpaySessionTokenData, GpaySessionTokenResponse, GpayShippingAddressParameters,
-        GpayTransactionInfo, MandateReference, NextActionCall, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentRequestMetadata,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalSdkSessionTokenData,
-        PaypalSessionTokenResponse, PaypalTransactionInfo, RefundFlowData, RefundSyncData,
-        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SdkNextAction,
+        self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse, ApplepaySessionTokenResponse,
+        GooglePaySessionResponse, GpayMerchantInfo, GpaySessionTokenData, GpaySessionTokenResponse,
+        GpayShippingAddressParameters, GpayTransactionInfo, MandateReference, NextActionCall, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentRequestMetadata, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, PaypalSdkSessionTokenData, PaypalSessionTokenResponse, PaypalTransactionInfo, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SdkNextAction,
         SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
     },
     errors::ConnectorError,
@@ -277,12 +273,7 @@ pub struct TransactionTiming {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         BraintreeRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
         String,
@@ -293,12 +284,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         (item, connector_mandate_id, metadata): (
             BraintreeRouterData<
-                RouterDataV2<
-                    RepeatPayment,
-                    PaymentFlowData,
-                    RepeatPaymentData<T>,
-                    PaymentsResponseData,
-                >,
+                RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
                 T,
             >,
             String,
@@ -308,10 +294,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
         let (query, transaction_body) = (
             match item.router_data.request.is_auto_capture()? {
@@ -346,12 +329,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BraintreeRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for BraintreePaymentsRequest
@@ -359,50 +337,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: BraintreeRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata: BraintreeMeta = if let (
-            Some(merchant_account_id),
-            Some(merchant_config_currency),
-        ) = (
+        let metadata: BraintreeMeta = if let (Some(merchant_account_id), Some(merchant_config_currency)) = (
             item.router_data.request.merchant_account_id.clone(),
             item.router_data.request.merchant_config_currency,
         ) {
-            info!(
-                "BRAINTREE: Picking merchant_account_id and merchant_config_currency from payments request"
-              );
+            info!("BRAINTREE: Picking merchant_account_id and merchant_config_currency from payments request");
             BraintreeMeta {
                 merchant_account_id: merchant_account_id.into(),
                 merchant_config_currency,
             }
         } else {
-            utils::to_connector_meta_from_secret(
-                item.router_data
-                    .resource_common_data
-                    .connector_meta_data
-                    .clone(),
-            )
-            .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
+            utils::to_connector_meta_from_secret(item.router_data.resource_common_data.connector_meta_data.clone())
+                .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };
-        validate_currency(
-            item.router_data.request.currency,
-            Some(metadata.merchant_config_currency),
-        )?;
+        validate_currency(item.router_data.request.currency, Some(metadata.merchant_config_currency))?;
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(_) => {
                 if item.router_data.resource_common_data.is_three_ds()
                     && item.router_data.request.authentication_data.is_none()
                 {
-                    Ok(Self::CardThreeDs(BraintreeClientTokenRequest::try_from(
-                        metadata,
-                    )?))
+                    Ok(Self::CardThreeDs(BraintreeClientTokenRequest::try_from(metadata)?))
                 } else {
                     Ok(Self::Card(CardPaymentRequest::try_from((item, metadata))?))
                 }
@@ -411,10 +369,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let amount = item
                     .connector
                     .amount_converter
-                    .convert(
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )
+                    .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
                     .change_context(ConnectorError::AmountConversionFailed)?;
                 let order_id = item
                     .router_data
@@ -456,35 +411,33 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         let payment_method_id = &req_wallet.token;
                         let is_mandate = item.router_data.request.is_mandate_payment();
 
-                        let (query, customer_details, vault_payment_method_after_transacting) =
-                            if is_mandate {
-                                (
-                                    if is_auto_capture {
-                                        constants::CHARGE_AND_VAULT_APPLE_PAY_MUTATION.to_string()
-                                    } else {
-                                        constants::AUTHORIZE_AND_VAULT_APPLE_PAY_MUTATION
-                                            .to_string()
-                                    },
-                                    item.router_data
-                                        .resource_common_data
-                                        .get_billing_email()
-                                        .ok()
-                                        .map(|email| CustomerBody { email }),
-                                    Some(TransactionTiming {
-                                        when: VaultTiming::Always,
-                                    }),
-                                )
-                            } else {
-                                (
-                                    if is_auto_capture {
-                                        constants::CHARGE_APPLE_PAY_MUTATION.to_string()
-                                    } else {
-                                        constants::AUTHORIZE_APPLE_PAY_MUTATION.to_string()
-                                    },
-                                    None,
-                                    None,
-                                )
-                            };
+                        let (query, customer_details, vault_payment_method_after_transacting) = if is_mandate {
+                            (
+                                if is_auto_capture {
+                                    constants::CHARGE_AND_VAULT_APPLE_PAY_MUTATION.to_string()
+                                } else {
+                                    constants::AUTHORIZE_AND_VAULT_APPLE_PAY_MUTATION.to_string()
+                                },
+                                item.router_data
+                                    .resource_common_data
+                                    .get_billing_email()
+                                    .ok()
+                                    .map(|email| CustomerBody { email }),
+                                Some(TransactionTiming {
+                                    when: VaultTiming::Always,
+                                }),
+                            )
+                        } else {
+                            (
+                                if is_auto_capture {
+                                    constants::CHARGE_APPLE_PAY_MUTATION.to_string()
+                                } else {
+                                    constants::AUTHORIZE_APPLE_PAY_MUTATION.to_string()
+                                },
+                                None,
+                                None,
+                            )
+                        };
 
                         Ok(Self::Wallet(BraintreeWalletRequest {
                             query,
@@ -528,10 +481,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             },
                         }))
                     }
-                    _ => Err(ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("braintree"),
-                    )
-                    .into()),
+                    _ => Err(
+                        ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message(
+                            "braintree",
+                        ))
+                        .into(),
+                    ),
                 }
             }
             PaymentMethodData::MandatePayment
@@ -550,12 +505,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("braintree"),
-                )
-                .into())
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("braintree"),
+            )
+            .into()),
         }
     }
 }
@@ -610,13 +563,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreeAuthResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeAuthResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             BraintreeAuthResponse::ErrorResponse(error_response) => Ok(Self {
-                response: build_error_response(&error_response.errors, item.http_code)
-                    .map_err(|err| *err),
+                response: build_error_response(&error_response.errors, item.http_code).map_err(|err| *err),
                 ..item.router_data
             }),
             BraintreeAuthResponse::AuthResponse(auth_response) => {
@@ -667,9 +617,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            transaction_data.id.clone(),
-                        ),
+                        resource_id: ResponseId::ConnectorTransactionId(transaction_data.id.clone()),
                         redirection_data: None,
                         mandate_reference: None,
                         connector_metadata: None,
@@ -698,9 +646,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     resource_id: ResponseId::NoResponseId,
                     redirection_data: Some(Box::new(get_braintree_redirect_form(
                         *client_token_data,
-                        item.router_data
-                            .resource_common_data
-                            .get_payment_method_token()?,
+                        item.router_data.resource_common_data.get_payment_method_token()?,
                         item.router_data.request.payment_method_data.clone(),
                         item.router_data.request.get_complete_authorize_url()?,
                     )?)),
@@ -736,9 +682,7 @@ fn build_error_response<T>(
             .first()
             .and_then(|err_details| err_details.extensions.as_ref())
             .and_then(|extensions| extensions.legacy_code.clone()),
-        response
-            .first()
-            .map(|err_details| err_details.message.clone()),
+        response.first().map(|err_details| err_details.message.clone()),
         reason,
         http_code,
     )
@@ -837,13 +781,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreePaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreePaymentsResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             BraintreePaymentsResponse::ErrorResponse(error_response) => Ok(Self {
-                response: build_error_response(&error_response.errors.clone(), item.http_code)
-                    .map_err(|err| *err),
+                response: build_error_response(&error_response.errors.clone(), item.http_code).map_err(|err| *err),
                 ..item.router_data
             }),
             BraintreePaymentsResponse::PaymentsResponse(payment_response) => {
@@ -894,9 +835,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(
-                            transaction_data.id.clone(),
-                        ),
+                        resource_id: ResponseId::ConnectorTransactionId(transaction_data.id.clone()),
                         redirection_data: None,
                         mandate_reference: transaction_data.payment_method.as_ref().map(|pm| {
                             Box::new(MandateReference {
@@ -931,9 +870,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                     resource_id: ResponseId::NoResponseId,
                     redirection_data: Some(Box::new(get_braintree_redirect_form(
                         *client_token_data,
-                        item.router_data
-                            .resource_common_data
-                            .get_payment_method_token()?,
+                        item.router_data.resource_common_data.get_payment_method_token()?,
                         item.router_data.request.payment_method_data.clone(),
                         item.router_data.request.get_complete_authorize_url()?,
                     )?)),
@@ -1049,16 +986,12 @@ pub struct BraintreeRefundInput {
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BraintreeRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for BraintreeRefundRequest
+    TryFrom<BraintreeRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for BraintreeRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BraintreeRouterData<
-            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: BraintreeRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let metadata: BraintreeMeta = if let (Some(merchant_account_id), merchant_config_currency) = (
             item.router_data.request.merchant_account_id.clone(),
@@ -1069,24 +1002,16 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 merchant_config_currency,
             }
         } else {
-            utils::to_connector_meta_from_secret(
-                item.router_data.request.merchant_account_metadata.clone(),
-            )
-            .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
+            utils::to_connector_meta_from_secret(item.router_data.request.merchant_account_metadata.clone())
+                .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };
 
-        validate_currency(
-            item.router_data.request.currency,
-            Some(metadata.merchant_config_currency),
-        )?;
+        validate_currency(item.router_data.request.currency, Some(metadata.merchant_config_currency))?;
         let query = constants::REFUND_TRANSACTION_MUTATION.to_string();
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
         let variables = BraintreeRefundVariables {
             input: BraintreeRefundInput {
@@ -1150,9 +1075,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreeRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeRefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: match item.response {
                 BraintreeRefundResponse::ErrorResponse(error_response) => {
@@ -1223,47 +1146,28 @@ pub struct RefundSearchInput {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BraintreeRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for BraintreeRSyncRequest
+    TryFrom<BraintreeRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for BraintreeRSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BraintreeRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        item: BraintreeRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let metadata: BraintreeMeta =
-            if let (Some(merchant_account_id), Some(merchant_config_currency)) = (
-                extract_metadata_string_field(
-                    &item.router_data.request.refund_connector_metadata,
-                    "merchant_account_id",
-                )
+        let metadata: BraintreeMeta = if let (Some(merchant_account_id), Some(merchant_config_currency)) = (
+            extract_metadata_string_field(&item.router_data.request.refund_connector_metadata, "merchant_account_id")
                 .ok(),
-                extract_metadata_field(
-                    &item.router_data.request.refund_connector_metadata,
-                    "merchant_config_currency",
-                )
+            extract_metadata_field(&item.router_data.request.refund_connector_metadata, "merchant_config_currency")
                 .ok(),
-            ) {
-                BraintreeMeta {
-                    merchant_account_id,
-                    merchant_config_currency,
-                }
-            } else {
-                utils::to_connector_meta_from_secret(
-                    item.router_data.request.merchant_account_metadata.clone(),
-                )
+        ) {
+            BraintreeMeta {
+                merchant_account_id,
+                merchant_config_currency,
+            }
+        } else {
+            utils::to_connector_meta_from_secret(item.router_data.request.merchant_account_metadata.clone())
                 .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
-            };
-        let currency = extract_metadata_field(
-            &item.router_data.request.refund_connector_metadata,
-            "currency",
-        )?;
+        };
+        let currency = extract_metadata_field(&item.router_data.request.refund_connector_metadata, "currency")?;
         validate_currency(currency, Some(metadata.merchant_config_currency))?;
         let refund_id = item.router_data.request.connector_refund_id;
         Ok(Self {
@@ -1320,13 +1224,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BraintreeRSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeRSyncResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             BraintreeRSyncResponse::ErrorResponse(error_response) => Ok(Self {
-                response: build_error_response(&error_response.errors, item.http_code)
-                    .map_err(|err| *err),
+                response: build_error_response(&error_response.errors, item.http_code).map_err(|err| *err),
                 ..item.router_data
             }),
             BraintreeRSyncResponse::RSyncResponse(rsync_response) => {
@@ -1354,9 +1255,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreditCardData<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct CreditCardData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     number: RawCardNumber<T>,
     expiration_year: Secret<String>,
     expiration_month: Secret<String>,
@@ -1372,9 +1271,7 @@ pub struct ClientTokenInput {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct InputData<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct InputData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     credit_card: CreditCardData<T>,
 }
 
@@ -1445,12 +1342,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("braintree"),
-                )
-                .into())
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("braintree"),
+            )
+            .into()),
         }
     }
 }
@@ -1514,35 +1409,25 @@ pub enum BraintreeTokenResponse {
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<BraintreeTokenResponse, Self>>
-    for RouterDataV2<
-        F,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    >
+    for RouterDataV2<F, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreeTokenResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeTokenResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: match item.response {
                 BraintreeTokenResponse::ErrorResponse(error_response) => {
-                    build_error_response(error_response.errors.as_ref(), item.http_code)
-                        .map_err(|err| *err)
+                    build_error_response(error_response.errors.as_ref(), item.http_code).map_err(|err| *err)
                 }
 
-                BraintreeTokenResponse::TokenResponse(token_response) => {
-                    Ok(PaymentMethodTokenResponse {
-                        token: token_response
-                            .data
-                            .tokenize_credit_card
-                            .payment_method
-                            .id
-                            .expose()
-                            .clone(),
-                    })
-                }
+                BraintreeTokenResponse::TokenResponse(token_response) => Ok(PaymentMethodTokenResponse {
+                    token: token_response
+                        .data
+                        .tokenize_credit_card
+                        .payment_method
+                        .id
+                        .expose()
+                        .clone(),
+                }),
             },
             ..item.router_data
         })
@@ -1563,19 +1448,12 @@ pub struct CaptureInputData {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BraintreeRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for BraintreeCaptureRequest
+    TryFrom<BraintreeRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for BraintreeCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BraintreeRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        item: BraintreeRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let query = constants::CAPTURE_TRANSACTION_MUTATION.to_string();
         let amount = item
@@ -1627,9 +1505,7 @@ impl<F, T> TryFrom<ResponseRouterData<BraintreeCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreeCaptureResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeCaptureResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             BraintreeCaptureResponse::SuccessResponse(capture_data) => {
                 let transaction_data = capture_data.data.capture_transaction.transaction;
@@ -1662,8 +1538,7 @@ impl<F, T> TryFrom<ResponseRouterData<BraintreeCaptureResponse, Self>>
                 })
             }
             BraintreeCaptureResponse::ErrorResponse(error_data) => Ok(Self {
-                response: build_error_response(&error_data.errors, item.http_code)
-                    .map_err(|err| *err),
+                response: build_error_response(&error_data.errors, item.http_code).map_err(|err| *err),
                 ..item.router_data
             }),
         }
@@ -1723,19 +1598,12 @@ pub struct BraintreeCancelRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BraintreeRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for BraintreeCancelRequest
+    TryFrom<BraintreeRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for BraintreeCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BraintreeRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: BraintreeRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let query = constants::VOID_TRANSACTION_MUTATION.to_string();
         let variables = VariableCancelInput {
@@ -1778,12 +1646,7 @@ pub enum BraintreeSessionResponse {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BraintreeRouterData<
-            RouterDataV2<
-                SdkSessionToken,
-                PaymentFlowData,
-                PaymentsSdkSessionTokenData,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>,
             T,
         >,
     > for BraintreeClientTokenRequest
@@ -1791,17 +1654,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: BraintreeRouterData<
-            RouterDataV2<
-                SdkSessionToken,
-                PaymentFlowData,
-                PaymentsSdkSessionTokenData,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata =
-            BraintreeMeta::try_from(&item.router_data.resource_common_data.connector_meta_data)?;
+        let metadata = BraintreeMeta::try_from(&item.router_data.resource_common_data.connector_meta_data)?;
         Ok(Self {
             query: constants::CLIENT_TOKEN_MUTATION.to_owned(),
             variables: VariableClientTokenInput {
@@ -1819,69 +1676,60 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSdkSessionTokenData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreeSessionResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeSessionResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
 
         match response {
             BraintreeSessionResponse::SessionTokenResponse(res) => {
                 let session_token = match item.router_data.request.payment_method_type {
                     Some(common_enums::PaymentMethodType::ApplePay) => {
-                        let payment_request_data: PaymentRequestMetadata = match item
-                            .router_data
-                            .resource_common_data
-                            .connector_meta_data
-                            .clone()
-                        {
-                            Some(connector_meta) => {
-                                let meta_value: serde_json::Value = connector_meta.expose();
-                                meta_value
-                                    .get("apple_pay_combined")
-                                    .ok_or(ConnectorError::NoConnectorMetaData)
-                                    .attach_printable("Missing apple_pay_combined metadata")?
-                                    .get("manual")
-                                    .ok_or(ConnectorError::NoConnectorMetaData)
-                                    .attach_printable("Missing manual metadata")?
-                                    .get("payment_request_data")
-                                    .ok_or(ConnectorError::NoConnectorMetaData)
-                                    .attach_printable("Missing payment_request_data metadata")?
-                                    .clone()
-                                    .parse_value("PaymentRequestMetadata")
-                                    .change_context(ConnectorError::ParsingFailed)
-                                    .attach_printable(
-                                        "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
-                                    )?
-                            }
-                            None => Err(ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None")?,
-                        };
+                        let payment_request_data: PaymentRequestMetadata =
+                            match item.router_data.resource_common_data.connector_meta_data.clone() {
+                                Some(connector_meta) => {
+                                    let meta_value: serde_json::Value = connector_meta.expose();
+                                    meta_value
+                                        .get("apple_pay_combined")
+                                        .ok_or(ConnectorError::NoConnectorMetaData)
+                                        .attach_printable("Missing apple_pay_combined metadata")?
+                                        .get("manual")
+                                        .ok_or(ConnectorError::NoConnectorMetaData)
+                                        .attach_printable("Missing manual metadata")?
+                                        .get("payment_request_data")
+                                        .ok_or(ConnectorError::NoConnectorMetaData)
+                                        .attach_printable("Missing payment_request_data metadata")?
+                                        .clone()
+                                        .parse_value("PaymentRequestMetadata")
+                                        .change_context(ConnectorError::ParsingFailed)
+                                        .attach_printable(
+                                            "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
+                                        )?
+                                }
+                                None => Err(ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("connector_meta_data is None")?,
+                            };
 
-                        let session_token_data = Some(ApplePaySessionResponse::ThirdPartySdk(
-                            ThirdPartySdkSessionResponse {
+                        let session_token_data =
+                            Some(ApplePaySessionResponse::ThirdPartySdk(ThirdPartySdkSessionResponse {
                                 secrets: SecretInfoToInitiateSdk {
                                     display: res.data.create_client_token.client_token.clone(),
                                     payment: None,
                                 },
-                            },
-                        ));
+                            }));
                         SessionToken::ApplePay(Box::new(ApplepaySessionTokenResponse {
                             session_token_data,
                             payment_request_data: Some(ApplePayPaymentRequest {
-                                country_code: item.router_data.request.country.ok_or(
-                                    ConnectorError::MissingRequiredField {
-                                        field_name: "country",
-                                    },
-                                )?,
+                                country_code: item
+                                    .router_data
+                                    .request
+                                    .country
+                                    .ok_or(ConnectorError::MissingRequiredField { field_name: "country" })?,
                                 currency_code: item.router_data.request.currency,
                                 total: AmountInfo {
                                     label: payment_request_data.label,
                                     total_type: None,
                                     amount: item.router_data.request.amount,
                                 },
-                                merchant_capabilities: Some(
-                                    payment_request_data.merchant_capabilities,
-                                ),
+                                merchant_capabilities: Some(payment_request_data.merchant_capabilities),
                                 supported_networks: Some(payment_request_data.supported_networks),
                                 merchant_identifier: None,
                                 required_billing_contact_fields: None,
@@ -1899,23 +1747,19 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         }))
                     }
                     Some(common_enums::PaymentMethodType::GooglePay) => {
-                        let gpay_data: GpaySessionTokenData = match item
-                            .router_data
-                            .resource_common_data
-                            .connector_meta_data
-                            .clone()
-                        {
-                            Some(connector_meta) => connector_meta
-                                .expose()
-                                .parse_value("GpaySessionTokenData")
-                                .change_context(ConnectorError::ParsingFailed)
-                                .attach_printable("Failed to parse gpay metadata")?,
-                            None => Err(ConnectorError::NoConnectorMetaData)
-                                .attach_printable("connector_meta_data is None")?,
-                        };
+                        let gpay_data: GpaySessionTokenData =
+                            match item.router_data.resource_common_data.connector_meta_data.clone() {
+                                Some(connector_meta) => connector_meta
+                                    .expose()
+                                    .parse_value("GpaySessionTokenData")
+                                    .change_context(ConnectorError::ParsingFailed)
+                                    .attach_printable("Failed to parse gpay metadata")?,
+                                None => Err(ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("connector_meta_data is None")?,
+                            };
 
-                        SessionToken::GooglePay(Box::new(
-                            GpaySessionTokenResponse::GooglePaySession(GooglePaySessionResponse {
+                        SessionToken::GooglePay(Box::new(GpaySessionTokenResponse::GooglePaySession(
+                            GooglePaySessionResponse {
                                 merchant_info: GpayMerchantInfo {
                                     merchant_name: gpay_data.data.merchant_info.merchant_name,
                                     merchant_id: gpay_data.data.merchant_info.merchant_id,
@@ -1927,11 +1771,11 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 },
                                 allowed_payment_methods: gpay_data.data.allowed_payment_methods,
                                 transaction_info: GpayTransactionInfo {
-                                    country_code: item.router_data.request.country.ok_or(
-                                        ConnectorError::MissingRequiredField {
-                                            field_name: "country",
-                                        },
-                                    )?,
+                                    country_code: item
+                                        .router_data
+                                        .request
+                                        .country
+                                        .ok_or(ConnectorError::MissingRequiredField { field_name: "country" })?,
                                     currency_code: item.router_data.request.currency,
                                     total_price_status: GooglePayPriceStatus::Final.to_string(),
                                     total_price: item.router_data.request.amount,
@@ -1945,8 +1789,8 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                 sdk_next_action: SdkNextAction {
                                     next_action: NextActionCall::Confirm,
                                 },
-                            }),
-                        ))
+                            },
+                        )))
                     }
                     Some(common_enums::PaymentMethodType::Paypal) => {
                         let paypal_sdk_data = item
@@ -1964,9 +1808,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             sdk_next_action: SdkNextAction {
                                 next_action: NextActionCall::Confirm,
                             },
-                            client_token: Some(
-                                res.data.create_client_token.client_token.clone().expose(),
-                            ),
+                            client_token: Some(res.data.create_client_token.client_token.clone().expose()),
                             transaction_info: Some(PaypalTransactionInfo {
                                 flow: PaypalFlow::Checkout.into(),
                                 currency_code: item.router_data.request.currency,
@@ -1975,12 +1817,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         }))
                     }
                     _ => {
-                        return Err(ConnectorError::NotImplemented(
-                            format!(
-                                "SDK session token generation is not supported for payment method: {:?}",
-                                item.router_data.request.payment_method_type
-                            )
-                        )
+                        return Err(ConnectorError::NotImplemented(format!(
+                            "SDK session token generation is not supported for payment method: {:?}",
+                            item.router_data.request.payment_method_type
+                        ))
                         .into());
                     }
                 };
@@ -1994,8 +1834,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                 })
             }
             BraintreeSessionResponse::ErrorResponse(error_response) => {
-                let err = build_error_response(error_response.errors.as_ref(), item.http_code)
-                    .map_err(|err| *err);
+                let err = build_error_response(error_response.errors.as_ref(), item.http_code).map_err(|err| *err);
                 Ok(Self {
                     response: err,
                     ..item.router_data
@@ -2039,24 +1878,17 @@ impl<F> TryFrom<ResponseRouterData<BraintreeCancelResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BraintreeCancelResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeCancelResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             BraintreeCancelResponse::ErrorResponse(error_response) => Ok(Self {
-                response: build_error_response(&error_response.errors, item.http_code)
-                    .map_err(|err| *err),
+                response: build_error_response(&error_response.errors, item.http_code).map_err(|err| *err),
                 ..item.router_data
             }),
             BraintreeCancelResponse::CancelResponse(void_response) => {
                 let void_data = void_response.data.reverse_transaction.reversal;
                 let status = enums::AttemptStatus::from(void_data.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(create_failure_error_response(
-                        void_data.status,
-                        None,
-                        item.http_code,
-                    ))
+                    Err(create_failure_error_response(void_data.status, None, item.http_code))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::NoResponseId,
@@ -2083,19 +1915,12 @@ impl<F> TryFrom<ResponseRouterData<BraintreeCancelResponse, Self>>
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BraintreeRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for BraintreePSyncRequest
+    TryFrom<BraintreeRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for BraintreePSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: BraintreeRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: BraintreeRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let transaction_id = item
             .router_data
@@ -2149,13 +1974,10 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreePSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreePSyncResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             BraintreePSyncResponse::ErrorResponse(error_response) => Ok(Self {
-                response: build_error_response(&error_response.errors, item.http_code)
-                    .map_err(|err| *err),
+                response: build_error_response(&error_response.errors, item.http_code).map_err(|err| *err),
                 ..item.router_data
             }),
             BraintreePSyncResponse::SuccessResponse(psync_response) => {
@@ -2257,12 +2079,7 @@ impl TryFrom<BraintreeMeta> for BraintreeClientTokenRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
         BraintreeRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
         BraintreeMeta,
@@ -2272,12 +2089,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         (item, metadata): (
             BraintreeRouterData<
-                RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
+                RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
                 T,
             >,
             BraintreeMeta,
@@ -2302,17 +2114,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
         );
-        let order_id =
-            reference_id.ok_or(ConnectorError::MissingConnectorRelatedTransactionID {
-                id: "order_id".to_string(),
-            })?;
+        let order_id = reference_id.ok_or(ConnectorError::MissingConnectorRelatedTransactionID {
+            id: "order_id".to_string(),
+        })?;
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
         let (query, transaction_body) = if item.router_data.request.is_mandate_payment() {
             (
@@ -2361,11 +2169,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             query,
             variables: VariablePaymentInput {
                 input: PaymentInput {
-                    payment_method_id: match item
-                        .router_data
-                        .resource_common_data
-                        .get_payment_method_token()?
-                    {
+                    payment_method_id: match item.router_data.resource_common_data.get_payment_method_token()? {
                         PaymentMethodTokenFlow::Token(token) => token,
                     },
                     transaction: transaction_body,
@@ -2376,20 +2180,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-fn get_braintree_redirect_form<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
->(
+fn get_braintree_redirect_form<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     client_token_data: ClientTokenResponse,
     payment_method_token: PaymentMethodTokenFlow,
     card_details: PaymentMethodData<T>,
     complete_authorize_url: String,
 ) -> Result<RedirectForm, error_stack::Report<ConnectorError>> {
     Ok(RedirectForm::Braintree {
-        client_token: client_token_data
-            .data
-            .create_client_token
-            .client_token
-            .expose(),
+        client_token: client_token_data.data.create_client_token.client_token.expose(),
         card_token: match payment_method_token {
             PaymentMethodTokenFlow::Token(token) => token.expose(),
         },
@@ -2412,9 +2210,9 @@ fn get_braintree_redirect_form<
             | PaymentMethodData::GiftCard(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(
-                ConnectorError::NotImplemented("given payment method".to_owned()),
-            )?,
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented("given payment method".to_owned()))?
+            }
         },
         acs_url: complete_authorize_url,
     })
@@ -2424,13 +2222,10 @@ fn validate_currency(
     request_currency: enums::Currency,
     merchant_config_currency: Option<enums::Currency>,
 ) -> Result<(), ConnectorError> {
-    let merchant_config_currency =
-        merchant_config_currency.ok_or(ConnectorError::NoConnectorMetaData)?;
+    let merchant_config_currency = merchant_config_currency.ok_or(ConnectorError::NoConnectorMetaData)?;
     if request_currency != merchant_config_currency {
         Err(ConnectorError::NotSupported {
-            message: format!(
-                "currency {request_currency} is not supported for this merchant account",
-            ),
+            message: format!("currency {request_currency} is not supported for this merchant account",),
             connector: "Braintree",
         })?
     }
@@ -2495,12 +2290,7 @@ pub enum BraintreeRepeatPaymentRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         BraintreeRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for BraintreeRepeatPaymentRequest
@@ -2508,50 +2298,34 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: BraintreeRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata: BraintreeMeta = if let (
-            Some(merchant_account_id),
-            Some(merchant_config_currency),
-        ) = (
+        let metadata: BraintreeMeta = if let (Some(merchant_account_id), Some(merchant_config_currency)) = (
             item.router_data.request.merchant_account_id.clone(),
             item.router_data.request.merchant_configured_currency,
         ) {
-            info!(
-                "BRAINTREE: Picking merchant_account_id and merchant_config_currency from repeatpayments request"
-            );
+            info!("BRAINTREE: Picking merchant_account_id and merchant_config_currency from repeatpayments request");
 
             BraintreeMeta {
                 merchant_account_id,
                 merchant_config_currency,
             }
         } else {
-            utils::to_connector_meta_from_secret(
-                item.router_data
-                    .resource_common_data
-                    .connector_meta_data
-                    .clone(),
-            )
-            .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
+            utils::to_connector_meta_from_secret(item.router_data.resource_common_data.connector_meta_data.clone())
+                .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };
-        validate_currency(
-            item.router_data.request.currency,
-            Some(metadata.merchant_config_currency),
-        )?;
+        validate_currency(item.router_data.request.currency, Some(metadata.merchant_config_currency))?;
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::MandatePayment => {
-                let connector_mandate_id = item.router_data.request.connector_mandate_id().ok_or(
-                    ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    },
-                )?;
+                let connector_mandate_id =
+                    item.router_data
+                        .request
+                        .connector_mandate_id()
+                        .ok_or(ConnectorError::MissingRequiredField {
+                            field_name: "connector_mandate_id",
+                        })?;
                 Ok(Self::Mandate(MandatePaymentRequest::try_from((
                     item,
                     connector_mandate_id,
@@ -2575,12 +2349,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("braintree"),
-                )
-                .into())
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("braintree"),
+            )
+            .into()),
         }
     }
 }
@@ -2625,10 +2397,7 @@ fn convert_external_three_ds_data(
             .message_version
             .as_ref()
             .map(|semantic_version| semantic_version.to_string()),
-        directory_server_response: auth_data
-            .trans_status
-            .as_ref()
-            .map(map_transaction_status_to_code),
+        directory_server_response: auth_data.trans_status.as_ref().map(map_transaction_status_to_code),
         directory_server_transaction_id: auth_data.ds_trans_id.clone(),
     }
 }
@@ -2641,9 +2410,7 @@ fn map_transaction_status_to_code(status: &common_enums::TransactionStatus) -> S
         common_enums::TransactionStatus::NotVerified => "A".to_string(),
         common_enums::TransactionStatus::Rejected => "R".to_string(),
         common_enums::TransactionStatus::ChallengeRequired => "C".to_string(),
-        common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => {
-            "D".to_string()
-        }
+        common_enums::TransactionStatus::ChallengeRequiredDecoupledAuthentication => "D".to_string(),
         common_enums::TransactionStatus::InformationOnly => "I".to_string(),
     }
 }
@@ -2660,13 +2427,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<BraintreeRepeatPaymentResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BraintreeRepeatPaymentResponse, Self>) -> Result<Self, Self::Error> {
         match item.response {
             BraintreeRepeatPaymentResponse::ErrorResponse(error_response) => Ok(Self {
-                response: build_error_response(&error_response.errors.clone(), item.http_code)
-                    .map_err(|err| *err),
+                response: build_error_response(&error_response.errors.clone(), item.http_code).map_err(|err| *err),
                 ..item.router_data
             }),
             BraintreeRepeatPaymentResponse::PaymentsResponse(payment_response) => {

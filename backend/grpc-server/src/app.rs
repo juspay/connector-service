@@ -4,9 +4,9 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        composite_payment_service_server, dispute_service_server, payment_service_server,
-        refund_service_server,
+        composite_payment_service_server, dispute_service_server, payment_service_server, refund_service_server,
     },
+    payouts::payout_service_server,
 };
 use std::{future::Future, net, sync::Arc};
 use tokio::{
@@ -18,10 +18,7 @@ use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
 use ucs_env::{configs, error::ConfigurationError, logger};
 
-use crate::{
-    config_overrides::RequestExtensionsLayer, http::config_middleware::HttpRequestExtensionsLayer,
-    utils,
-};
+use crate::{config_overrides::RequestExtensionsLayer, http::config_middleware::HttpRequestExtensionsLayer, utils};
 
 /// # Panics
 ///
@@ -35,14 +32,10 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 
     #[allow(clippy::expect_used)]
     tokio::spawn(async move {
-        let mut sig_int =
-            signal(SignalKind::interrupt()).expect("Failed to initialize SIGINT signal handler");
-        let mut sig_term =
-            signal(SignalKind::terminate()).expect("Failed to initialize SIGTERM signal handler");
-        let mut sig_quit =
-            signal(SignalKind::quit()).expect("Failed to initialize QUIT signal handler");
-        let mut sig_hup =
-            signal(SignalKind::hangup()).expect("Failed to initialize SIGHUP signal handler");
+        let mut sig_int = signal(SignalKind::interrupt()).expect("Failed to initialize SIGINT signal handler");
+        let mut sig_term = signal(SignalKind::terminate()).expect("Failed to initialize SIGTERM signal handler");
+        let mut sig_quit = signal(SignalKind::quit()).expect("Failed to initialize QUIT signal handler");
+        let mut sig_hup = signal(SignalKind::hangup()).expect("Failed to initialize SIGHUP signal handler");
 
         tokio::select! {
             _ = sig_int.recv() => {
@@ -77,12 +70,7 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 
     match server_config.type_ {
         configs::ServiceType::Grpc => {
-            Box::pin(
-                service
-                    .await
-                    .grpc_server(base_config, socket_addr, shutdown_signal),
-            )
-            .await?
+            Box::pin(service.await.grpc_server(base_config, socket_addr, shutdown_signal)).await?
         }
         configs::ServiceType::Http => {
             service
@@ -111,6 +99,7 @@ pub struct Service {
     pub merchant_authentication_service: crate::server::payments::MerchantAuthentication,
     pub customer_service: crate::server::payments::Customer,
     pub payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
+    pub payouts_service: crate::server::payouts::Payouts,
 }
 
 impl Service {
@@ -152,8 +141,8 @@ impl Service {
             payment_method_service: crate::server::payments::PaymentMethod,
             merchant_authentication_service,
             customer_service,
-            payment_method_authentication_service:
-                crate::server::payments::PaymentMethodAuthentication,
+            payment_method_authentication_service: crate::server::payments::PaymentMethodAuthentication,
+            payouts_service: crate::server::payouts::Payouts,
         }
     }
 
@@ -182,9 +171,8 @@ impl Service {
             MakeRequestUuid,
         );
 
-        let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
-            http::HeaderName::from_static(consts::X_REQUEST_ID),
-        );
+        let propagate_request_id_layer =
+            tower_http::request_id::PropagateRequestIdLayer::new(http::HeaderName::from_static(consts::X_REQUEST_ID));
 
         let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
         let app_state = crate::http::AppState::new(
@@ -225,9 +213,7 @@ impl Service {
             .build_v1()?;
 
         let logging_layer = tower_trace::TraceLayer::new_for_http()
-            .make_span_with(|request: &http::request::Request<_>| {
-                utils::record_fields_from_header(request)
-            })
+            .make_span_with(|request: &http::request::Request<_>| utils::record_fields_from_header(request))
             .on_request(tower_trace::DefaultOnRequest::new().level(tracing::Level::INFO))
             .on_response(
                 tower_trace::DefaultOnResponse::new()
@@ -246,9 +232,8 @@ impl Service {
             http::HeaderName::from_static(consts::X_REQUEST_ID),
             MakeRequestUuid,
         );
-        let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
-            http::HeaderName::from_static(consts::X_REQUEST_ID),
-        );
+        let propagate_request_id_layer =
+            tower_http::request_id::PropagateRequestIdLayer::new(http::HeaderName::from_static(consts::X_REQUEST_ID));
         let config_override_layer = RequestExtensionsLayer::new(base_config.clone());
 
         Server::builder()
@@ -259,20 +244,13 @@ impl Service {
             .layer(metrics_layer)
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
-            .add_service(payment_service_server::PaymentServiceServer::new(
-                self.payments_service.clone(),
+            .add_service(payment_service_server::PaymentServiceServer::new(self.payments_service.clone()))
+            .add_service(composite_payment_service_server::CompositePaymentServiceServer::new(
+                self.composite_payments_service,
             ))
-            .add_service(
-                composite_payment_service_server::CompositePaymentServiceServer::new(
-                    self.composite_payments_service,
-                ),
-            )
-            .add_service(refund_service_server::RefundServiceServer::new(
-                self.refunds_service,
-            ))
-            .add_service(dispute_service_server::DisputeServiceServer::new(
-                self.disputes_service,
-            ))
+            .add_service(refund_service_server::RefundServiceServer::new(self.refunds_service))
+            .add_service(dispute_service_server::DisputeServiceServer::new(self.disputes_service))
+            .add_service(payout_service_server::PayoutServiceServer::new(self.payouts_service))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;
 
@@ -292,10 +270,7 @@ pub async fn metrics_server_builder(config: configs::Config) -> Result<(), Confi
                 Err(error) => {
                     tracing::error!(?error, "Error fetching metrics");
 
-                    Err((
-                        http::StatusCode::INTERNAL_SERVER_ERROR,
-                        "Error fetching metrics".to_string(),
-                    ))
+                    Err((http::StatusCode::INTERNAL_SERVER_ERROR, "Error fetching metrics".to_string()))
                 }
             }
         }),

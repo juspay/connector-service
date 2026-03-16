@@ -9,9 +9,9 @@ use std::fmt::Debug;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -375,9 +375,7 @@ impl TryFrom<&ConnectorSpecificAuth> for ZiftAuthType {
 impl TryFrom<&domain_types::router_request_types::AuthenticationData> for AuthenticationStatus {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        auth_data: &domain_types::router_request_types::AuthenticationData,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(auth_data: &domain_types::router_request_types::AuthenticationData) -> Result<Self, Self::Error> {
         // Map authentication status based on trans_status field
         let authentication_status = match auth_data.trans_status {
             Some(common_enums::TransactionStatus::Success) => Self::Success,
@@ -395,27 +393,13 @@ impl TryFrom<&domain_types::router_request_types::AuthenticationData> for Authen
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ZiftRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for ZiftPaymentsRequest<T>
+    TryFrom<ZiftRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    for ZiftPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ZiftRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -445,14 +429,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     }
                     .into()),
                     (true, true) => {
-                        let auth_data = item
-                            .router_data
-                            .request
-                            .authentication_data
-                            .as_ref()
-                            .ok_or(ConnectorError::MissingRequiredField {
+                        let auth_data = item.router_data.request.authentication_data.as_ref().ok_or(
+                            ConnectorError::MissingRequiredField {
                                 field_name: "authentication_data",
-                            })?;
+                            },
+                        )?;
 
                         let authentication_status = AuthenticationStatus::try_from(auth_data)?;
 
@@ -461,23 +442,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             auth,
                             account_number: card.card_number.clone(),
                             account_accessory: card
-                                .get_card_expiry_month_year_2_digit_with_delimiter(
-                                    "".to_string(),
-                                )?,
+                                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
                             transaction_industry_type: TransactionIndustryType::Ecommerce,
                             transaction_category_code: TransactionCategoryCode::Ecommerce,
-                            holder_name: item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_full_name()?,
+                            holder_name: item.router_data.resource_common_data.get_billing_full_name()?,
                             amount,
                             account_type: AccountType::PaymentCard,
                             holder_type: HolderType::Personal,
                             authentication_status,
                             authentication_code: auth_data.ds_trans_id.clone().map(Secret::new),
-                            authentication_verification_value: auth_data.cavv.clone().ok_or(
-                                ConnectorError::MissingRequiredField { field_name: "cavv" },
-                            )?,
+                            authentication_verification_value: auth_data
+                                .cavv
+                                .clone()
+                                .ok_or(ConnectorError::MissingRequiredField { field_name: "cavv" })?,
                             authentication_version: auth_data
                                 .message_version
                                 .as_ref()
@@ -496,15 +473,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                             auth,
                             account_number: card.card_number.clone(),
                             account_accessory: card
-                                .get_card_expiry_month_year_2_digit_with_delimiter(
-                                    "".to_string(),
-                                )?,
+                                .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
                             transaction_industry_type: TransactionIndustryType::Ecommerce,
                             transaction_category_code: TransactionCategoryCode::Ecommerce,
-                            holder_name: item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_full_name()?,
+                            holder_name: item.router_data.resource_common_data.get_billing_full_name()?,
                             amount,
                             account_type: AccountType::PaymentCard,
                             holder_type: HolderType::Personal,
@@ -530,9 +502,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<ZiftAuthPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<ZiftAuthPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let is_approved = item.response.response_code.is_approved();
         let is_auto_capture = item.router_data.request.is_auto_capture()?;
 
@@ -563,11 +533,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                 ..item.router_data
             }),
             _ => {
-                let mandate_reference = if item
-                    .router_data
-                    .request
-                    .is_customer_initiated_mandate_payment()
-                {
+                let mandate_reference = if item.router_data.request.is_customer_initiated_mandate_payment() {
                     item.response.token.clone().map(|token| {
                         Box::new(MandateReference {
                             connector_mandate_id: Some(token),
@@ -579,11 +545,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
                     None
                 };
 
-                let transaction_id = item.response.transaction_id.ok_or_else(|| {
-                    ConnectorError::MissingRequiredField {
-                        field_name: "transaction_id",
-                    }
-                })?;
+                let transaction_id =
+                    item.response
+                        .transaction_id
+                        .ok_or_else(|| ConnectorError::MissingRequiredField {
+                            field_name: "transaction_id",
+                        })?;
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -608,27 +575,13 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ZiftRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for ZiftRepeatPaymentsRequest<T>
+    TryFrom<ZiftRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>, T>>
+    for ZiftRepeatPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ZiftRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -694,9 +647,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<ZiftAuthPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<ZiftAuthPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let is_approved = item.response.response_code.is_approved();
         let is_auto_capture = item.router_data.request.is_auto_capture()?;
 
@@ -727,11 +678,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
             }),
 
             _ => {
-                let transaction_id = item.response.transaction_id.ok_or_else(|| {
-                    ConnectorError::MissingRequiredField {
-                        field_name: "transaction_id",
-                    }
-                })?;
+                let transaction_id =
+                    item.response
+                        .transaction_id
+                        .ok_or_else(|| ConnectorError::MissingRequiredField {
+                            field_name: "transaction_id",
+                        })?;
 
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -764,18 +716,14 @@ impl TryFrom<ResponseRouterData<ZiftSyncResponse, Self>>
             // Sale transactions
             PaymentRequestType::Sale => match item.response.transaction_status {
                 TransactionStatus::Processed => common_enums::AttemptStatus::Charged,
-                TransactionStatus::Pending | TransactionStatus::InRebill => {
-                    common_enums::AttemptStatus::Pending
-                }
+                TransactionStatus::Pending | TransactionStatus::InRebill => common_enums::AttemptStatus::Pending,
                 TransactionStatus::Cancelled => common_enums::AttemptStatus::Failure,
             },
 
             // Auth transactions (sale-auth)
             PaymentRequestType::Auth => match item.response.transaction_status {
                 TransactionStatus::Processed => common_enums::AttemptStatus::Authorized,
-                TransactionStatus::Pending | TransactionStatus::InRebill => {
-                    common_enums::AttemptStatus::Pending
-                }
+                TransactionStatus::Pending | TransactionStatus::InRebill => common_enums::AttemptStatus::Pending,
                 TransactionStatus::Cancelled => common_enums::AttemptStatus::Failure,
             },
 
@@ -833,19 +781,12 @@ impl TryFrom<ResponseRouterData<ZiftSyncResponse, Self>>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ZiftRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for ZiftSyncRequest
+    TryFrom<ZiftRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for ZiftSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ZiftRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: ZiftRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
         let transaction_id = item
@@ -867,19 +808,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ZiftRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for ZiftCaptureRequest
+    TryFrom<ZiftRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for ZiftCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ZiftRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        item: ZiftRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
         let amount = item
@@ -958,12 +892,7 @@ impl<F> TryFrom<ResponseRouterData<ZiftCaptureResponse, Self>>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         ZiftRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
             T,
         >,
     > for ZiftSetupMandateRequest<T>
@@ -971,12 +900,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ZiftRouterData<
-            RouterDataV2<
-                SetupMandate,
-                PaymentFlowData,
-                SetupMandateRequestData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -997,8 +921,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     SetupMandatePaymentMethod::Card(CardVerificationDetails {
                         account_type: AccountType::PaymentCard,
                         account_number: card.card_number.clone(),
-                        account_accessory: card
-                            .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
+                        account_accessory: card.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
                         csc: card.card_cvc.clone(),
                     }),
                 ),
@@ -1013,10 +936,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             auth,
             transaction_industry_type,
             transaction_category_code,
-            holder_name: item
-                .router_data
-                .resource_common_data
-                .get_billing_full_name()?,
+            holder_name: item.router_data.resource_common_data.get_billing_full_name()?,
             holder_type: HolderType::Personal,
             transaction_code: item
                 .router_data
@@ -1030,12 +950,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<ZiftAuthPaymentsResponse, Self>>
-    for RouterDataV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    >
+    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -1049,11 +964,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             common_enums::AttemptStatus::Failure
         };
         if status != common_enums::AttemptStatus::Failure {
-            let transaction_id = item.response.transaction_id.ok_or_else(|| {
-                ConnectorError::MissingRequiredField {
+            let transaction_id = item
+                .response
+                .transaction_id
+                .ok_or_else(|| ConnectorError::MissingRequiredField {
                     field_name: "transaction_id",
-                }
-            })?;
+                })?;
 
             Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1102,19 +1018,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ZiftRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for ZiftVoidRequest
+    TryFrom<ZiftRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for ZiftVoidRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ZiftRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: ZiftRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
         Ok(Self {
@@ -1180,16 +1089,12 @@ impl<F> TryFrom<ResponseRouterData<ZiftVoidResponse, Self>>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ZiftRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for ZiftRefundRequest
+    TryFrom<ZiftRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for ZiftRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ZiftRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: ZiftRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
         let amount = item

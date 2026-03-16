@@ -154,17 +154,7 @@ impl AmountConvertor for MinorUnitForConnector {
 
 /// This Unit struct represents MinorUnit in which core amount works
 #[derive(
-    Default,
-    Debug,
-    serde::Deserialize,
-    serde::Serialize,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-    ToSchema,
-    PartialOrd,
+    Default, Debug, serde::Deserialize, serde::Serialize, Clone, Copy, PartialEq, Eq, Hash, ToSchema, PartialOrd,
 )]
 
 pub struct MinorUnit(pub i64);
@@ -201,9 +191,7 @@ impl MinorUnit {
         let amount_f64 = self.to_major_unit_as_f64(currency)?;
         let decimal_places = currency
             .number_of_digits_after_decimal_point()
-            .change_context(ParsingError::StructParseFailure(
-                "currency decimal configuration",
-            ))?;
+            .change_context(ParsingError::StructParseFailure("currency decimal configuration"))?;
 
         let amount_string = if decimal_places == 0 {
             amount_f64.0.to_string()
@@ -223,14 +211,11 @@ impl MinorUnit {
         self,
         currency: enums::Currency,
     ) -> Result<FloatMajorUnit, error_stack::Report<ParsingError>> {
-        let amount_decimal =
-            Decimal::from_i64(self.0).ok_or(ParsingError::I64ToDecimalConversionFailure)?;
+        let amount_decimal = Decimal::from_i64(self.0).ok_or(ParsingError::I64ToDecimalConversionFailure)?;
 
         let decimal_places = currency
             .number_of_digits_after_decimal_point()
-            .change_context(ParsingError::StructParseFailure(
-                "currency decimal configuration",
-            ))?;
+            .change_context(ParsingError::StructParseFailure("currency decimal configuration"))?;
 
         let amount = if decimal_places == 0 {
             amount_decimal
@@ -242,9 +227,7 @@ impl MinorUnit {
             amount_decimal / Decimal::from(100) // 2 decimal places
         };
 
-        let amount_f64 = amount
-            .to_f64()
-            .ok_or(ParsingError::FloatToDecimalConversionFailure)?;
+        let amount_f64 = amount.to_f64().ok_or(ParsingError::FloatToDecimalConversionFailure)?;
         Ok(FloatMajorUnit::new(amount_f64))
     }
 
@@ -289,18 +272,7 @@ impl Sum for MinorUnit {
 }
 
 /// Connector specific types to send
-#[derive(
-    Default,
-    Debug,
-    serde::Deserialize,
-    serde::Serialize,
-    Clone,
-    PartialEq,
-    Eq,
-    Hash,
-    ToSchema,
-    PartialOrd,
-)]
+#[derive(Default, Debug, serde::Deserialize, serde::Serialize, Clone, PartialEq, Eq, Hash, ToSchema, PartialOrd)]
 
 pub struct StringMinorUnit(String);
 
@@ -313,11 +285,8 @@ impl StringMinorUnit {
     /// converts to minor unit i64 from minor unit string value
     fn to_minor_unit_as_i64(&self) -> Result<MinorUnit, error_stack::Report<ParsingError>> {
         let amount_string = &self.0;
-        let amount_decimal = Decimal::from_str(amount_string).map_err(|e| {
-            ParsingError::StringToDecimalConversionFailure {
-                error: e.to_string(),
-            }
-        })?;
+        let amount_decimal = Decimal::from_str(amount_string)
+            .map_err(|e| ParsingError::StringToDecimalConversionFailure { error: e.to_string() })?;
         let amount_i64 = amount_decimal
             .to_i64()
             .ok_or(ParsingError::DecimalToI64ConversionFailure)?;
@@ -347,12 +316,8 @@ impl FloatMajorUnit {
     }
 
     /// converts to minor unit as i64 from FloatMajorUnit
-    fn to_minor_unit_as_i64(
-        self,
-        currency: enums::Currency,
-    ) -> Result<MinorUnit, error_stack::Report<ParsingError>> {
-        let amount_decimal =
-            Decimal::from_f64(self.0).ok_or(ParsingError::FloatToDecimalConversionFailure)?;
+    fn to_minor_unit_as_i64(self, currency: enums::Currency) -> Result<MinorUnit, error_stack::Report<ParsingError>> {
+        let amount_decimal = Decimal::from_f64(self.0).ok_or(ParsingError::FloatToDecimalConversionFailure)?;
 
         let amount = if currency.is_zero_decimal_currency() {
             amount_decimal
@@ -362,9 +327,7 @@ impl FloatMajorUnit {
             amount_decimal * Decimal::from(100)
         };
 
-        let amount_i64 = amount
-            .to_i64()
-            .ok_or(ParsingError::DecimalToI64ConversionFailure)?;
+        let amount_i64 = amount.to_i64().ok_or(ParsingError::DecimalToI64ConversionFailure)?;
         Ok(MinorUnit::new(amount_i64))
     }
 }
@@ -380,15 +343,9 @@ impl StringMajorUnit {
     }
 
     /// Converts to minor unit as i64 from StringMajorUnit
-    fn to_minor_unit_as_i64(
-        &self,
-        currency: enums::Currency,
-    ) -> Result<MinorUnit, error_stack::Report<ParsingError>> {
-        let amount_decimal = Decimal::from_str(&self.0).map_err(|e| {
-            ParsingError::StringToDecimalConversionFailure {
-                error: e.to_string(),
-            }
-        })?;
+    fn to_minor_unit_as_i64(&self, currency: enums::Currency) -> Result<MinorUnit, error_stack::Report<ParsingError>> {
+        let amount_decimal = Decimal::from_str(&self.0)
+            .map_err(|e| ParsingError::StringToDecimalConversionFailure { error: e.to_string() })?;
 
         let amount = if currency.is_zero_decimal_currency() {
             amount_decimal
@@ -397,9 +354,7 @@ impl StringMajorUnit {
         } else {
             amount_decimal * Decimal::from(100)
         };
-        let amount_i64 = amount
-            .to_i64()
-            .ok_or(ParsingError::DecimalToI64ConversionFailure)?;
+        let amount_i64 = amount.to_i64().ok_or(ParsingError::DecimalToI64ConversionFailure)?;
         Ok(MinorUnit::new(amount_i64))
     }
     /// forms a new StringMajorUnit default unit i.e zero
@@ -412,9 +367,7 @@ impl StringMajorUnit {
     }
 }
 
-#[derive(
-    Default, Debug, serde::Deserialize, serde::Serialize, Clone, PartialEq, Eq, Hash, ToSchema,
-)]
+#[derive(Default, Debug, serde::Deserialize, serde::Serialize, Clone, PartialEq, Eq, Hash, ToSchema)]
 
 pub struct Money {
     pub amount: MinorUnit,
@@ -422,9 +375,7 @@ pub struct Money {
 }
 
 /// A type representing a range of time for filtering, including a mandatory start time and an optional end time.
-#[derive(
-    Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash, ToSchema,
-)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash, ToSchema)]
 pub struct TimeRange {
     /// The start time to filter payments list or to get list of filters. To get list of filters start time is needed to be passed
     #[serde(with = "crate::custom_serde::iso8601")]
@@ -466,8 +417,8 @@ impl FromStr for SemanticVersion {
     type Err = error_stack::Report<ParsingError>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(Version::from_str(s).change_context(
-            ParsingError::StructParseFailure("SemanticVersion"),
-        )?))
+        Ok(Self(
+            Version::from_str(s).change_context(ParsingError::StructParseFailure("SemanticVersion"))?,
+        ))
     }
 }

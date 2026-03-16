@@ -63,12 +63,7 @@ impl GenericPatchCtx {
     }
 
     // Add Patch/Default bounds for nested patching.
-    pub(crate) fn add_bound(
-        &mut self,
-        ident: &syn::Ident,
-        patch_ident: &syn::Ident,
-        needs_default: bool,
-    ) {
+    pub(crate) fn add_bound(&mut self, ident: &syn::Ident, patch_ident: &syn::Ident, needs_default: bool) {
         let key = format!("{}:{}:{}", ident, patch_ident, needs_default);
         let already_added = self.bound_keys.contains(&key);
         let predicate = match (already_added, needs_default) {
@@ -88,12 +83,7 @@ impl GenericPatchCtx {
 
     // Add bounds for an explicit nested patch type.
     pub(crate) fn add_type_bound(&mut self, ty: &Type, patch_ty: &Type, needs_default: bool) {
-        let key = format!(
-            "{}:{}:{}",
-            ty.to_token_stream(),
-            patch_ty.to_token_stream(),
-            needs_default
-        );
+        let key = format!("{}:{}:{}", ty.to_token_stream(), patch_ty.to_token_stream(), needs_default);
         if !self.bound_keys.contains(&key) {
             let predicate = match needs_default {
                 true => parse_quote!(#ty: ::common_utils::config_patch::Patch<#patch_ty> + Default),
@@ -123,10 +113,7 @@ impl GenericPatchCtx {
 }
 
 // Append patch-only generic params to a generics list.
-pub(crate) fn append_patch_params(
-    generics: &syn::Generics,
-    patch_params: &[syn::TypeParam],
-) -> syn::Generics {
+pub(crate) fn append_patch_params(generics: &syn::Generics, patch_params: &[syn::TypeParam]) -> syn::Generics {
     let mut next = generics.clone();
     for param in patch_params {
         next.params.push(syn::GenericParam::Type(param.clone()));
@@ -135,10 +122,7 @@ pub(crate) fn append_patch_params(
 }
 
 // Add generated bounds to a where clause.
-pub(crate) fn add_where_bounds(
-    generics: &syn::Generics,
-    bounds: &[WherePredicate],
-) -> syn::Generics {
+pub(crate) fn add_where_bounds(generics: &syn::Generics, bounds: &[WherePredicate]) -> syn::Generics {
     let mut next = generics.clone();
     match bounds.is_empty() {
         true => next,
@@ -176,15 +160,8 @@ pub(crate) fn build_patch_generics(
 }
 
 // Walk a type and record any referenced generic params.
-pub(crate) fn collect_generic_params(
-    ty: &Type,
-    generic_params: &HashSet<String>,
-    used: &mut HashSet<String>,
-) {
-    let mut collector = GenericParamCollector {
-        generic_params,
-        used,
-    };
+pub(crate) fn collect_generic_params(ty: &Type, generic_params: &HashSet<String>, used: &mut HashSet<String>) {
+    let mut collector = GenericParamCollector { generic_params, used };
     collector.visit_type(ty);
 }
 

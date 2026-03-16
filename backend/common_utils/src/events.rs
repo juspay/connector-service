@@ -24,16 +24,12 @@ pub struct MaskedSerdeValue {
 impl MaskedSerdeValue {
     pub fn from_masked<T: Serialize>(value: &T) -> Result<Self, serde_json::Error> {
         let masked_value = hyperswitch_masking::masked_serialize(value)?;
-        Ok(Self {
-            inner: masked_value,
-        })
+        Ok(Self { inner: masked_value })
     }
 
     pub fn from_masked_optional<T: Serialize>(value: &T, context: &str) -> Option<Self> {
         hyperswitch_masking::masked_serialize(value)
-            .map(|masked_value| Self {
-                inner: masked_value,
-            })
+            .map(|masked_value| Self { inner: masked_value })
             .inspect_err(|e| {
                 tracing::error!(
                     error_category = ?e.classify(),
@@ -232,42 +228,30 @@ pub struct Event {
 impl Event {
     pub fn add_reference_id(&mut self, reference_id: Option<&str>) {
         reference_id
-            .and_then(|ref_id| {
-                MaskedSerdeValue::from_masked_optional(&ref_id.to_string(), "reference_id")
-            })
+            .and_then(|ref_id| MaskedSerdeValue::from_masked_optional(&ref_id.to_string(), "reference_id"))
             .map(|masked_ref| {
-                self.additional_fields
-                    .insert("reference_id".to_string(), masked_ref);
+                self.additional_fields.insert("reference_id".to_string(), masked_ref);
             });
     }
 
     pub fn add_resource_id(&mut self, resource_id: Option<&str>) {
         resource_id
-            .and_then(|res_id| {
-                MaskedSerdeValue::from_masked_optional(&res_id.to_string(), "resource_id")
-            })
+            .and_then(|res_id| MaskedSerdeValue::from_masked_optional(&res_id.to_string(), "resource_id"))
             .map(|masked_res| {
-                self.additional_fields
-                    .insert("resource_id".to_string(), masked_res);
+                self.additional_fields.insert("resource_id".to_string(), masked_res);
             });
     }
 
     pub fn add_service_type(&mut self, service_type: &str) {
-        MaskedSerdeValue::from_masked_optional(&service_type.to_string(), "service_type").map(
-            |masked_type| {
-                self.additional_fields
-                    .insert("service_type".to_string(), masked_type);
-            },
-        );
+        MaskedSerdeValue::from_masked_optional(&service_type.to_string(), "service_type").map(|masked_type| {
+            self.additional_fields.insert("service_type".to_string(), masked_type);
+        });
     }
 
     pub fn add_service_name(&mut self, service_name: &str) {
-        MaskedSerdeValue::from_masked_optional(&service_name.to_string(), "service_name").map(
-            |masked_name| {
-                self.additional_fields
-                    .insert("service_name".to_string(), masked_name);
-            },
-        );
+        MaskedSerdeValue::from_masked_optional(&service_name.to_string(), "service_name").map(|masked_name| {
+            self.additional_fields.insert("service_name".to_string(), masked_name);
+        });
     }
 
     pub fn set_grpc_error_response(&mut self, tonic_error: &tonic::Status) {
@@ -276,14 +260,12 @@ impl Event {
             "grpc_code": i32::from(tonic_error.code()),
             "grpc_code_name": format!("{:?}", tonic_error.code())
         });
-        self.response_data =
-            MaskedSerdeValue::from_masked_optional(&error_body, "grpc_error_response");
+        self.response_data = MaskedSerdeValue::from_masked_optional(&error_body, "grpc_error_response");
     }
 
     pub fn set_grpc_success_response<R: Serialize>(&mut self, response: &R) {
         self.status_code = Some(0);
-        self.response_data =
-            MaskedSerdeValue::from_masked_optional(response, "grpc_success_response");
+        self.response_data = MaskedSerdeValue::from_masked_optional(response, "grpc_success_response");
     }
 
     pub fn set_connector_response<R: Serialize>(&mut self, response: &R) {
@@ -322,6 +304,7 @@ pub enum FlowName {
     MandateRevoke,
     Unknown,
     IncrementalAuthorization,
+    PayoutCreate,
 }
 
 impl FlowName {
@@ -352,6 +335,7 @@ impl FlowName {
             Self::PostAuthenticate => "PostAuthenticate",
             Self::SdkSessionToken => "SdkSessionToken",
             Self::IncrementalAuthorization => "IncrementalAuthorization",
+            Self::PayoutCreate => "PayoutCreate",
             Self::MandateRevoke => "MandateRevoke",
             Self::Unknown => "Unknown",
         }

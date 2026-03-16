@@ -11,18 +11,14 @@ mod tests {
         use common_utils::{pii::Email, request::RequestContent, types::MinorUnit};
         use domain_types::{
             connector_flow::Authorize,
-            connector_types::{
-                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-            },
+            connector_types::{ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, RawCardNumber},
             router_data::{ConnectorSpecificAuth, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
         use hyperswitch_masking::Secret;
-        use interfaces::{
-            connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector,
-        };
+        use interfaces::{connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector};
         use serde_json::json;
 
         use crate::{connectors::Adyen, types::ConnectorData};
@@ -48,9 +44,7 @@ mod tests {
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("www.google.com".to_string()),
                     order_details: None,
-                    address: domain_types::payment_address::PaymentAddress::new(
-                        None, None, None, None,
-                    ),
+                    address: domain_types::payment_address::PaymentAddress::new(None, None, None, None),
                     auth_type: common_enums::AuthenticationType::ThreeDs,
                     connector_meta_data: None,
                     amount_captured: None,
@@ -68,7 +62,9 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            dispute_base_url: Some(
+                                "https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string(),
+                            ),
                             ..Default::default()
                         },
                         ..Default::default()
@@ -92,24 +88,16 @@ mod tests {
                     payment_channel: None,
                     authentication_data: None,
                     connector_testing_data: None,
-                    payment_method_data: PaymentMethodData::Card(
-                        domain_types::payment_method_data::Card {
-                            card_number: RawCardNumber(cards::CardNumber::from_str(
-                                "5123456789012346",
-                            )
-                            .unwrap()),
-                            card_cvc: Secret::new("100".into()),
-                            card_exp_month: Secret::new("03".into()),
-                            card_exp_year: Secret::new("2030".into()),
-                            ..Default::default()
-                        },
-                    ),
+                    payment_method_data: PaymentMethodData::Card(domain_types::payment_method_data::Card {
+                        card_number: RawCardNumber(cards::CardNumber::from_str("5123456789012346").unwrap()),
+                        card_cvc: Secret::new("100".into()),
+                        card_exp_month: Secret::new("03".into()),
+                        card_exp_year: Secret::new("2030".into()),
+                        ..Default::default()
+                    }),
                     amount: MinorUnit::new(1000),
                     order_tax_amount: None,
-                    email: Some(
-                        Email::try_from("test@example.com".to_string())
-                            .expect("Failed to parse email"),
-                    ),
+                    email: Some(Email::try_from("test@example.com".to_string()).expect("Failed to parse email")),
                     customer_name: None,
                     currency: common_enums::Currency::USD,
                     confirm: true,
@@ -121,30 +109,25 @@ mod tests {
                     mandate_id: None,
                     setup_future_usage: None,
                     off_session: None,
-                    browser_info: Some(
-                        domain_types::router_request_types::BrowserInformation {
-                            color_depth: Some(24),
-                            java_enabled: Some(false),
-                            screen_height: Some(1080),
-                            screen_width: Some(1920),
-                            user_agent: Some(
-                                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-                            ),
-                            accept_header: Some(
-                                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-                                    .to_string(),
-                            ),
-                            java_script_enabled: Some(false),
-                            language: Some("en-US".to_string()),
-                            time_zone: Some(-480),
-                            referer: None,
-                            ip_address: None,
-                            os_type: None,
-                            os_version: None,
-                            device_model: None,
-                            accept_language: None,
-                        },
-                    ),
+                    browser_info: Some(domain_types::router_request_types::BrowserInformation {
+                        color_depth: Some(24),
+                        java_enabled: Some(false),
+                        screen_height: Some(1080),
+                        screen_width: Some(1920),
+                        user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+                        accept_header: Some(
+                            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
+                        ),
+                        java_script_enabled: Some(false),
+                        language: Some("en-US".to_string()),
+                        time_zone: Some(-480),
+                        referer: None,
+                        ip_address: None,
+                        os_type: None,
+                        os_version: None,
+                        device_model: None,
+                        accept_language: None,
+                    }),
                     order_category: None,
                     session_token: None,
                     enrolled_for_3ds: Some(true),
@@ -152,10 +135,7 @@ mod tests {
                     payment_experience: None,
                     payment_method_type: Some(common_enums::PaymentMethodType::Card),
                     customer_id: Some(
-                        common_utils::id_type::CustomerId::try_from(Cow::from(
-                            "cus_123456789".to_string(),
-                        ))
-                        .unwrap(),
+                        common_utils::id_type::CustomerId::try_from(Cow::from("cus_123456789".to_string())).unwrap(),
                     ),
                     request_incremental_authorization: Some(false),
                     metadata: None,
@@ -201,11 +181,9 @@ mod tests {
             let req_body = request.as_ref().map(|request_val| {
                 let masked_request = match request_val.body.as_ref() {
                     Some(request_content) => match request_content {
-                        RequestContent::Json(i)
-                        | RequestContent::FormUrlEncoded(i)
-                        | RequestContent::Xml(i) => i.masked_serialize().unwrap_or(
-                            json!({ "error": "failed to mask serialize connector request"}),
-                        ),
+                        RequestContent::Json(i) | RequestContent::FormUrlEncoded(i) | RequestContent::Xml(i) => i
+                            .masked_serialize()
+                            .unwrap_or(json!({ "error": "failed to mask serialize connector request"})),
                         RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
@@ -214,10 +192,7 @@ mod tests {
                 masked_request
             });
             println!("request: {req_body:?}");
-            assert_eq!(
-                req_body.as_ref().unwrap()["reference"],
-                "conn_ref_123456789"
-            );
+            assert_eq!(req_body.as_ref().unwrap()["reference"], "conn_ref_123456789");
         }
         #[test]
         fn test_build_request_missing() {
@@ -241,9 +216,7 @@ mod tests {
                     description: None,
                     return_url: None,
                     order_details: None,
-                    address: domain_types::payment_address::PaymentAddress::new(
-                        None, None, None, None,
-                    ),
+                    address: domain_types::payment_address::PaymentAddress::new(None, None, None, None),
                     auth_type: common_enums::AuthenticationType::ThreeDs,
                     connector_meta_data: None,
                     amount_captured: None,
@@ -261,7 +234,9 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            dispute_base_url: Some(
+                                "https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string(),
+                            ),
                             ..Default::default()
                         },
                         ..Default::default()

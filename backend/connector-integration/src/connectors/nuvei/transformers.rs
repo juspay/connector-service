@@ -2,14 +2,11 @@ use common_utils::{pii, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
+    payment_method_data::{BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
@@ -59,8 +56,7 @@ impl NuveiAuthType {
         format!("{:x}", hasher.finalize())
     }
 
-    pub fn get_timestamp(
-    ) -> common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss> {
+    pub fn get_timestamp() -> common_utils::date_time::DateTime<common_utils::date_time::YYYYMMDDHHmmss> {
         // Generate timestamp in YYYYMMDDHHmmss format using common_utils date_time
         common_utils::date_time::DateTime::from(common_utils::date_time::now())
     }
@@ -104,9 +100,7 @@ pub struct NuveiUrlDetails {
 // Payment Request
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NuveiPaymentRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct NuveiPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     pub session_token: Option<String>,
     pub merchant_id: Secret<String>,
     pub merchant_site_id: Secret<String>,
@@ -129,9 +123,7 @@ pub struct NuveiPaymentRequest<
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NuveiPaymentOption<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct NuveiPaymentOption<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card: Option<NuveiCard<T>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -140,9 +132,7 @@ pub struct NuveiPaymentOption<
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NuveiCard<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct NuveiCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     pub card_number: RawCardNumber<T>,
     pub card_holder_name: Secret<String>,
     pub expiration_month: Secret<String>,
@@ -255,10 +245,7 @@ pub enum TransactionType {
 }
 
 impl TransactionType {
-    fn get_from_capture_method(
-        capture_method: Option<common_enums::CaptureMethod>,
-        amount: &StringMajorUnit,
-    ) -> Self {
+    fn get_from_capture_method(capture_method: Option<common_enums::CaptureMethod>, amount: &StringMajorUnit) -> Self {
         let amount_value = amount.get_amount_as_string().parse::<f64>();
         if capture_method == Some(common_enums::CaptureMethod::Manual) || amount_value == Ok(0.0) {
             Self::Auth
@@ -454,10 +441,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
-        let client_request_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Generate checksum for getSessionToken: merchantId + merchantSiteId + clientRequestId + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -488,19 +472,14 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<NuveiSessionTokenResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NuveiSessionTokenResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
         if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
-            let error_message = response
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Unknown error".to_string());
+            let error_message = response.reason.clone().unwrap_or_else(|| "Unknown error".to_string());
 
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -523,13 +502,12 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
         }
 
         // Extract session token
-        let session_token =
-            response
-                .session_token
-                .clone()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "session_token",
-                })?;
+        let session_token = response
+            .session_token
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "session_token",
+            })?;
 
         let session_response_data = domain_types::connector_types::SessionTokenResponseData {
             session_token: session_token.clone(),
@@ -549,20 +527,13 @@ impl TryFrom<ResponseRouterData<NuveiSessionTokenResponse, Self>>
 
 // Sync Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        NuveiRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for NuveiSyncRequest
+    TryFrom<NuveiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for NuveiSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: NuveiRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: NuveiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -572,10 +543,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let time_stamp = NuveiAuthType::get_timestamp();
 
         // Per Hyperswitch pattern: ALWAYS send both transaction_id AND client_unique_id
-        let client_unique_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
         let transaction_id = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             ResponseId::EncodedData(id) => id.clone(),
@@ -607,27 +575,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        NuveiRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        NuveiRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for NuveiPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: NuveiRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -669,11 +624,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             },
                         )?;
 
-                        let ach_data = metadata.peek().get("ach").ok_or(
-                            errors::ConnectorError::MissingRequiredField {
-                                field_name: "ach in metadata",
-                            },
-                        )?;
+                        let ach_data =
+                            metadata
+                                .peek()
+                                .get("ach")
+                                .ok_or(errors::ConnectorError::MissingRequiredField {
+                                    field_name: "ach in metadata",
+                                })?;
 
                         let account_number = ach_data
                             .get("account_number")
@@ -732,26 +689,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 field_name: "billing_address.email",
             })?;
 
-        let country = router_data
-            .resource_common_data
-            .get_optional_billing_country()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+        let country = router_data.resource_common_data.get_optional_billing_country().ok_or(
+            errors::ConnectorError::MissingRequiredField {
                 field_name: "billing_address.country",
-            })?;
+            },
+        )?;
 
         // Get first and last name from billing (optional fields)
-        let first_name = router_data
-            .resource_common_data
-            .get_optional_billing_first_name();
+        let first_name = router_data.resource_common_data.get_optional_billing_first_name();
 
-        let last_name = router_data
-            .resource_common_data
-            .get_optional_billing_last_name();
+        let last_name = router_data.resource_common_data.get_optional_billing_last_name();
 
         // Use state code conversion (e.g., "California" -> "CA") for US/CA
-        let state = router_data
-            .resource_common_data
-            .get_optional_billing_state();
+        let state = router_data.resource_common_data.get_optional_billing_state();
 
         // Get address_line3 directly from billing address
         let address_line3 = router_data
@@ -765,16 +715,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             first_name,
             last_name,
             country: country.to_string(),
-            phone: router_data
-                .resource_common_data
-                .get_optional_billing_phone_number(),
+            phone: router_data.resource_common_data.get_optional_billing_phone_number(),
             city: router_data.resource_common_data.get_optional_billing_city(),
-            address: router_data
-                .resource_common_data
-                .get_optional_billing_line1(),
-            address_line2: router_data
-                .resource_common_data
-                .get_optional_billing_line2(),
+            address: router_data.resource_common_data.get_optional_billing_line1(),
+            address_line2: router_data.resource_common_data.get_optional_billing_line2(),
             address_line3,
             zip: router_data.resource_common_data.get_optional_billing_zip(),
             state,
@@ -798,48 +742,38 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         let time_stamp = NuveiAuthType::get_timestamp();
-        let client_request_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Convert amount using the connector's amount converter
         let amount = item
             .connector
             .amount_converter_webhooks
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let currency = router_data.request.currency;
 
         // Extract session token from PaymentFlowData
         // The CreateSessionToken flow runs before Authorize and populates this field
-        let session_token = router_data
-            .resource_common_data
-            .session_token
-            .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+        let session_token = router_data.resource_common_data.session_token.clone().ok_or(
+            errors::ConnectorError::MissingRequiredField {
                 field_name: "session_token",
-            })?;
+            },
+        )?;
 
         // Determine transaction type based on capture method
-        let transaction_type =
-            TransactionType::get_from_capture_method(router_data.request.capture_method, &amount);
+        let transaction_type = TransactionType::get_from_capture_method(router_data.request.capture_method, &amount);
 
         // Build urlDetails from router_return_url if available
-        let url_details =
-            router_data
-                .request
-                .router_return_url
-                .as_ref()
-                .map(|url| NuveiUrlDetails {
-                    success_url: url.clone(),
-                    failure_url: url.clone(),
-                    pending_url: url.clone(),
-                });
+        let url_details = router_data
+            .request
+            .router_return_url
+            .as_ref()
+            .map(|url| NuveiUrlDetails {
+                success_url: url.clone(),
+                failure_url: url.clone(),
+                pending_url: url.clone(),
+            });
 
         // Generate checksum: merchantId + merchantSiteId + clientRequestId + amount + currency + timeStamp + merchantSecretKey
         let checksum = auth.generate_checksum(&[
@@ -859,12 +793,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             amount,
             currency,
             user_token_id: None,
-            client_unique_id: Some(
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
+            client_unique_id: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
             payment_option,
             transaction_type,
             device_details,
@@ -890,10 +819,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Check if the overall request status is SUCCESS or ERROR
         if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
-            let error_message = response
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Unknown error".to_string());
+            let error_message = response.reason.clone().unwrap_or_else(|| "Unknown error".to_string());
 
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -926,9 +852,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             Some(NuveiTransactionStatus::Declined) => common_enums::AttemptStatus::Failure,
             Some(NuveiTransactionStatus::Error) => common_enums::AttemptStatus::Failure,
-            Some(NuveiTransactionStatus::Redirect) => {
-                common_enums::AttemptStatus::AuthenticationPending
-            }
+            Some(NuveiTransactionStatus::Redirect) => common_enums::AttemptStatus::AuthenticationPending,
             Some(NuveiTransactionStatus::Pending) => common_enums::AttemptStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Pending
@@ -971,20 +895,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Capture Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        NuveiRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for NuveiCaptureRequest
+    TryFrom<NuveiRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for NuveiCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: NuveiRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        item: NuveiRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -992,14 +909,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
-        let client_request_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-        let client_unique_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
+        let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Extract relatedTransactionId from connector_transaction_id
         let related_transaction_id = match &router_data.request.connector_transaction_id {
@@ -1014,10 +925,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter_webhooks
-            .convert(
-                router_data.request.minor_amount_to_capture,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_amount_to_capture, router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let currency = router_data.request.currency;
@@ -1061,10 +969,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         // Check if the overall request status is SUCCESS or ERROR
         if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
-            let error_message = response
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Unknown error".to_string());
+            let error_message = response.reason.clone().unwrap_or_else(|| "Unknown error".to_string());
 
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1090,11 +995,13 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
         }
 
         // Extract transaction details
-        let transaction_details = response.transaction_details.as_ref().ok_or(
-            errors::ConnectorError::MissingRequiredField {
-                field_name: "transaction_details",
-            },
-        )?;
+        let transaction_details =
+            response
+                .transaction_details
+                .as_ref()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "transaction_details",
+                })?;
 
         // Map transaction status to attempt status
         let status = match transaction_details.transaction_status {
@@ -1109,9 +1016,7 @@ impl TryFrom<ResponseRouterData<NuveiSyncResponse, Self>>
             }
             Some(NuveiTransactionStatus::Declined) => common_enums::AttemptStatus::Failure,
             Some(NuveiTransactionStatus::Error) => common_enums::AttemptStatus::Failure,
-            Some(NuveiTransactionStatus::Redirect) => {
-                common_enums::AttemptStatus::AuthenticationPending
-            }
+            Some(NuveiTransactionStatus::Redirect) => common_enums::AttemptStatus::AuthenticationPending,
             Some(NuveiTransactionStatus::Pending) => common_enums::AttemptStatus::Pending,
             _ => {
                 // If transaction_status is not present but status is SUCCESS, default to Pending
@@ -1164,10 +1069,7 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
         // Check if the overall request status is SUCCESS or ERROR
         if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
-            let error_message = response
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Unknown error".to_string());
+            let error_message = response.reason.clone().unwrap_or_else(|| "Unknown error".to_string());
 
             return Ok(Self {
                 resource_common_data: PaymentFlowData {
@@ -1235,17 +1137,13 @@ impl TryFrom<ResponseRouterData<NuveiCaptureResponse, Self>>
 
 // Refund Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        NuveiRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for NuveiRefundRequest
+    TryFrom<NuveiRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for NuveiRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: NuveiRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: NuveiRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -1253,14 +1151,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
-        let client_request_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-        let client_unique_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
+        let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Extract relatedTransactionId from connector_transaction_id
         let related_transaction_id = router_data.request.connector_transaction_id.clone();
@@ -1305,20 +1197,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Refund Sync Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        NuveiRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for NuveiRefundSyncRequest
+    TryFrom<NuveiRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for NuveiRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: NuveiRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        item: NuveiRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -1330,10 +1215,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Per Hyperswitch pattern: ALWAYS send both transaction_id AND client_unique_id
         // NOTE: For RSync to work correctly, we need the ORIGINAL clientUniqueId from refund creation
         // Using current connector_request_reference_id may not match the original
-        let client_unique_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
         let transaction_id = router_data.request.connector_transaction_id.clone();
 
         if transaction_id.is_empty() {
@@ -1373,10 +1255,7 @@ impl TryFrom<ResponseRouterData<NuveiRefundResponse, Self>>
         // Check if the overall request status is SUCCESS or ERROR
         if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
-            let error_message = response
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Unknown error".to_string());
+            let error_message = response.reason.clone().unwrap_or_else(|| "Unknown error".to_string());
 
             return Ok(Self {
                 resource_common_data: RefundFlowData {
@@ -1443,19 +1322,14 @@ impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<NuveiRefundSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<NuveiRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
         // Check if the overall request status is SUCCESS or ERROR
         if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
-            let error_message = response
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Unknown error".to_string());
+            let error_message = response.reason.clone().unwrap_or_else(|| "Unknown error".to_string());
 
             return Ok(Self {
                 resource_common_data: RefundFlowData {
@@ -1518,20 +1392,13 @@ impl TryFrom<ResponseRouterData<NuveiRefundSyncResponse, Self>>
 
 // Void Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        NuveiRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for NuveiVoidRequest
+    TryFrom<NuveiRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for NuveiVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: NuveiRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: NuveiRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -1539,35 +1406,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = NuveiAuthType::try_from(&router_data.connector_auth_type)?;
 
         let time_stamp = NuveiAuthType::get_timestamp();
-        let client_request_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
-        let client_unique_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let client_request_id = router_data.resource_common_data.connector_request_reference_id.clone();
+        let client_unique_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         // Extract relatedTransactionId from connector_transaction_id
         let related_transaction_id = router_data.request.connector_transaction_id.clone();
 
         // Extract amount and currency from the request
         // For void, we need to send the original transaction amount and currency
-        let minor_amount =
-            router_data
-                .request
-                .amount
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "amount",
-                })?;
+        let minor_amount = router_data
+            .request
+            .amount
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "amount" })?;
 
-        let currency =
-            router_data
-                .request
-                .currency
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "currency",
-                })?;
+        let currency = router_data
+            .request
+            .currency
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "currency" })?;
 
         let amount = item
             .connector
@@ -1616,10 +1471,7 @@ impl TryFrom<ResponseRouterData<NuveiVoidResponse, Self>>
         // Check if the overall request status is SUCCESS or ERROR
         if matches!(response.status, NuveiPaymentStatus::Error) {
             let error_code = response.err_code.map(|c| c.to_string()).unwrap_or_default();
-            let error_message = response
-                .reason
-                .clone()
-                .unwrap_or_else(|| "Unknown error".to_string());
+            let error_message = response.reason.clone().unwrap_or_else(|| "Unknown error".to_string());
 
             return Ok(Self {
                 resource_common_data: PaymentFlowData {

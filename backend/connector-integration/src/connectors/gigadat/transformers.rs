@@ -3,8 +3,8 @@ use common_utils::{id_type, request::Method, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, PSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
@@ -29,17 +29,13 @@ pub struct GigadatConnectorMetadataObject {
 impl TryFrom<&Option<common_utils::pii::SecretSerdeValue>> for GigadatConnectorMetadataObject {
     type Error = Report<ConnectorError>;
 
-    fn try_from(
-        meta_data: &Option<common_utils::pii::SecretSerdeValue>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(meta_data: &Option<common_utils::pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata: Self = meta_data
             .clone()
             .map(|data| {
-                serde_json::from_value::<Self>(data.expose()).change_context(
-                    ConnectorError::InvalidConnectorConfig {
-                        config: "merchant_connector_account.metadata",
-                    },
-                )
+                serde_json::from_value::<Self>(data.expose()).change_context(ConnectorError::InvalidConnectorConfig {
+                    config: "merchant_connector_account.metadata",
+                })
             })
             .transpose()?
             .unwrap_or_default();
@@ -135,9 +131,7 @@ impl From<GigadatTransactionStatus> for AttemptStatus {
     fn from(item: GigadatTransactionStatus) -> Self {
         match item {
             GigadatTransactionStatus::StatusSuccess => Self::Charged,
-            GigadatTransactionStatus::StatusInited | GigadatTransactionStatus::StatusPending => {
-                Self::Pending
-            }
+            GigadatTransactionStatus::StatusInited | GigadatTransactionStatus::StatusPending => Self::Pending,
             GigadatTransactionStatus::StatusRejected
             | GigadatTransactionStatus::StatusExpired
             | GigadatTransactionStatus::StatusRejected1
@@ -211,51 +205,35 @@ pub struct GigadatRefundResponse {
 // ===== REQUEST TRANSFORMER (AUTHORIZE) =====
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        GigadatRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        GigadatRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for GigadatPaymentsRequest
 {
     type Error = Report<ConnectorError>;
 
     fn try_from(
         item: GigadatRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         // Get metadata for site - try connector_meta_data first, then fallback to request metadata
-        let metadata = GigadatConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
-        )
-        .or_else(|_| {
-            // Try to get site from request metadata
-            item.router_data
-                .request
-                .metadata
-                .as_ref()
-                .and_then(|m| m.peek().get("site"))
-                .and_then(|v| v.as_str())
-                .map(|site| GigadatConnectorMetadataObject {
-                    site: site.to_string(),
-                })
-                .ok_or_else(|| {
-                    Report::from(ConnectorError::InvalidConnectorConfig {
-                        config: "missing 'site' in connector_meta_data or metadata",
-                    })
-                })
-        })?;
+        let metadata =
+            GigadatConnectorMetadataObject::try_from(&item.router_data.resource_common_data.connector_meta_data)
+                .or_else(|_| {
+                    // Try to get site from request metadata
+                    item.router_data
+                        .request
+                        .metadata
+                        .as_ref()
+                        .and_then(|m| m.peek().get("site"))
+                        .and_then(|v| v.as_str())
+                        .map(|site| GigadatConnectorMetadataObject { site: site.to_string() })
+                        .ok_or_else(|| {
+                            Report::from(ConnectorError::InvalidConnectorConfig {
+                                config: "missing 'site' in connector_meta_data or metadata",
+                            })
+                        })
+                })?;
 
         // Validate payment method is Interac bank redirect
         match &item.router_data.request.payment_method_data {
@@ -270,50 +248,45 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         field_name: "billing_address",
                     })?;
 
-                let billing_address =
-                    billing
-                        .clone()
-                        .address
-                        .ok_or(ConnectorError::MissingRequiredField {
-                            field_name: "billing_address.address",
-                        })?;
-
-                let name = billing_address.get_optional_full_name().ok_or(
-                    ConnectorError::MissingRequiredField {
-                        field_name: "billing_address.first_name or billing_address.last_name",
-                    },
-                )?;
-
-                let email = billing
-                    .email
-                    .clone()
-                    .or(item.router_data.request.email.clone())
-                    .ok_or(ConnectorError::MissingRequiredField {
-                        field_name: "billing_address.email or email",
-                    })?;
-
-                let mobile = billing.get_phone_with_country_code().map_err(|_| {
-                    ConnectorError::MissingRequiredField {
-                        field_name: "billing_address.phone",
-                    }
+                let billing_address = billing.clone().address.ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "billing_address.address",
                 })?;
 
-                // Get customer ID
-                let customer_id = item
-                    .router_data
-                    .resource_common_data
-                    .customer_id
-                    .clone()
+                let name = billing_address
+                    .get_optional_full_name()
                     .ok_or(ConnectorError::MissingRequiredField {
-                        field_name: "customer_id",
+                        field_name: "billing_address.first_name or billing_address.last_name",
                     })?;
 
-                // Get browser IP
-                let browser_info = item.router_data.request.browser_info.clone().ok_or(
+                let email = billing.email.clone().or(item.router_data.request.email.clone()).ok_or(
                     ConnectorError::MissingRequiredField {
-                        field_name: "browser_info",
+                        field_name: "billing_address.email or email",
                     },
                 )?;
+
+                let mobile =
+                    billing
+                        .get_phone_with_country_code()
+                        .map_err(|_| ConnectorError::MissingRequiredField {
+                            field_name: "billing_address.phone",
+                        })?;
+
+                // Get customer ID
+                let customer_id = item.router_data.resource_common_data.customer_id.clone().ok_or(
+                    ConnectorError::MissingRequiredField {
+                        field_name: "customer_id",
+                    },
+                )?;
+
+                // Get browser IP
+                let browser_info =
+                    item.router_data
+                        .request
+                        .browser_info
+                        .clone()
+                        .ok_or(ConnectorError::MissingRequiredField {
+                            field_name: "browser_info",
+                        })?;
                 let user_ip = Secret::new(
                     browser_info
                         .ip_address
@@ -324,19 +297,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 );
 
                 // Determine sandbox mode
-                let sandbox = item
-                    .router_data
-                    .resource_common_data
-                    .test_mode
-                    .unwrap_or(false);
+                let sandbox = item.router_data.resource_common_data.test_mode.unwrap_or(false);
 
                 let amount = item
                     .connector
                     .amount_converter
-                    .convert(
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )
+                    .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
                     .change_context(ConnectorError::AmountConversionFailed)?;
 
                 Ok(Self {
@@ -373,9 +339,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GigadatPaymentsRespon
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<GigadatPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<GigadatPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
         let router_data = &item.router_data;
 
@@ -383,9 +347,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GigadatPaymentsRespon
         let redirect_url = format!(
             "{}webflow?transaction={}&token={}",
             router_data.resource_common_data.connectors.gigadat.base_url,
-            router_data
-                .resource_common_data
-                .connector_request_reference_id,
+            router_data.resource_common_data.connector_request_reference_id,
             response.token.peek()
         );
 
@@ -401,9 +363,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<GigadatPaymentsRespon
                 ..router_data.resource_common_data.clone()
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    response.data.transaction_id.clone(),
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(response.data.transaction_id.clone()),
                 redirection_data,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -463,30 +423,20 @@ impl TryFrom<ResponseRouterData<GigadatSyncResponse, Self>>
 
 // ===== REQUEST TRANSFORMER (REFUND) =====
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        GigadatRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for GigadatRefundRequest
+    TryFrom<GigadatRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for GigadatRefundRequest
 {
     type Error = Report<ConnectorError>;
 
     fn try_from(
-        item: GigadatRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: GigadatRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = GigadatAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
@@ -503,9 +453,7 @@ impl TryFrom<ResponseRouterData<GigadatRefundResponse, Self>>
 {
     type Error = Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<GigadatRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<GigadatRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         let mut router_data = item.router_data;
 

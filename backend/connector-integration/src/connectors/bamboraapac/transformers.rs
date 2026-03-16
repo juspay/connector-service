@@ -2,9 +2,8 @@ use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, RepeatPayment},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -166,9 +165,7 @@ impl From<BamboraapacTrnType> for i32 {
 
 // Request Structure for SOAP/XML
 #[derive(Debug, Clone)]
-pub struct BamboraapacPaymentRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct BamboraapacPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     pub account_number: Secret<String>,
     pub cust_number: Option<String>,
     pub cust_ref: String,
@@ -184,9 +181,7 @@ pub struct BamboraapacPaymentRequest<
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    BamboraapacPaymentRequest<T>
-{
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> BamboraapacPaymentRequest<T> {
     // Generate SOAP XML request using quick-xml serialization
     pub fn to_soap_xml(&self) -> String {
         // Build the inner Transaction XML using quick-xml
@@ -210,8 +205,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Serialize using quick-xml
-        let transaction_xml_string = quick_xml::se::to_string(&transaction_xml)
-            .unwrap_or_else(|_| String::from("<Transaction/>"));
+        let transaction_xml_string =
+            quick_xml::se::to_string(&transaction_xml).unwrap_or_else(|_| String::from("<Transaction/>"));
 
         // Wrap in SOAP envelope (only the envelope structure, data is safely serialized)
         format!(
@@ -425,28 +420,20 @@ pub struct InnerPaymentResponse {
 
 // Request Transformation Implementation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for BamboraapacPaymentRequest<T>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for BamboraapacPaymentRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Extract card data
         let card_data = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(ConnectorError::NotImplemented(
-                "Payment method not supported".to_string(),
-            )),
+            _ => Err(ConnectorError::NotImplemented("Payment method not supported".to_string())),
         }?;
 
         // Determine transaction type based on capture method
@@ -465,21 +452,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .customer_id
                 .as_ref()
                 .map(|id| id.get_string_repr().to_string()),
-            cust_ref: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            cust_ref: router_data.resource_common_data.connector_request_reference_id.clone(),
             amount: router_data.request.minor_amount,
             trn_type,
             card_number: Secret::new(card_number_str),
             exp_month: card_data.card_exp_month.clone(),
             exp_year: card_data.get_expiry_year_4_digit(),
             cvn: card_data.card_cvc.clone(),
-            card_holder_name: card_data.card_holder_name.clone().ok_or(
-                ConnectorError::MissingRequiredField {
+            card_holder_name: card_data
+                .card_holder_name
+                .clone()
+                .ok_or(ConnectorError::MissingRequiredField {
                     field_name: "card_holder_name",
-                },
-            )?,
+                })?,
             username: auth.username,
             password: auth.password,
             _phantom: std::marker::PhantomData,
@@ -494,9 +479,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraapacPaymentResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraapacPaymentResponse, Self>) -> Result<Self, Self::Error> {
         use common_utils::ext_traits::XmlExt;
 
         let router_data = &item.router_data;
@@ -536,10 +519,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..router_data.resource_common_data.clone()
                 },
                 response: Err(ErrorResponse {
-                    code: response
-                        .declined_code
-                        .clone()
-                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    code: response.declined_code.clone().unwrap_or_else(|| "DECLINED".to_string()),
                     message: response
                         .declined_message
                         .clone()
@@ -590,12 +570,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<
-            Capture,
-            PaymentFlowData,
-            PaymentsCaptureData,
-            PaymentsResponseData,
-        >,
+        router_data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
 
@@ -624,9 +599,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraapacCaptureResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraapacCaptureResponse, Self>) -> Result<Self, Self::Error> {
         use common_utils::ext_traits::XmlExt;
 
         let router_data = &item.router_data;
@@ -661,10 +634,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
                     ..router_data.resource_common_data.clone()
                 },
                 response: Err(ErrorResponse {
-                    code: response
-                        .declined_code
-                        .clone()
-                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    code: response.declined_code.clone().unwrap_or_else(|| "DECLINED".to_string()),
                     message: response
                         .declined_message
                         .clone()
@@ -709,9 +679,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
 // ============================================================================
 
 // PSync Request Transformation
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for BamboraapacSyncRequest
-{
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for BamboraapacSyncRequest {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
@@ -742,9 +710,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraapacSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraapacSyncResponse, Self>) -> Result<Self, Self::Error> {
         use common_utils::ext_traits::XmlExt;
 
         let router_data = &item.router_data;
@@ -809,10 +775,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
                     ..router_data.resource_common_data.clone()
                 },
                 response: Err(ErrorResponse {
-                    code: response
-                        .declined_code
-                        .clone()
-                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    code: response.declined_code.clone().unwrap_or_else(|| "DECLINED".to_string()),
                     message: response
                         .declined_message
                         .clone()
@@ -857,15 +820,8 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
 // ============================================================================
 
 // Refund Request Transformation
-impl
-    TryFrom<
-        &RouterDataV2<
-            domain_types::connector_flow::Refund,
-            RefundFlowData,
-            RefundsData,
-            RefundsResponseData,
-        >,
-    > for BamboraapacRefundRequest
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>>
+    for BamboraapacRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -883,10 +839,7 @@ impl
         let receipt = router_data.request.connector_transaction_id.clone();
 
         Ok(Self {
-            cust_ref: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            cust_ref: router_data.resource_common_data.connector_request_reference_id.clone(),
             receipt,
             amount: router_data.request.minor_refund_amount,
             username: auth.username,
@@ -897,18 +850,11 @@ impl
 
 // Refund Response Transformation
 impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
-    for RouterDataV2<
-        domain_types::connector_flow::Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    >
+    for RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraapacRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraapacRefundResponse, Self>) -> Result<Self, Self::Error> {
         use common_utils::ext_traits::XmlExt;
 
         let router_data = &item.router_data;
@@ -943,10 +889,7 @@ impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
                     ..router_data.resource_common_data.clone()
                 },
                 response: Err(ErrorResponse {
-                    code: response
-                        .declined_code
-                        .clone()
-                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    code: response.declined_code.clone().unwrap_or_else(|| "DECLINED".to_string()),
                     message: response
                         .declined_message
                         .clone()
@@ -986,9 +929,7 @@ impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
 // ============================================================================
 
 // RSync Request Transformation (reuses BamboraapacSyncRequest)
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for BamboraapacSyncRequest
-{
+impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>> for BamboraapacSyncRequest {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
@@ -1014,9 +955,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraapacSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraapacSyncResponse, Self>) -> Result<Self, Self::Error> {
         use common_utils::ext_traits::XmlExt;
 
         let router_data = &item.router_data;
@@ -1077,10 +1016,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
                     ..router_data.resource_common_data.clone()
                 },
                 response: Err(ErrorResponse {
-                    code: response
-                        .declined_code
-                        .clone()
-                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    code: response.declined_code.clone().unwrap_or_else(|| "DECLINED".to_string()),
                     message: response
                         .declined_message
                         .clone()
@@ -1209,12 +1145,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .customer_id
             .as_ref()
             .map(|id| id.get_string_repr().to_string())
-            .unwrap_or_else(|| {
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone()
-            });
+            .unwrap_or_else(|| router_data.resource_common_data.connector_request_reference_id.clone());
 
         Ok(Self {
             customer_storage_number: None, // Optional: Can be set if merchant wants specific storage numbering
@@ -1222,11 +1153,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             card_number: Secret::new(card_number_str),
             exp_month: card_data.card_exp_month.clone(),
             exp_year: card_data.get_expiry_year_4_digit(),
-            card_holder_name: card_data.card_holder_name.clone().ok_or(
-                ConnectorError::MissingRequiredField {
+            card_holder_name: card_data
+                .card_holder_name
+                .clone()
+                .ok_or(ConnectorError::MissingRequiredField {
                     field_name: "card_holder_name",
-                },
-            )?,
+                })?,
             username: auth.username,
             password: auth.password,
         })
@@ -1245,9 +1177,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraapacSetupMandateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraapacSetupMandateResponse, Self>) -> Result<Self, Self::Error> {
         use common_utils::ext_traits::XmlExt;
 
         let router_data = &item.router_data;
@@ -1366,34 +1296,24 @@ pub struct BamboraapacRepeatPaymentRequest {
 // ============================================================================
 
 // RepeatPayment Request Transformation
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
-    >
-    TryFrom<
-        &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-    > for BamboraapacRepeatPaymentRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
+    TryFrom<&RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>>
+    for BamboraapacRepeatPaymentRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        router_data: &RouterDataV2<
-            RepeatPayment,
-            PaymentFlowData,
-            RepeatPaymentData<T>,
-            PaymentsResponseData,
-        >,
+        router_data: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Extract the card token (customer_id from SetupMandate) from mandate_reference
         let token = match &router_data.request.mandate_reference {
-            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(mandate_ref) => {
-                mandate_ref.get_connector_mandate_id().ok_or(
-                    ConnectorError::MissingRequiredField {
-                        field_name: "connector_mandate_id",
-                    },
-                )?
-            }
+            domain_types::connector_types::MandateReferenceId::ConnectorMandateId(mandate_ref) => mandate_ref
+                .get_connector_mandate_id()
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "connector_mandate_id",
+                })?,
             _ => {
                 return Err(error_stack::report!(ConnectorError::NotImplemented(
                     "Only ConnectorMandateId is supported for RepeatPayment".to_string()
@@ -1409,10 +1329,7 @@ impl<
 
         Ok(Self {
             account_number: auth.account_number,
-            cust_ref: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            cust_ref: router_data.resource_common_data.connector_request_reference_id.clone(),
             amount: router_data.request.minor_amount,
             trn_type,
             card_token: token,
@@ -1423,16 +1340,13 @@ impl<
 }
 
 // RepeatPayment Response Transformation (reuses BamboraapacPaymentResponse)
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize,
-    > TryFrom<ResponseRouterData<BamboraapacPaymentResponse, Self>>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize + Serialize>
+    TryFrom<ResponseRouterData<BamboraapacPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraapacPaymentResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraapacPaymentResponse, Self>) -> Result<Self, Self::Error> {
         use common_utils::ext_traits::XmlExt;
 
         let router_data = &item.router_data;
@@ -1472,10 +1386,7 @@ impl<
                     ..router_data.resource_common_data.clone()
                 },
                 response: Err(ErrorResponse {
-                    code: response
-                        .declined_code
-                        .clone()
-                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    code: response.declined_code.clone().unwrap_or_else(|| "DECLINED".to_string()),
                     message: response
                         .declined_message
                         .clone()
@@ -1555,8 +1466,7 @@ impl GetSoapXml for BamboraapacCaptureRequest {
         };
 
         // Serialize using quick-xml
-        let capture_xml_string =
-            quick_xml::se::to_string(&capture_xml).unwrap_or_else(|_| String::from("<Capture/>"));
+        let capture_xml_string = quick_xml::se::to_string(&capture_xml).unwrap_or_else(|_| String::from("<Capture/>"));
 
         // Wrap in SOAP envelope
         format!(
@@ -1585,8 +1495,7 @@ impl GetSoapXml for BamboraapacRefundRequest {
         };
 
         // Serialize using quick-xml
-        let refund_xml_string =
-            quick_xml::se::to_string(&refund_xml).unwrap_or_else(|_| String::from("<Refund/>"));
+        let refund_xml_string = quick_xml::se::to_string(&refund_xml).unwrap_or_else(|_| String::from("<Refund/>"));
 
         // Wrap in SOAP envelope
         format!(
@@ -1619,8 +1528,8 @@ impl GetSoapXml for BamboraapacSyncRequest {
         };
 
         // Serialize using quick-xml
-        let query_xml_string = quick_xml::se::to_string(&query_xml)
-            .unwrap_or_else(|_| String::from("<QueryTransaction/>"));
+        let query_xml_string =
+            quick_xml::se::to_string(&query_xml).unwrap_or_else(|_| String::from("<QueryTransaction/>"));
 
         // Wrap in SOAP envelope
         format!(
@@ -1730,12 +1639,7 @@ impl GetSoapXml for BamboraapacRepeatPaymentRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BamboraapacRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for BamboraapacPaymentRequest<T>
@@ -1744,12 +1648,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         data: super::BamboraapacRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1759,10 +1658,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        super::BamboraapacRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        super::BamboraapacRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     > for BamboraapacPSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -1798,20 +1694,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::BamboraapacRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for BamboraapacRSyncRequest
+    TryFrom<super::BamboraapacRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for BamboraapacRSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        data: super::BamboraapacRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        data: super::BamboraapacRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&data.router_data)
     }
@@ -1820,12 +1709,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BamboraapacRouterData<
-            RouterDataV2<
-                domain_types::connector_flow::Refund,
-                RefundFlowData,
-                RefundsData,
-                RefundsResponseData,
-            >,
+            RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
     > for BamboraapacRefundRequest
@@ -1834,12 +1718,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         data: super::BamboraapacRouterData<
-            RouterDataV2<
-                domain_types::connector_flow::Refund,
-                RefundFlowData,
-                RefundsData,
-                RefundsResponseData,
-            >,
+            RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1880,12 +1759,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BamboraapacRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     > for BamboraapacRepeatPaymentRequest
@@ -1894,12 +1768,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         data: super::BamboraapacRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {

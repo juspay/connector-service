@@ -69,11 +69,7 @@ impl aead::NonceSequence for NonceSequence {
 /// Trait for cryptographically signing messages
 pub trait SignMessage {
     /// Takes in a secret and a message and returns the calculated signature as bytes
-    fn sign_message(
-        &self,
-        _secret: &[u8],
-        _msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError>;
+    fn sign_message(&self, _secret: &[u8], _msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError>;
 }
 
 /// Trait for cryptographically verifying a message against a signature
@@ -91,11 +87,7 @@ pub trait VerifySignature {
 /// Trait for cryptographically encoding a message
 pub trait EncodeMessage {
     /// Takes in a secret and the message and encodes it, returning bytes
-    fn encode_message(
-        &self,
-        _secret: &[u8],
-        _msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError>;
+    fn encode_message(&self, _secret: &[u8], _msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError>;
 }
 
 /// Trait for cryptographically decoding a message
@@ -114,11 +106,7 @@ pub trait DecodeMessage {
 pub struct NoAlgorithm;
 
 impl SignMessage for NoAlgorithm {
-    fn sign_message(
-        &self,
-        _secret: &[u8],
-        _msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn sign_message(&self, _secret: &[u8], _msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         Ok(Vec::new())
     }
 }
@@ -135,11 +123,7 @@ impl VerifySignature for NoAlgorithm {
 }
 
 impl EncodeMessage for NoAlgorithm {
-    fn encode_message(
-        &self,
-        _secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn encode_message(&self, _secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         Ok(msg.to_vec())
     }
 }
@@ -159,23 +143,14 @@ impl DecodeMessage for NoAlgorithm {
 pub struct HmacSha1;
 
 impl SignMessage for HmacSha1 {
-    fn sign_message(
-        &self,
-        secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn sign_message(&self, secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         let key = hmac::Key::new(hmac::HMAC_SHA1_FOR_LEGACY_USE_ONLY, secret);
         Ok(hmac::sign(&key, msg).as_ref().to_vec())
     }
 }
 
 impl VerifySignature for HmacSha1 {
-    fn verify_signature(
-        &self,
-        secret: &[u8],
-        signature: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<bool, errors::CryptoError> {
+    fn verify_signature(&self, secret: &[u8], signature: &[u8], msg: &[u8]) -> CustomResult<bool, errors::CryptoError> {
         let key = hmac::Key::new(hmac::HMAC_SHA1_FOR_LEGACY_USE_ONLY, secret);
 
         Ok(hmac::verify(&key, msg, signature).is_ok())
@@ -187,23 +162,14 @@ impl VerifySignature for HmacSha1 {
 pub struct HmacSha256;
 
 impl SignMessage for HmacSha256 {
-    fn sign_message(
-        &self,
-        secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn sign_message(&self, secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         let key = hmac::Key::new(hmac::HMAC_SHA256, secret);
         Ok(hmac::sign(&key, msg).as_ref().to_vec())
     }
 }
 
 impl VerifySignature for HmacSha256 {
-    fn verify_signature(
-        &self,
-        secret: &[u8],
-        signature: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<bool, errors::CryptoError> {
+    fn verify_signature(&self, secret: &[u8], signature: &[u8], msg: &[u8]) -> CustomResult<bool, errors::CryptoError> {
         let key = hmac::Key::new(hmac::HMAC_SHA256, secret);
 
         Ok(hmac::verify(&key, msg, signature).is_ok())
@@ -215,23 +181,14 @@ impl VerifySignature for HmacSha256 {
 pub struct HmacSha512;
 
 impl SignMessage for HmacSha512 {
-    fn sign_message(
-        &self,
-        secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn sign_message(&self, secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         let key = hmac::Key::new(hmac::HMAC_SHA512, secret);
         Ok(hmac::sign(&key, msg).as_ref().to_vec())
     }
 }
 
 impl VerifySignature for HmacSha512 {
-    fn verify_signature(
-        &self,
-        secret: &[u8],
-        signature: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<bool, errors::CryptoError> {
+    fn verify_signature(&self, secret: &[u8], signature: &[u8], msg: &[u8]) -> CustomResult<bool, errors::CryptoError> {
         let key = hmac::Key::new(hmac::HMAC_SHA512, secret);
 
         Ok(hmac::verify(&key, msg, signature).is_ok())
@@ -250,11 +207,7 @@ impl Blake3 {
 }
 
 impl SignMessage for Blake3 {
-    fn sign_message(
-        &self,
-        secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn sign_message(&self, secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         let key = blake3::derive_key(&self.0, secret);
         let output = blake3::keyed_hash(&key, msg).as_bytes().to_vec();
         Ok(output)
@@ -262,12 +215,7 @@ impl SignMessage for Blake3 {
 }
 
 impl VerifySignature for Blake3 {
-    fn verify_signature(
-        &self,
-        secret: &[u8],
-        signature: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<bool, errors::CryptoError> {
+    fn verify_signature(&self, secret: &[u8], signature: &[u8], msg: &[u8]) -> CustomResult<bool, errors::CryptoError> {
         let key = blake3::derive_key(&self.0, secret);
         let output = blake3::keyed_hash(&key, msg);
         Ok(output.as_bytes() == signature)
@@ -279,16 +227,10 @@ impl VerifySignature for Blake3 {
 pub struct GcmAes256;
 
 impl EncodeMessage for GcmAes256 {
-    fn encode_message(
-        &self,
-        secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
-        let nonce_sequence =
-            NonceSequence::new().change_context(errors::CryptoError::EncodingFailed)?;
+    fn encode_message(&self, secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
+        let nonce_sequence = NonceSequence::new().change_context(errors::CryptoError::EncodingFailed)?;
         let current_nonce = nonce_sequence.current();
-        let key = UnboundKey::new(&aead::AES_256_GCM, secret)
-            .change_context(errors::CryptoError::EncodingFailed)?;
+        let key = UnboundKey::new(&aead::AES_256_GCM, secret).change_context(errors::CryptoError::EncodingFailed)?;
         let mut key = SealingKey::new(key, nonce_sequence);
         let mut in_out = msg.to_vec();
 
@@ -307,8 +249,7 @@ impl DecodeMessage for GcmAes256 {
         msg: Secret<Vec<u8>, EncryptionStrategy>,
     ) -> CustomResult<Vec<u8>, errors::CryptoError> {
         let msg = msg.expose();
-        let key = UnboundKey::new(&aead::AES_256_GCM, secret)
-            .change_context(errors::CryptoError::DecodingFailed)?;
+        let key = UnboundKey::new(&aead::AES_256_GCM, secret).change_context(errors::CryptoError::DecodingFailed)?;
 
         let nonce_sequence = NonceSequence::from_bytes(
             <[u8; aead::NONCE_LEN]>::try_from(
@@ -339,10 +280,7 @@ impl Ed25519 {
     const ED25519_PUBLIC_KEY_LEN: usize = 32;
     const ED25519_SIGNATURE_LEN: usize = 64;
     /// Validates ED25519 inputs (public key and signature lengths)
-    fn validate_inputs(
-        public_key: &[u8],
-        signature: &[u8],
-    ) -> CustomResult<(), errors::CryptoError> {
+    fn validate_inputs(public_key: &[u8], signature: &[u8]) -> CustomResult<(), errors::CryptoError> {
         // Validate public key length
         if public_key.len() != Self::ED25519_PUBLIC_KEY_LEN {
             return Err(errors::CryptoError::InvalidKeyLength).attach_printable(format!(
@@ -376,8 +314,7 @@ impl VerifySignature for Ed25519 {
         Self::validate_inputs(public_key, signature)?;
 
         // Create unparsed public key
-        let ring_public_key =
-            ring::signature::UnparsedPublicKey::new(&ring::signature::ED25519, public_key);
+        let ring_public_key = ring::signature::UnparsedPublicKey::new(&ring::signature::ED25519, public_key);
 
         // Perform verification
         match ring_public_key.verify(msg, signature) {
@@ -389,11 +326,7 @@ impl VerifySignature for Ed25519 {
 }
 
 impl SignMessage for Ed25519 {
-    fn sign_message(
-        &self,
-        secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn sign_message(&self, secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         if secret.len() != 32 {
             return Err(errors::CryptoError::InvalidKeyLength).attach_printable(format!(
                 "Invalid ED25519 private key length: expected 32 bytes, got {}",
@@ -522,10 +455,7 @@ pub struct Encryptable<T: Clone> {
 
 impl<T: Clone, S: hyperswitch_masking::Strategy<T>> Encryptable<Secret<T, S>> {
     /// constructor function to be used by the encryptor and decryptor to generate the data type
-    pub fn new(
-        masked_data: Secret<T, S>,
-        encrypted_data: Secret<Vec<u8>, EncryptionStrategy>,
-    ) -> Self {
+    pub fn new(masked_data: Secret<T, S>, encrypted_data: Secret<Vec<u8>, EncryptionStrategy>) -> Self {
         Self {
             inner: masked_data,
             encrypted: encrypted_data,
@@ -553,10 +483,7 @@ impl<T: Clone> Encryptable<T> {
     }
 
     /// Deserialize inner value and return new Encryptable object
-    pub fn deserialize_inner_value<U, F>(
-        self,
-        f: F,
-    ) -> CustomResult<Encryptable<U>, errors::ParsingError>
+    pub fn deserialize_inner_value<U, F>(self, f: F) -> CustomResult<Encryptable<U>, errors::ParsingError>
     where
         F: FnOnce(T) -> CustomResult<U, errors::ParsingError>,
         U: Clone,
@@ -644,10 +571,7 @@ impl TripleDesEde3CBC {
     ///
     /// # Errors
     /// Returns `CryptoError::InvalidIvLength` if IV is not 8 bytes
-    pub fn new(
-        padding: Option<common_enums::CryptoPadding>,
-        iv: Vec<u8>,
-    ) -> CustomResult<Self, errors::CryptoError> {
+    pub fn new(padding: Option<common_enums::CryptoPadding>, iv: Vec<u8>) -> CustomResult<Self, errors::CryptoError> {
         if iv.len() != Self::TRIPLE_DES_IV_LENGTH {
             Err(errors::CryptoError::InvalidIvLength)?
         };
@@ -657,11 +581,7 @@ impl TripleDesEde3CBC {
 }
 
 impl EncodeMessage for TripleDesEde3CBC {
-    fn encode_message(
-        &self,
-        secret: &[u8],
-        msg: &[u8],
-    ) -> CustomResult<Vec<u8>, errors::CryptoError> {
+    fn encode_message(&self, secret: &[u8], msg: &[u8]) -> CustomResult<Vec<u8>, errors::CryptoError> {
         if secret.len() != Self::TRIPLE_DES_KEY_LENGTH {
             Err(errors::CryptoError::InvalidKeyLength)?
         }
@@ -691,25 +611,20 @@ mod crypto_tests {
     fn test_hmac_sha256_sign_message() {
         let message = r#"{"type":"payment_intent"}"#.as_bytes();
         let secret = "hmac_secret_1234".as_bytes();
-        let right_signature =
-            hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823e")
-                .expect("Right signature decoding");
+        let right_signature = hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823e")
+            .expect("Right signature decoding");
 
-        let signature = super::HmacSha256
-            .sign_message(secret, message)
-            .expect("Signature");
+        let signature = super::HmacSha256.sign_message(secret, message).expect("Signature");
 
         assert_eq!(signature, right_signature);
     }
 
     #[test]
     fn test_hmac_sha256_verify_signature() {
-        let right_signature =
-            hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823e")
-                .expect("Right signature decoding");
-        let wrong_signature =
-            hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823f")
-                .expect("Wrong signature decoding");
+        let right_signature = hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823e")
+            .expect("Right signature decoding");
+        let wrong_signature = hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823f")
+            .expect("Wrong signature decoding");
         let secret = "hmac_secret_1234".as_bytes();
         let data = r#"{"type":"payment_intent"}"#.as_bytes();
 
@@ -728,14 +643,13 @@ mod crypto_tests {
 
     #[test]
     fn test_sha256_verify_signature() {
-        let right_signature =
-            hex::decode("123250a72f4e961f31661dbcee0fec0f4714715dc5ae1b573f908a0a5381ddba")
-                .expect("Right signature decoding");
-        let wrong_signature =
-            hex::decode("123250a72f4e961f31661dbcee0fec0f4714715dc5ae1b573f908a0a5381ddbb")
-                .expect("Wrong signature decoding");
+        let right_signature = hex::decode("123250a72f4e961f31661dbcee0fec0f4714715dc5ae1b573f908a0a5381ddba")
+            .expect("Right signature decoding");
+        let wrong_signature = hex::decode("123250a72f4e961f31661dbcee0fec0f4714715dc5ae1b573f908a0a5381ddbb")
+            .expect("Wrong signature decoding");
         let secret = "".as_bytes();
-        let data = r#"AJHFH9349JASFJHADJ9834115USD2020-11-13.13:22:34711000000021406655APPROVED12345product_id"#.as_bytes();
+        let data =
+            r#"AJHFH9349JASFJHADJ9834115USD2020-11-13.13:22:34711000000021406655APPROVED12345product_id"#.as_bytes();
 
         let right_verified = super::Sha256
             .verify_signature(secret, &right_signature, data)
@@ -757,9 +671,7 @@ mod crypto_tests {
         let right_signature = hex::decode("38b0bc1ea66b14793e39cd58e93d37b799a507442d0dd8d37443fa95dec58e57da6db4742636fea31201c48e57a66e73a308a2e5a5c6bb831e4e39fe2227c00f")
             .expect("signature decoding");
 
-        let signature = super::HmacSha512
-            .sign_message(secret, message)
-            .expect("Signature");
+        let signature = super::HmacSha512.sign_message(secret, message).expect("Signature");
 
         assert_eq!(signature, right_signature);
     }
@@ -768,9 +680,8 @@ mod crypto_tests {
     fn test_hmac_sha512_verify_signature() {
         let right_signature = hex::decode("38b0bc1ea66b14793e39cd58e93d37b799a507442d0dd8d37443fa95dec58e57da6db4742636fea31201c48e57a66e73a308a2e5a5c6bb831e4e39fe2227c00f")
             .expect("signature decoding");
-        let wrong_signature =
-            hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823f")
-                .expect("Wrong signature decoding");
+        let wrong_signature = hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823f")
+            .expect("Wrong signature decoding");
         let secret = "hmac_secret_1234".as_bytes();
         let data = r#"{"type":"payment_intent"}"#.as_bytes();
 
@@ -791,8 +702,7 @@ mod crypto_tests {
     fn test_gcm_aes_256_encode_message() {
         let message = r#"{"type":"PAYMENT"}"#.as_bytes();
         let secret =
-            hex::decode("000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f")
-                .expect("Secret decoding");
+            hex::decode("000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f").expect("Secret decoding");
         let algorithm = super::GcmAes256;
 
         let encoded_message = algorithm
@@ -813,11 +723,9 @@ mod crypto_tests {
         // https://github.com/briansmith/ring/blob/95948b3977013aed16db92ae32e6b8384496a740/tests/aead_aes_256_gcm_tests.txt#L447-L452
 
         let right_secret =
-            hex::decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308")
-                .expect("Secret decoding");
+            hex::decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308308").expect("Secret decoding");
         let wrong_secret =
-            hex::decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308309")
-                .expect("Secret decoding");
+            hex::decode("feffe9928665731c6d6a8f9467308308feffe9928665731c6d6a8f9467308309").expect("Secret decoding");
         let message =
             // The three parts of the message are the nonce, ciphertext and tag from the test vector
             hex::decode(
@@ -847,21 +755,16 @@ mod crypto_tests {
     fn test_md5_digest() {
         let message = "abcdefghijklmnopqrstuvwxyz".as_bytes();
         assert_eq!(
-            format!(
-                "{}",
-                hex::encode(super::Md5.generate_digest(message).expect("Digest"))
-            ),
+            format!("{}", hex::encode(super::Md5.generate_digest(message).expect("Digest"))),
             "c3fcd3d76192e4007dfb496cca67e13b"
         );
     }
 
     #[test]
     fn test_md5_verify_signature() {
-        let right_signature =
-            hex::decode("c3fcd3d76192e4007dfb496cca67e13b").expect("signature decoding");
-        let wrong_signature =
-            hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823f")
-                .expect("Wrong signature decoding");
+        let right_signature = hex::decode("c3fcd3d76192e4007dfb496cca67e13b").expect("signature decoding");
+        let wrong_signature = hex::decode("d5550730377011948f12cc28889bee590d2a5434d6f54b87562f2dbc2657823f")
+            .expect("Wrong signature decoding");
         let secret = "".as_bytes();
         let data = "abcdefghijklmnopqrstuvwxyz".as_bytes();
 

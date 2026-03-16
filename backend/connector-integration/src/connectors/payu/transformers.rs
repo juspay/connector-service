@@ -2,9 +2,7 @@ use common_enums::{self, AttemptStatus, Currency};
 use common_utils::{pii::IpAddress, Email};
 use domain_types::{
     connector_flow::{Authorize, PSync},
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
-    },
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorSpecificAuth, ErrorResponse},
@@ -80,10 +78,7 @@ impl TryFrom<&ConnectorSpecificAuth> for PayuAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Payu {
-                api_key,
-                api_secret,
-            } => Ok(Self {
+            ConnectorSpecificAuth::Payu { api_key, api_secret } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
@@ -125,9 +120,9 @@ pub struct PayuPaymentRequest {
     pub vpa: Option<Secret<String>>, // UPI VPA (for collect)
 
     // UPI specific fields
-    pub txn_s2s_flow: String, // S2S flow type ("2" for UPI)
+    pub txn_s2s_flow: String,                     // S2S flow type ("2" for UPI)
     pub s2s_client_ip: Secret<String, IpAddress>, // Client IP
-    pub s2s_device_info: String, // Device info
+    pub s2s_device_info: String,                  // Device info
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_version: Option<String>, // API version ("2.0")
 
@@ -262,12 +257,7 @@ pub struct PayuErrorResponse {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::PayuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for PayuPaymentRequest
@@ -276,12 +266,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::PayuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -292,10 +277,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_amount, router_data.request.currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         // Extract authentication
@@ -307,33 +289,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Generate UDF fields based on Haskell implementation
         let udf_fields = generate_udf_fields(
             &router_data.resource_common_data.payment_id,
-            router_data
-                .resource_common_data
-                .merchant_id
-                .get_string_repr(),
+            router_data.resource_common_data.merchant_id.get_string_repr(),
             router_data,
         );
 
         // Build base request
         let mut request = Self {
             key: auth.api_key.peek().to_string(),
-            txnid: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            txnid: router_data.resource_common_data.connector_request_reference_id.clone(),
             amount,
             currency: router_data.request.currency,
             productinfo: constants::PRODUCT_INFO.to_string(), // Default product info
 
             // Customer info - extract from billing address if available
             firstname: router_data.resource_common_data.get_billing_first_name()?,
-            lastname: router_data
-                .resource_common_data
-                .get_optional_billing_last_name(),
+            lastname: router_data.resource_common_data.get_optional_billing_last_name(),
             email: router_data.resource_common_data.get_billing_email()?,
-            phone: router_data
-                .resource_common_data
-                .get_billing_phone_number()?,
+            phone: router_data.resource_common_data.get_billing_phone_number()?,
 
             // URLs - use router return URL if available
             surl: router_data.request.get_router_return_url()?,
@@ -346,14 +318,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
             // UPI specific - corrected based on PayU docs
             txn_s2s_flow: s2s_flow,
-            s2s_client_ip: router_data
-                .request
-                .get_ip_address_as_optional()
-                .ok_or_else(|| {
-                    report!(ConnectorError::MissingRequiredField {
-                        field_name: "IP address"
-                    })
-                })?,
+            s2s_client_ip: router_data.request.get_ip_address_as_optional().ok_or_else(|| {
+                report!(ConnectorError::MissingRequiredField {
+                    field_name: "IP address"
+                })
+            })?,
             s2s_device_info: constants::DEVICE_INFO.to_string(),
             api_version: Some(constants::API_VERSION.to_string()), // As per PayU analysis
 
@@ -406,9 +375,9 @@ pub struct PayuSyncResponse {
     pub status: Option<i32>, // 0 = error, non-zero = success
     pub msg: Option<String>, // Status message
     pub transaction_details: Option<std::collections::HashMap<String, PayuTransactionDetail>>, // Map of txnId -> details
-    pub result: Option<serde_json::Value>, // Optional result field
+    pub result: Option<serde_json::Value>,                                                     // Optional result field
     #[serde(alias = "field3")]
-    pub field3: Option<String>, // Additional field
+    pub field3: Option<String>,                                  // Additional field
 }
 
 // PayU Transaction Detail structure from sync response
@@ -417,48 +386,41 @@ pub struct PayuTransactionDetail {
     pub mihpayid: Option<String>,         // PayU transaction ID
     pub txnid: Option<String>,            // Merchant transaction ID
     pub amount: Option<String>,           // Transaction amount
-    pub status: String, // Transaction status: "success", "failure", "pending", "cancel"
-    pub firstname: Option<String>, // Customer first name
-    pub lastname: Option<String>, // Customer last name
-    pub email: Option<Secret<String>>, // Customer email
-    pub phone: Option<Secret<String>>, // Customer phone
-    pub productinfo: Option<String>, // Product description
-    pub hash: Option<String>, // Response hash for verification
-    pub field1: Option<String>, // UPI transaction ID
-    pub field2: Option<String>, // Bank reference number
-    pub field3: Option<String>, // Payment source
-    pub field9: Option<String>, // Additional field
-    pub error_code: Option<String>, // Error code if failed
-    pub error_message: Option<String>, // Error message if failed
-    pub card_token: Option<String>, // Card token if applicable
-    pub card_category: Option<String>, // Card category
-    pub offer_key: Option<String>, // Offer key used
-    pub discount: Option<String>, // Discount applied
+    pub status: String,                   // Transaction status: "success", "failure", "pending", "cancel"
+    pub firstname: Option<String>,        // Customer first name
+    pub lastname: Option<String>,         // Customer last name
+    pub email: Option<Secret<String>>,    // Customer email
+    pub phone: Option<Secret<String>>,    // Customer phone
+    pub productinfo: Option<String>,      // Product description
+    pub hash: Option<String>,             // Response hash for verification
+    pub field1: Option<String>,           // UPI transaction ID
+    pub field2: Option<String>,           // Bank reference number
+    pub field3: Option<String>,           // Payment source
+    pub field9: Option<String>,           // Additional field
+    pub error_code: Option<String>,       // Error code if failed
+    pub error_message: Option<String>,    // Error message if failed
+    pub card_token: Option<String>,       // Card token if applicable
+    pub card_category: Option<String>,    // Card category
+    pub offer_key: Option<String>,        // Offer key used
+    pub discount: Option<String>,         // Discount applied
     pub net_amount_debit: Option<String>, // Net amount debited
-    pub addedon: Option<String>, // Transaction timestamp
-    pub payment_source: Option<String>, // Payment method used
-    pub bank_ref_num: Option<String>, // Bank reference number
-    pub upi_va: Option<String>, // UPI virtual address
-    pub cardnum: Option<String>, // Masked card number
-    pub issuing_bank: Option<String>, // Card issuing bank
+    pub addedon: Option<String>,          // Transaction timestamp
+    pub payment_source: Option<String>,   // Payment method used
+    pub bank_ref_num: Option<String>,     // Bank reference number
+    pub upi_va: Option<String>,           // UPI virtual address
+    pub cardnum: Option<String>,          // Masked card number
+    pub issuing_bank: Option<String>,     // Card issuing bank
 }
 
 // PayU Sync Request conversion from RouterData
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PayuSyncRequest
+    TryFrom<super::PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for PayuSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: super::PayuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: super::PayuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -530,17 +492,10 @@ fn generate_payu_verify_hash(
 
 // UDF field generation based on Haskell implementation
 // Implements the logic from getUdf1-getUdf5 functions and orderReference fields
-fn generate_udf_fields<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
->(
+fn generate_udf_fields<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     payment_id: &str,
     merchant_id: &str,
-    router_data: &RouterDataV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    >,
+    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> [Option<String>; 10] {
     // Based on Haskell implementation:
     // udf1-udf5 come from PayuMetaData (if available) or default values
@@ -583,9 +538,7 @@ fn generate_udf_fields<
 }
 
 // UPI app name determination based on Haskell getUpiAppName implementation
-fn determine_upi_app_name<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
->(
+fn determine_upi_app_name<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<Option<String>, ConnectorError> {
     // From Haskell getUpiAppName implementation:
@@ -619,9 +572,7 @@ fn determine_upi_app_name<
 
 // PayU flow determination based on Haskell getTxnS2SType implementation
 #[allow(clippy::type_complexity)]
-fn determine_upi_flow<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
->(
+fn determine_upi_flow<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<(Option<String>, Option<String>, Option<String>, String), ConnectorError> {
     // Based on Haskell implementation:
@@ -644,9 +595,7 @@ fn determine_upi_flow<
                         ))
                     } else {
                         // Missing VPA for UPI Collect - this should be an error
-                        Err(ConnectorError::MissingRequiredField {
-                            field_name: "vpa_id",
-                        })
+                        Err(ConnectorError::MissingRequiredField { field_name: "vpa_id" })
                     }
                 }
                 UpiData::UpiIntent(_) | UpiData::UpiQr(_) => {
@@ -662,31 +611,22 @@ fn determine_upi_flow<
             }
         }
         _ => Err(ConnectorError::NotSupported {
-            message: "Payment method not supported by PayU. Only UPI payments are supported"
-                .to_string(),
+            message: "Payment method not supported by PayU. Only UPI payments are supported".to_string(),
             connector: "PayU",
         }),
     }
 }
 
-pub fn is_upi_collect_flow<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
->(
+pub fn is_upi_collect_flow<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     request: &PaymentsAuthorizeData<T>,
 ) -> bool {
     // Check if the payment method is UPI Collect
-    matches!(
-        request.payment_method_data,
-        PaymentMethodData::Upi(UpiData::UpiCollect(_))
-    )
+    matches!(request.payment_method_data, PaymentMethodData::Upi(UpiData::UpiCollect(_)))
 }
 
 // Hash generation based on Haskell PayU implementation (makePayuTxnHash)
 // PayU expects: sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|udf6|udf7|udf8|udf9|udf10|salt)
-fn generate_payu_hash(
-    request: &PayuPaymentRequest,
-    merchant_salt: &Secret<String>,
-) -> Result<String, ConnectorError> {
+fn generate_payu_hash(request: &PayuPaymentRequest, merchant_salt: &Secret<String>) -> Result<String, ConnectorError> {
     use sha2::{Digest, Sha512};
 
     // Build hash fields array exactly as PayU expects based on Haskell implementation
@@ -816,10 +756,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .result
                     .map(|result| {
                         if result.status == "pending" {
-                            (
-                                AttemptStatus::AuthenticationPending,
-                                result.mihpayid.clone(),
-                            )
+                            (AttemptStatus::AuthenticationPending, result.mihpayid.clone())
                         } else {
                             (AttemptStatus::Failure, result.mihpayid.clone())
                         }
@@ -863,9 +800,7 @@ impl TryFrom<ResponseRouterData<PayuSyncResponse, Self>>
 
     fn try_from(item: ResponseRouterData<PayuSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
-        let error_message = response
-            .msg
-            .unwrap_or_else(|| "PayU PSync error".to_string());
+        let error_message = response.msg.unwrap_or_else(|| "PayU PSync error".to_string());
         // Check PayU status field - 0 means error, 1 means success response structure
         match (response.status, response.transaction_details) {
             (Some(1), Some(transaction_details)) => {
@@ -881,9 +816,7 @@ impl TryFrom<ResponseRouterData<PayuSyncResponse, Self>>
                         let attempt_status = map_payu_sync_status(&txn_detail.status, txn_detail);
 
                         let payment_response_data = PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                connector_transaction_id.clone(),
-                            ),
+                            resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,

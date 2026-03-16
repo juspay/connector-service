@@ -48,10 +48,7 @@ impl ValueExt for Value {
     where
         T: serde::de::DeserializeOwned,
     {
-        let debug = format!(
-            "Unable to parse {type_name} from serde_json::Value: {:?}",
-            &self
-        );
+        let debug = format!("Unable to parse {type_name} from serde_json::Value: {:?}", &self);
         serde_json::from_value::<T>(self)
             .change_context(ParsingError::StructParseFailure(type_name))
             .attach_printable_lazy(|| debug)
@@ -116,12 +113,7 @@ pub fn generate_random_bytes(length: usize) -> Vec<u8> {
 pub fn missing_field_err(
     message: &'static str,
 ) -> Box<dyn Fn() -> error_stack::Report<errors::ConnectorError> + 'static> {
-    Box::new(move || {
-        errors::ConnectorError::MissingRequiredField {
-            field_name: message,
-        }
-        .into()
-    })
+    Box::new(move || errors::ConnectorError::MissingRequiredField { field_name: message }.into())
 }
 
 pub fn construct_not_supported_error_report(
@@ -161,9 +153,7 @@ pub fn get_amount_as_string(
     Ok(amount)
 }
 
-pub fn base64_decode(
-    data: String,
-) -> core::result::Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+pub fn base64_decode(data: String) -> core::result::Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
     base64::engine::general_purpose::STANDARD
         .decode(data)
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
@@ -191,25 +181,18 @@ pub fn get_header_key_value<'a>(
     get_header_field(headers.get(key))
 }
 
-pub fn get_http_header<'a>(
-    key: &str,
-    headers: &'a http::HeaderMap,
-) -> CustomResult<&'a str, errors::ConnectorError> {
+pub fn get_http_header<'a>(key: &str, headers: &'a http::HeaderMap) -> CustomResult<&'a str, errors::ConnectorError> {
     get_header_field(headers.get(key))
 }
 
-fn get_header_field(
-    field: Option<&http::HeaderValue>,
-) -> CustomResult<&str, errors::ConnectorError> {
+fn get_header_field(field: Option<&http::HeaderValue>) -> CustomResult<&str, errors::ConnectorError> {
     field
         .map(|header_value| {
             header_value
                 .to_str()
                 .change_context(errors::ConnectorError::WebhookSignatureNotFound)
         })
-        .ok_or(report!(
-            errors::ConnectorError::WebhookSourceVerificationFailed
-        ))?
+        .ok_or(report!(errors::ConnectorError::WebhookSourceVerificationFailed))?
 }
 
 pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
@@ -362,35 +345,31 @@ pub fn get_card_issuer(card_number: &str) -> core::result::Result<CardIssuer, Er
             return Ok(*k);
         }
     }
-    Err(error_stack::Report::new(
-        errors::ConnectorError::NotImplemented("Card Type".into()),
-    ))
+    Err(error_stack::Report::new(errors::ConnectorError::NotImplemented(
+        "Card Type".into(),
+    )))
 }
 
-static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, regex::Error>>> =
-    LazyLock::new(|| {
-        let mut map = HashMap::new();
-        // Reference: https://gist.github.com/michaelkeevildown/9096cd3aac9029c4e6e05588448a8841
-        // [#379]: Determine card issuer from card BIN number
-        map.insert(CardIssuer::Master, Regex::new(r"^5[1-5][0-9]{14}$"));
-        map.insert(CardIssuer::AmericanExpress, Regex::new(r"^3[47][0-9]{13}$"));
-        map.insert(CardIssuer::Visa, Regex::new(r"^4[0-9]{12}(?:[0-9]{3})?$"));
-        map.insert(CardIssuer::Discover, Regex::new(r"^65[4-9][0-9]{13}|64[4-9][0-9]{13}|6011[0-9]{12}|(622(?:12[6-9]|1[3-9][0-9]|[2-8][0-9][0-9]|9[01][0-9]|92[0-5])[0-9]{10})$"));
-        map.insert(
-            CardIssuer::Maestro,
-            Regex::new(r"^(5018|5020|5038|5893|6304|6759|6761|6762|6763)[0-9]{8,15}$"),
-        );
-        map.insert(
-            CardIssuer::DinersClub,
-            Regex::new(r"^3(?:0[0-5]|[68][0-9])[0-9]{11}$"),
-        );
-        map.insert(
-            CardIssuer::JCB,
-            Regex::new(r"^(3(?:088|096|112|158|337|5(?:2[89]|[3-8][0-9]))\d{12})$"),
-        );
-        map.insert(CardIssuer::CarteBlanche, Regex::new(r"^389[0-9]{11}$"));
-        map
-    });
+static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, regex::Error>>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    // Reference: https://gist.github.com/michaelkeevildown/9096cd3aac9029c4e6e05588448a8841
+    // [#379]: Determine card issuer from card BIN number
+    map.insert(CardIssuer::Master, Regex::new(r"^5[1-5][0-9]{14}$"));
+    map.insert(CardIssuer::AmericanExpress, Regex::new(r"^3[47][0-9]{13}$"));
+    map.insert(CardIssuer::Visa, Regex::new(r"^4[0-9]{12}(?:[0-9]{3})?$"));
+    map.insert(CardIssuer::Discover, Regex::new(r"^65[4-9][0-9]{13}|64[4-9][0-9]{13}|6011[0-9]{12}|(622(?:12[6-9]|1[3-9][0-9]|[2-8][0-9][0-9]|9[01][0-9]|92[0-5])[0-9]{10})$"));
+    map.insert(
+        CardIssuer::Maestro,
+        Regex::new(r"^(5018|5020|5038|5893|6304|6759|6761|6762|6763)[0-9]{8,15}$"),
+    );
+    map.insert(CardIssuer::DinersClub, Regex::new(r"^3(?:0[0-5]|[68][0-9])[0-9]{11}$"));
+    map.insert(
+        CardIssuer::JCB,
+        Regex::new(r"^(3(?:088|096|112|158|337|5(?:2[89]|[3-8][0-9]))\d{12})$"),
+    );
+    map.insert(CardIssuer::CarteBlanche, Regex::new(r"^389[0-9]{11}$"));
+    map
+});
 
 /// Helper function for extracting merchant ID from metadata.
 ///
@@ -399,9 +378,8 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
 pub fn extract_merchant_id_from_metadata(
     metadata: &MaskedMetadata,
 ) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
-    let merchant_id_str = common_utils::metadata::merchant_id_or_default(
-        metadata.get_raw(consts::X_MERCHANT_ID).as_deref(),
-    );
+    let merchant_id_str =
+        common_utils::metadata::merchant_id_or_default(metadata.get_raw(consts::X_MERCHANT_ID).as_deref());
     Ok(merchant_id_str
         .parse::<common_utils::id_type::MerchantId>()
         .map_err(|e| {

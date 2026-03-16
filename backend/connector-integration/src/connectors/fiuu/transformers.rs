@@ -14,16 +14,14 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, Void},
     connector_types::{
-        EventType, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId,
+        EventType, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
-        ApplePayDecryptedData, BankRedirectData, Card, CardDetailsForNetworkTransactionId,
-        GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        RealTimePaymentData, WalletData,
+        ApplePayDecryptedData, BankRedirectData, Card, CardDetailsForNetworkTransactionId, GooglePayWalletData,
+        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, RealTimePaymentData, WalletData,
     },
     router_data::{ConnectorSpecificAuth, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -85,9 +83,7 @@ impl TryFrom<Option<CaptureMethod>> for TxnType {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(capture_method: Option<CaptureMethod>) -> Result<Self, Self::Error> {
         match capture_method {
-            Some(CaptureMethod::Automatic) | Some(CaptureMethod::SequentialAutomatic) | None => {
-                Ok(Self::Sals)
-            }
+            Some(CaptureMethod::Automatic) | Some(CaptureMethod::SequentialAutomatic) | None => Ok(Self::Sals),
             Some(CaptureMethod::Manual) => Ok(Self::Auts),
             _ => Err(ConnectorError::CaptureMethodNotSupported.into()),
         }
@@ -238,26 +234,13 @@ pub enum FiuuRecordType {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &FiuuRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        &FiuuRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>, T>,
     > for FiuuMandateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: &FiuuRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -273,22 +256,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
             .change_context(ConnectorError::RequestEncodingFailed)?;
-        let billing_name = item
-            .router_data
-            .resource_common_data
-            .get_billing_full_name()?;
+        let billing_name = item.router_data.resource_common_data.get_billing_full_name()?;
 
         let email = item.router_data.resource_common_data.get_billing_email()?;
-        let token = Secret::new(item.router_data.request.connector_mandate_id().ok_or_else(
-            || ConnectorError::MissingRequiredField {
+        let token = Secret::new(item.router_data.request.connector_mandate_id().ok_or_else(|| {
+            ConnectorError::MissingRequiredField {
                 field_name: "connector_mandate_id",
-            },
-        )?);
+            }
+        })?);
         let verify_key = auth.verify_key;
         let recurring_request = FiuuRecurringRequest {
             record_type: record_type.clone(),
@@ -320,9 +297,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-pub fn calculate_check_sum(
-    req: FiuuRecurringRequest,
-) -> CustomResult<Secret<String>, ConnectorError> {
+pub fn calculate_check_sum(req: FiuuRecurringRequest) -> CustomResult<Secret<String>, ConnectorError> {
     let formatted_string = format!(
         "{}{}{}{}{}{}{}",
         req.record_type,
@@ -342,9 +317,7 @@ pub fn calculate_check_sum(
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct FiuuPaymentRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct FiuuPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "MerchantID")]
     merchant_id: Secret<String>,
     reference_no: String,
@@ -362,9 +335,7 @@ pub struct FiuuPaymentRequest<
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum FiuuPaymentMethodData<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub enum FiuuPaymentMethodData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     FiuuQRData(Box<FiuuQRData>),
     FiuuCardData(Box<FiuuCardData<T>>),
     FiuuCardWithNTI(Box<FiuuCardWithNTI>),
@@ -388,9 +359,7 @@ pub struct FiuuQRData {
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct FiuuCardData<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct FiuuCardData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "non_3DS")]
     non_3ds: i32,
     #[serde(rename = "TxnChannel")]
@@ -449,9 +418,7 @@ pub struct FiuuGooglePayData {
     api_version_minor: u8,
     #[serde(rename = "GooglePay[paymentMethodData][info][assuranceDetails][accountVerified]")]
     account_verified: Option<bool>,
-    #[serde(
-        rename = "GooglePay[paymentMethodData][info][assuranceDetails][cardHolderAuthenticated]"
-    )]
+    #[serde(rename = "GooglePay[paymentMethodData][info][assuranceDetails][cardHolderAuthenticated]")]
     card_holder_authenticated: Option<bool>,
     #[serde(rename = "GooglePay[paymentMethodData][info][cardDetails]")]
     card_details: String,
@@ -469,9 +436,7 @@ pub struct FiuuGooglePayData {
     non_3ds: i32,
 }
 
-pub fn calculate_signature(
-    signature_data: String,
-) -> Result<Secret<String>, error_stack::Report<ConnectorError>> {
+pub fn calculate_signature(signature_data: String) -> Result<Secret<String>, error_stack::Report<ConnectorError>> {
     let message = signature_data.as_bytes();
     let encoded_data = hex::encode(
         crypto::Md5
@@ -482,27 +447,13 @@ pub fn calculate_signature(
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for FiuuPaymentRequest<T>
+    TryFrom<FiuuRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    for FiuuPaymentRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiuuRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -512,10 +463,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
             .change_context(ConnectorError::RequestEncodingFailed)?;
         let txn_amount = amount;
         let reference_no = item
@@ -538,29 +486,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             true => 0,
         };
         let notification_url = Some(
-            Url::parse(&item.router_data.request.get_webhook_url()?)
-                .change_context(ConnectorError::ParsingFailed)?,
+            Url::parse(&item.router_data.request.get_webhook_url()?).change_context(ConnectorError::ParsingFailed)?,
         );
 
         let payment_method_data = match item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(ref card) => {
-                FiuuPaymentMethodData::try_from((card, &item.router_data))
-            }
-            PaymentMethodData::RealTimePayment(ref real_time_payment_data) => {
-                match *real_time_payment_data.clone() {
-                    RealTimePaymentData::DuitNow {} => {
-                        Ok(FiuuPaymentMethodData::FiuuQRData(Box::new(FiuuQRData {
-                            txn_channel: TxnChannel::RppDuitNowQr,
-                        })))
-                    }
-                    RealTimePaymentData::Fps {}
-                    | RealTimePaymentData::PromptPay {}
-                    | RealTimePaymentData::VietQr {} => Err(ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("fiuu"),
+            PaymentMethodData::Card(ref card) => FiuuPaymentMethodData::try_from((card, &item.router_data)),
+            PaymentMethodData::RealTimePayment(ref real_time_payment_data) => match *real_time_payment_data.clone() {
+                RealTimePaymentData::DuitNow {} => Ok(FiuuPaymentMethodData::FiuuQRData(Box::new(FiuuQRData {
+                    txn_channel: TxnChannel::RppDuitNowQr,
+                }))),
+                RealTimePaymentData::Fps {} | RealTimePaymentData::PromptPay {} | RealTimePaymentData::VietQr {} => {
+                    Err(
+                        ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message("fiuu"))
+                            .into(),
                     )
-                    .into()),
                 }
-            }
+            },
             PaymentMethodData::BankRedirect(ref bank_redirect_data) => match bank_redirect_data {
                 BankRedirectData::OnlineBankingFpx { ref issuer } => {
                     Ok(FiuuPaymentMethodData::FiuuFpxData(Box::new(FiuuFPXData {
@@ -592,9 +533,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .into()),
             },
             PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
-                WalletData::GooglePay(google_pay_data) => {
-                    FiuuPaymentMethodData::try_from(google_pay_data)
-                }
+                WalletData::GooglePay(google_pay_data) => FiuuPaymentMethodData::try_from(google_pay_data),
                 WalletData::ApplePay(_apple_pay_data) => {
                     match _apple_pay_data
                         .payment_data
@@ -651,12 +590,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("fiuu"),
-                )
-                .into())
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("fiuu"),
+            )
+            .into()),
         }?;
 
         Ok(Self {
@@ -675,26 +612,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &FiuuRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        &FiuuRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>, T>,
     > for FiuuPaymentRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: &FiuuRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -704,10 +628,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
             .change_context(ConnectorError::RequestEncodingFailed)?;
         let txn_amount = amount;
         let reference_no = item
@@ -726,28 +647,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let return_url = item.router_data.request.router_return_url.clone();
         let notification_url = Some(
-            Url::parse(&item.router_data.request.get_webhook_url()?)
-                .change_context(ConnectorError::ParsingFailed)?,
+            Url::parse(&item.router_data.request.get_webhook_url()?).change_context(ConnectorError::ParsingFailed)?,
         );
         let payment_method_data = match &item.router_data.request.mandate_reference {
             MandateReferenceId::NetworkMandateId(network_transaction_id) => {
                 match item.router_data.request.payment_method_data {
                     PaymentMethodData::CardDetailsForNetworkTransactionId(ref raw_card_details) => {
-                        FiuuPaymentMethodData::try_from((
-                            raw_card_details,
-                            network_transaction_id.clone(),
-                        ))
+                        FiuuPaymentMethodData::try_from((raw_card_details, network_transaction_id.clone()))
                     }
-                    _ => Err(ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("fiuu"),
-                    )
-                    .into()),
+                    _ => Err(
+                        ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message("fiuu"))
+                            .into(),
+                    ),
                 }
             }
-            _ => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("fiuu"),
-            )
-            .into()),
+            _ => Err(
+                ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message("fiuu")).into(),
+            ),
         }?;
 
         Ok(Self {
@@ -774,23 +690,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         (req_card, item): (
             &Card<T>,
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
-        let (mps_token_status, customer_email) =
-            if item.request.is_customer_initiated_mandate_payment() {
-                (
-                    Some(1),
-                    Some(item.resource_common_data.get_billing_email()?),
-                )
-            } else {
-                (Some(3), None)
-            };
+        let (mps_token_status, customer_email) = if item.request.is_customer_initiated_mandate_payment() {
+            (Some(1), Some(item.resource_common_data.get_billing_email()?))
+        } else {
+            (Some(3), None)
+        };
         let non_3ds = match item.resource_common_data.is_three_ds() {
             false => 1,
             true => 0,
@@ -825,8 +732,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<&GooglePayWalletData> for FiuuPaymentMethodData<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> TryFrom<&GooglePayWalletData>
+    for FiuuPaymentMethodData<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(data: &GooglePayWalletData) -> Result<Self, Self::Error> {
@@ -871,8 +778,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ApplePayDecryptedData> for FiuuPaymentMethodData<T>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> TryFrom<ApplePayDecryptedData>
+    for FiuuPaymentMethodData<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(decrypt_data: ApplePayDecryptedData) -> Result<Self, Self::Error> {
@@ -1094,17 +1001,13 @@ where
                     })
                 }
                 RequestData::NonThreeDS(non_threeds_data) => {
-                    let mandate_reference =
-                        non_threeds_data
-                            .extra_parameters
-                            .as_ref()
-                            .and_then(|extra_p| {
-                                extra_p.token.as_ref().map(|token| MandateReference {
-                                    connector_mandate_id: Some(token.clone().expose()),
-                                    payment_method_id: None,
-                                    connector_mandate_request_reference_id: None,
-                                })
-                            });
+                    let mandate_reference = non_threeds_data.extra_parameters.as_ref().and_then(|extra_p| {
+                        extra_p.token.as_ref().map(|token| MandateReference {
+                            connector_mandate_id: Some(token.clone().expose()),
+                            payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
+                        })
+                    });
                     let status = match non_threeds_data.status.as_str() {
                         "00" => {
                             if router_data.request.is_auto_capture()? {
@@ -1115,9 +1018,7 @@ where
                         }
                         "11" => Ok(common_enums::AttemptStatus::Failure),
                         "22" => Ok(common_enums::AttemptStatus::Pending),
-                        other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(
-                            other.to_owned(),
-                        ))),
+                        other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(other.to_owned()))),
                     }?;
                     let response = if status == common_enums::AttemptStatus::Failure {
                         Err(ErrorResponse {
@@ -1163,8 +1064,7 @@ where
                 let recurring_response_item = recurring_response_vec.first();
                 let router_data_response = match recurring_response_item {
                     Some(recurring_response) => {
-                        let status =
-                            common_enums::AttemptStatus::from(recurring_response.status.clone());
+                        let status = common_enums::AttemptStatus::from(recurring_response.status.clone());
                         let connector_transaction_id = recurring_response
                             .tran_id
                             .as_ref()
@@ -1266,26 +1166,19 @@ pub enum RefundType {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for FiuuRefundRequest
+    TryFrom<FiuuRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for FiuuRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiuuRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: FiuuRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
             .change_context(ConnectorError::RequestEncodingFailed)?;
         let txn_amount = amount;
         let reference_no = item
@@ -1360,9 +1253,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                     "00" => Ok(common_enums::RefundStatus::Success),
                     "11" => Ok(common_enums::RefundStatus::Failure),
                     "22" => Ok(common_enums::RefundStatus::Pending),
-                    other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(
-                        other.to_owned(),
-                    ))),
+                    other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(other.to_owned()))),
                 }?;
                 if refund_status == common_enums::RefundStatus::Failure {
                     Ok(Self {
@@ -1467,19 +1358,12 @@ pub enum StatName {
     Unknown,
 }
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for FiuuPaymentSyncRequest
+    TryFrom<FiuuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for FiuuPaymentSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiuuRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: FiuuRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let txn_id = item
@@ -1493,19 +1377,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.amount, item.router_data.request.currency)
             .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
             amount: amount.clone(),
             tx_id: txn_id.clone(),
             domain: merchant_id.clone(),
-            skey: calculate_signature(format!(
-                "{txn_id}{merchant_id}{verify_key}{}",
-                amount.get_amount_as_string()
-            ))?,
+            skey: calculate_signature(format!("{txn_id}{merchant_id}{verify_key}{}", amount.get_amount_as_string()))?,
         })
     }
 }
@@ -1528,9 +1406,7 @@ impl TryFrom<ErrorInputs> for ErrorDetails {
         let query_params = value
             .encoded_data
             .as_ref()
-            .map(|encoded_data| {
-                serde_urlencoded::from_str::<FiuuPaymentRedirectResponse>(encoded_data)
-            })
+            .map(|encoded_data| serde_urlencoded::from_str::<FiuuPaymentRedirectResponse>(encoded_data))
             .transpose()
             .change_context(ConnectorError::ResponseDeserializationFailed)
             .attach_printable("Failed to deserialize FiuuPaymentRedirectResponse")?;
@@ -1584,10 +1460,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 let stat_name = response.stat_name;
                 let stat_code = response.stat_code.clone();
                 let txn_id = response.tran_id;
-                let status = common_enums::AttemptStatus::try_from(FiuuSyncStatus {
-                    stat_name,
-                    stat_code,
-                })?;
+                let status = common_enums::AttemptStatus::try_from(FiuuSyncStatus { stat_name, stat_code })?;
                 let error_response = if status == common_enums::AttemptStatus::Failure {
                     let error_details = ErrorDetails::try_from(ErrorInputs {
                         encoded_data: router_data.request.encoded_data.clone(),
@@ -1613,10 +1486,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
-                    network_txn_id: response
-                        .scheme_transaction_id
-                        .as_ref()
-                        .map(|id| id.clone().expose()),
+                    network_txn_id: response.scheme_transaction_id.as_ref().map(|id| id.clone().expose()),
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
@@ -1637,8 +1507,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 })?;
                 let txn_id = response.tran_id;
                 let mandate_reference = response.extra_parameters.as_ref().and_then(|extra_p| {
-                    let mandate_token: Result<ExtraParameters, _> =
-                        serde_json::from_str(&extra_p.clone().expose());
+                    let mandate_token: Result<ExtraParameters, _> = serde_json::from_str(&extra_p.clone().expose());
                     match mandate_token {
                         Ok(token) => token.token.as_ref().map(|token| MandateReference {
                             connector_mandate_id: Some(token.clone().expose()),
@@ -1701,9 +1570,7 @@ impl TryFrom<FiuuWebhookStatus> for common_enums::AttemptStatus {
     fn try_from(webhook_status: FiuuWebhookStatus) -> Result<Self, Self::Error> {
         match webhook_status.status {
             FiuuPaymentWebhookStatus::Success => match webhook_status.capture_method {
-                Some(CaptureMethod::Automatic) | Some(CaptureMethod::SequentialAutomatic) => {
-                    Ok(Self::Charged)
-                }
+                Some(CaptureMethod::Automatic) | Some(CaptureMethod::SequentialAutomatic) => Ok(Self::Charged),
                 Some(CaptureMethod::Manual) => Ok(Self::Authorized),
                 _ => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(
                     webhook_status.status.to_string(),
@@ -1747,31 +1614,20 @@ impl TryFrom<FiuuSyncStatus> for common_enums::AttemptStatus {
             (StatCode::Success, StatName::Authorized) => Ok(Self::Authorized),
             (StatCode::Pending, StatName::Pending) => Ok(Self::AuthenticationPending), // For Pending as StatCode we can only expect Pending and Unknown as StatName.
             (StatCode::Pending, StatName::Unknown) => Ok(Self::Pending),
-            (StatCode::Failure, StatName::Cancelled) | (StatCode::Failure, StatName::ReqCancel) => {
-                Ok(Self::Voided)
-            }
+            (StatCode::Failure, StatName::Cancelled) | (StatCode::Failure, StatName::ReqCancel) => Ok(Self::Voided),
             (StatCode::Failure, _) => Ok(Self::Failure),
-            (other, _) => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(
-                other.to_string(),
-            ))),
+            (other, _) => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(other.to_string()))),
         }
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for PaymentCaptureRequest
+    TryFrom<FiuuRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for PaymentCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiuuRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        item: FiuuRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek().to_string();
@@ -1790,10 +1646,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
         let verify_key = auth.verify_key.peek().to_string();
-        let signature = calculate_signature(format!(
-            "{txn_id}{}{merchant_id}{verify_key}",
-            amount.get_amount_as_string()
-        ))?;
+        let signature =
+            calculate_signature(format!("{txn_id}{}{merchant_id}{verify_key}", amount.get_amount_as_string()))?;
         Ok(Self {
             domain: merchant_id,
             tran_id: txn_id,
@@ -1833,9 +1687,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<PaymentCaptureResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<PaymentCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1846,11 +1698,10 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
         let status = match status_code.as_str() {
             "00" => Ok(common_enums::AttemptStatus::Charged),
             "22" => Ok(common_enums::AttemptStatus::Pending),
-            "11" | "12" | "13" | "15" | "16" | "17" | "18" | "19" | "20" | "21" | "23" | "24"
-            | "25" | "99" => Ok(common_enums::AttemptStatus::Failure),
-            other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(
-                other.to_owned(),
-            ))),
+            "11" | "12" | "13" | "15" | "16" | "17" | "18" | "19" | "20" | "21" | "23" | "24" | "25" | "99" => {
+                Ok(common_enums::AttemptStatus::Failure)
+            }
+            other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(other.to_owned()))),
         }?;
         let capture_message_status = capture_status_codes();
         let error_response = if status == common_enums::AttemptStatus::Failure {
@@ -1914,19 +1765,12 @@ pub struct FiuuPaymentCancelResponse {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for FiuuPaymentCancelRequest
+    TryFrom<FiuuRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for FiuuPaymentCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiuuRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: FiuuRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let txn_id = item.router_data.request.connector_transaction_id.clone();
@@ -1953,10 +1797,7 @@ fn void_status_codes() -> HashMap<&'static str, &'static str> {
         ("18", "Duplicate partial refund request"),
         ("19", "Merchant not found"),
         ("20", "Missing required parameter"),
-        (
-            "21",
-            "Transaction must be in authorized/captured/settled status",
-        ),
+        ("21", "Transaction must be in authorized/captured/settled status"),
     ]
     .into_iter()
     .collect()
@@ -1966,9 +1807,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<FiuuPaymentCancelResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FiuuPaymentCancelResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -1980,16 +1819,11 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
             "11" | "12" | "13" | "14" | "15" | "16" | "17" | "18" | "19" | "20" | "21" => {
                 Ok(common_enums::AttemptStatus::VoidFailed)
             }
-            other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(
-                other.to_owned(),
-            ))),
+            other => Err(ConnectorError::UnexpectedResponseError(bytes::Bytes::from(other.to_owned()))),
         }?;
         let void_message_status = void_status_codes();
         let error_response = if status == common_enums::AttemptStatus::VoidFailed {
-            let optional_message = void_message_status
-                .get(status_code.as_str())
-                .copied()
-                .map(String::from);
+            let optional_message = void_message_status.get(status_code.as_str()).copied().map(String::from);
 
             Some(ErrorResponse {
                 status_code: item.http_code,
@@ -2039,16 +1873,12 @@ pub struct FiuuRefundSyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
-    > for FiuuRefundSyncRequest
+    TryFrom<FiuuRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for FiuuRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: FiuuRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        item: FiuuRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
         let (txn_id, merchant_id, verify_key) = (
@@ -2094,9 +1924,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<FiuuRefundSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FiuuRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -2121,8 +1949,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
                 let refund = refund_data
                     .iter()
                     .find(|refund| {
-                        Some(refund.refund_id.clone())
-                            == Some(router_data.request.connector_refund_id.clone())
+                        Some(refund.refund_id.clone()) == Some(router_data.request.connector_refund_id.clone())
                     })
                     .ok_or_else(|| ConnectorError::MissingConnectorRefundID)?;
                 Ok(Self {
@@ -2137,9 +1964,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
             FiuuRefundSyncResponse::Webhook(fiuu_webhooks_refund_response) => Ok(Self {
                 response: Ok(RefundsResponseData {
                     connector_refund_id: fiuu_webhooks_refund_response.refund_id,
-                    refund_status: common_enums::RefundStatus::from(
-                        fiuu_webhooks_refund_response.status.clone(),
-                    ),
+                    refund_status: common_enums::RefundStatus::from(fiuu_webhooks_refund_response.status.clone()),
                     status_code: item.http_code,
                 }),
                 ..router_data
@@ -2159,14 +1984,10 @@ impl From<RefundStatus> for common_enums::RefundStatus {
     }
 }
 
-pub fn get_qr_metadata(
-    response: &DuitNowQrCodeResponse,
-) -> CustomResult<Option<Value>, ConnectorError> {
-    let image_data = QrImage::new_colored_from_data(
-        response.txn_data.request_data.qr_data.peek().clone(),
-        DUIT_NOW_BRAND_COLOR,
-    )
-    .change_context(ConnectorError::ResponseHandlingFailed)?;
+pub fn get_qr_metadata(response: &DuitNowQrCodeResponse) -> CustomResult<Option<Value>, ConnectorError> {
+    let image_data =
+        QrImage::new_colored_from_data(response.txn_data.request_data.qr_data.peek().clone(), DUIT_NOW_BRAND_COLOR)
+            .change_context(ConnectorError::ResponseHandlingFailed)?;
 
     let image_data_url = Url::parse(image_data.data.clone().as_str()).ok();
     let display_to_timestamp = None;
@@ -2332,9 +2153,7 @@ impl From<FiuuRefundsWebhookStatus> for common_enums::RefundStatus {
 //new additions  structs
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum FiuuPaymentsRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub enum FiuuPaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     FiuuPaymentRequest(Box<FiuuPaymentRequest<T>>),
     FiuuMandateRequest(FiuuMandateRequest),
 }
@@ -2344,12 +2163,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     fn get_form_data(&self) -> MultipartData {
         match self {
-            Self::FiuuPaymentRequest(req) => {
-                build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new())
-            }
-            Self::FiuuMandateRequest(req) => {
-                build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new())
-            }
+            Self::FiuuPaymentRequest(req) => build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new()),
+            Self::FiuuMandateRequest(req) => build_form_from_struct(req).unwrap_or_else(|_| MultipartData::new()),
         }
     }
 }
@@ -2387,27 +2202,13 @@ impl GetFormData for FiuuRefundSyncRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        FiuuRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for FiuuPaymentsRequest<T>
+    TryFrom<FiuuRouterData<RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>, T>>
+    for FiuuPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiuuRouterData<
-            RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -2416,8 +2217,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let recurring_request = FiuuMandateRequest::try_from(&item)?;
                 Ok(Self::FiuuMandateRequest(recurring_request))
             }
-            MandateReferenceId::NetworkMandateId(_)
-            | MandateReferenceId::NetworkTokenWithNTI(_) => {
+            MandateReferenceId::NetworkMandateId(_) | MandateReferenceId::NetworkTokenWithNTI(_) => {
                 let payment_request: FiuuPaymentRequest<T> = FiuuPaymentRequest::try_from(&item)?;
                 Ok(Self::FiuuPaymentRequest(Box::new(payment_request)))
             }
@@ -2428,16 +2228,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[macro_export]
 macro_rules! unimplemented_payment_method {
     ($payment_method:expr, $connector:expr) => {
-        errors::ConnectorError::NotImplemented(format!(
-            "{} through {}",
-            $payment_method, $connector
-        ))
+        errors::ConnectorError::NotImplemented(format!("{} through {}", $payment_method, $connector))
     };
     ($payment_method:expr, $flow:expr, $connector:expr) => {
-        errors::ConnectorError::NotImplemented(format!(
-            "{} {} through {}",
-            $payment_method, $flow, $connector
-        ))
+        errors::ConnectorError::NotImplemented(format!("{} {} through {}", $payment_method, $flow, $connector))
     };
 }
 
@@ -2474,9 +2268,7 @@ impl TryFrom<FiuuRefundSyncResponse> for RefundWebhookDetailsResponse {
         match notif {
             FiuuRefundSyncResponse::Webhook(fiuu_webhooks_refund_response) => Ok(Self {
                 connector_refund_id: Some(fiuu_webhooks_refund_response.refund_id),
-                status: common_enums::RefundStatus::from(
-                    fiuu_webhooks_refund_response.status.clone(),
-                ),
+                status: common_enums::RefundStatus::from(fiuu_webhooks_refund_response.status.clone()),
                 status_code: 200,
                 connector_response_reference_id: None,
                 error_code: None,

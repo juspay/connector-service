@@ -4,9 +4,8 @@ use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConn
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -37,22 +36,15 @@ impl TryFrom<&ConnectorSpecificAuth> for BamboraAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Bambora {
-                merchant_id,
-                api_key,
-            } => {
+            ConnectorSpecificAuth::Bambora { merchant_id, api_key } => {
                 let auth_string = format!("{}:{}", merchant_id.peek(), api_key.peek());
-                let encoded = base64::Engine::encode(
-                    &base64::engine::general_purpose::STANDARD,
-                    auth_string.as_bytes(),
-                );
+                let encoded =
+                    base64::Engine::encode(&base64::engine::general_purpose::STANDARD, auth_string.as_bytes());
                 Ok(Self {
                     api_key: Secret::new(format!("Passcode {encoded}")),
                 })
             }
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -234,19 +226,13 @@ pub struct BamboraAvsDetails {
 // Request Transformation
 
 impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for BamboraPaymentsRequest<T>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for BamboraPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Extract card data
         let payment_method_data = &item.request.payment_method_data;
@@ -307,37 +293,31 @@ impl<T: PaymentMethodDataTypes>
             .resource_common_data
             .address
             .get_payment_billing()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "billing",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "billing" })?;
 
-        let billing_address = payment_billing.address.as_ref().ok_or(
-            errors::ConnectorError::MissingRequiredField {
+        let billing_address = payment_billing
+            .address
+            .as_ref()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "billing.address",
-            },
-        )?;
+            })?;
 
         // Bambora requires province/state for US and CA addresses in 2-letter format
         // Convert full state names (e.g., "California", "New York") to 2-letter codes (e.g., "CA", "NY")
-        let province = billing_address.state.clone().and_then(|state| {
-            crate::utils::get_state_code_for_country(&state, billing_address.country)
-        });
+        let province = billing_address
+            .state
+            .clone()
+            .and_then(|state| crate::utils::get_state_code_for_country(&state, billing_address.country));
 
         let billing = BamboraBillingAddress {
-            name: billing_address
-                .first_name
-                .clone()
-                .or(billing_address.last_name.clone()),
+            name: billing_address.first_name.clone().or(billing_address.last_name.clone()),
             address_line1: billing_address.line1.clone(),
             address_line2: billing_address.line2.clone(),
             city: billing_address.city.clone().map(|s| s.expose()),
             province,
             country: billing_address.country,
             postal_code: billing_address.zip.clone(),
-            phone_number: payment_billing
-                .phone
-                .as_ref()
-                .and_then(|p| p.number.clone()),
+            phone_number: payment_billing.phone.as_ref().and_then(|p| p.number.clone()),
             email_address: payment_billing.email.clone(),
         };
 
@@ -349,10 +329,7 @@ impl<T: PaymentMethodDataTypes>
             .attach_printable("Failed to convert amount from minor to major units")?;
 
         Ok(Self {
-            order_number: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            order_number: item.resource_common_data.connector_request_reference_id.clone(),
             amount,
             payment_method: PaymentMethodType::Card,
             card,
@@ -368,9 +345,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraPaymentsRespon
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Status mapping using Bambora's payment_type field for robustness
         // payment_type: "P" = Payment (auto-captured), "PA" = Pre-authorization (manual)
         let is_approved = item.response.approved == "1";
@@ -381,9 +356,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<BamboraPaymentsRespon
                 BamboraPaymentType::PreAuth => AttemptStatus::Authorized, // Pre-auth (manual capture)
                 BamboraPaymentType::Payment => AttemptStatus::Charged,    // Payment (auto-capture)
                 BamboraPaymentType::PreAuthCompletion => AttemptStatus::Charged,
-                BamboraPaymentType::Return
-                | BamboraPaymentType::VoidPayment
-                | BamboraPaymentType::VoidRefund => {
+                BamboraPaymentType::Return | BamboraPaymentType::VoidPayment | BamboraPaymentType::VoidRefund => {
                     // Unexpected types for Authorize flow - mark as pending
                     AttemptStatus::Pending
                 }
@@ -466,9 +439,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Status mapping for capture completion
         // For approved captures, payment_type should be "PAC" (Pre-auth Completion)
         let is_approved = item.response.approved == "1";
@@ -503,9 +474,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 #[derive(Debug, Serialize)]
 pub struct BamboraSyncRequest;
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for BamboraSyncRequest
-{
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for BamboraSyncRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -523,9 +492,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Status mapping using Bambora's payment_type field for accuracy
         // payment_type indicates the actual transaction state:
         // "P" = Payment (auto-captured or completed)
@@ -592,9 +559,7 @@ pub struct BamboraRefundRequest {
     pub amount: FloatMajorUnit,
 }
 
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for BamboraRefundRequest
-{
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>> for BamboraRefundRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -615,9 +580,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Status mapping following hyperswitch pattern
         // Only check approved field for refund
         let is_approved = item.response.approved == "1";
@@ -646,9 +609,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Status mapping following hyperswitch pattern
         // Only check approved field for refund sync
         let is_approved = item.response.approved == "1";
@@ -686,9 +647,7 @@ pub struct BamboraVoidRequest {
     pub amount: FloatMajorUnit,
 }
 
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for BamboraVoidRequest
-{
+impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>> for BamboraVoidRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -700,20 +659,16 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 
         // Get the amount from the original transaction
         // For void, we typically void the full amount
-        let minor_amount =
-            item.request
-                .amount
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "amount",
-                })?;
+        let minor_amount = item
+            .request
+            .amount
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "amount" })?;
 
         // Get currency from request
-        let currency =
-            item.request
-                .currency
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "currency",
-                })?;
+        let currency = item
+            .request
+            .currency
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "currency" })?;
 
         // Convert amount from minor units to major units using FloatMajorUnitForConnector
         let converter = FloatMajorUnitForConnector;
@@ -731,9 +686,7 @@ impl TryFrom<ResponseRouterData<BamboraPaymentsResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<BamboraPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<BamboraPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Status mapping following hyperswitch pattern
         // Only check approved field for void
         let is_approved = item.response.approved == "1";
@@ -771,27 +724,14 @@ use crate::connectors::bambora::BamboraRouterData;
 // Authorize - wrapper to RouterDataV2
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        BamboraRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        BamboraRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for BamboraPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         wrapper: BamboraRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -801,12 +741,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Capture - wrapper to RouterDataV2
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BamboraRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for BamboraCaptureRequest
+    TryFrom<BamboraRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for BamboraCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -822,20 +758,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Void - wrapper to RouterDataV2
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BamboraRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for BamboraVoidRequest
+    TryFrom<BamboraRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for BamboraVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        wrapper: BamboraRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        wrapper: BamboraRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&wrapper.router_data)
     }
@@ -843,20 +772,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // Refund - wrapper to RouterDataV2
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        BamboraRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for BamboraRefundRequest
+    TryFrom<BamboraRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for BamboraRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        wrapper: BamboraRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        wrapper: BamboraRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&wrapper.router_data)
     }

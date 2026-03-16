@@ -55,10 +55,7 @@ pub mod iso8601 {
         use super::*;
 
         /// Serialize an [`Option<PrimitiveDateTime>`] using the well-known ISO 8601 format.
-        pub fn serialize<S>(
-            date_time: &Option<PrimitiveDateTime>,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error>
+        pub fn serialize<S>(date_time: &Option<PrimitiveDateTime>, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
@@ -93,17 +90,13 @@ pub mod iso8601 {
         use super::*;
 
         /// Serialize an [`Option<PrimitiveDateTime>`] using the well-known ISO 8601 format which is without timezone.
-        pub fn serialize<S>(
-            date_time: &Option<PrimitiveDateTime>,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error>
+        pub fn serialize<S>(date_time: &Option<PrimitiveDateTime>, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {
             date_time
                 .map(|date_time| {
-                    let format =
-                        format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
+                    let format = format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
                     date_time.assume_utc().format(format)
                 })
                 .transpose()
@@ -118,13 +111,9 @@ pub mod iso8601 {
         {
             Option::deserialize(deserializer)?
                 .map(|time_string| {
-                    let format =
-                        format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
-                    PrimitiveDateTime::parse(time_string, format).map_err(|_| {
-                        de::Error::custom(format!(
-                            "Failed to parse PrimitiveDateTime from {time_string}"
-                        ))
-                    })
+                    let format = format_description!("[year]-[month]-[day]T[hour]:[minute]:[second]");
+                    PrimitiveDateTime::parse(time_string, format)
+                        .map_err(|_| de::Error::custom(format!("Failed to parse PrimitiveDateTime from {time_string}")))
                 })
                 .transpose()
         }
@@ -145,10 +134,7 @@ pub mod timestamp {
     where
         S: Serializer,
     {
-        date_time
-            .assume_utc()
-            .unix_timestamp()
-            .serialize(serializer)
+        date_time.assume_utc().unix_timestamp().serialize(serializer)
     }
 
     /// Deserialize an [`PrimitiveDateTime`] from UNIX timestamp.
@@ -172,10 +158,7 @@ pub mod timestamp {
         use super::*;
 
         /// Serialize an [`Option<PrimitiveDateTime>`] from UNIX timestamp.
-        pub fn serialize<S>(
-            date_time: &Option<PrimitiveDateTime>,
-            serializer: S,
-        ) -> Result<S::Ok, S::Error>
+        pub fn serialize<S>(date_time: &Option<PrimitiveDateTime>, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: Serializer,
         {

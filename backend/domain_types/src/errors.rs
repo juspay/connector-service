@@ -159,10 +159,7 @@ pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::ServerNotAvailable, code = "HE_00", message = "Something went wrong")]
     InternalServerError,
     #[error(error_type = ErrorType::ServerNotAvailable, code= "HE_00", message = "{component} health check is failing with error: {message}")]
-    HealthCheckError {
-        component: &'static str,
-        message: String,
-    },
+    HealthCheckError { component: &'static str, message: String },
     #[error(error_type = ErrorType::ValidationError, code = "HE_00", message = "Failed to convert currency to minor unit")]
     CurrencyConversionFailed,
     #[error(error_type = ErrorType::DuplicateRequest, code = "HE_01", message = "Duplicate refund request. Refund already attempted with the refund ID")]
@@ -424,10 +421,7 @@ impl std::fmt::Debug for NotImplementedMessage {
         match self {
             Self::Reason(message) => write!(fmt, "{message} is not implemented"),
             Self::Default => {
-                write!(
-                    fmt,
-                    "This API is under development and will be made available soon."
-                )
+                write!(fmt, "This API is under development and will be made available soon.")
             }
         }
     }
@@ -879,10 +873,7 @@ pub enum ConnectorError {
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
-    NotSupported {
-        message: String,
-        connector: &'static str,
-    },
+    NotSupported { message: String, connector: &'static str },
     #[error("{flow} flow not supported by {connector} connector")]
     FlowNotSupported { flow: String, connector: String },
     #[error("Capture method not supported")]
@@ -942,10 +933,7 @@ pub enum ConnectorError {
     #[error("Server responded with Request Timeout")]
     RequestTimeoutReceived,
     #[error("The given currency method is not configured with the given connector")]
-    CurrencyNotSupported {
-        message: String,
-        connector: &'static str,
-    },
+    CurrencyNotSupported { message: String, connector: &'static str },
     #[error("Invalid Configuration")]
     InvalidConnectorConfig { config: &'static str },
     #[error("Failed to convert amount to required type")]
@@ -989,9 +977,7 @@ impl ErrorSwitch<ApiErrorResponse> for ConnectorError {
             | Self::WebhookBodyDecodingFailed
             | Self::WebhooksNotImplemented => ApiErrorResponse::WebhookBadRequest,
             Self::WebhookEventTypeNotFound => ApiErrorResponse::WebhookUnprocessableEntity,
-            Self::WebhookVerificationSecretInvalid => {
-                ApiErrorResponse::WebhookInvalidMerchantSecret
-            }
+            Self::WebhookVerificationSecretInvalid => ApiErrorResponse::WebhookInvalidMerchantSecret,
             _ => ApiErrorResponse::InternalServerError,
         }
     }
@@ -1055,9 +1041,7 @@ impl ErrorSwitch<ApiClientError> for HttpClientError {
             Self::RequestNotSent(reason) => ApiClientError::RequestNotSent(reason.clone()),
             Self::ResponseDecodingFailed => ApiClientError::ResponseDecodingFailed,
             Self::RequestTimeoutReceived => ApiClientError::RequestTimeoutReceived,
-            Self::ConnectionClosedIncompleteMessage => {
-                ApiClientError::ConnectionClosedIncompleteMessage
-            }
+            Self::ConnectionClosedIncompleteMessage => ApiClientError::ConnectionClosedIncompleteMessage,
             Self::InternalServerErrorReceived => ApiClientError::InternalServerErrorReceived,
             Self::BadGatewayReceived => ApiClientError::BadGatewayReceived,
             Self::ServiceUnavailableReceived => ApiClientError::ServiceUnavailableReceived,

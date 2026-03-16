@@ -10,14 +10,11 @@ use error_stack::ResultExt;
 use http_body::Body as HttpBody;
 use lazy_static::lazy_static;
 use prometheus::{
-    self, register_histogram_vec, register_int_counter_vec, Encoder, HistogramVec, IntCounterVec,
-    TextEncoder,
+    self, register_histogram_vec, register_int_counter_vec, Encoder, HistogramVec, IntCounterVec, TextEncoder,
 };
 use tower::{Layer, Service};
 // Define latency buckets for histograms
-const LATENCY_BUCKETS: &[f64] = &[
-    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
-];
+const LATENCY_BUCKETS: &[f64] = &[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0];
 
 lazy_static! {
     pub static ref GRPC_SERVER_REQUESTS_TOTAL: IntCounterVec = register_int_counter_vec!(
@@ -103,9 +100,9 @@ where
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx).map_err(|e| {
-            tonic::Status::internal(format!("GrpcMetricsService inner poll_ready error: {e:?}"))
-        })
+        self.inner
+            .poll_ready(cx)
+            .map_err(|e| tonic::Status::internal(format!("GrpcMetricsService inner poll_ready error: {e:?}")))
     }
 
     fn call(&mut self, mut req: hyper::Request<B>) -> Self::Future {
@@ -151,9 +148,7 @@ where
                 .with_label_values(&[&method_name, &service_name, &connector])
                 .observe(duration);
 
-            result.map_err(|e| {
-                tonic::Status::internal(format!("GrpcMetricsService inner call error: {e:?}"))
-            })
+            result.map_err(|e| tonic::Status::internal(format!("GrpcMetricsService inner call error: {e:?}")))
         })
     }
 }

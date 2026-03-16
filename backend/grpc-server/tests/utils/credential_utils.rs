@@ -13,8 +13,7 @@ use std::{collections::HashMap, fs};
 
 // Path to the credentials file - use environment variable if set (for CI), otherwise use relative path (for local)
 fn get_creds_file_path() -> String {
-    std::env::var("CONNECTOR_AUTH_FILE_PATH")
-        .unwrap_or_else(|_| "../../.github/test/creds.json".to_string())
+    std::env::var("CONNECTOR_AUTH_FILE_PATH").unwrap_or_else(|_| "../../.github/test/creds.json".to_string())
 }
 
 /// Generic credential structure that can deserialize any connector's credentials
@@ -95,9 +94,7 @@ pub fn load_connector_auth(connector_name: &str) -> Result<ConnectorAuthType, Cr
 /// let metadata = load_connector_metadata("fiserv").unwrap();
 /// let terminal_id = metadata.get("terminal_id");
 /// ```
-pub fn load_connector_metadata(
-    connector_name: &str,
-) -> Result<HashMap<String, String>, CredentialError> {
+pub fn load_connector_metadata(connector_name: &str) -> Result<HashMap<String, String>, CredentialError> {
     let creds_file_path = get_creds_file_path();
     let creds_content = fs::read_to_string(&creds_file_path)?;
 
@@ -152,16 +149,11 @@ fn load_from_json(connector_name: &str) -> Result<ConnectorAuthType, CredentialE
 }
 
 /// Load credentials by parsing each connector individually
-fn load_credentials_individually(
-    json_value: &serde_json::Value,
-) -> Result<AllCredentials, CredentialError> {
+fn load_credentials_individually(json_value: &serde_json::Value) -> Result<AllCredentials, CredentialError> {
     let mut all_credentials = HashMap::new();
 
     let root_object = json_value.as_object().ok_or_else(|| {
-        CredentialError::InvalidStructure(
-            "root".to_string(),
-            "Expected JSON object at root".to_string(),
-        )
+        CredentialError::InvalidStructure("root".to_string(), "Expected JSON object at root".to_string())
     })?;
 
     for (connector_name, connector_value) in root_object {
@@ -191,10 +183,7 @@ fn parse_single_connector(
     connector_value: &serde_json::Value,
 ) -> Result<ConnectorCredentials, CredentialError> {
     let connector_obj = connector_value.as_object().ok_or_else(|| {
-        CredentialError::InvalidStructure(
-            connector_name.to_string(),
-            "Expected JSON object".to_string(),
-        )
+        CredentialError::InvalidStructure(connector_name.to_string(), "Expected JSON object".to_string())
     })?;
 
     // Check if this is a flat structure (has connector_account_details directly)
@@ -225,21 +214,12 @@ fn parse_connector_credentials(
     connector_value: &serde_json::Value,
 ) -> Result<ConnectorCredentials, CredentialError> {
     let connector_obj = connector_value.as_object().ok_or_else(|| {
-        CredentialError::InvalidStructure(
-            connector_name.to_string(),
-            "Expected JSON object".to_string(),
-        )
+        CredentialError::InvalidStructure(connector_name.to_string(), "Expected JSON object".to_string())
     })?;
 
-    let account_details_value =
-        connector_obj
-            .get("connector_account_details")
-            .ok_or_else(|| {
-                CredentialError::InvalidStructure(
-                    connector_name.to_string(),
-                    "Missing connector_account_details".to_string(),
-                )
-            })?;
+    let account_details_value = connector_obj.get("connector_account_details").ok_or_else(|| {
+        CredentialError::InvalidStructure(connector_name.to_string(), "Missing connector_account_details".to_string())
+    })?;
 
     let account_details = parse_connector_account_details(connector_name, account_details_value)?;
 
@@ -272,10 +252,7 @@ fn parse_connector_account_details(
         .get("auth_type")
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            CredentialError::InvalidStructure(
-                connector_name.to_string(),
-                "Missing or invalid auth_type".to_string(),
-            )
+            CredentialError::InvalidStructure(connector_name.to_string(), "Missing or invalid auth_type".to_string())
         })?
         .to_string();
 
@@ -305,20 +282,14 @@ fn parse_currency_auth_key_details(
     })?;
 
     let auth_key_map_obj = auth_key_map_value.as_object().ok_or_else(|| {
-        CredentialError::InvalidStructure(
-            connector_name.to_string(),
-            "auth_key_map must be an object".to_string(),
-        )
+        CredentialError::InvalidStructure(connector_name.to_string(), "auth_key_map must be an object".to_string())
     })?;
 
     let mut auth_key_map = HashMap::new();
 
     for (currency_str, secret_value) in auth_key_map_obj {
         let currency = currency_str.parse::<Currency>().map_err(|_| {
-            CredentialError::InvalidStructure(
-                connector_name.to_string(),
-                format!("Invalid currency: {currency_str}"),
-            )
+            CredentialError::InvalidStructure(connector_name.to_string(), format!("Invalid currency: {currency_str}"))
         })?;
 
         let secret_serde_value = SecretSerdeValue::new(secret_value.clone());
@@ -344,21 +315,24 @@ fn convert_to_auth_type(
 ) -> Result<ConnectorAuthType, CredentialError> {
     match details.auth_type.as_str() {
         "HeaderKey" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "HeaderKey".to_string())
-            })?;
+            let api_key = details
+                .api_key
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("api_key".to_string(), "HeaderKey".to_string()))?;
 
             Ok(ConnectorAuthType::HeaderKey {
                 api_key: Secret::new(api_key.clone()),
             })
         }
         "BodyKey" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "BodyKey".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "BodyKey".to_string())
-            })?;
+            let api_key = details
+                .api_key
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("api_key".to_string(), "BodyKey".to_string()))?;
+            let key1 = details
+                .key1
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("key1".to_string(), "BodyKey".to_string()))?;
 
             Ok(ConnectorAuthType::BodyKey {
                 api_key: Secret::new(api_key.clone()),
@@ -366,15 +340,18 @@ fn convert_to_auth_type(
             })
         }
         "SignatureKey" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "SignatureKey".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "SignatureKey".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "SignatureKey".to_string())
-            })?;
+            let api_key = details
+                .api_key
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("api_key".to_string(), "SignatureKey".to_string()))?;
+            let key1 = details
+                .key1
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("key1".to_string(), "SignatureKey".to_string()))?;
+            let api_secret = details
+                .api_secret
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("api_secret".to_string(), "SignatureKey".to_string()))?;
 
             Ok(ConnectorAuthType::SignatureKey {
                 api_key: Secret::new(api_key.clone()),
@@ -383,18 +360,22 @@ fn convert_to_auth_type(
             })
         }
         "MultiAuthKey" => {
-            let api_key = details.api_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_key".to_string(), "MultiAuthKey".to_string())
-            })?;
-            let key1 = details.key1.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key1".to_string(), "MultiAuthKey".to_string())
-            })?;
-            let api_secret = details.api_secret.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("api_secret".to_string(), "MultiAuthKey".to_string())
-            })?;
-            let key2 = details.key2.as_ref().ok_or_else(|| {
-                CredentialError::MissingField("key2".to_string(), "MultiAuthKey".to_string())
-            })?;
+            let api_key = details
+                .api_key
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("api_key".to_string(), "MultiAuthKey".to_string()))?;
+            let key1 = details
+                .key1
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("key1".to_string(), "MultiAuthKey".to_string()))?;
+            let api_secret = details
+                .api_secret
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("api_secret".to_string(), "MultiAuthKey".to_string()))?;
+            let key2 = details
+                .key2
+                .as_ref()
+                .ok_or_else(|| CredentialError::MissingField("key2".to_string(), "MultiAuthKey".to_string()))?;
 
             Ok(ConnectorAuthType::MultiAuthKey {
                 api_key: Secret::new(api_key.clone()),
@@ -406,10 +387,7 @@ fn convert_to_auth_type(
         "CurrencyAuthKey" => {
             // For CurrencyAuthKey, we expect the auth_key_map field to contain the mapping
             let auth_key_map = details.auth_key_map.as_ref().ok_or_else(|| {
-                CredentialError::MissingField(
-                    "auth_key_map".to_string(),
-                    "CurrencyAuthKey".to_string(),
-                )
+                CredentialError::MissingField("auth_key_map".to_string(), "CurrencyAuthKey".to_string())
             })?;
 
             Ok(ConnectorAuthType::CurrencyAuthKey {
@@ -418,16 +396,10 @@ fn convert_to_auth_type(
         }
         "CertificateAuth" => {
             let certificate = details.certificate.as_ref().ok_or_else(|| {
-                CredentialError::MissingField(
-                    "certificate".to_string(),
-                    "CertificateAuth".to_string(),
-                )
+                CredentialError::MissingField("certificate".to_string(), "CertificateAuth".to_string())
             })?;
             let private_key = details.private_key.as_ref().ok_or_else(|| {
-                CredentialError::MissingField(
-                    "private_key".to_string(),
-                    "CertificateAuth".to_string(),
-                )
+                CredentialError::MissingField("private_key".to_string(), "CertificateAuth".to_string())
             })?;
 
             Ok(ConnectorAuthType::CertificateAuth {

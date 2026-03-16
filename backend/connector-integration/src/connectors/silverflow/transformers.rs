@@ -4,9 +4,8 @@ use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -38,9 +37,7 @@ impl TryFrom<&ConnectorSpecificAuth> for SilverflowAuthType {
                 api_secret: api_secret.to_owned(),
                 merchant_acceptor_key: merchant_acceptor_key.to_owned(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -182,12 +179,7 @@ pub struct SilverflowAmount {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::SilverflowRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for SilverflowPaymentsRequest<T>
@@ -196,12 +188,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::SilverflowRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -214,10 +201,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let card_data = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
-                    "Only card payments are supported".to_string(),
+                return Err(
+                    errors::ConnectorError::NotImplemented("Only card payments are supported".to_string()).into(),
                 )
-                .into())
             }
         };
 
@@ -257,9 +243,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 currency: router_data.request.currency,
             },
             clearing_mode: match router_data.request.capture_method {
-                Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple) => {
-                    SilverflowClearingMode::Manual
-                }
+                Some(CaptureMethod::Manual) | Some(CaptureMethod::ManualMultiple) => SilverflowClearingMode::Manual,
                 _ => SilverflowClearingMode::Auto,
             },
         })
@@ -358,31 +342,16 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<SilverflowPaymentsRes
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<SilverflowPaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SilverflowPaymentsResponse, Self>) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's authorization and clearing status
         // This follows the multi-dimensional status mapping pattern as per best practices
-        let status = match (
-            &item.response.status.authorization,
-            &item.response.status.clearing,
-        ) {
+        let status = match (&item.response.status.authorization, &item.response.status.clearing) {
             // Approved authorization - check clearing status for final determination
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Cleared) => {
-                AttemptStatus::Charged
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Settled) => {
-                AttemptStatus::Charged
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Pending) => {
-                AttemptStatus::Authorized
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Failed) => {
-                AttemptStatus::Failure
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Unknown) => {
-                AttemptStatus::Authorized
-            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Cleared) => AttemptStatus::Charged,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Settled) => AttemptStatus::Charged,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Pending) => AttemptStatus::Authorized,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Failed) => AttemptStatus::Failure,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Unknown) => AttemptStatus::Authorized,
             // Failed or declined authorization
             (SilverflowAuthorizationStatus::Declined, _) => AttemptStatus::Failure,
             (SilverflowAuthorizationStatus::Failed, _) => AttemptStatus::Failure,
@@ -437,31 +406,16 @@ impl TryFrom<ResponseRouterData<SilverflowSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<SilverflowSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SilverflowSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's status fields
         // This follows the multi-dimensional status mapping pattern as per best practices
-        let status = match (
-            &item.response.status.authorization,
-            &item.response.status.clearing,
-        ) {
+        let status = match (&item.response.status.authorization, &item.response.status.clearing) {
             // Approved authorization - check clearing status for final determination
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Cleared) => {
-                AttemptStatus::Charged
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Settled) => {
-                AttemptStatus::Charged
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Pending) => {
-                AttemptStatus::Authorized
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Failed) => {
-                AttemptStatus::Failure
-            }
-            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Unknown) => {
-                AttemptStatus::Authorized
-            }
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Cleared) => AttemptStatus::Charged,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Settled) => AttemptStatus::Charged,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Pending) => AttemptStatus::Authorized,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Failed) => AttemptStatus::Failure,
+            (SilverflowAuthorizationStatus::Approved, SilverflowClearingStatus::Unknown) => AttemptStatus::Authorized,
             // Failed or declined authorization
             (SilverflowAuthorizationStatus::Declined, _) => AttemptStatus::Failure,
             (SilverflowAuthorizationStatus::Failed, _) => AttemptStatus::Failure,
@@ -577,14 +531,10 @@ impl TryFrom<ResponseRouterData<SilverflowCaptureResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<SilverflowCaptureResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SilverflowCaptureResponse, Self>) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's action status for capture flow
         let status = match item.response.status {
-            SilverflowActionStatus::Completed | SilverflowActionStatus::Success => {
-                AttemptStatus::Charged
-            }
+            SilverflowActionStatus::Completed | SilverflowActionStatus::Success => AttemptStatus::Charged,
             SilverflowActionStatus::Pending => AttemptStatus::Pending,
             SilverflowActionStatus::Failed => AttemptStatus::Failure,
             SilverflowActionStatus::Unknown => AttemptStatus::Pending,
@@ -652,20 +602,13 @@ pub struct SilverflowVoidStatus {
 
 // Refund Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::SilverflowRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for SilverflowRefundRequest
+    TryFrom<super::SilverflowRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for SilverflowRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::SilverflowRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: super::SilverflowRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
@@ -688,14 +631,10 @@ impl TryFrom<ResponseRouterData<SilverflowRefundResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<SilverflowRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SilverflowRefundResponse, Self>) -> Result<Self, Self::Error> {
         // Map refund status based on Silverflow's status
         let refund_status = match item.response.status {
-            SilverflowActionStatus::Success | SilverflowActionStatus::Completed => {
-                common_enums::RefundStatus::Success
-            }
+            SilverflowActionStatus::Success | SilverflowActionStatus::Completed => common_enums::RefundStatus::Success,
             SilverflowActionStatus::Pending => common_enums::RefundStatus::Pending,
             SilverflowActionStatus::Failed => common_enums::RefundStatus::Failure,
             SilverflowActionStatus::Unknown => common_enums::RefundStatus::Pending,
@@ -722,20 +661,13 @@ pub type SilverflowRefundSyncResponse = SilverflowRefundResponse;
 
 // Refund Sync Request Transformation (empty for GET-based connector)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::SilverflowRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for SilverflowRefundSyncRequest
+    TryFrom<super::SilverflowRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for SilverflowRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        _item: super::SilverflowRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        _item: super::SilverflowRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         // Empty request for GET-based sync
         Ok(Self)
@@ -748,15 +680,11 @@ impl TryFrom<ResponseRouterData<SilverflowRefundSyncResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<SilverflowRefundSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SilverflowRefundSyncResponse, Self>) -> Result<Self, Self::Error> {
         // Map refund status based on Silverflow's refund action status
         // This is the CORRECT way - check the action status, not authorization status
         let refund_status = match item.response.status {
-            SilverflowActionStatus::Success | SilverflowActionStatus::Completed => {
-                common_enums::RefundStatus::Success
-            }
+            SilverflowActionStatus::Success | SilverflowActionStatus::Completed => common_enums::RefundStatus::Success,
             SilverflowActionStatus::Failed => common_enums::RefundStatus::Failure,
             SilverflowActionStatus::Pending => common_enums::RefundStatus::Pending,
             SilverflowActionStatus::Unknown => common_enums::RefundStatus::Pending,
@@ -798,12 +726,8 @@ pub struct SilverflowVoidResponse {
 
 // Void Request Transformation
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::SilverflowRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for SilverflowVoidRequest
+    TryFrom<super::SilverflowRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for SilverflowVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -831,9 +755,7 @@ impl TryFrom<ResponseRouterData<SilverflowVoidResponse, Self>>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<SilverflowVoidResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SilverflowVoidResponse, Self>) -> Result<Self, Self::Error> {
         // Map status based on Silverflow's authorization status for void operations
         let status = match item.response.status.authorization {
             SilverflowAuthorizationStatus::Approved => AttemptStatus::Voided,

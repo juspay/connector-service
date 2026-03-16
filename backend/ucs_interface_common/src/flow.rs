@@ -1,9 +1,8 @@
 use common_utils::events::FlowName;
 use domain_types::connector_flow::{
-    Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
-    IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate,
-    PreAuthenticate, RSync, Refund, RepeatPayment, SdkSessionToken, SetupMandate, SubmitEvidence,
-    Void, VoidPC,
+    Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization,
+    MandateRevoke, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+    SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
 };
 use ucs_env::configs;
 

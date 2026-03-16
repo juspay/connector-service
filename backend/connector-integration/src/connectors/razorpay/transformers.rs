@@ -7,8 +7,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -57,9 +57,7 @@ pub enum ConnectorError {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct RazorpayCard<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct RazorpayCard<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     number: RawCardNumber<T>,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
@@ -72,9 +70,7 @@ pub struct RazorpayCard<
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
-pub enum RazorpayPaymentMethod<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub enum RazorpayPaymentMethod<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "scheme")]
     RazorpayCard(Box<RazorpayCard<T>>),
 }
@@ -99,18 +95,14 @@ pub struct Address {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
-pub enum PaymentMethod<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub enum PaymentMethod<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     RazorpayPaymentMethod(Box<RazorpayPaymentMethod<T>>),
 }
 
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct CardDetails<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct CardDetails<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     pub number: RawCardNumber<T>,
     pub name: Option<Secret<String>>,
     pub expiry_month: Option<Secret<String>>,
@@ -147,9 +139,7 @@ pub struct BrowserInfo {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub struct RazorpayPaymentRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct RazorpayPaymentRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     pub amount: MinorUnit,
     pub currency: String,
     pub contact: Secret<String>,
@@ -166,9 +156,7 @@ pub struct RazorpayPaymentRequest<
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged, rename_all = "snake_case")]
-pub enum PaymentMethodSpecificData<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub enum PaymentMethodSpecificData<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     Card(CardDetails<T>),
 }
 
@@ -214,10 +202,7 @@ impl RazorpayAuthType {
         info!("Type of auth Token is {}", auth_type_name);
         match self {
             Self::AuthToken(token) => format!("Bearer {}", token.peek()),
-            Self::ApiKeySecret {
-                api_key,
-                api_secret,
-            } => {
+            Self::ApiKeySecret { api_key, api_secret } => {
                 let credentials = format!("{}:{}", api_key.peek(), api_secret.peek());
                 let encoded = STANDARD.encode(credentials);
                 format!("Basic {encoded}")
@@ -230,10 +215,7 @@ impl TryFrom<&ConnectorSpecificAuth> for RazorpayAuthType {
     type Error = errors::ConnectorError;
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Razorpay {
-                api_key,
-                api_secret,
-            } => match api_secret {
+            ConnectorSpecificAuth::Razorpay { api_key, api_secret } => match api_secret {
                 None => Ok(Self::AuthToken(api_key.to_owned())),
                 Some(secret) => Ok(Self::ApiKeySecret {
                     api_key: api_key.to_owned(),
@@ -249,9 +231,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<(&Card<T>, Option<Secret<String>>)> for RazorpayPaymentMethod<T>
 {
     type Error = ConnectorError;
-    fn try_from(
-        (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
-    ) -> Result<Self, Self::Error> {
+    fn try_from((card, card_holder_name): (&Card<T>, Option<Secret<String>>)) -> Result<Self, Self::Error> {
         let razorpay_card = RazorpayCard {
             number: card.card_number.clone(),
             expiry_month: card.card_exp_month.clone(),
@@ -265,9 +245,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-fn extract_payment_method_and_data<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
->(
+fn extract_payment_method_and_data<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>(
     payment_method_data: &PaymentMethodData<T>,
     customer_name: Option<String>,
 ) -> Result<(PaymentMethodType, PaymentMethodSpecificData<T>), errors::ConnectorError> {
@@ -310,14 +288,7 @@ fn extract_payment_method_and_data<
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
-        &RazorpayRouterData<
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        &RazorpayRouterData<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
         &Card<T>,
     )> for RazorpayPaymentRequest<T>
 {
@@ -326,12 +297,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     fn try_from(
         value: (
             &RazorpayRouterData<
-                &RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData<T>,
-                    PaymentsResponseData,
-                >,
+                &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             >,
             &Card<T>,
         ),
@@ -340,39 +306,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item.amount;
         let currency = item.router_data.request.currency.to_string();
 
-        let billing = item
-            .router_data
-            .resource_common_data
-            .address
-            .get_payment_billing();
+        let billing = item.router_data.resource_common_data.address.get_payment_billing();
 
         let contact = billing
             .and_then(|billing| billing.phone.as_ref())
             .and_then(|phone| phone.number.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "contact",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "contact" })?;
 
-        let billing_email = item
-            .router_data
-            .resource_common_data
-            .get_billing_email()
-            .ok();
+        let billing_email = item.router_data.resource_common_data.get_billing_email().ok();
 
         let email = billing_email
             .or(item.router_data.request.email.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "email",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "email" })?;
 
         let order_id = item
             .router_data
             .resource_common_data
             .reference_id
             .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "order_id",
-            })?;
+            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "order_id" })?;
 
         let (method, card) = extract_payment_method_and_data(
             &item.router_data.request.payment_method_data,
@@ -386,9 +338,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             None => AuthenticationChannel::App,
         };
 
-        let authentication = Some(AuthenticationDetails {
-            authentication_channel,
-        });
+        let authentication = Some(AuthenticationDetails { authentication_channel });
 
         let browser = browser_info_opt.map(|info| BrowserInfo {
             java_enabled: info.java_enabled,
@@ -444,34 +394,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &RazorpayRouterData<
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        &RazorpayRouterData<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     > for RazorpayPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: &RazorpayRouterData<
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Self::try_from((item, card)),
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Only card payments are supported".into(),
-            )
-            .into()),
+            _ => Err(errors::ConnectorError::NotImplemented("Only card payments are supported".into()).into()),
         }
     }
 }
@@ -562,22 +497,14 @@ impl ForeignTryFrom<RazorpayRefundStatus> for common_enums::RefundStatus {
     }
 }
 
-impl
-    TryFrom<
-        &RazorpayRouterData<
-            &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RazorpayRefundRequest
+impl TryFrom<&RazorpayRouterData<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+    for RazorpayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: &RazorpayRouterData<
-            &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: &RazorpayRouterData<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount: item.amount,
-        })
+        Ok(Self { amount: item.amount })
     }
 }
 
@@ -655,10 +582,7 @@ fn get_authorization_razorpay_payment_status_from_action(
     }
 }
 
-fn get_psync_razorpay_payment_status(
-    is_manual_capture: bool,
-    razorpay_status: RazorpayStatus,
-) -> AttemptStatus {
+fn get_psync_razorpay_payment_status(is_manual_capture: bool, razorpay_status: RazorpayStatus) -> AttemptStatus {
     match razorpay_status {
         RazorpayStatus::Created => AttemptStatus::Pending,
         RazorpayStatus::Authorized => {
@@ -679,9 +603,7 @@ impl ForeignTryFrom<(RazorpayRefundResponse, Self, u16)>
 {
     type Error = errors::ConnectorError;
 
-    fn foreign_try_from(
-        (response, data, http_code): (RazorpayRefundResponse, Self, u16),
-    ) -> Result<Self, Self::Error> {
+    fn foreign_try_from((response, data, http_code): (RazorpayRefundResponse, Self, u16)) -> Result<Self, Self::Error> {
         let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
@@ -706,9 +628,7 @@ impl ForeignTryFrom<(RazorpayRefundResponse, Self, u16)>
 {
     type Error = errors::ConnectorError;
 
-    fn foreign_try_from(
-        (response, data, http_code): (RazorpayRefundResponse, Self, u16),
-    ) -> Result<Self, Self::Error> {
+    fn foreign_try_from((response, data, http_code): (RazorpayRefundResponse, Self, u16)) -> Result<Self, Self::Error> {
         let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
@@ -754,23 +674,18 @@ impl<F, Req>
 
         match response {
             RazorpayResponse::PaymentResponse(payment_response) => {
-                let status =
-                    get_authorization_razorpay_payment_status_from_action(is_manual_capture, true);
+                let status = get_authorization_razorpay_payment_status_from_action(is_manual_capture, true);
                 let redirect_url = payment_response
                     .next
                     .as_ref()
                     .and_then(|next_actions| next_actions.first())
                     .map(|action| action.url.clone())
-                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                        field_name: "next.url",
-                    })?;
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField { field_name: "next.url" })?;
 
                 let form_fields = HashMap::new();
 
                 let payment_response_data = PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        payment_response.razorpay_payment_id.clone(),
-                    ),
+                    resource_id: ResponseId::ConnectorTransactionId(payment_response.razorpay_payment_id.clone()),
                     redirection_data: Some(Box::new(RedirectForm::Form {
                         endpoint: redirect_url,
                         method: Method::Get,
@@ -795,8 +710,7 @@ impl<F, Req>
                 })
             }
             RazorpayResponse::PsyncResponse(psync_response) => {
-                let status =
-                    get_psync_razorpay_payment_status(is_manual_capture, psync_response.status);
+                let status = get_psync_razorpay_payment_status(is_manual_capture, psync_response.status);
 
                 // Extract UPI mode and set in connector_response
                 let connector_response = psync_response
@@ -804,12 +718,11 @@ impl<F, Req>
                     .as_ref()
                     .filter(|upi| upi.payer_account_type == "credit_card")
                     .map(|_| {
-                        domain_types::router_data::ConnectorResponseData::
-                            with_additional_payment_method_data(
-                                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                                    upi_mode: Some(domain_types::payment_method_data::UpiSource::UpiCc),
-                                },
-                            )
+                        domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
+                            domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
+                                upi_mode: Some(domain_types::payment_method_data::UpiSource::UpiCc),
+                            },
+                        )
                     });
 
                 let psync_response_data = PaymentsResponseData::TransactionResponse {
@@ -893,10 +806,7 @@ pub struct RazorpayOrderRequest {
     pub __token_91_frequency_93_: Option<String>,
     #[serde(rename = "bank_account[name]", skip_serializing_if = "Option::is_none")]
     pub __bank_account_91_name_93_: Option<String>,
-    #[serde(
-        rename = "bank_account[account_number]",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "bank_account[account_number]", skip_serializing_if = "Option::is_none")]
     pub __bank_account_91_account_number_93_: Option<String>,
     #[serde(rename = "bank_account[ifsc]", skip_serializing_if = "Option::is_none")]
     pub __bank_account_91_ifsc_93_: Option<Secret<String>>,
@@ -913,12 +823,7 @@ pub struct RazorpayOrderRequest {
 impl
     TryFrom<
         &RazorpayRouterData<
-            &RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
+            &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         >,
     > for RazorpayOrderRequest
 {
@@ -926,12 +831,7 @@ impl
 
     fn try_from(
         item: &RazorpayRouterData<
-            &RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
+            &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         >,
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
@@ -963,9 +863,7 @@ impl
             first_payment_min_amount: None,
             payment_capture: Some(1),
             method: metadata_map.get("method").cloned(),
-            discount: metadata_map
-                .get("discount")
-                .and_then(|v| v.parse::<i64>().ok()),
+            discount: metadata_map.get("discount").and_then(|v| v.parse::<i64>().ok()),
             offer_id: metadata_map.get("offer_id").cloned(),
             customer_id: metadata_map.get("customer_id").cloned(),
             __token_91_expire_at_93_: metadata_map
@@ -977,13 +875,8 @@ impl
             __token_91_auth_type_93_: metadata_map.get("__token_91_auth_type_93_").cloned(),
             __token_91_frequency_93_: metadata_map.get("__token_91_frequency_93_").cloned(),
             __bank_account_91_name_93_: metadata_map.get("__bank_account_91_name_93_").cloned(),
-            __bank_account_91_account_number_93_: metadata_map
-                .get("__bank_account_91_account_number_93_")
-                .cloned(),
-            __bank_account_91_ifsc_93_: metadata_map
-                .get("__bank_account_91_ifsc_93_")
-                .cloned()
-                .map(Secret::new),
+            __bank_account_91_account_number_93_: metadata_map.get("__bank_account_91_account_number_93_").cloned(),
+            __bank_account_91_ifsc_93_: metadata_map.get("__bank_account_91_ifsc_93_").cloned().map(Secret::new),
             account_id: metadata_map.get("account_id").cloned(),
             phonepe_switch_context: metadata_map.get("phonepe_switch_context").cloned(),
             __notes_91_crm1_93_: metadata_map.get("__notes_91_crm1_93_").cloned(),
@@ -1017,12 +910,7 @@ pub struct RazorpayOrderResponse {
 }
 
 impl ForeignTryFrom<(RazorpayOrderResponse, Self, u16, bool)>
-    for RouterDataV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    >
+    for RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
 {
     type Error = errors::ConnectorError;
 
@@ -1157,9 +1045,7 @@ pub struct RazorpayWebhookCard {
     pub emi: bool,
 }
 
-pub fn get_webhook_object_from_body(
-    body: Vec<u8>,
-) -> Result<Payload, error_stack::Report<errors::ConnectorError>> {
+pub fn get_webhook_object_from_body(body: Vec<u8>) -> Result<Payload, error_stack::Report<errors::ConnectorError>> {
     let webhook: RazorpayWebhook = body
         .parse_struct("RazorpayWebhook")
         .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
@@ -1187,9 +1073,7 @@ pub(crate) fn get_razorpay_refund_webhook_status(
     match entity {
         RazorpayEntity::Refund => match status {
             RazorpayRefundStatus::Processed => Ok(common_enums::RefundStatus::Success),
-            RazorpayRefundStatus::Created | RazorpayRefundStatus::Pending => {
-                Ok(common_enums::RefundStatus::Pending)
-            }
+            RazorpayRefundStatus::Created | RazorpayRefundStatus::Pending => Ok(common_enums::RefundStatus::Pending),
             RazorpayRefundStatus::Failed => Ok(common_enums::RefundStatus::Failure),
         },
         RazorpayEntity::Payment => Err(errors::ConnectorError::RequestEncodingFailed),
@@ -1237,19 +1121,13 @@ pub struct RazorpayCaptureResponse {
     pub acquirer_data: Option<AcquirerData>,
 }
 
-impl
-    TryFrom<
-        &RazorpayRouterData<
-            &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RazorpayCaptureRequest
+impl TryFrom<&RazorpayRouterData<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+    for RazorpayCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &RazorpayRouterData<
-            &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
+        item: &RazorpayRouterData<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
 
@@ -1308,10 +1186,7 @@ pub struct RazorpayWebCollectRequest {
     pub vpa: Option<Secret<String>>,
     #[serde(rename = "notes[txn_uuid]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_txn_uuid_93_: Option<String>,
-    #[serde(
-        rename = "notes[transaction_id]",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "notes[transaction_id]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_transaction_id_93_: Option<String>,
     pub callback_url: String,
     pub ip: Secret<String>,
@@ -1349,22 +1224,13 @@ pub struct RazorpayWebCollectRequest {
     pub __notes_91_payment_id_93: Option<String>,
     #[serde(rename = "notes[lob]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_lob_93_: Option<String>,
-    #[serde(
-        rename = "notes[credit_line_id]",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "notes[credit_line_id]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_credit_line_id_93_: Option<String>,
     #[serde(rename = "notes[loan_id]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_loan_id_93_: Option<String>,
-    #[serde(
-        rename = "notes[transaction_type]",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "notes[transaction_type]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_transaction_type_93_: Option<String>,
-    #[serde(
-        rename = "notes[loan_product_code]",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "notes[loan_product_code]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_loan_product_code_93_: Option<String>,
     #[serde(rename = "notes[pg_flow]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_pg_flow_93_: Option<String>,
@@ -1376,26 +1242,14 @@ pub struct RazorpayWebCollectRequest {
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        &RazorpayRouterData<
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        &RazorpayRouterData<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     > for RazorpayWebCollectRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: &RazorpayRouterData<
-            &RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         use domain_types::payment_method_data::{PaymentMethodData, UpiData};
@@ -1407,15 +1261,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let vpa = collect_data
                     .vpa_id
                     .as_ref()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "vpa_id",
-                    })?
+                    .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "vpa_id" })?
                     .peek()
                     .to_string();
                 (None, Some(vpa))
             }
-            PaymentMethodData::Upi(UpiData::UpiIntent(_))
-            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => (Some("intent"), None),
+            PaymentMethodData::Upi(UpiData::UpiIntent(_)) | PaymentMethodData::Upi(UpiData::UpiQr(_)) => {
+                (Some("intent"), None)
+            }
             _ => (None, None), // Default fallback
         };
 
@@ -1447,17 +1300,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             currency: item.router_data.request.currency.to_string(),
             amount: item.amount,
-            email: item
-                .router_data
-                .resource_common_data
-                .get_billing_email()
-                .ok(),
+            email: item.router_data.resource_common_data.get_billing_email().ok(),
             order_id: order_id.to_string(),
-            contact: item
-                .router_data
-                .resource_common_data
-                .get_billing_phone_number()
-                .ok(),
+            contact: item.router_data.resource_common_data.get_billing_phone_number().ok(),
             method: match &item.router_data.request.payment_method_data {
                 PaymentMethodData::Upi(_) => "upi".to_string(),
                 PaymentMethodData::Card(_) => "card".to_string(),
@@ -1465,9 +1310,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             vpa: vpa.clone().map(Secret::new),
             __notes_91_txn_uuid_93_: metadata_map.get("__notes_91_txn_uuid_93_").cloned(),
-            __notes_91_transaction_id_93_: metadata_map
-                .get("__notes_91_transaction_id_93_")
-                .cloned(),
+            __notes_91_transaction_id_93_: metadata_map.get("__notes_91_transaction_id_93_").cloned(),
             callback_url: item.router_data.request.get_router_return_url()?,
 
             ip: item
@@ -1510,16 +1353,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             __notes_91_pnr_93: metadata_map.get("__notes_91_pnr_93").cloned(),
             __notes_91_payment_id_93: metadata_map.get("__notes_91_payment_id_93").cloned(),
             __notes_91_lob_93_: metadata_map.get("__notes_91_lob_93_").cloned(),
-            __notes_91_credit_line_id_93_: metadata_map
-                .get("__notes_91_credit_line_id_93_")
-                .cloned(),
+            __notes_91_credit_line_id_93_: metadata_map.get("__notes_91_credit_line_id_93_").cloned(),
             __notes_91_loan_id_93_: metadata_map.get("__notes_91_loan_id_93_").cloned(),
-            __notes_91_transaction_type_93_: metadata_map
-                .get("__notes_91_transaction_type_93_")
-                .cloned(),
-            __notes_91_loan_product_code_93_: metadata_map
-                .get("__notes_91_loan_product_code_93_")
-                .cloned(),
+            __notes_91_transaction_type_93_: metadata_map.get("__notes_91_transaction_type_93_").cloned(),
+            __notes_91_loan_product_code_93_: metadata_map.get("__notes_91_loan_product_code_93_").cloned(),
             __notes_91_pg_flow_93_: metadata_map.get("__notes_91_pg_flow_93_").cloned(),
             __notes_91_tid_93: metadata_map.get("__notes_91_tid_93").cloned(),
             account_id: None,
@@ -1532,19 +1369,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RazorpayUpiPaymentsResponse {
-    SuccessIntent {
-        razorpay_payment_id: String,
-        link: String,
-    },
-    SuccessCollect {
-        razorpay_payment_id: String,
-    },
-    NullResponse {
-        razorpay_payment_id: Option<String>,
-    },
-    Error {
-        error: RazorpayErrorResponse,
-    },
+    SuccessIntent { razorpay_payment_id: String, link: String },
+    SuccessCollect { razorpay_payment_id: String },
+    NullResponse { razorpay_payment_id: Option<String> },
+    Error { error: RazorpayErrorResponse },
 }
 
 // Wrapper type for UPI response transformations
@@ -1565,12 +1393,7 @@ impl<F, Req>
     type Error = errors::ConnectorError;
 
     fn foreign_try_from(
-        (upi_response, data, _status_code, _raw_response): (
-            RazorpayUpiPaymentsResponse,
-            Self,
-            u16,
-            Vec<u8>,
-        ),
+        (upi_response, data, _status_code, _raw_response): (RazorpayUpiPaymentsResponse, Self, u16, Vec<u8>),
     ) -> Result<Self, Self::Error> {
         let (transaction_id, redirection_data) = match upi_response {
             RazorpayUpiPaymentsResponse::SuccessIntent {
@@ -1578,23 +1401,13 @@ impl<F, Req>
                 link,
             } => {
                 let redirect_form = RedirectForm::Uri { uri: link };
-                (
-                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
-                    Some(redirect_form),
-                )
+                (ResponseId::ConnectorTransactionId(razorpay_payment_id), Some(redirect_form))
             }
-            RazorpayUpiPaymentsResponse::SuccessCollect {
-                razorpay_payment_id,
-            } => {
+            RazorpayUpiPaymentsResponse::SuccessCollect { razorpay_payment_id } => {
                 // For UPI Collect, there's no link, so no redirection data
-                (
-                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
-                    None,
-                )
+                (ResponseId::ConnectorTransactionId(razorpay_payment_id), None)
             }
-            RazorpayUpiPaymentsResponse::NullResponse {
-                razorpay_payment_id,
-            } => {
+            RazorpayUpiPaymentsResponse::NullResponse { razorpay_payment_id } => {
                 // Handle null response - likely an error condition
                 match razorpay_payment_id {
                     Some(payment_id) => (ResponseId::ConnectorTransactionId(payment_id), None),

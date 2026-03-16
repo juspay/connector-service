@@ -48,8 +48,7 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 
 impl QrImage {
     pub fn new_from_data(data: String) -> Result<Self, error_stack::Report<QrCodeError>> {
-        let qr_code = qrcode::QrCode::new(data.as_bytes())
-            .change_context(QrCodeError::FailedToCreateQrCode)?;
+        let qr_code = qrcode::QrCode::new(data.as_bytes()).change_context(QrCodeError::FailedToCreateQrCode)?;
 
         let qrcode_image_buffer = qr_code.render::<Luma<u8>>().build();
         let qrcode_dynamic_image = DynamicImage::ImageLuma8(qrcode_image_buffer);
@@ -59,22 +58,15 @@ impl QrImage {
         // Encodes qrcode_dynamic_image and write it to image_bytes
         let _ = qrcode_dynamic_image.write_to(&mut image_bytes, ImageFormat::Png);
 
-        let image_data_source = format!(
-            "{},{}",
-            QR_IMAGE_DATA_SOURCE_STRING,
-            BASE64_ENGINE.encode(image_bytes.buffer())
-        );
+        let image_data_source =
+            format!("{},{}", QR_IMAGE_DATA_SOURCE_STRING, BASE64_ENGINE.encode(image_bytes.buffer()));
         Ok(Self {
             data: image_data_source,
         })
     }
 
-    pub fn new_colored_from_data(
-        data: String,
-        hex_color: &str,
-    ) -> Result<Self, error_stack::Report<QrCodeError>> {
-        let qr_code = qrcode::QrCode::new(data.as_bytes())
-            .change_context(QrCodeError::FailedToCreateQrCode)?;
+    pub fn new_colored_from_data(data: String, hex_color: &str) -> Result<Self, error_stack::Report<QrCodeError>> {
+        let qr_code = qrcode::QrCode::new(data.as_bytes()).change_context(QrCodeError::FailedToCreateQrCode)?;
 
         let qrcode_image_buffer = qr_code.render::<Luma<u8>>().build();
         let (width, height) = qrcode_image_buffer.dimensions();

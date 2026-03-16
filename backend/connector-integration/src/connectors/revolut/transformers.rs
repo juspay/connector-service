@@ -2,9 +2,8 @@ use crate::connectors::revolut::RevolutRouterData;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, WebhookDetailsResponse,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId, WebhookDetailsResponse,
     },
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
@@ -467,47 +466,30 @@ impl TryFrom<&ConnectorSpecificAuth> for RevolutAuthType {
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        RevolutRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        RevolutRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for RevolutOrderCreateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         item: RevolutRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let customer = router_data
-            .request
-            .email
-            .as_ref()
-            .map(|email| RevolutCustomer {
-                id: None,
-                full_name: router_data
-                    .request
-                    .customer_name
-                    .as_ref()
-                    .map(|name| Secret::new(name.clone())),
-                phone: None,
-                email: Some(email.clone()),
-                date_of_birth: None,
-            });
+        let customer = router_data.request.email.as_ref().map(|email| RevolutCustomer {
+            id: None,
+            full_name: router_data
+                .request
+                .customer_name
+                .as_ref()
+                .map(|name| Secret::new(name.clone())),
+            phone: None,
+            email: Some(email.clone()),
+            date_of_birth: None,
+        });
 
         // Map shipping data from resource_common_data
         let shipping = router_data
@@ -529,12 +511,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         .is_some()
                 {
                     Some(RevolutContact {
-                        full_name: router_data
-                            .resource_common_data
-                            .get_optional_shipping_full_name(),
-                        phone: router_data
-                            .resource_common_data
-                            .get_optional_shipping_phone_number(),
+                        full_name: router_data.resource_common_data.get_optional_shipping_full_name(),
+                        phone: router_data.resource_common_data.get_optional_shipping_phone_number(),
                         email: contact_email,
                     })
                 } else {
@@ -576,12 +554,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Map merchant_order_data from connector_request_reference_id
         let merchant_order_data = Some(RevolutMerchantOrderData {
             url: router_data.request.router_return_url.clone(),
-            reference: Some(
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
+            reference: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
         });
 
         Ok(Self {
@@ -619,9 +592,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<RevolutOrderCreateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RevolutOrderCreateResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
 
         let status = match response.state {
@@ -663,9 +634,7 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<RevolutOrderCreateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RevolutOrderCreateResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
 
         let (status, payment_id) = match &response.payments {
@@ -673,17 +642,11 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
                 Some(first_payment) => {
                     let status = match first_payment.state {
                         RevolutPaymentState::Authorised => AttemptStatus::Authorized,
-                        RevolutPaymentState::Captured | RevolutPaymentState::Completed => {
-                            AttemptStatus::Charged
-                        }
-                        RevolutPaymentState::Failed | RevolutPaymentState::Declined => {
-                            AttemptStatus::Failure
-                        }
+                        RevolutPaymentState::Captured | RevolutPaymentState::Completed => AttemptStatus::Charged,
+                        RevolutPaymentState::Failed | RevolutPaymentState::Declined => AttemptStatus::Failure,
                         RevolutPaymentState::Cancelled => AttemptStatus::Voided,
                         RevolutPaymentState::Pending => AttemptStatus::Pending,
-                        RevolutPaymentState::AuthenticationChallenge => {
-                            AttemptStatus::AuthenticationPending
-                        }
+                        RevolutPaymentState::AuthenticationChallenge => AttemptStatus::AuthenticationPending,
                         _ => AttemptStatus::Pending,
                     };
                     (status, Some(first_payment.id.clone()))
@@ -773,32 +736,20 @@ pub struct RevolutRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        RevolutRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for RevolutRefundRequest
+    TryFrom<RevolutRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for RevolutRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: RevolutRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: RevolutRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         Ok(Self {
             amount: router_data.request.minor_refund_amount,
             currency: router_data.request.currency,
             merchant_order_data: Some(RevolutMerchantOrderData {
-                reference: Some(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(),
-                ),
+                reference: Some(router_data.resource_common_data.connector_request_reference_id.clone()),
                 url: None,
             }),
             metadata: router_data.request.connector_metadata.clone(),
@@ -812,9 +763,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<RevolutRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RevolutRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         let status = match response.state {
             RevolutOrderState::Completed => common_enums::RefundStatus::Success,
@@ -840,9 +789,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        item: ResponseRouterData<RevolutRefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RevolutRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = item.response;
         let status = match response.state {
             RevolutOrderState::Completed => common_enums::RefundStatus::Success,
@@ -864,20 +811,13 @@ impl<F> TryFrom<ResponseRouterData<RevolutRefundResponse, Self>>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        RevolutRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for RevolutCaptureRequest
+    TryFrom<RevolutRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for RevolutCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: RevolutRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        item: RevolutRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         // Amount is optional - if not provided, Revolut captures full authorized amount
         let amount = Some(item.router_data.request.minor_amount_to_capture);
@@ -891,9 +831,7 @@ impl<F> TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(
-        value: ResponseRouterData<RevolutOrderCreateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(value: ResponseRouterData<RevolutOrderCreateResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             router_data,
@@ -963,9 +901,7 @@ pub enum RevolutWebhookEvent {
 }
 
 /// Maps Revolut webhook event to AttemptStatus for webhook processing
-fn map_webhook_event_to_attempt_status(
-    event: RevolutWebhookEvent,
-) -> Result<AttemptStatus, ConnectorError> {
+fn map_webhook_event_to_attempt_status(event: RevolutWebhookEvent) -> Result<AttemptStatus, ConnectorError> {
     match event {
         RevolutWebhookEvent::OrderCompleted => Ok(AttemptStatus::Charged),
         RevolutWebhookEvent::OrderAuthorised => Ok(AttemptStatus::Authorized),
@@ -982,9 +918,7 @@ impl TryFrom<RevolutWebhookBody> for WebhookDetailsResponse {
         let status = map_webhook_event_to_attempt_status(webhook_body.event)?;
 
         Ok(Self {
-            resource_id: Some(ResponseId::ConnectorTransactionId(
-                webhook_body.order_id.clone(),
-            )),
+            resource_id: Some(ResponseId::ConnectorTransactionId(webhook_body.order_id.clone())),
             status,
             error_code: None,
             error_message: None,

@@ -8,9 +8,9 @@
 
 use cards::CardNumber;
 use grpc_api_types::payments::{
-    identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address,
-    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, Currency, Identifier,
-    PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentStatus,
+    identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+    BrowserInformation, CaptureMethod, CardDetails, Currency, Identifier, PaymentAddress, PaymentMethod,
+    PaymentServiceAuthorizeRequest, PaymentStatus,
 };
 use grpc_server::app;
 use hyperswitch_masking::Secret;
@@ -61,9 +61,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             capture_method: Some(CaptureMethod::Manual as i32),
             browser_info: Some(BrowserInformation {
                 user_agent: Some("Mozilla/5.0".to_string()),
-                accept_header: Some(
-                    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
-                ),
+                accept_header: Some("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string()),
                 language: Some("en-US".to_string()),
                 color_depth: Some(24),
                 screen_height: Some(1080),
@@ -92,17 +90,13 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
 
         request.metadata_mut().insert(
             "x-config-override",
-            override_config
-                .to_string()
-                .parse()
-                .expect("valid header value"),
+            override_config.to_string().parse().expect("valid header value"),
         );
 
         // Add required headers
-        request.metadata_mut().insert(
-            "x-connector",
-            "razorpay".parse().expect("valid header value"),
-        );
+        request
+            .metadata_mut()
+            .insert("x-connector", "razorpay".parse().expect("valid header value"));
 
         request
             .metadata_mut()
@@ -131,10 +125,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             "Expected failure due to test data, got status: {:?}",
             response.status
         );
-        assert!(
-            response.error.is_some(),
-            "Expected error details in response"
-        );
+        assert!(response.error.is_some(), "Expected error details in response");
     });
     Ok(())
 }
@@ -159,16 +150,11 @@ mod unit {
     }
 
     fn apply_override(override_json: serde_json::Value) -> Arc<Config> {
-        merge_config_with_override(override_json.to_string(), base_config())
-            .expect("override should succeed")
+        merge_config_with_override(override_json.to_string(), base_config()).expect("override should succeed")
     }
 
-    fn apply_override_with_base(
-        override_json: serde_json::Value,
-        base_config: Config,
-    ) -> Arc<Config> {
-        merge_config_with_override(override_json.to_string(), base_config)
-            .expect("override should succeed")
+    fn apply_override_with_base(override_json: serde_json::Value, base_config: Config) -> Arc<Config> {
+        merge_config_with_override(override_json.to_string(), base_config).expect("override should succeed")
     }
 
     #[test]
@@ -233,18 +219,9 @@ mod unit {
         });
         let new_config = apply_override(override_json);
         assert!(new_config.log.console.enabled);
-        assert_eq!(
-            new_config.log.console.level.into_level(),
-            tracing::Level::ERROR
-        );
-        assert!(matches!(
-            new_config.log.console.log_format,
-            LogFormat::Default
-        ));
-        assert_eq!(
-            new_config.log.console.filtering_directive.as_deref(),
-            Some("debug")
-        );
+        assert_eq!(new_config.log.console.level.into_level(), tracing::Level::ERROR);
+        assert!(matches!(new_config.log.console.log_format, LogFormat::Default));
+        assert_eq!(new_config.log.console.filtering_directive.as_deref(), Some("debug"));
     }
 
     #[test]
@@ -253,10 +230,7 @@ mod unit {
         base_config.server.port = 61234;
 
         let result = merge_config_with_override(String::new(), base_config.clone());
-        assert!(
-            result.is_ok(),
-            "empty override should be treated as no override"
-        );
+        assert!(result.is_ok(), "empty override should be treated as no override");
         let new_config = result.expect("should get config");
 
         assert_eq!(new_config.server.port, 61234);
@@ -282,11 +256,7 @@ mod unit {
             }
         });
         let new_config = apply_override_with_base(override_json, base_config);
-        let kafka_config = new_config
-            .log
-            .kafka
-            .as_ref()
-            .expect("kafka config should be present");
+        let kafka_config = new_config.log.kafka.as_ref().expect("kafka config should be present");
         assert_eq!(kafka_config.level.into_level(), tracing::Level::ERROR);
         assert!(kafka_config.enabled);
         assert_eq!(kafka_config.brokers, vec!["localhost:9092".to_string()]);
@@ -337,16 +307,10 @@ mod unit {
             },
         });
         let new_config = apply_override(override_json);
-        assert_eq!(
-            new_config.proxy.http_url.as_deref(),
-            Some("http://proxy.local")
-        );
+        assert_eq!(new_config.proxy.http_url.as_deref(), Some("http://proxy.local"));
         assert_eq!(new_config.proxy.https_url, None);
         assert_eq!(new_config.proxy.idle_pool_connection_timeout, Some(45));
-        assert_eq!(
-            new_config.proxy.bypass_proxy_urls,
-            vec!["http://no-proxy.local".to_string()]
-        );
+        assert_eq!(new_config.proxy.bypass_proxy_urls, vec!["http://no-proxy.local".to_string()]);
         assert!(new_config.proxy.mitm_proxy_enabled);
         assert_eq!(new_config.proxy.mitm_ca_cert.as_deref(), Some(pem));
     }
@@ -366,24 +330,14 @@ mod unit {
             },
         });
         let new_config = apply_override(override_json);
-        assert_eq!(
-            new_config.connectors.razorpay.base_url.as_str(),
-            "https://razorpay.example"
-        );
+        assert_eq!(new_config.connectors.razorpay.base_url.as_str(), "https://razorpay.example");
         assert_eq!(
             new_config.connectors.razorpay.dispute_base_url.as_deref(),
             Some("https://dispute.razorpay.example")
         );
+        assert_eq!(new_config.connectors.trustpay.base_url.as_str(), "https://trustpay.example");
         assert_eq!(
-            new_config.connectors.trustpay.base_url.as_str(),
-            "https://trustpay.example"
-        );
-        assert_eq!(
-            new_config
-                .connectors
-                .trustpay
-                .base_url_bank_redirects
-                .as_str(),
+            new_config.connectors.trustpay.base_url_bank_redirects.as_str(),
             "https://trustpay-bank.example"
         );
     }
@@ -408,32 +362,14 @@ mod unit {
             new_config.events.brokers,
             vec!["broker1:9092".to_string(), "broker2:9092".to_string()]
         );
+        assert_eq!(new_config.events.partition_key_field.as_str(), "merchant_id");
         assert_eq!(
-            new_config.events.partition_key_field.as_str(),
-            "merchant_id"
-        );
-        assert_eq!(
-            new_config
-                .events
-                .transformations
-                .get("order_id")
-                .map(String::as_str),
+            new_config.events.transformations.get("order_id").map(String::as_str),
             Some("payment_id")
         );
+        assert_eq!(new_config.events.static_values.get("app").map(String::as_str), Some("grpc"));
         assert_eq!(
-            new_config
-                .events
-                .static_values
-                .get("app")
-                .map(String::as_str),
-            Some("grpc")
-        );
-        assert_eq!(
-            new_config
-                .events
-                .extractions
-                .get("path")
-                .map(String::as_str),
+            new_config.events.extractions.get("path").map(String::as_str),
             Some("metadata.path")
         );
     }
@@ -454,11 +390,7 @@ mod unit {
         let new_config = apply_override_with_base(override_json, base_config);
 
         assert_eq!(
-            new_config
-                .events
-                .transformations
-                .get("new_key")
-                .map(String::as_str),
+            new_config.events.transformations.get("new_key").map(String::as_str),
             Some("new_value")
         );
         assert!(!new_config.events.transformations.contains_key("old_key"));
@@ -515,10 +447,7 @@ mod unit {
         });
         let new_config = apply_override(override_json);
         assert!(new_config.test.enabled);
-        assert_eq!(
-            new_config.test.mock_server_url.as_deref(),
-            Some("http://mock.local")
-        );
+        assert_eq!(new_config.test.mock_server_url.as_deref(), Some("http://mock.local"));
     }
 
     #[test]
@@ -529,10 +458,7 @@ mod unit {
             },
         });
         let new_config = apply_override(override_json);
-        assert_eq!(
-            new_config.api_tags.tags.get("psync").map(String::as_str),
-            Some("PSYNC_TAG")
-        );
+        assert_eq!(new_config.api_tags.tags.get("psync").map(String::as_str), Some("PSYNC_TAG"));
     }
 
     #[test]
@@ -556,11 +482,7 @@ mod unit {
         });
 
         let new_config = apply_override_with_base(override_json, base_config);
-        let kafka_config = new_config
-            .log
-            .kafka
-            .as_ref()
-            .expect("kafka config should be present");
+        let kafka_config = new_config.log.kafka.as_ref().expect("kafka config should be present");
         assert_eq!(kafka_config.filtering_directive, None);
     }
 

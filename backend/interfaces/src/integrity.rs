@@ -8,27 +8,26 @@ use domain_types::router_request_types::SdkSessionTokenIntegrityObject;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 // Domain type imports
 use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData,
-    MandateRevokeRequestData, PaymentCreateOrderData, PaymentMethodTokenizationData,
-    PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
-    PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
-    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
-    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    AcceptDisputeData, AccessTokenRequestData, ConnectorCustomerData, DisputeDefendData, MandateRevokeRequestData,
+    PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+    PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData, PaymentsSyncData,
+    RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
+    SubmitEvidenceData,
 };
+use domain_types::payout_types::PayoutCreateRequest;
 use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateConnectorCustomerIntegrityObject,
-        CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        IncrementalAuthorizationIntegrityObject, MandateRevokeIntegrityObject,
-        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
-        PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
-        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        CreateOrderIntegrityObject, DefendDisputeIntegrityObject, IncrementalAuthorizationIntegrityObject,
+        MandateRevokeIntegrityObject, PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject,
+        PaymentVoidIntegrityObject, PaymentVoidPostCaptureIntegrityObject, PayoutCreateIntegrityObject,
+        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -110,11 +109,7 @@ macro_rules! impl_check_integrity {
                 match request.get_response_integrity_object() {
                     Some(res_integrity_object) => {
                         let req_integrity_object = request.get_request_integrity_object();
-                        T::compare(
-                            req_integrity_object,
-                            res_integrity_object,
-                            connector_transaction_id,
-                        )
+                        T::compare(req_integrity_object, res_integrity_object, connector_transaction_id)
                     }
                     None => Ok(()),
                 }
@@ -135,11 +130,7 @@ macro_rules! impl_check_integrity {
                 match request.get_response_integrity_object() {
                     Some(res_integrity_object) => {
                         let req_integrity_object = request.get_request_integrity_object();
-                        T::compare(
-                            req_integrity_object,
-                            res_integrity_object,
-                            connector_transaction_id,
-                        )
+                        T::compare(req_integrity_object, res_integrity_object, connector_transaction_id)
                     }
                     None => Ok(()),
                 }
@@ -173,14 +164,13 @@ impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
+impl_check_integrity!(PayoutCreateRequest);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
 // ========================================================================
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject>
-    for PaymentsAuthorizeData<T>
-{
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject> for PaymentsAuthorizeData<T> {
     fn get_response_integrity_object(&self) -> Option<AuthoriseIntegrityObject> {
         self.integrity_object.clone()
     }
@@ -206,9 +196,7 @@ impl GetIntegrityObject<CreateOrderIntegrityObject> for PaymentCreateOrderData {
     }
 }
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<SetupMandateIntegrityObject>
-    for SetupMandateRequestData<T>
-{
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<SetupMandateIntegrityObject> for SetupMandateRequestData<T> {
     fn get_response_integrity_object(&self) -> Option<SetupMandateIntegrityObject> {
         self.integrity_object.clone()
     }
@@ -334,9 +322,7 @@ impl GetIntegrityObject<SubmitEvidenceIntegrityObject> for SubmitEvidenceData {
     }
 }
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
-    for RepeatPaymentData<T>
-{
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject> for RepeatPaymentData<T> {
     fn get_response_integrity_object(&self) -> Option<RepeatPaymentIntegrityObject> {
         self.integrity_object.clone()
     }
@@ -346,18 +332,13 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<RepeatPaymentIntegrityObject>
             amount: self.amount,
             currency: self.currency,
             mandate_reference: match &self.mandate_reference {
-                domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
-                    mandate_ref,
-                ) => mandate_ref
-                    .get_connector_mandate_id()
-                    .unwrap_or_default()
-                    .to_string(),
-                domain_types::connector_types::MandateReferenceId::NetworkMandateId(
-                    network_mandate,
-                ) => network_mandate.clone(),
-                domain_types::connector_types::MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    String::new()
+                domain_types::connector_types::MandateReferenceId::ConnectorMandateId(mandate_ref) => {
+                    mandate_ref.get_connector_mandate_id().unwrap_or_default().to_string()
                 }
+                domain_types::connector_types::MandateReferenceId::NetworkMandateId(network_mandate) => {
+                    network_mandate.clone()
+                }
+                domain_types::connector_types::MandateReferenceId::NetworkTokenWithNTI(_) => String::new(),
             },
         }
     }
@@ -382,8 +363,7 @@ impl GetIntegrityObject<VerifyWebhookSourceIntegrityObject> for VerifyWebhookSou
 
     fn get_request_integrity_object(&self) -> VerifyWebhookSourceIntegrityObject {
         // Extract webhook_id from merchant_secret (for PayPal, webhook_id is stored in secret)
-        let webhook_id =
-            String::from_utf8(self.merchant_secret.secret.to_vec()).unwrap_or_default();
+        let webhook_id = String::from_utf8(self.merchant_secret.secret.to_vec()).unwrap_or_default();
         VerifyWebhookSourceIntegrityObject { webhook_id }
     }
 }
@@ -423,9 +403,7 @@ impl GetIntegrityObject<SdkSessionTokenIntegrityObject> for PaymentsSdkSessionTo
     }
 }
 
-impl GetIntegrityObject<IncrementalAuthorizationIntegrityObject>
-    for PaymentsIncrementalAuthorizationData
-{
+impl GetIntegrityObject<IncrementalAuthorizationIntegrityObject> for PaymentsIncrementalAuthorizationData {
     fn get_response_integrity_object(&self) -> Option<IncrementalAuthorizationIntegrityObject> {
         None // Incremental authorization responses don't have integrity objects
     }
@@ -450,9 +428,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PaymentMethodTokenIntegrityOb
     }
 }
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<PreAuthenticateIntegrityObject>
-    for PaymentsPreAuthenticateData<T>
-{
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PreAuthenticateIntegrityObject> for PaymentsPreAuthenticateData<T> {
     fn get_response_integrity_object(&self) -> Option<PreAuthenticateIntegrityObject> {
         None
     }
@@ -465,9 +441,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PreAuthenticateIntegrityObjec
     }
 }
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthenticateIntegrityObject>
-    for PaymentsAuthenticateData<T>
-{
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthenticateIntegrityObject> for PaymentsAuthenticateData<T> {
     fn get_response_integrity_object(&self) -> Option<AuthenticateIntegrityObject> {
         None
     }
@@ -507,6 +481,19 @@ impl GetIntegrityObject<CreateConnectorCustomerIntegrityObject> for ConnectorCus
                 let email_inner = e.peek().clone().expose();
                 Secret::new(email_inner.expose())
             }),
+        }
+    }
+}
+
+impl GetIntegrityObject<PayoutCreateIntegrityObject> for PayoutCreateRequest {
+    fn get_response_integrity_object(&self) -> Option<PayoutCreateIntegrityObject> {
+        None
+    }
+
+    fn get_request_integrity_object(&self) -> PayoutCreateIntegrityObject {
+        PayoutCreateIntegrityObject {
+            amount: self.amount,
+            currency: self.source_currency,
         }
     }
 }
@@ -588,11 +575,7 @@ impl FlowIntegrity for SetupMandateIntegrityObject {
         // Handle optional amount field
         match (req_integrity_object.amount, res_integrity_object.amount) {
             (Some(req_amount), Some(res_amount)) if req_amount != res_amount => {
-                mismatched_fields.push(format_mismatch(
-                    "amount",
-                    &req_amount.to_string(),
-                    &res_amount.to_string(),
-                ));
+                mismatched_fields.push(format_mismatch("amount", &req_amount.to_string(), &res_amount.to_string()));
             }
             (None, Some(_)) | (Some(_), None) => {
                 mismatched_fields.push("amount is missing in request or response".to_string());
@@ -652,9 +635,7 @@ impl FlowIntegrity for PaymentVoidIntegrityObject {
     ) -> Result<(), IntegrityCheckError> {
         let mut mismatched_fields = Vec::new();
 
-        if req_integrity_object.connector_transaction_id
-            != res_integrity_object.connector_transaction_id
-        {
+        if req_integrity_object.connector_transaction_id != res_integrity_object.connector_transaction_id {
             mismatched_fields.push(format_mismatch(
                 "connector_transaction_id",
                 &req_integrity_object.connector_transaction_id,
@@ -676,9 +657,7 @@ impl FlowIntegrity for PaymentVoidPostCaptureIntegrityObject {
     ) -> Result<(), IntegrityCheckError> {
         let mut mismatched_fields = Vec::new();
 
-        if req_integrity_object.connector_transaction_id
-            != res_integrity_object.connector_transaction_id
-        {
+        if req_integrity_object.connector_transaction_id != res_integrity_object.connector_transaction_id {
             mismatched_fields.push(format_mismatch(
                 "connector_transaction_id",
                 &req_integrity_object.connector_transaction_id,
@@ -812,9 +791,7 @@ impl FlowIntegrity for RefundSyncIntegrityObject {
     ) -> Result<(), IntegrityCheckError> {
         let mut mismatched_fields = Vec::new();
 
-        if req_integrity_object.connector_transaction_id
-            != res_integrity_object.connector_transaction_id
-        {
+        if req_integrity_object.connector_transaction_id != res_integrity_object.connector_transaction_id {
             mismatched_fields.push(format_mismatch(
                 "connector_transaction_id",
                 &req_integrity_object.connector_transaction_id,
@@ -1156,11 +1133,7 @@ impl FlowIntegrity for CreateConnectorCustomerIntegrityObject {
                 .as_ref()
                 .map(|s| s.clone().expose())
                 .unwrap_or_else(|| "None".to_string());
-            mismatched_fields.push(format_mismatch(
-                "customer_id",
-                &req_customer_id,
-                &res_customer_id,
-            ));
+            mismatched_fields.push(format_mismatch("customer_id", &req_customer_id, &res_customer_id));
         }
 
         // Check email
@@ -1206,5 +1179,35 @@ fn check_integrity_result(
             field_names,
             connector_transaction_id,
         })
+    }
+}
+
+impl FlowIntegrity for PayoutCreateIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
     }
 }

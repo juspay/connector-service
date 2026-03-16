@@ -14,16 +14,12 @@ pub trait BodyDecoding {
     /// Get the decoding algorithm being used
     fn get_algorithm(
         &self,
-    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorError>
-    {
+    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorError> {
         Ok(Box::new(crypto::NoAlgorithm))
     }
 
     /// Get the message/payload that should be decoded
-    fn get_message(
-        &self,
-        body: &[u8],
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+    fn get_message(&self, body: &[u8]) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
         Ok(body.to_owned())
     }
 

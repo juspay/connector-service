@@ -4,15 +4,15 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    composite_payment_service_server::CompositePaymentService, CompositeAuthorizeRequest,
-    CompositeAuthorizeResponse, CompositeGetRequest, CompositeGetResponse,
+    composite_payment_service_server::CompositePaymentService, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    CompositeGetRequest, CompositeGetResponse,
 };
 use std::sync::Arc;
 
 use crate::http::handlers::macros::http_handler;
 use crate::http::{
-    error::HttpError, http_headers_to_grpc_metadata, state::AppState,
-    transfer_config_to_grpc_request, utils::ValidatedJson,
+    error::HttpError, http_headers_to_grpc_metadata, state::AppState, transfer_config_to_grpc_request,
+    utils::ValidatedJson,
 };
 use ucs_env::configs::Config;
 

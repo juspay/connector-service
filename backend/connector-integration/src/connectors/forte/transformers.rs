@@ -5,14 +5,11 @@ use common_utils::types::FloatMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
     utils,
@@ -39,9 +36,7 @@ impl TryFrom<&Option<serde_json::Value>> for ForteMeta {
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum FortePaymentMethod<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub enum FortePaymentMethod<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     Card(Card<T>),
     Echeck(ForteEcheckWrapper),
 }
@@ -52,9 +47,7 @@ pub struct ForteEcheckWrapper {
 }
 
 #[derive(Debug, Serialize)]
-pub struct FortePaymentsRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
-> {
+pub struct FortePaymentsRequest<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> {
     action: ForteAction,
     authorization_amount: FloatMajorUnit,
     billing_address: BillingAddress,
@@ -128,36 +121,22 @@ impl TryFrom<utils::CardIssuer> for ForteCardType {
             utils::CardIssuer::Visa => Ok(Self::Visa),
             utils::CardIssuer::DinersClub => Ok(Self::DinersClub),
             utils::CardIssuer::JCB => Ok(Self::Jcb),
-            _ => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Forte"),
-            )
-            .into()),
+            _ => Err(
+                ConnectorError::NotImplemented(utils::get_unimplemented_payment_method_error_message("Forte")).into(),
+            ),
         }
     }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
-        ForteRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
+        ForteRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
     > for FortePaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: ForteRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -177,16 +156,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let card_number = ccard.card_number.peek();
                 let card_issuer = utils::get_card_issuer(card_number)?;
                 let card_type = ForteCardType::try_from(card_issuer)?;
-                let address = item
-                    .router_data
-                    .resource_common_data
-                    .get_billing_address()?;
+                let address = item.router_data.resource_common_data.get_billing_address()?;
                 let card = Card {
                     card_type,
-                    name_on_card: item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_full_name()?,
+                    name_on_card: item.router_data.resource_common_data.get_billing_full_name()?,
                     account_number: ccard.card_number.clone(),
                     expire_month: ccard.card_exp_month.clone(),
                     expire_year: ccard.card_exp_year.clone(),
@@ -200,10 +173,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let authorization_amount = item
                     .connector
                     .amount_converter
-                    .convert(
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )
+                    .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
                     .change_context(ConnectorError::RequestEncodingFailed)?;
                 Ok(Self {
                     action,
@@ -227,11 +197,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                     let account_holder = bank_account_holder_name
                         .clone()
-                        .or(item
-                            .router_data
-                            .resource_common_data
-                            .get_billing_full_name()
-                            .ok())
+                        .or(item.router_data.resource_common_data.get_billing_full_name().ok())
                         .ok_or(ConnectorError::MissingRequiredField {
                             field_name: "bank_account_holder_name",
                         })?;
@@ -246,10 +212,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         account_holder,
                     };
 
-                    let address = item
-                        .router_data
-                        .resource_common_data
-                        .get_billing_address()?;
+                    let address = item.router_data.resource_common_data.get_billing_address()?;
                     let first_name = address.get_first_name()?;
                     let billing_address = BillingAddress {
                         first_name: first_name.clone(),
@@ -259,10 +222,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let authorization_amount = item
                         .connector
                         .amount_converter
-                        .convert(
-                            item.router_data.request.minor_amount,
-                            item.router_data.request.currency,
-                        )
+                        .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
                         .change_context(ConnectorError::RequestEncodingFailed)?;
 
                     Ok(Self {
@@ -272,26 +232,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         payment_method: FortePaymentMethod::Echeck(ForteEcheckWrapper { echeck }),
                     })
                 }
-                BankDebitData::SepaBankDebit { .. } => {
-                    Err(ConnectorError::NotImplemented(
-                        "SEPA bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
-                    ))?
-                }
-                BankDebitData::BecsBankDebit { .. } => {
-                    Err(ConnectorError::NotImplemented(
-                        "BECS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
-                    ))?
-                }
-                BankDebitData::BacsBankDebit { .. } => {
-                    Err(ConnectorError::NotImplemented(
-                        "BACS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
-                    ))?
-                }
-                BankDebitData::SepaGuaranteedBankDebit { .. } => {
-                    Err(ConnectorError::NotImplemented(
-                        "SEPA Guaranteed bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
-                    ))?
-                }
+                BankDebitData::SepaBankDebit { .. } => Err(ConnectorError::NotImplemented(
+                    "SEPA bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
+                ))?,
+                BankDebitData::BecsBankDebit { .. } => Err(ConnectorError::NotImplemented(
+                    "BECS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
+                ))?,
+                BankDebitData::BacsBankDebit { .. } => Err(ConnectorError::NotImplemented(
+                    "BACS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
+                ))?,
+                BankDebitData::SepaGuaranteedBankDebit { .. } => Err(ConnectorError::NotImplemented(
+                    "SEPA Guaranteed bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
+                        .to_string(),
+                ))?,
             },
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
@@ -309,11 +262,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("Forte"),
-                ))?
-            }
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Forte"),
+            ))?,
         }
     }
 }
@@ -427,13 +378,10 @@ pub enum ForteResponseCode {
 impl From<ForteResponseCode> for enums::AttemptStatus {
     fn from(item: ForteResponseCode) -> Self {
         match item {
-            ForteResponseCode::A01 | ForteResponseCode::A05 | ForteResponseCode::A06 => {
-                Self::Pending
+            ForteResponseCode::A01 | ForteResponseCode::A05 | ForteResponseCode::A06 => Self::Pending,
+            ForteResponseCode::U13 | ForteResponseCode::U14 | ForteResponseCode::U18 | ForteResponseCode::U20 => {
+                Self::Failure
             }
-            ForteResponseCode::U13
-            | ForteResponseCode::U14
-            | ForteResponseCode::U18
-            | ForteResponseCode::U20 => Self::Failure,
             ForteResponseCode::Unknown => Self::Failure,
         }
     }
@@ -483,9 +431,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<FortePaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FortePaymentsResponse, Self>) -> Result<Self, Self::Error> {
         let response_code = item.response.response.response_code;
         let action = item.response.action;
         let transaction_id = &item.response.transaction_id;
@@ -546,9 +492,7 @@ impl<F> TryFrom<ResponseRouterData<FortePaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<FortePaymentsSyncResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<FortePaymentsSyncResponse, Self>) -> Result<Self, Self::Error> {
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -582,27 +526,18 @@ pub struct ForteCaptureRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ForteRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for ForteCaptureRequest
+    TryFrom<ForteRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for ForteCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ForteRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
+        item: ForteRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let minor_amount_authorized = item
             .router_data
             .resource_common_data
             .minor_amount_capturable
-            .ok_or(ConnectorError::MissingRequiredField {
-                field_name: "amount",
-            })?;
+            .ok_or(ConnectorError::MissingRequiredField { field_name: "amount" })?;
 
         if item.router_data.request.minor_amount_to_capture != minor_amount_authorized {
             return Err(ConnectorError::NotSupported {
@@ -691,19 +626,12 @@ pub struct ForteCancelRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ForteRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for ForteCancelRequest
+    TryFrom<ForteRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for ForteCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ForteRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: ForteRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let action = VOID.to_string();
         let metadata: ForteMeta = ForteMeta::try_from(
@@ -778,24 +706,14 @@ pub struct ForteRefundRequest {
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        ForteRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for ForteRefundRequest
+    TryFrom<ForteRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for ForteRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ForteRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: ForteRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let trn_id = match item
-            .router_data
-            .request
-            .connector_metadata
-            .clone()
-            .expose_option()
-        {
+        let trn_id = match item.router_data.request.connector_metadata.clone().expose_option() {
             Some(metadata) => metadata.as_str().map(|id| id.to_string()),
             None => None,
         }
@@ -812,10 +730,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let authorization_amount = item
             .connector
             .amount_converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
+            .convert(item.router_data.request.minor_refund_amount, item.router_data.request.currency)
             .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             action: REVERSE.to_string(),
@@ -846,9 +761,7 @@ impl From<RefundStatus> for enums::RefundStatus {
 impl From<ForteResponseCode> for enums::RefundStatus {
     fn from(item: ForteResponseCode) -> Self {
         match item {
-            ForteResponseCode::A01 | ForteResponseCode::A05 | ForteResponseCode::A06 => {
-                Self::Pending
-            }
+            ForteResponseCode::A01 | ForteResponseCode::A05 | ForteResponseCode::A06 => Self::Pending,
             _ => Self::Failure,
         }
     }

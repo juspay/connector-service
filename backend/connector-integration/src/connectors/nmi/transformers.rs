@@ -4,14 +4,12 @@ use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConn
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
-    payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificAuth,
     router_data_v2::RouterDataV2,
 };
@@ -35,16 +33,11 @@ impl TryFrom<&ConnectorSpecificAuth> for NmiAuthType {
 
     fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nmi {
-                api_key,
-                public_key,
-            } => Ok(Self {
+            ConnectorSpecificAuth::Nmi { api_key, public_key } => Ok(Self {
                 api_key: api_key.to_owned(),
                 public_key: public_key.to_owned(),
             }),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(errors::ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -110,10 +103,7 @@ impl From<NmiStatus> for AttemptStatus {
 impl From<NmiStatus> for RefundStatus {
     fn from(item: NmiStatus) -> Self {
         match item {
-            NmiStatus::Abandoned
-            | NmiStatus::Cancelled
-            | NmiStatus::Failed
-            | NmiStatus::Unknown => Self::Failure,
+            NmiStatus::Abandoned | NmiStatus::Cancelled | NmiStatus::Failed | NmiStatus::Unknown => Self::Failure,
             NmiStatus::Pending | NmiStatus::InProgress => Self::Pending,
             NmiStatus::Pendingsettlement | NmiStatus::Complete => Self::Success,
         }
@@ -214,12 +204,7 @@ pub struct NmiPaymentsRequest<T: PaymentMethodDataTypes> {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::NmiRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     > for NmiPaymentsRequest<T>
@@ -228,12 +213,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn try_from(
         item: super::NmiRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -246,10 +226,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::BankDebit(bank_debit_data) => {
                 let ach_data = create_ach_data(bank_debit_data, router_data)?;
                 // ACH only supports "sale" transaction type, not "auth"
-                (
-                    NmiPaymentMethod::Ach(Box::new(ach_data)),
-                    TransactionType::Sale,
-                )
+                (NmiPaymentMethod::Ach(Box::new(ach_data)), TransactionType::Sale)
             }
             _ => {
                 // Determine transaction type based on auto_capture for card payments
@@ -258,20 +235,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 } else {
                     TransactionType::Auth
                 };
-                (
-                    NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?,
-                    txn_type,
-                )
+                (NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?, txn_type)
             }
         };
 
         // Convert amount from minor units to major units using framework converter
         let converter = FloatMajorUnitForConnector;
         let amount = converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
@@ -279,10 +250,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transaction_type,
             amount,
             currency: router_data.request.currency,
-            orderid: router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            orderid: router_data.resource_common_data.connector_request_reference_id.clone(),
             payment_method,
             merchant_defined_field: router_data
                 .request
@@ -302,8 +270,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
         match pm_data {
             PaymentMethodData::Card(card_data) => {
                 // Extract expiry date in MMYY format using framework utility
-                let ccexp =
-                    card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
+                let ccexp = card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
 
                 let card = CardData {
                     ccnumber: card_data.card_number.clone(),
@@ -316,14 +283,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 BankDebitData::SepaBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. },
-            ) => Err(error_stack::report!(
-                errors::ConnectorError::NotImplemented(
-                    "Bank Debit type not supported for NMI".to_string()
-                )
-            )),
-            _ => Err(error_stack::report!(
-                errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
-            )),
+            ) => Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+                "Bank Debit type not supported for NMI".to_string()
+            ))),
+            _ => Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+                "Payment method not supported".to_string()
+            ))),
         }
     }
 }
@@ -331,12 +296,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
 /// Helper function to create ACH data from BankDebitData with access to router data for billing name fallback
 fn create_ach_data<T: PaymentMethodDataTypes>(
     bank_debit_data: &BankDebitData,
-    router_data: &RouterDataV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    >,
+    router_data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> Result<AchData, error_stack::Report<errors::ConnectorError>> {
     match bank_debit_data {
         BankDebitData::AchBankDebit {
@@ -350,12 +310,7 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
             // Get account holder name: use bank_account_holder_name or fall back to billing name
             let checkname = bank_account_holder_name
                 .clone()
-                .or_else(|| {
-                    router_data
-                        .resource_common_data
-                        .get_billing_full_name()
-                        .ok()
-                })
+                .or_else(|| router_data.resource_common_data.get_billing_full_name().ok())
                 .ok_or_else(|| {
                     error_stack::report!(errors::ConnectorError::MissingRequiredField {
                         field_name: "bank_account_holder_name",
@@ -373,11 +328,9 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
             };
             Ok(ach_data)
         }
-        _ => Err(error_stack::report!(
-            errors::ConnectorError::NotImplemented(
-                "Only ACH Bank Debit is supported for NMI".to_string()
-            )
-        )),
+        _ => Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+            "Only ACH Bank Debit is supported for NMI".to_string()
+        ))),
     }
 }
 
@@ -461,30 +414,20 @@ pub struct NmiSyncRequest {
 
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::NmiRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for NmiSyncRequest
+    TryFrom<super::NmiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for NmiSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::NmiRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
+        item: super::NmiRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
 
         // PSync uses attempt_id as order_id (NOT connector_transaction_id)
         // The connector_transaction_id contains the attempt_id for sync operations
-        let order_id = router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .clone();
+        let order_id = router_data.resource_common_data.connector_request_reference_id.clone();
 
         Ok(Self {
             security_key: auth.api_key,
@@ -587,12 +530,8 @@ pub struct NmiCaptureRequest {
 
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::NmiRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for NmiCaptureRequest
+    TryFrom<super::NmiRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for NmiCaptureRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -617,10 +556,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Convert amount from minor to major units using framework converter
         let converter = FloatMajorUnitForConnector;
         let amount = converter
-            .convert(
-                router_data.request.minor_amount_to_capture,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_amount_to_capture, router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
@@ -693,20 +629,13 @@ pub enum PaymentType {
 
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::NmiRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for NmiRefundRequest
+    TryFrom<super::NmiRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for NmiRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::NmiRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: super::NmiRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
@@ -716,25 +645,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Get the refund ID (refund_id) as orderid
         // If refund_id is not present, use connector_request_reference_id as fallback
-        let orderid = router_data
-            .resource_common_data
-            .refund_id
-            .clone()
-            .unwrap_or_else(|| {
-                tracing::debug!("Refund: refund_id not present, using connector_request_reference_id as orderid");
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone()
-            });
+        let orderid = router_data.resource_common_data.refund_id.clone().unwrap_or_else(|| {
+            tracing::debug!("Refund: refund_id not present, using connector_request_reference_id as orderid");
+            router_data.resource_common_data.connector_request_reference_id.clone()
+        });
 
         // Convert amount from minor to major units using framework converter
         let converter = FloatMajorUnitForConnector;
         let amount = converter
-            .convert(
-                router_data.request.minor_refund_amount,
-                router_data.request.currency,
-            )
+            .convert(router_data.request.minor_refund_amount, router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
@@ -791,20 +710,13 @@ pub struct NmiRefundSyncRequest {
 
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::NmiRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for NmiRefundSyncRequest
+    TryFrom<super::NmiRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for NmiRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::NmiRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
+        item: super::NmiRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;
@@ -888,20 +800,13 @@ pub enum VoidReason {
 
 // Implementation for NmiRouterData wrapper (needed by macros)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        super::NmiRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for NmiVoidRequest
+    TryFrom<super::NmiRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for NmiVoidRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: super::NmiRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
+        item: super::NmiRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_auth_type)?;

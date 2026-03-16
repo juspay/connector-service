@@ -12,8 +12,8 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    refund_service_server::RefundService, EventResponse, EventServiceHandleRequest,
-    EventServiceHandleResponse, RefundResponse, RefundServiceGetRequest, WebhookEventType,
+    refund_service_server::RefundService, EventResponse, EventServiceHandleRequest, EventServiceHandleResponse,
+    RefundResponse, RefundServiceGetRequest, WebhookEventType,
 };
 
 use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
@@ -132,18 +132,14 @@ impl RefundService for Refunds {
                 let request_details = payload
                     .request_details
                     .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                    .ok_or_else(|| {
-                        tonic::Status::invalid_argument("missing request_details in the payload")
-                    })?
+                    .ok_or_else(|| tonic::Status::invalid_argument("missing request_details in the payload"))?
                     .map_err(|e| e.into_grpc_status())?;
 
                 let webhook_secrets = payload
                     .webhook_secrets
                     .map(|details| {
-                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                            details,
-                        )
-                        .map_err(|e| e.into_grpc_status())
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(details)
+                            .map_err(|e| e.into_grpc_status())
                     })
                     .transpose()?;
 
