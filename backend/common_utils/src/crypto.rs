@@ -705,7 +705,10 @@ impl RsaPkcs1v15 {
             .change_context(errors::CryptoError::EncodingFailed)
             .attach_printable("Failed to parse RSA public key from DER format")?;
 
-        let mut encrypted = vec![0u8; rsa.size() as usize];
+        let rsa_size = usize::try_from(rsa.size())
+            .change_context(errors::CryptoError::EncodingFailed)
+            .attach_printable("RSA key size does not fit in usize")?;
+        let mut encrypted = vec![0u8; rsa_size];
         let encrypted_len = rsa
             .public_encrypt(plaintext, &mut encrypted, Padding::PKCS1)
             .change_context(errors::CryptoError::EncodingFailed)

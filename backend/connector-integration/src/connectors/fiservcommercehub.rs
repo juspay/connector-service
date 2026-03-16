@@ -60,6 +60,8 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const AUTH_TOKEN_TYPE: &str = "Auth-Token-Type";
     pub(crate) const ACCEPT_LANGUAGE: &str = "Accept-Language";
+    pub(crate) const AUTH_TOKEN_TYPE_HMAC: &str = "HMAC";
+    pub(crate) const ACCEPT_LANGUAGE_EN: &str = "en";
 }
 
 // =============================================================================
@@ -111,11 +113,6 @@ macros::create_all_prerequisites!(
         amount_converter: FloatMajorUnit
     ],
     member_functions: {
-        /// Builds the HMAC-authenticated headers for the key-generation endpoint.
-        ///
-        /// Header computation:
-        ///   raw_msg  = api_key + client_request_id + timestamp_ms + json_body
-        ///   signature = Base64(HMAC-SHA256(api_secret, raw_msg))
         pub fn build_access_token_headers(
             &self,
             req: &RouterDataV2<
@@ -143,7 +140,6 @@ macros::create_all_prerequisites!(
             let timestamp =
                 fiservcommercehub::FiservcommercehubAuthType::generate_timestamp();
 
-            // Serialize the request body to a string so it can be included in the HMAC message.
             let temp_request_body = self.get_request_body(req)?;
             let request_body_str = match temp_request_body {
                 Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
@@ -158,17 +154,6 @@ macros::create_all_prerequisites!(
                 &timestamp,
                 &request_body_str,
             )?;
-
-            println!("$$$[ACCESS TOKEN] --- Request ---");
-            println!("$$$[ACCESS TOKEN] Body             : {request_body_str}");
-            println!("$$$[ACCESS TOKEN] --- Headers ---");
-            println!("$$$[ACCESS TOKEN] Content-Type     : application/json");
-            println!("$$$[ACCESS TOKEN] Api-Key          : {api_key}");
-            println!("$$$[ACCESS TOKEN] Timestamp        : {timestamp}");
-            println!("$$$[ACCESS TOKEN] Client-Request-Id: {client_request_id}");
-            println!("$$$[ACCESS TOKEN] Authorization    : {authorization}");
-            println!("$$$[ACCESS TOKEN] Auth-Token-Type  : HMAC");
-            println!("$$$[ACCESS TOKEN] Accept-Language  : en");
 
             Ok(vec![
                 (
@@ -188,20 +173,11 @@ macros::create_all_prerequisites!(
                     headers::AUTHORIZATION.to_string(),
                     authorization.into_masked(),
                 ),
-                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".into()),
-                (headers::ACCEPT_LANGUAGE.to_string(), "en".into()),
+                (headers::AUTH_TOKEN_TYPE.to_string(), headers::AUTH_TOKEN_TYPE_HMAC.into()),
+                (headers::ACCEPT_LANGUAGE.to_string(), headers::ACCEPT_LANGUAGE_EN.into()),
             ])
         }
 
-        /// Builds the HMAC-authenticated headers for the Authorize endpoint.
-        ///
-        /// Takes the pre-serialized request body string to ensure HMAC is computed
-        /// on the exact same body that will be sent (important for RSA-encrypted data
-        /// which produces different ciphertext each time due to random OAEP padding).
-        ///
-        /// Header computation:
-        ///   raw_msg  = api_key + client_request_id + timestamp_ms + json_body
-        ///   signature = Base64(HMAC-SHA256(api_secret, raw_msg))
         pub fn build_authorize_headers(
             &self,
             req: &RouterDataV2<
@@ -247,8 +223,8 @@ macros::create_all_prerequisites!(
                     headers::AUTHORIZATION.to_string(),
                     authorization.into_masked(),
                 ),
-                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".into()),
-                (headers::ACCEPT_LANGUAGE.to_string(), "en".into()),
+                (headers::AUTH_TOKEN_TYPE.to_string(), headers::AUTH_TOKEN_TYPE_HMAC.into()),
+                (headers::ACCEPT_LANGUAGE.to_string(), headers::ACCEPT_LANGUAGE_EN.into()),
             ])
         }
 
@@ -263,7 +239,6 @@ macros::create_all_prerequisites!(
                 .clone()
         }
 
-        /// Builds the HMAC-authenticated headers for the PSync (transaction-inquiry) endpoint.
         pub fn build_psync_headers(
             &self,
             req: &RouterDataV2<
@@ -324,12 +299,11 @@ macros::create_all_prerequisites!(
                     headers::AUTHORIZATION.to_string(),
                     authorization.into_masked(),
                 ),
-                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".into()),
-                (headers::ACCEPT_LANGUAGE.to_string(), "en".into()),
+                (headers::AUTH_TOKEN_TYPE.to_string(), headers::AUTH_TOKEN_TYPE_HMAC.into()),
+                (headers::ACCEPT_LANGUAGE.to_string(), headers::ACCEPT_LANGUAGE_EN.into()),
             ])
         }
 
-        /// Builds the HMAC-authenticated headers for the Void (cancels) endpoint.
         pub fn build_void_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -380,8 +354,8 @@ macros::create_all_prerequisites!(
                     headers::AUTHORIZATION.to_string(),
                     authorization.into_masked(),
                 ),
-                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".into()),
-                (headers::ACCEPT_LANGUAGE.to_string(), "en".into()),
+                (headers::AUTH_TOKEN_TYPE.to_string(), headers::AUTH_TOKEN_TYPE_HMAC.into()),
+                (headers::ACCEPT_LANGUAGE.to_string(), headers::ACCEPT_LANGUAGE_EN.into()),
             ])
         }
 
@@ -436,8 +410,8 @@ macros::create_all_prerequisites!(
                     headers::AUTHORIZATION.to_string(),
                     authorization.into_masked(),
                 ),
-                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".into()),
-                (headers::ACCEPT_LANGUAGE.to_string(), "en".into()),
+                (headers::AUTH_TOKEN_TYPE.to_string(), headers::AUTH_TOKEN_TYPE_HMAC.into()),
+                (headers::ACCEPT_LANGUAGE.to_string(), headers::ACCEPT_LANGUAGE_EN.into()),
             ])
         }
 
@@ -492,8 +466,8 @@ macros::create_all_prerequisites!(
                     headers::AUTHORIZATION.to_string(),
                     authorization.into_masked(),
                 ),
-                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".into()),
-                (headers::ACCEPT_LANGUAGE.to_string(), "en".into()),
+                (headers::AUTH_TOKEN_TYPE.to_string(), headers::AUTH_TOKEN_TYPE_HMAC.into()),
+                (headers::ACCEPT_LANGUAGE.to_string(), headers::ACCEPT_LANGUAGE_EN.into()),
             ])
         }
     }
@@ -518,14 +492,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        "https://connect-cert.fiservapis.com/ch/"
+        &_connectors.fiservcommercehub.base_url
     }
 
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificAuth,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        // Per-request HMAC auth headers are built in build_access_token_headers.
         Ok(vec![])
     }
 
@@ -541,7 +514,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         with_error_response_body!(event_builder, response);
 
-        // Extract error code: first try 'code' field, fallback to 'error_type'
         let code = response
             .error
             .first()
@@ -549,25 +521,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .or_else(|| response.error.first().map(|e| e.error_type.clone()))
             .unwrap_or_else(|| "UNKNOWN".to_string());
 
-        // Extract error message from first error
         let message = response
             .error
             .first()
             .map(|e| e.message.clone())
             .unwrap_or_else(|| "Unknown error occurred".to_string());
 
-        // Build detailed reason string
         let reason = {
             let reasons: Vec<String> = response
                 .error
                 .iter()
                 .map(|e| {
-                    let mut parts = vec![format!("[{}]", e.error_type)];
+                    let error_type = &e.error_type;
+                    let mut parts = vec![format!("[{error_type}]")];
                     if let Some(code) = &e.code {
-                        parts.push(format!("Code: {}", code));
+                        parts.push(format!("Code: {code}"));
                     }
                     if let Some(field) = &e.field {
-                        parts.push(format!("Field: {}", field));
+                        parts.push(format!("Field: {field}"));
                     }
                     parts.push(e.message.clone());
                     parts.join(" | ")
@@ -580,7 +551,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
         };
 
-        // Extract connector transaction ID if available
         let connector_transaction_id = response
             .gateway_response
             .as_ref()
@@ -837,9 +807,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Authorize flow uses build_request_v2 override to ensure HMAC is computed on the same request body
-// that is actually sent. The RSA encryption uses random OAEP padding, so each call to
-// get_request_body would produce a different encrypted block, causing HMAC mismatch.
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiservcommercehub,
@@ -862,12 +829,10 @@ macros::macro_connector_implementation!(
                 PaymentsResponseData,
             >,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}payments/v1/charges", self.connector_base_url(req)))
+            let base_url = self.connector_base_url(req);
+            Ok(format!("{base_url}payments/v1/charges"))
         }
 
-        /// Builds the complete HTTP request, ensuring HMAC is computed on the exact same body
-        /// that will be sent. This is critical because RSA-OAEP encryption produces different
-        /// ciphertext each time due to random padding.
         fn build_request_v2(
             &self,
             req: &RouterDataV2<
@@ -879,7 +844,6 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
             use common_utils::request::{Method, RequestBuilder};
 
-            // Step 1: Build the request body ONCE
             let input_data = FiservcommercehubRouterData {
                 connector: self.to_owned(),
                 router_data: req.clone(),
@@ -889,10 +853,8 @@ macros::macro_connector_implementation!(
             let request_body_str = serde_json::to_string(&request_body)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-            // Step 2: Build headers using the pre-serialized body string
             let headers = self.build_authorize_headers(req, &request_body_str)?;
 
-            // Step 3: Build the complete request using the SAME body
             let url = self.get_url(req)?;
             let request_content = RequestContent::Json(Box::new(request_body));
 
@@ -989,9 +951,9 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
             Ok(format!(
-                "{}payments/v1/transaction-inquiry",
-                self.connector_base_url(req)
+                "{base_url}payments/v1/transaction-inquiry"
             ))
         }
     }
@@ -1041,7 +1003,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}payments/v1/cancels", self.connector_base_url(req)))
+            let base_url = self.connector_base_url(req);
+            Ok(format!("{base_url}payments/v1/cancels"))
         }
     }
 );

@@ -22,8 +22,11 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
-use rand::Rng;
 use serde::{Deserialize, Serialize};
+
+// Constants for encryption and token formatting
+pub(crate) const ENCRYPTION_TYPE_RSA: &str = "RSA";
+pub(crate) const ACCESS_TOKEN_SEPARATOR: &str = "|||";
 
 #[derive(Debug, Clone)]
 pub struct FiservcommercehubAuthType {
@@ -34,10 +37,6 @@ pub struct FiservcommercehubAuthType {
 }
 
 impl FiservcommercehubAuthType {
-    /// Computes the HMAC-SHA256 signature for the Authorization header.
-    ///
-    /// Raw signature message: `{api_key}{client_request_id}{timestamp}{request_body}`
-    /// Signing key: `self.api_secret` (the HMAC secret, separate from the API key)
     pub fn generate_hmac_signature(
         &self,
         api_key: &str,
@@ -46,7 +45,6 @@ impl FiservcommercehubAuthType {
         request_body: &str,
     ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         let raw_signature = format!("{api_key}{client_request_id}{timestamp}{request_body}");
-        println!("$$Raw signature message: {raw_signature}");
         let signature = crypto::HmacSha256
             .sign_message(self.api_secret.peek().as_bytes(), raw_signature.as_bytes())
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
@@ -54,11 +52,7 @@ impl FiservcommercehubAuthType {
     }
 
     pub fn generate_client_request_id() -> String {
-        // Uuid::new_v4().to_string()
-        let mut rng = rand::thread_rng();
-        // Generates a number between 1 and 10,000,000
-        let random_number: u32 = rng.gen_range(1..=10_000_000);
-        random_number.to_string()
+        uuid::Uuid::new_v4().to_string()
     }
 
     pub fn generate_timestamp() -> String {
@@ -152,7 +146,6 @@ pub struct FiservcommercehubAuthorizeAmount {
     pub total: FloatMajorUnit,
 }
 
-/// Source type for payment methods
 #[derive(Debug, Serialize)]
 pub enum FiservcommercehubSourceType {
     PaymentCard,
@@ -168,13 +161,8 @@ pub struct FiservcommercehubSourceData {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubEncryptionData {
-    /// Key ID from the CreateAccessToken response: the `{keyId}` portion of `{apiKey}_{keyId}`
     pub key_id: String,
     pub encryption_type: String,
-    /// RSA-encrypted card data encoded as base64.
-    /// Plaintext layout (per encryptionBlockFields):
-    ///   card.cardData:16 | card.nameOnCard:11 | card.expirationMonth:2 | card.expirationYear:4
-    /// NOTE: actual RSA encryption using Fiserv's asymmetric public key must be applied.
     pub encryption_block: Secret<String>,
     pub encryption_block_fields: String,
 }
@@ -186,15 +174,11 @@ pub struct FiservcommercehubTransactionDetailsReq {
     pub merchant_transaction_id: String,
 }
 
-/// Transaction origin type based on payment channel
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservcommercehubOrigin {
-    /// Card not present - email or internet (E-commerce)
     Ecom,
-    /// Mail order or telephone order
     Moto,
-    /// Card Present - retail face to face
     Pos,
 }
 
@@ -203,7 +187,6 @@ impl From<Option<&common_enums::PaymentChannel>> for FiservcommercehubOrigin {
         match channel {
             Some(common_enums::PaymentChannel::MailOrder)
             | Some(common_enums::PaymentChannel::TelephoneOrder) => Self::Moto,
-            // Default to ECOM for Ecommerce and when not specified
             Some(common_enums::PaymentChannel::Ecommerce) | None => Self::Ecom,
         }
     }
@@ -213,30 +196,22 @@ impl From<Option<&common_enums::PaymentChannel>> for FiservcommercehubOrigin {
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubTransactionInteractionReq {
     pub origin: FiservcommercehubOrigin,
-    /// ECI indicator - mandatory for all E-commerce transactions
-    /// e.g., "05" for Visa authenticated, "06" for Visa attempted, "07" for non-3DS
     #[serde(skip_serializing_if = "Option::is_none")]
     pub eci_indicator: Option<String>,
 }
 
-/// MPI (Merchant Plug-In) data for 3DS authentication
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubMpiData {
-    /// Cardholder Authentication Verification Value (CAVV)
     pub cavv: Secret<String>,
-    /// Transaction ID from 3DS authentication (XID for 3DS1, or DS Transaction ID for 3DS2)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub xid: Option<String>,
 }
 
-/// Additional 3DS data for external 3DS authentication
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubAdditionalData3DS {
-    /// Directory Server Transaction ID from 3DS2 authentication
     pub ds_transaction_id: String,
-    /// MPI data containing CAVV and XID
     pub mpi_data: FiservcommercehubMpiData,
 }
 
@@ -274,9 +249,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             router_data.request.currency,
         )?;
 
-        // Access token format: "{keyId}|||{encodedPublicKey}"
         let access_token = router_data.resource_common_data.get_access_token()?;
-        let parts: Vec<&str> = access_token.split("|||").collect();
+        let parts: Vec<&str> = access_token.split(ACCESS_TOKEN_SEPARATOR).collect();
 
         let key_id = parts
             .first()
@@ -293,7 +267,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })
         })?;
 
-        // Decode the Base64-encoded RSA public key (SPKI/DER format)
         let public_key_der = general_purpose::STANDARD
             .decode(encoded_public_key)
             .map_err(|_| error_stack::report!(errors::ConnectorError::RequestEncodingFailed))
@@ -302,10 +275,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth_type = &router_data.connector_auth_type;
         let auth = FiservcommercehubAuthType::try_from(auth_type)?;
 
-        // Build source based on payment method
         let source = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => {
-                // Extract card data values
                 let card_data = card.card_number.peek().to_string();
                 let name_on_card = card
                     .card_holder_name
@@ -315,29 +286,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let expiration_month = card.card_exp_month.peek().to_string();
                 let expiration_year = card.card_exp_year.peek().to_string();
 
-                // Build the plaintext block by concatenating all values (matching JS: Object.values(cardData).join(""))
-                let plain_block = format!(
-                    "{}{}{}{}",
-                    card_data, name_on_card, expiration_month, expiration_year
-                );
+                let plain_block =
+                    format!("{card_data}{name_on_card}{expiration_month}{expiration_year}");
 
-                // Build encryptionBlockFields dynamically based on actual byte lengths
-                // Format: "card.cardData:{len},card.nameOnCard:{len},card.expirationMonth:{len},card.expirationYear:{len}"
+                let card_data_len = card_data.len();
+                let name_on_card_len = name_on_card.len();
+                let expiration_month_len = expiration_month.len();
+                let expiration_year_len = expiration_year.len();
                 let encryption_block_fields = format!(
-                    "card.cardData:{},card.nameOnCard:{},card.expirationMonth:{},card.expirationYear:{}",
-                    card_data.len(),
-                    name_on_card.len(),
-                    expiration_month.len(),
-                    expiration_year.len()
+                    "card.cardData:{card_data_len},card.nameOnCard:{name_on_card_len},card.expirationMonth:{expiration_month_len},card.expirationYear:{expiration_year_len}"
                 );
 
-                // RSA encrypt the plaintext block using Fiserv's public key with OAEP-SHA256 padding
                 let encrypted_bytes =
                     RsaOaepSha256::encrypt(&public_key_der, plain_block.as_bytes())
                         .change_context(errors::ConnectorError::RequestEncodingFailed)
                         .attach_printable("RSA OAEP-SHA256 encryption of card data failed")?;
 
-                // Base64 encode the encrypted bytes for the API request
                 let encryption_block =
                     Secret::new(general_purpose::STANDARD.encode(&encrypted_bytes));
 
@@ -345,7 +309,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     source_type: FiservcommercehubSourceType::PaymentCard,
                     encryption_data: FiservcommercehubEncryptionData {
                         key_id,
-                        encryption_type: "RSA".to_string(),
+                        encryption_type: ENCRYPTION_TYPE_RSA.to_string(),
                         encryption_block,
                         encryption_block_fields,
                     },
@@ -360,22 +324,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        // Determine origin based on payment channel
         let origin = FiservcommercehubOrigin::from(router_data.request.payment_channel.as_ref());
 
-        // ECI indicator from authentication_data if available
         let eci_indicator = router_data
             .request
             .authentication_data
             .as_ref()
             .and_then(|auth_data| auth_data.eci.clone());
 
-        // Build 3DS additional data only if authentication_data has ds_trans_id and cavv
         let additional_data_3ds =
             if let Some(ref auth_data) = router_data.request.authentication_data {
                 match (&auth_data.ds_trans_id, &auth_data.cavv) {
                     (Some(ds_trans_id), Some(cavv)) => {
-                        // Use threeds_server_transaction_id as xid if available, otherwise use ds_trans_id
                         let xid = auth_data
                             .threeds_server_transaction_id
                             .clone()
@@ -418,10 +378,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             additional_data_3ds,
         };
-        println!(
-            "$$$[AUTHORIZE] Request body: {}",
-            serde_json::to_string(&request).unwrap_or_else(|_| format!("{request:?}"))
-        );
         Ok(request)
     }
 }
@@ -429,21 +385,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum FiservcommercehubTransactionState {
-    /// Transaction approved and captured by the issuer.
     Approved,
-    /// Transaction captured (auto-capture after authorization).
     Captured,
-    /// Transaction authorized; capture has not yet occurred.
     Authorized,
-    /// Transaction is awaiting further action (e.g. async payment method).
     Pending,
-    /// Transaction refused by the issuer or processor.
     Declined,
-    /// Transaction rejected due to validation errors, fraud filters, or missing fields.
     Rejected,
-    /// Transaction failed during processing.
     Failed,
-    /// Transaction was voided or cancelled before completion.
     Cancelled,
 }
 
@@ -483,30 +431,13 @@ pub struct FiservcommercehubTxnDetails {
 }
 
 impl<T: PaymentMethodDataTypes>
-    TryFrom<
-        ResponseRouterData<
-            FiservcommercehubAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    TryFrom<ResponseRouterData<FiservcommercehubAuthorizeResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservcommercehubAuthorizeResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<FiservcommercehubAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let txn = &item
             .response
@@ -538,7 +469,6 @@ impl<T: PaymentMethodDataTypes>
 // PSYNC FLOW
 // =============================================================================
 
-/// Merchant identification for the transaction-inquiry request (only merchantId is required).
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubPSyncMerchantDetails {
@@ -551,7 +481,6 @@ pub struct FiservcommercehubReferenceTransactionDetails {
     pub reference_transaction_id: String,
 }
 
-/// Request body for `POST /payments/v1/transaction-inquiry`.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubPSyncRequest {
@@ -605,25 +534,16 @@ pub struct FiservcommercehubPSyncItem {
     pub gateway_response: FiservcommercehubPSyncGatewayResponse,
 }
 
-/// The transaction-inquiry endpoint returns an array of transaction objects.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FiservcommercehubPSyncResponse(pub Vec<FiservcommercehubPSyncItem>);
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservcommercehubPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<FiservcommercehubPSyncResponse, Self>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservcommercehubPSyncResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<FiservcommercehubPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let psync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(errors::ConnectorError::ResponseDeserializationFailed)
@@ -675,7 +595,6 @@ pub struct FiservcommercehubRefundTransactionDetails {
     pub merchant_transaction_id: String,
 }
 
-/// Request body for `POST /payments/v1/refunds`.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRefundRequest {
@@ -738,21 +657,13 @@ pub struct FiservcommercehubRefundResponse {
     pub gateway_response: FiservcommercehubGatewayResponseBody,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservcommercehubRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<FiservcommercehubRefundResponse, Self>>
+    for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservcommercehubRefundResponse,
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<FiservcommercehubRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let refund_status = RefundStatus::from(&item.response.gateway_response.transaction_state);
         let txn = &item
@@ -778,8 +689,6 @@ impl
 // RSYNC FLOW (Refund Sync)
 // =============================================================================
 
-/// Request body for `POST /payments/v1/transaction-inquiry` for refund sync.
-/// Uses the same structure as PSync - queries by connector's transaction ID.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRSyncRequest {
@@ -805,7 +714,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
         let auth = FiservcommercehubAuthType::try_from(&router_data.connector_auth_type)?;
-        // Use connector_refund_id which is the connector's refund transaction ID
         Ok(Self {
             merchant_details: FiservcommercehubPSyncMerchantDetails {
                 merchant_id: auth.merchant_id.clone(),
@@ -817,7 +725,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-/// Gateway response for RSync - contains refund transaction state and processing details.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRSyncGatewayResponse {
@@ -825,7 +732,6 @@ pub struct FiservcommercehubRSyncGatewayResponse {
     pub transaction_processing_details: Option<FiservcommercehubRSyncTxnDetails>,
 }
 
-/// Transaction processing details in RSync response.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRSyncTxnDetails {
@@ -833,39 +739,27 @@ pub struct FiservcommercehubRSyncTxnDetails {
     pub order_id: Option<String>,
 }
 
-/// Item in the RSync response array.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubRSyncItem {
     pub gateway_response: FiservcommercehubRSyncGatewayResponse,
 }
 
-/// The transaction-inquiry endpoint returns an array of transaction objects.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FiservcommercehubRSyncResponse(pub Vec<FiservcommercehubRSyncItem>);
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservcommercehubRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
-    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl TryFrom<ResponseRouterData<FiservcommercehubRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservcommercehubRSyncResponse,
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        item: ResponseRouterData<FiservcommercehubRSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let rsync_item = item.response.0.into_iter().next().ok_or_else(|| {
             error_stack::report!(errors::ConnectorError::ResponseDeserializationFailed)
         })?;
         let refund_status = RefundStatus::from(&rsync_item.gateway_response.transaction_state);
-        // Get transaction_id from gateway_response.transaction_processing_details
-        // Fall back to connector_refund_id from the request if not present
         let connector_refund_id = rsync_item
             .gateway_response
             .transaction_processing_details
@@ -890,7 +784,6 @@ impl
 // VOID FLOW
 // =============================================================================
 
-/// Request body for `POST /payments/v1/cancels`.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubVoidRequest {
@@ -952,28 +845,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     }
 }
 
-/// Response body from `POST /payments/v1/cancels`.
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubVoidResponse {
     pub gateway_response: FiservcommercehubGatewayResponseBody,
 }
 
-impl
-    TryFrom<
-        ResponseRouterData<
-            FiservcommercehubVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<FiservcommercehubVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            FiservcommercehubVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
+        item: ResponseRouterData<FiservcommercehubVoidResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let status = AttemptStatus::from(&item.response.gateway_response.transaction_state);
         let txn = &item
@@ -1004,7 +888,6 @@ impl
 // ACCESS TOKEN FLOW
 // =============================================================================
 
-/// Merchant identification details required for the key-generation request body.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubMerchantDetails {
@@ -1012,7 +895,6 @@ pub struct FiservcommercehubMerchantDetails {
     pub terminal_id: Secret<String>,
 }
 
-/// Request body for `POST /security/v1/keys/generate`.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubAccessTokenRequest {
@@ -1101,10 +983,7 @@ impl<F, T> TryFrom<ResponseRouterData<FiservcommercehubAccessTokenResponse, Self
     ) -> Result<Self, Self::Error> {
         let key_id = &item.response.asymmetric_key_details.key_id;
         let encoded_public_key = &item.response.asymmetric_key_details.encoded_public_key;
-        // Store as: "{keyId}|||{encodedPublicKey}"
-        // Using ||| as delimiter since it won't appear in Base64 or keyId
-        // The encodedPublicKey is Base64-encoded RSA public key in SPKI/DER format
-        let combined_token = Secret::new(format!("{key_id}|||{encoded_public_key}"));
+        let combined_token = Secret::new(format!("{key_id}{ACCESS_TOKEN_SEPARATOR}{encoded_public_key}"));
         Ok(Self {
             response: Ok(AccessTokenResponseData {
                 access_token: combined_token,
