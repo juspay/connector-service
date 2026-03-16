@@ -805,7 +805,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankRedirectData::Giropay { .. } => AlternativePaymentMethodType::Giropay,
                     BankRedirectData::Ideal { bank_name } => {
                         if let Some(ref bank) = bank_name {
-                            let _ = NuveiBIC::try_from(bank.clone())?;
+                            let _ = NuveiBIC::try_from(*bank)?;
                         }
                         AlternativePaymentMethodType::Ideal
                     }
@@ -825,7 +825,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let bank_id = match redirect_data {
                     BankRedirectData::Ideal { bank_name } => bank_name
                         .as_ref()
-                        .map(|bank| NuveiBIC::try_from(bank.clone()))
+                        .map(|bank| NuveiBIC::try_from(*bank))
                         .transpose()?,
                     _ => None,
                 };
