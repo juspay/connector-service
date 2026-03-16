@@ -5640,8 +5640,11 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     .collect()
             })
             .unwrap_or_default();
-        let mandate_reference_grpc = value.mandate_reference.map(|m| {
-            grpc_api_types::payments::MandateReference {
+        let mandate_reference_grpc =
+            value
+                .mandate_reference
+                .map(|m| {
+                    grpc_api_types::payments::MandateReference {
                 mandate_id_type: Some(
                     grpc_api_types::payments::mandate_reference::MandateIdType::ConnectorMandateId(
                         grpc_payment_types::ConnectorMandateReferenceId {
@@ -5653,7 +5656,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     ),
                 ),
             }
-        });
+                });
         Ok(Self {
             connector_transaction_id: value
                 .resource_id
