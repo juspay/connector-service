@@ -13,7 +13,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
 
 
 utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
