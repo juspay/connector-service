@@ -65,7 +65,7 @@ The `CreateSdkSessionToken` RPC initializes wallet payment sessions for Apple Pa
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_sdk_session_id": "sdk_session_001",
     "amount": {
@@ -80,7 +80,7 @@ grpcurl -H "x-connector: stripe" \
     }
   }' \
   localhost:8080 \
-  ucs.v2.MerchantAuthenticationService/CreateSdkSessionToken
+  types.MerchantAuthenticationService/CreateSdkSessionToken
 ```
 
 ### Response

@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -136,12 +136,14 @@ impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PeachpaymentsAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PeachpaymentsAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Peachpayments { api_key, tenant_id } => Ok(Self {
+            ConnectorSpecificConfig::Peachpayments {
+                api_key, tenant_id, ..
+            } => Ok(Self {
                 api_key: api_key.to_owned(),
                 tenant_id: tenant_id.to_owned(),
             }),
@@ -187,7 +189,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         }
 
         let connector_meta_data = PeachpaymentsConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
+            &item.router_data.resource_common_data.connector_feature_data,
         )?;
 
         let transaction_data = match item.router_data.request.payment_method_data.clone() {

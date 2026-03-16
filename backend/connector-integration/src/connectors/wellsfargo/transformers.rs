@@ -428,18 +428,19 @@ pub struct WellsfargoAuthType {
     pub api_secret: Secret<String>,
 }
 
-impl TryFrom<&domain_types::router_data::ConnectorSpecificAuth> for WellsfargoAuthType {
+impl TryFrom<&domain_types::router_data::ConnectorSpecificConfig> for WellsfargoAuthType {
     type Error = Report<errors::ConnectorError>;
 
     fn try_from(
-        auth_type: &domain_types::router_data::ConnectorSpecificAuth,
+        auth_type: &domain_types::router_data::ConnectorSpecificConfig,
     ) -> Result<Self, Self::Error> {
-        use domain_types::router_data::ConnectorSpecificAuth;
+        use domain_types::router_data::ConnectorSpecificConfig;
         match auth_type {
-            ConnectorSpecificAuth::Wellsfargo {
+            ConnectorSpecificConfig::Wellsfargo {
                 api_key,
                 merchant_account,
                 api_secret,
+                ..
             } => Ok(Self {
                 api_key: api_key.clone(),
                 merchant_account: merchant_account.clone(),

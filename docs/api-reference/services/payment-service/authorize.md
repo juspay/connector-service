@@ -107,7 +107,7 @@ The `Authorize` RPC reserves funds on a customer's payment method without transf
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_transaction_id": "txn_order_001",
     "amount": {
@@ -128,7 +128,7 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/Authorize
+  types.PaymentService/Authorize
 ```
 
 ### Response

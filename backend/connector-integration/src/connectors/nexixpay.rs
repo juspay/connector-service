@@ -26,7 +26,7 @@ use domain_types::{
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -113,18 +113,18 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        /// Helper function to extract operationId from connector_meta_data
+        /// Helper function to extract operationId from connector_feature_data
         /// Used in PostAuthenticate flow to get the operationId from PreAuthenticate
         pub fn extract_operation_id_from_metadata<F, Req, Res>(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let metadata_obj = req
                 .resource_common_data
-                .connector_meta_data
+                .connector_feature_data
                 .as_ref()
                 .and_then(|metadata| metadata.peek().as_object())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data",
+                    field_name: "connector_feature_data",
                 })?;
 
             metadata_obj
@@ -132,7 +132,7 @@ macros::create_all_prerequisites!(
                 .and_then(|value| value.as_str())
                 .map(|s| s.to_string())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data.operationId",
+                    field_name: "connector_feature_data.operationId",
                 }.into())
         }
 
@@ -144,7 +144,7 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             )];
-            let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+            let mut auth_header = self.get_auth_header(&req.connector_config)?;
             header.append(&mut auth_header);
             Ok(header)
         }
@@ -376,13 +376,13 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             // GET request - only auth headers needed
-            self.get_auth_header(&req.connector_auth_type)
+            self.get_auth_header(&req.connector_config)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = if let Some(metadata) = req.resource_common_data.connector_meta_data.as_ref() {
+            let operation_id = if let Some(metadata) = req.resource_common_data.connector_feature_data.as_ref() {
                 // Try to use dynamic selection based on psync_flow
                 nexixpay::get_payment_id(
                     Some(metadata.peek().clone()),
@@ -433,7 +433,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = if let Some(metadata) = req.resource_common_data.connector_meta_data.as_ref() {
+            let operation_id = if let Some(metadata) = req.resource_common_data.connector_feature_data.as_ref() {
                 // Try to get authorization operation ID from metadata
                 nexixpay::get_payment_id(
                     Some(metadata.peek().clone()),
@@ -491,7 +491,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = if let Some(metadata) = req.resource_common_data.connector_meta_data.as_ref() {
+            let operation_id = if let Some(metadata) = req.resource_common_data.connector_feature_data.as_ref() {
                 // Try to get authorization operation ID from metadata
                 nexixpay::get_payment_id(
                     Some(metadata.peek().clone()),
@@ -540,7 +540,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let operation_id = if let Some(metadata) = req.request.connector_metadata.clone() {
+            let operation_id = if let Some(metadata) = req.request.connector_feature_data.clone() {
                 // Try to get capture operation ID from metadata
                 nexixpay::get_payment_id(
                     Some(metadata.expose()),
@@ -576,7 +576,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             // GET request - only auth headers needed
-            self.get_auth_header(&req.connector_auth_type)
+            self.get_auth_header(&req.connector_config)
         }
         fn get_url(
             &self,
@@ -806,7 +806,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = nexixpay::NexixpayAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

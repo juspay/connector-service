@@ -76,7 +76,7 @@ The `Capture` RPC finalizes an authorized payment by transferring the reserved f
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_capture_id": "capture_001",
     "connector_transaction_id": "pi_3Oxxx...",
@@ -88,7 +88,7 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/Capture
+  types.PaymentService/Capture
 
 ```
 

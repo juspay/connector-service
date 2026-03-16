@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::RedirectForm,
@@ -72,13 +72,14 @@ pub struct ErrorDetails {
     pub reason: Option<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for TruelayerAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for TruelayerAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Truelayer {
+            ConnectorSpecificConfig::Truelayer {
                 client_id,
                 client_secret,
+                ..
             } => Ok(Self {
                 client_id: client_id.to_owned(),
                 client_secret: client_secret.to_owned(),
@@ -113,7 +114,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = TruelayerAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = TruelayerAuthType::try_from(&item.router_data.connector_config)?;
         Ok(Self {
             grant_type: GRANT_TYPE.to_string(),
             client_id: auth.client_id,
@@ -295,7 +296,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 };
 
                 let metadata = TruelayerMetadata::try_from(
-                    &item.router_data.resource_common_data.connector_meta_data,
+                    &item.router_data.resource_common_data.connector_feature_data,
                 )?;
 
                 let payment_method = PaymentMethod {

@@ -17,7 +17,7 @@ use domain_types::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
         ErrorResponse,
     },
     router_data_v2::RouterDataV2,
@@ -337,13 +337,14 @@ pub struct CheckoutThreeDS {
     challenge_indicator: CheckoutChallengeIndicator,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for CheckoutAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for CheckoutAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Checkout {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Checkout {
             api_key,
             api_secret,
             processing_channel_id,
+            ..
         } = auth_type
         {
             Ok(Self {
@@ -683,7 +684,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|return_url| format!("{return_url}?status=failure")),
         };
 
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
         let metadata = build_metadata(&item);
@@ -948,7 +949,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|return_url| format!("{return_url}?status=failure")),
         };
 
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
 
@@ -1236,7 +1237,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .map(|return_url| format!("{return_url}?status=failure")),
         };
 
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
 
@@ -2057,7 +2058,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let connector_auth = &item.router_data.connector_auth_type;
+        let connector_auth = &item.router_data.connector_config;
         let auth_type: CheckoutAuthType = connector_auth.try_into()?;
         let processing_channel_id = auth_type.processing_channel_id;
         let capture_type = if item.router_data.request.is_multiple_capture() {

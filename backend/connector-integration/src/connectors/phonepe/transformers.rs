@@ -12,7 +12,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, UpiSource},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
@@ -232,7 +232,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
 
         // Use amount converter to get proper amount in minor units
         let amount_in_minor_units = wrapper
@@ -388,7 +388,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
 
         // Use amount converter to get proper amount in minor units
         let amount_in_minor_units = item
@@ -672,15 +672,16 @@ pub struct PhonepeAuthType {
     pub key_index: String,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PhonepeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PhonepeAuthType {
     type Error = Error;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Phonepe {
+            ConnectorSpecificConfig::Phonepe {
                 merchant_id,
                 salt_key,
                 salt_index,
+                ..
             } => Ok(Self {
                 merchant_id: merchant_id.clone(),
                 salt_key: salt_key.clone(),
@@ -747,7 +748,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
 
         let merchant_transaction_id = router_data.resource_common_data.get_reference_id()?;
 
@@ -790,7 +791,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_config)?;
 
         let merchant_transaction_id = router_data.resource_common_data.get_reference_id()?;
 

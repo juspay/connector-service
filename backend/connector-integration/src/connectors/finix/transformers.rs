@@ -13,7 +13,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{self, ConnectorAuthType, ConnectorSpecificAuth},
+    router_data::{self, ConnectorAuthType, ConnectorSpecificConfig},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -51,16 +51,17 @@ impl TryFrom<&ConnectorAuthType> for FinixAuthType {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for FinixAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for FinixAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Finix {
+            ConnectorSpecificConfig::Finix {
                 finix_user_name,
                 finix_password,
                 merchant_identity_id,
                 merchant_id,
+                ..
             } => Ok(Self {
                 finix_user_name: finix_user_name.clone(),
                 finix_password: finix_password.clone(),
@@ -354,7 +355,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract merchant ID from auth_type
-        let auth = FinixAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = FinixAuthType::try_from(&router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
 
         // For Finix, we need a payment instrument ID (source)

@@ -26,7 +26,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{ConnectorInfo, Connectors},
@@ -363,7 +363,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
+            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_config)?;
 
             // Use merchant-based endpoint if merchant is IRCTC
             let api_endpoint = if phonepe::is_irctc_merchant(auth.merchant_id.peek()) {
@@ -411,7 +411,7 @@ macros::macro_connector_implementation!(
             let connector_req = PhonepeSyncRequest::try_from(&connector_router_data)?;
 
             // Get merchant ID for X-MERCHANT-ID header
-            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
+            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_config)?;
 
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
             headers.push((headers::X_MERCHANT_ID.to_string(), auth.merchant_id.peek().to_string().into()));
@@ -426,7 +426,7 @@ macros::macro_connector_implementation!(
             let base_url = self.connector_base_url(req);
             let merchant_transaction_id = req.resource_common_data.get_reference_id()?;
 
-            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
+            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
 
             // Use merchant-based endpoint if merchant is IRCTC
@@ -461,7 +461,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let _auth = phonepe::PhonepeAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

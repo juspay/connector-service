@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     utils,
 };
@@ -28,15 +28,16 @@ pub struct HyperpgAuthType {
     pub merchant_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for HyperpgAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for HyperpgAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Hyperpg {
+            ConnectorSpecificConfig::Hyperpg {
                 username,
                 password,
                 merchant_id,
+                ..
             } => Ok(Self {
                 username: username.to_owned(),
                 password: password.to_owned(),
@@ -240,7 +241,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             router_data.request.currency,
         )?;
 
-        let auth_type = HyperpgAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth_type = HyperpgAuthType::try_from(&router_data.connector_config)?;
 
         Ok(Self {
             merchant_id: auth_type.merchant_id.peek().to_string(),

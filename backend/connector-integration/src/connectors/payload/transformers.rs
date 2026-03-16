@@ -16,7 +16,7 @@ use domain_types::{
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificAuth,
+        AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
         ErrorResponse,
     },
     router_data_v2::RouterDataV2,
@@ -62,12 +62,12 @@ pub struct PayloadAuthType {
     pub auths: HashMap<enums::Currency, PayloadAuth>,
 }
 
-impl TryFrom<(&ConnectorSpecificAuth, enums::Currency)> for PayloadAuth {
+impl TryFrom<(&ConnectorSpecificConfig, enums::Currency)> for PayloadAuth {
     type Error = Error;
-    fn try_from(value: (&ConnectorSpecificAuth, enums::Currency)) -> Result<Self, Self::Error> {
+    fn try_from(value: (&ConnectorSpecificConfig, enums::Currency)) -> Result<Self, Self::Error> {
         let (auth_type, currency) = value;
         match auth_type {
-            ConnectorSpecificAuth::Payload { auth_key_map } => auth_key_map
+            ConnectorSpecificConfig::Payload { auth_key_map, .. } => auth_key_map
                 .get(&currency)
                 .ok_or(errors::ConnectorError::CurrencyNotSupported {
                     message: currency.to_string(),
@@ -81,11 +81,11 @@ impl TryFrom<(&ConnectorSpecificAuth, enums::Currency)> for PayloadAuth {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PayloadAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PayloadAuthType {
     type Error = Error;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Payload { auth_key_map } => Ok(Self {
+            ConnectorSpecificConfig::Payload { auth_key_map, .. } => Ok(Self {
                 auths: auth_key_map
                     .iter()
                     .map(|(currency, auth_value)| {
@@ -105,7 +105,7 @@ impl TryFrom<&ConnectorSpecificAuth> for PayloadAuthType {
 // Helper function to build card request data
 fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
     payment_method_data: &PaymentMethodData<T>,
-    connector_auth_type: &ConnectorSpecificAuth,
+    connector_config: &ConnectorSpecificConfig,
     currency: enums::Currency,
     amount: FloatMajorUnit,
     resource_common_data: &PaymentFlowData,
@@ -113,7 +113,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
     is_mandate: bool,
 ) -> Result<PayloadCardsRequestData<T>, Error> {
     if let PaymentMethodData::Card(req_card) = payment_method_data {
-        let payload_auth = PayloadAuth::try_from((connector_auth_type, currency))?;
+        let payload_auth = PayloadAuth::try_from((connector_config, currency))?;
 
         let card = requests::PayloadCard {
             number: req_card.card_number.clone(),
@@ -207,7 +207,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 // For SetupMandate, is_mandate is always true
                 build_payload_cards_request_data(
                     &router_data.request.payment_method_data,
-                    &router_data.connector_auth_type,
+                    &router_data.connector_config,
                     router_data.request.currency,
                     FloatMajorUnit::zero(),
                     &router_data.resource_common_data,
@@ -260,7 +260,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 let cards_data = build_payload_cards_request_data(
                     &router_data.request.payment_method_data,
-                    &router_data.connector_auth_type,
+                    &router_data.connector_config,
                     router_data.request.currency,
                     amount,
                     &router_data.resource_common_data,

@@ -62,7 +62,7 @@ The `CreateSessionToken` RPC creates a session token for payment processing. Thi
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_session_id": "session_001",
     "amount": {
@@ -76,7 +76,7 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.MerchantAuthenticationService/CreateSessionToken
+  types.MerchantAuthenticationService/CreateSessionToken
 ```
 
 ### Response
