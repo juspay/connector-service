@@ -1454,25 +1454,25 @@ impl Revolv3InvoiceWebhookBody {
 impl WebhookInvoiceStatus {
     pub fn to_event_type(&self) -> EventType {
         match self {
-            WebhookInvoiceStatus::Paid | WebhookInvoiceStatus::MerchantPaid => {
+            Self::Paid | Self::MerchantPaid => {
                 EventType::PaymentIntentSuccess
             }
-            WebhookInvoiceStatus::Void | WebhookInvoiceStatus::MerchantCancelled => {
+            Self::Void | Self::MerchantCancelled => {
                 EventType::PaymentIntentCancelled
             }
-            WebhookInvoiceStatus::Refund | WebhookInvoiceStatus::PartialRefund => {
+            Self::Refund | Self::PartialRefund => {
                 EventType::RefundSuccess
             }
-            WebhookInvoiceStatus::RefundDeclined | WebhookInvoiceStatus::RefundFailed => {
+            Self::RefundDeclined | Self::RefundFailed => {
                 EventType::RefundFailure
             }
-            WebhookInvoiceStatus::Pending
-            | WebhookInvoiceStatus::Recycle
-            | WebhookInvoiceStatus::OneTimePaymentPending
-            | WebhookInvoiceStatus::BatchPending
-            | WebhookInvoiceStatus::CapturePending
-            | WebhookInvoiceStatus::RefundPending => EventType::PaymentIntentProcessing,
-            WebhookInvoiceStatus::Noncollectable | WebhookInvoiceStatus::Failed => {
+            Self::Pending
+            | Self::Recycle
+            | Self::OneTimePaymentPending
+            | Self::BatchPending
+            | Self::CapturePending
+            | Self::RefundPending => EventType::PaymentIntentProcessing,
+            Self::Noncollectable | Self::Failed => {
                 EventType::PaymentIntentFailure
             }
         }
@@ -1480,25 +1480,25 @@ impl WebhookInvoiceStatus {
 
     pub fn to_attempt_status(&self) -> Result<AttemptStatus, errors::ConnectorError> {
         match self {
-            WebhookInvoiceStatus::Paid | WebhookInvoiceStatus::MerchantPaid => {
+            Self::Paid | Self::MerchantPaid => {
                 Ok(AttemptStatus::Charged)
             }
-            WebhookInvoiceStatus::Void | WebhookInvoiceStatus::MerchantCancelled => {
+            Self::Void | Self::MerchantCancelled => {
                 Ok(AttemptStatus::Voided)
             }
-            WebhookInvoiceStatus::Pending
-            | WebhookInvoiceStatus::Recycle
-            | WebhookInvoiceStatus::OneTimePaymentPending
-            | WebhookInvoiceStatus::BatchPending
-            | WebhookInvoiceStatus::CapturePending
-            | WebhookInvoiceStatus::RefundPending => Ok(AttemptStatus::Pending),
-            WebhookInvoiceStatus::Noncollectable | WebhookInvoiceStatus::Failed => {
+            Self::Pending
+            | Self::Recycle
+            | Self::OneTimePaymentPending
+            | Self::BatchPending
+            | Self::CapturePending
+            | Self::RefundPending => Ok(AttemptStatus::Pending),
+            Self::Noncollectable | Self::Failed => {
                 Ok(AttemptStatus::Failure)
             }
-            WebhookInvoiceStatus::Refund
-            | WebhookInvoiceStatus::PartialRefund
-            | WebhookInvoiceStatus::RefundDeclined
-            | WebhookInvoiceStatus::RefundFailed => {
+            Self::Refund
+            | Self::PartialRefund
+            | Self::RefundDeclined
+            | Self::RefundFailed => {
                 Err(errors::ConnectorError::UnexpectedResponseError(
                     bytes::Bytes::from(format!("received refund status in payments webhook",)),
                 ))
@@ -1514,7 +1514,7 @@ impl WebhookInvoiceStatus {
             WebhookInvoiceStatus::RefundDeclined => Ok(RefundStatus::Failure),
             WebhookInvoiceStatus::RefundFailed => Ok(RefundStatus::Failure),
             _ => Err(errors::ConnectorError::UnexpectedResponseError(
-                bytes::Bytes::from(format!("received payment status in refund webhook",)),
+                bytes::Bytes::from("received payment status in refund webhook".to_string()),
             )),
         }
     }

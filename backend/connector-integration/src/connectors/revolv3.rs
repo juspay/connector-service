@@ -132,10 +132,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             None => return Ok(false),
         };
 
-        // Extract signature header (you may need to adjust the header name)
         let signature_header = match request
             .headers
-            .get("x-revolv3-signature") // Adjust header name as needed
+            .get("x-revolv3-signature") 
             .or_else(|| request.headers.get("X-Revolv3-Signature"))
         {
             Some(header) => header,
@@ -147,7 +146,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 return Ok(false);
             }
         };
-        // Get the URL from the request URI
+
         let url = match request.url {
             Some(url) => url,
             None => {
@@ -161,9 +160,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let message = format!("{}${}", url, String::from_utf8_lossy(&request.body));
 
-        println!("Message for HMAC computation: {}", message);
-
-        // Compute HMAC-SHA256 of request body
         use common_utils::crypto::{HmacSha256, SignMessage};
         let crypto_algorithm = HmacSha256;
         let computed_signature = match crypto_algorithm
