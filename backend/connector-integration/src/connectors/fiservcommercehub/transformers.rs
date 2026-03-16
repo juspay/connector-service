@@ -141,6 +141,9 @@ pub struct FiservcommercehubAuthorizeRequest {
     pub merchant_details: FiservcommercehubMerchantDetails,
     pub transaction_details: FiservcommercehubTransactionDetailsReq,
     pub transaction_interaction: FiservcommercehubTransactionInteractionReq,
+    /// Additional 3DS data for external 3DS authentication (when authentication_data is present)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub additional_data_3ds: Option<FiservcommercehubAdditionalData3DS>,
 }
 
 #[derive(Debug, Serialize)]
@@ -149,10 +152,16 @@ pub struct FiservcommercehubAuthorizeAmount {
     pub total: FloatMajorUnit,
 }
 
+/// Source type for payment methods
+#[derive(Debug, Serialize)]
+pub enum FiservcommercehubSourceType {
+    PaymentCard,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservcommercehubSourceData {
-    pub source_type: String,
+    pub source_type: FiservcommercehubSourceType,
     pub encryption_data: FiservcommercehubEncryptionData,
 }
 
@@ -168,7 +177,6 @@ pub struct FiservcommercehubEncryptionData {
     /// NOTE: actual RSA encryption using Fiserv's asymmetric public key must be applied.
     pub encryption_block: Secret<String>,
     pub encryption_block_fields: String,
-    pub encryption_target: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -178,15 +186,58 @@ pub struct FiservcommercehubTransactionDetailsReq {
     pub merchant_transaction_id: String,
 }
 
+/// Transaction origin type based on payment channel
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FiservcommercehubTransactionInteractionReq {
-    pub additional_pos_information: FiservcommercehubAdditionalPosInfo,
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FiservcommercehubOrigin {
+    /// Card not present - email or internet (E-commerce)
+    Ecom,
+    /// Mail order or telephone order
+    Moto,
+    /// Card Present - retail face to face
+    Pos,
+}
+
+impl From<Option<&common_enums::PaymentChannel>> for FiservcommercehubOrigin {
+    fn from(channel: Option<&common_enums::PaymentChannel>) -> Self {
+        match channel {
+            Some(common_enums::PaymentChannel::MailOrder)
+            | Some(common_enums::PaymentChannel::TelephoneOrder) => Self::Moto,
+            // Default to ECOM for Ecommerce and when not specified
+            Some(common_enums::PaymentChannel::Ecommerce) | None => Self::Ecom,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
-pub struct FiservcommercehubAdditionalPosInfo {
-    pub origin: String,
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubTransactionInteractionReq {
+    pub origin: FiservcommercehubOrigin,
+    /// ECI indicator - mandatory for all E-commerce transactions
+    /// e.g., "05" for Visa authenticated, "06" for Visa attempted, "07" for non-3DS
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub eci_indicator: Option<String>,
+}
+
+/// MPI (Merchant Plug-In) data for 3DS authentication
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubMpiData {
+    /// Cardholder Authentication Verification Value (CAVV)
+    pub cavv: Secret<String>,
+    /// Transaction ID from 3DS authentication (XID for 3DS1, or DS Transaction ID for 3DS2)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub xid: Option<String>,
+}
+
+/// Additional 3DS data for external 3DS authentication
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FiservcommercehubAdditionalData3DS {
+    /// Directory Server Transaction ID from 3DS2 authentication
+    pub ds_transaction_id: String,
+    /// MPI data containing CAVV and XID
+    pub mpi_data: FiservcommercehubMpiData,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -248,8 +299,58 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .map_err(|_| error_stack::report!(errors::ConnectorError::RequestEncodingFailed))
             .attach_printable("Failed to decode Base64 RSA public key")?;
 
-        let card = match &router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => card,
+        let auth_type = &router_data.connector_auth_type;
+        let auth = FiservcommercehubAuthType::try_from(auth_type)?;
+
+        // Build source based on payment method
+        let source = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => {
+                // Extract card data values
+                let card_data = card.card_number.peek().to_string();
+                let name_on_card = card
+                    .card_holder_name
+                    .as_ref()
+                    .map(|n| n.peek().clone())
+                    .unwrap_or_default();
+                let expiration_month = card.card_exp_month.peek().to_string();
+                let expiration_year = card.card_exp_year.peek().to_string();
+
+                // Build the plaintext block by concatenating all values (matching JS: Object.values(cardData).join(""))
+                let plain_block = format!(
+                    "{}{}{}{}",
+                    card_data, name_on_card, expiration_month, expiration_year
+                );
+
+                // Build encryptionBlockFields dynamically based on actual byte lengths
+                // Format: "card.cardData:{len},card.nameOnCard:{len},card.expirationMonth:{len},card.expirationYear:{len}"
+                let encryption_block_fields = format!(
+                    "card.cardData:{},card.nameOnCard:{},card.expirationMonth:{},card.expirationYear:{}",
+                    card_data.len(),
+                    name_on_card.len(),
+                    expiration_month.len(),
+                    expiration_year.len()
+                );
+
+                // RSA encrypt the plaintext block using Fiserv's public key with OAEP-SHA256 padding
+                let encrypted_bytes =
+                    RsaOaepSha256::encrypt(&public_key_der, plain_block.as_bytes())
+                        .change_context(errors::ConnectorError::RequestEncodingFailed)
+                        .attach_printable("RSA OAEP-SHA256 encryption of card data failed")?;
+
+                // Base64 encode the encrypted bytes for the API request
+                let encryption_block =
+                    Secret::new(general_purpose::STANDARD.encode(&encrypted_bytes));
+
+                FiservcommercehubSourceData {
+                    source_type: FiservcommercehubSourceType::PaymentCard,
+                    encryption_data: FiservcommercehubEncryptionData {
+                        key_id,
+                        encryption_type: "RSA".to_string(),
+                        encryption_block,
+                        encryption_block_fields,
+                    },
+                }
+            }
             _ => {
                 return Err(error_stack::report!(
                     errors::ConnectorError::NotImplemented(
@@ -259,59 +360,47 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
         };
 
-        // Extract card data values
-        let card_data = card.card_number.peek().to_string();
-        let name_on_card = card
-            .card_holder_name
+        // Determine origin based on payment channel
+        let origin = FiservcommercehubOrigin::from(router_data.request.payment_channel.as_ref());
+
+        // ECI indicator from authentication_data if available
+        let eci_indicator = router_data
+            .request
+            .authentication_data
             .as_ref()
-            .map(|n| n.peek().clone())
-            .unwrap_or_default();
-        let expiration_month = card.card_exp_month.peek().to_string();
-        let expiration_year = card.card_exp_year.peek().to_string();
+            .and_then(|auth_data| auth_data.eci.clone());
 
-        // Build the plaintext block by concatenating all values (matching JS: Object.values(cardData).join(""))
-        let plain_block = format!(
-            "{}{}{}{}",
-            card_data, name_on_card, expiration_month, expiration_year
-        );
+        // Build 3DS additional data only if authentication_data has ds_trans_id and cavv
+        let additional_data_3ds =
+            if let Some(ref auth_data) = router_data.request.authentication_data {
+                match (&auth_data.ds_trans_id, &auth_data.cavv) {
+                    (Some(ds_trans_id), Some(cavv)) => {
+                        // Use threeds_server_transaction_id as xid if available, otherwise use ds_trans_id
+                        let xid = auth_data
+                            .threeds_server_transaction_id
+                            .clone()
+                            .or_else(|| auth_data.ds_trans_id.clone());
 
-        // Build encryptionBlockFields dynamically based on actual byte lengths
-        // Format: "card.cardData:{len},card.nameOnCard:{len},card.expirationMonth:{len},card.expirationYear:{len}"
-        let encryption_block_fields = format!(
-            "card.cardData:{},card.nameOnCard:{},card.expirationMonth:{},card.expirationYear:{}",
-            card_data.len(),
-            name_on_card.len(),
-            expiration_month.len(),
-            expiration_year.len()
-        );
-
-        // RSA encrypt the plaintext block using Fiserv's public key with OAEP-SHA256 padding
-        let encrypted_bytes = RsaOaepSha256::encrypt(&public_key_der, plain_block.as_bytes())
-            .change_context(errors::ConnectorError::RequestEncodingFailed)
-            .attach_printable("RSA OAEP-SHA256 encryption of card data failed")?;
-
-        // Base64 encode the encrypted bytes for the API request
-        let encryption_block = Secret::new(general_purpose::STANDARD.encode(&encrypted_bytes));
-
-        let auth_type = &router_data.connector_auth_type;
-
-        let auth = FiservcommercehubAuthType::try_from(auth_type)?;
+                        Some(FiservcommercehubAdditionalData3DS {
+                            ds_transaction_id: ds_trans_id.clone(),
+                            mpi_data: FiservcommercehubMpiData {
+                                cavv: cavv.clone(),
+                                xid,
+                            },
+                        })
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            };
 
         let request = Self {
             amount: FiservcommercehubAuthorizeAmount {
                 currency: router_data.request.currency.to_string(),
                 total,
             },
-            source: FiservcommercehubSourceData {
-                source_type: "PaymentCard".to_string(),
-                encryption_data: FiservcommercehubEncryptionData {
-                    key_id,
-                    encryption_type: "RSA".to_string(),
-                    encryption_block,
-                    encryption_block_fields,
-                    encryption_target: "MANUAL".to_string(),
-                },
-            },
+            source,
             merchant_details: FiservcommercehubMerchantDetails {
                 merchant_id: auth.merchant_id.clone(),
                 terminal_id: auth.terminal_id.clone(),
@@ -324,10 +413,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .clone(),
             },
             transaction_interaction: FiservcommercehubTransactionInteractionReq {
-                additional_pos_information: FiservcommercehubAdditionalPosInfo {
-                    origin: "ECOM".to_string(),
-                },
+                origin,
+                eci_indicator,
             },
+            additional_data_3ds,
         };
         println!(
             "$$$[AUTHORIZE] Request body: {}",
