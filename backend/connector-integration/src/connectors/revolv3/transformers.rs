@@ -1343,7 +1343,6 @@ pub enum TestEventType {
     WebhookTest,
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Revolv3InvoiceWebhookBody {
@@ -1422,18 +1421,21 @@ impl Revolv3InvoiceWebhookBody {
     }
 
     pub fn get_mandate_reference(&self) -> Option<domain_types::connector_types::MandateReference> {
-        self.invoice.payment_method.as_ref().and_then(|payment_method| {
-            payment_method
-                .payment_method_id
-                .as_ref()
-                .map(
-                    |connector_mandate_id| domain_types::connector_types::MandateReference {
-                        connector_mandate_id: Some(connector_mandate_id.to_string()),
-                        payment_method_id: None,
-                        connector_mandate_request_reference_id: None,
-                    },
-                )
-        })
+        self.invoice
+            .payment_method
+            .as_ref()
+            .and_then(|payment_method| {
+                payment_method
+                    .payment_method_id
+                    .as_ref()
+                    .map(
+                        |connector_mandate_id| domain_types::connector_types::MandateReference {
+                            connector_mandate_id: Some(connector_mandate_id.to_string()),
+                            payment_method_id: None,
+                            connector_mandate_request_reference_id: None,
+                        },
+                    )
+            })
     }
 
     pub fn get_latest_attempt(&self) -> Option<&Revolv3WebhookInvoiceAttempt> {
@@ -1454,53 +1456,34 @@ impl Revolv3InvoiceWebhookBody {
 impl WebhookInvoiceStatus {
     pub fn to_event_type(&self) -> EventType {
         match self {
-            Self::Paid | Self::MerchantPaid => {
-                EventType::PaymentIntentSuccess
-            }
-            Self::Void | Self::MerchantCancelled => {
-                EventType::PaymentIntentCancelled
-            }
-            Self::Refund | Self::PartialRefund => {
-                EventType::RefundSuccess
-            }
-            Self::RefundDeclined | Self::RefundFailed => {
-                EventType::RefundFailure
-            }
+            Self::Paid | Self::MerchantPaid => EventType::PaymentIntentSuccess,
+            Self::Void | Self::MerchantCancelled => EventType::PaymentIntentCancelled,
+            Self::Refund | Self::PartialRefund => EventType::RefundSuccess,
+            Self::RefundDeclined | Self::RefundFailed => EventType::RefundFailure,
             Self::Pending
             | Self::Recycle
             | Self::OneTimePaymentPending
             | Self::BatchPending
             | Self::CapturePending
             | Self::RefundPending => EventType::PaymentIntentProcessing,
-            Self::Noncollectable | Self::Failed => {
-                EventType::PaymentIntentFailure
-            }
+            Self::Noncollectable | Self::Failed => EventType::PaymentIntentFailure,
         }
     }
 
     pub fn to_attempt_status(&self) -> Result<AttemptStatus, errors::ConnectorError> {
         match self {
-            Self::Paid | Self::MerchantPaid => {
-                Ok(AttemptStatus::Charged)
-            }
-            Self::Void | Self::MerchantCancelled => {
-                Ok(AttemptStatus::Voided)
-            }
+            Self::Paid | Self::MerchantPaid => Ok(AttemptStatus::Charged),
+            Self::Void | Self::MerchantCancelled => Ok(AttemptStatus::Voided),
             Self::Pending
             | Self::Recycle
             | Self::OneTimePaymentPending
             | Self::BatchPending
             | Self::CapturePending
             | Self::RefundPending => Ok(AttemptStatus::Pending),
-            Self::Noncollectable | Self::Failed => {
-                Ok(AttemptStatus::Failure)
-            }
-            Self::Refund
-            | Self::PartialRefund
-            | Self::RefundDeclined
-            | Self::RefundFailed => {
+            Self::Noncollectable | Self::Failed => Ok(AttemptStatus::Failure),
+            Self::Refund | Self::PartialRefund | Self::RefundDeclined | Self::RefundFailed => {
                 Err(errors::ConnectorError::UnexpectedResponseError(
-                    bytes::Bytes::from(format!("received refund status in payments webhook",)),
+                    bytes::Bytes::from("received refund status in payments webhook".to_string()),
                 ))
             }
         }
@@ -1508,11 +1491,11 @@ impl WebhookInvoiceStatus {
 
     pub fn to_refund_status(&self) -> Result<RefundStatus, errors::ConnectorError> {
         match self {
-            WebhookInvoiceStatus::Refund => Ok(RefundStatus::Success),
-            WebhookInvoiceStatus::PartialRefund => Ok(RefundStatus::Success),
-            WebhookInvoiceStatus::RefundPending => Ok(RefundStatus::Pending),
-            WebhookInvoiceStatus::RefundDeclined => Ok(RefundStatus::Failure),
-            WebhookInvoiceStatus::RefundFailed => Ok(RefundStatus::Failure),
+            Self::Refund => Ok(RefundStatus::Success),
+            Self::PartialRefund => Ok(RefundStatus::Success),
+            Self::RefundPending => Ok(RefundStatus::Pending),
+            Self::RefundDeclined => Ok(RefundStatus::Failure),
+            Self::RefundFailed => Ok(RefundStatus::Failure),
             _ => Err(errors::ConnectorError::UnexpectedResponseError(
                 bytes::Bytes::from("received payment status in refund webhook".to_string()),
             )),

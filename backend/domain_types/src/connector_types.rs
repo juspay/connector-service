@@ -1983,7 +1983,7 @@ impl EventType {
     pub fn is_misc_event(&self) -> bool {
         matches!(
             self,
-                 Self::ExternalAuthenticationAres
+            Self::ExternalAuthenticationAres
                 | Self::FrmApproved
                 | Self::FrmRejected
                 | Self::IncomingWebhookEventUnspecified
@@ -1992,10 +1992,7 @@ impl EventType {
 
     /// Returns true if this event type is endpoint verification-related
     pub fn is_endpoint_verification_event(&self) -> bool {
-        matches!(
-            self,
-            Self::EndpointVerification
-        )
+        matches!(self, Self::EndpointVerification)
     }
 }
 
@@ -2193,11 +2190,23 @@ impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails
         value: grpc_api_types::payments::RequestDetails,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let method = HttpMethod::foreign_try_from(value.method())?;
-
+        let url = value
+            .url
+            .map(|url_str| {
+                url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
+                    ApiError {
+                        sub_code: "INVALID_URL".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid Webhook URL".to_owned(),
+                        error_object: None,
+                    },
+                ))
+            })
+            .transpose()?;
         Ok(Self {
             method,
             uri: value.uri,
-            url: value.url.and_then(|url_str| Url::parse(&url_str).ok()),
+            url,
             headers: value.headers,
             body: value.body,
             query_params: value.query_params,

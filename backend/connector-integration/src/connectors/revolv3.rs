@@ -38,6 +38,9 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const REVOLV3_TOKEN: &str = "x-revolv3-token";
+    pub const REVOLV3_SIGNATURE_KEY: &str = "X-Revolv3-Signature";
+    pub const REVOLV3_SIGNATURE_KEY_LOWERCASE: &str = "x-revolv3-signature";
+    
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
@@ -134,8 +137,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let signature_header = match request
             .headers
-            .get("x-revolv3-signature") 
-            .or_else(|| request.headers.get("X-Revolv3-Signature"))
+            .get(headers::REVOLV3_SIGNATURE_KEY_LOWERCASE)
+            .or_else(|| request.headers.get(headers::REVOLV3_SIGNATURE_KEY))
         {
             Some(header) => header,
             None => {
@@ -177,7 +180,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
 
         let computed_signature_b64 = BASE64_ENGINE.encode(&computed_signature);
-        let check_point = computed_signature_b64 == *signature_header; 
+        let check_point = computed_signature_b64 == *signature_header;
         Ok(check_point)
     }
 
@@ -195,7 +198,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 "Failed to parse webhook event type from Revolv3 webhook body"
             })?;
 
-        let webhook_body_data : Revolv3WebhookBodyData = serde_json::from_str(&webhook_body.body)
+        let webhook_body_data: Revolv3WebhookBodyData = serde_json::from_str(&webhook_body.body)
             .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
             .attach_printable_lazy(|| {
                 "Failed to parse webhook event type from Revolv3 webhook body"
@@ -205,8 +208,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Revolv3WebhookBodyData::InvoiceData(invoice_webhook) => {
                 Ok(invoice_webhook.get_invoice_status().to_event_type())
             }
-            Revolv3WebhookBodyData::TestData(_) => {
-                Ok(EventType::EndpointVerification)},
+            Revolv3WebhookBodyData::TestData(_) => Ok(EventType::EndpointVerification),
         }
     }
 
