@@ -206,6 +206,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Python codegen dependencies (jinja2, grpcio-tools, etc.)
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk install-deps
+
       - name: Generate Python SDK (UniFFI Python bindings + Python proto stubs)
         if: matrix.target == 'aarch64-apple-darwin'
         run: make -C sdk/python generate-all
