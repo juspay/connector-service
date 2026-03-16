@@ -175,6 +175,25 @@ message ResponseError {
   optional uint32 status_code = 4;
 }
 
+// Result type for FFI operations with explicit type discrimination
+// Replaces the heuristic error detection with explicit enum-based type checking
+message FfiResult {
+  enum Type {
+    HTTP_REQUEST = 0;
+    HTTP_RESPONSE = 1;
+    REQUEST_ERROR = 2;
+    RESPONSE_ERROR = 3;
+  }
+  
+  Type type = 1;
+  
+  oneof payload {
+    FfiConnectorHttpRequest http_request = 2;
+    FfiConnectorHttpResponse http_response = 3;
+    RequestError request_error = 4;
+    ResponseError response_error = 5;
+  }
+}
 // ============================================================
 // Network Error (HTTP transport layer)
 // ============================================================
