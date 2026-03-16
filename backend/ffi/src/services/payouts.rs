@@ -1,6 +1,5 @@
 use grpc_api_types::payouts::{PayoutServiceCreateRequest, PayoutServiceCreateResponse};
 
-use crate::errors::{FfiError, FfiPaymentError};
 use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
