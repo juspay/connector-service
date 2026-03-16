@@ -40,7 +40,6 @@ pub(crate) mod headers {
     pub(crate) const REVOLV3_TOKEN: &str = "x-revolv3-token";
     pub const REVOLV3_SIGNATURE_KEY: &str = "X-Revolv3-Signature";
     pub const REVOLV3_SIGNATURE_KEY_LOWERCASE: &str = "x-revolv3-signature";
-    
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
