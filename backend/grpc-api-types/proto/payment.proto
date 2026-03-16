@@ -602,6 +602,7 @@ enum Connector {
   ZIFT = 108;
   REVOLV3 = 109;
   TRUELAYER = 110;
+  FISERVCOMMERCEHUB = 111;
 }
 
 // Payment method types.
