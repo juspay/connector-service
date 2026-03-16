@@ -77,7 +77,7 @@ The `SubmitEvidence` RPC uploads supporting documentation to contest a chargebac
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_dispute_id": "dispute_001",
     "dispute_id": "dp_1Oxxx...",
@@ -98,7 +98,7 @@ grpcurl -H "x-connector: stripe" \
     ]
   }' \
   localhost:8080 \
-  ucs.v2.DisputeService/SubmitEvidence
+  types.DisputeService/SubmitEvidence
 ```
 
 ### Response

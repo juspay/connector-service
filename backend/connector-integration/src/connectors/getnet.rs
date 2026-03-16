@@ -569,7 +569,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = getnet::GetnetAuthType::try_from(&req.connector_auth_type)
+            let auth = getnet::GetnetAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)
                 .attach_printable("Failed to obtain access token")?;
 

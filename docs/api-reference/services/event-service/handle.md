@@ -86,7 +86,7 @@ The `event_response` contains one of the following based on `event_type`:
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_event_id": "evt_webhook_001",
     "request_details": {
@@ -103,7 +103,7 @@ grpcurl -H "x-connector: stripe" \
     }
   }' \
   localhost:8080 \
-  ucs.v2.EventService/Handle
+  types.EventService/Handle
 ```
 
 ### Response

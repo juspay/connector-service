@@ -518,7 +518,7 @@ macros::create_all_prerequisites!(
         {
         let date = OffsetDateTime::now_utc();
         let bankofamerica_req = self.get_request_body(req)?;
-        let auth = BankOfAmericaAuthType::try_from(&req.connector_auth_type)?;
+        let auth = BankOfAmericaAuthType::try_from(&req.connector_config)?;
         let merchant_account = auth.merchant_account.clone();
         let base_url = self.base_url(req.resource_common_data.connectors());
         let bankofamerica_host =

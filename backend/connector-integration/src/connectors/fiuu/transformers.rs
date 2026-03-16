@@ -25,7 +25,7 @@ use domain_types::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         RealTimePaymentData, WalletData,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -56,14 +56,15 @@ pub struct FiuuAuthType {
     pub(super) secret_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for FiuuAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for FiuuAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Fiuu {
+            ConnectorSpecificConfig::Fiuu {
                 merchant_id,
                 verify_key,
                 secret_key,
+                ..
             } => Ok(Self {
                 merchant_id: merchant_id.to_owned(),
                 verify_key: verify_key.to_owned(),
@@ -261,7 +262,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let record_type = FiuuRecordType::T;
         let merchant_id = auth.merchant_id;
         let order_id = item
@@ -506,7 +507,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let txn_currency = item.router_data.request.currency;
         let amount = item
@@ -701,7 +702,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let txn_currency = item.router_data.request.currency;
         let amount = item
@@ -1280,7 +1281,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let amount = item
             .connector
@@ -1484,7 +1485,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let txn_id = item
             .router_data
             .request
@@ -1776,7 +1777,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_id = auth.merchant_id.peek().to_string();
         let amount = item
             .connector
@@ -1931,7 +1932,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let txn_id = item.router_data.request.connector_transaction_id.clone();
         let merchant_id = auth.merchant_id.peek().to_string();
         let secret_key = auth.secret_key.peek().to_string();
@@ -2053,7 +2054,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = FiuuAuthType::try_from(&item.router_data.connector_config)?;
         let (txn_id, merchant_id, verify_key) = (
             item.router_data.request.connector_transaction_id.clone(),
             auth.merchant_id.peek().to_string(),

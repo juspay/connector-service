@@ -40,14 +40,13 @@ const PAYPAL_CREDS = {
 
 // 1. ConnectorConfig (connector, auth, environment)
 const config = ConnectorConfig.create({
-  connector: Connector.PAYPAL,
-  auth: {
+  options: { environment: Environment.SANDBOX },
+  connectorConfig: {
     paypal: {
       clientId: { value: PAYPAL_CREDS.client_id },
       clientSecret: { value: PAYPAL_CREDS.client_secret },
-    }
+    },
   },
-  environment: Environment.SANDBOX,
 });
 
 // 2. Optional RequestConfig defaults (http, vault)

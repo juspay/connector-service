@@ -11,7 +11,7 @@ use domain_types::{
     connector_types::*,
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -57,7 +57,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = revolv3::Revolv3AuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
@@ -453,7 +453,7 @@ macros::create_all_prerequisites!(
                     "application/json".to_string().into(),
                 )
             ];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -521,7 +521,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            validate_psync(&req.request.connector_metadata)?;
+            validate_psync(&req.request.connector_feature_data)?;
             self.build_headers(req)
         }
 

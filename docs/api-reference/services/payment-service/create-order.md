@@ -71,7 +71,7 @@ The `CreateOrder` RPC initializes a payment order at the payment processor befor
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_order_id": "order_001",
     "amount": {
@@ -82,7 +82,7 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/CreateOrder
+  types.PaymentService/CreateOrder
 ```
 
 ### Response

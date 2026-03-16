@@ -25,7 +25,7 @@ use domain_types::{
     payment_method_data::{
         self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::{is_payment_failure, CardIssuer},
 };
@@ -1418,13 +1418,14 @@ impl From<PaymentSolution> for String {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for BankOfAmericaAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for BankOfAmericaAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::BankOfAmerica {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::BankOfAmerica {
             api_key,
             merchant_account,
             api_secret,
+            ..
         } = auth_type
         {
             Ok(Self {
