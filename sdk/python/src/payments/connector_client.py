@@ -39,6 +39,7 @@ from .generated.sdk_config_pb2 import (
     HttpConfig,
     RequestError as RequestErrorProto,
     ResponseError as ResponseErrorProto,
+    FfiResult,
 )
 
 
@@ -75,78 +76,68 @@ class ResponseError(Exception):
 
 def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
     """
-    Parse FFI req_transformer bytes as either a success proto or a RequestError.
-
-    Parse as RequestError first; if parsing succeeds AND status is non-default,
-    treat it as an actual error and raise it. Otherwise, parse as success message.
+    Parse FFI req_transformer bytes using FfiResult proto with enum-based type checking.
 
     Args:
         result_bytes: Raw bytes returned by the req_transformer FFI call.
         success_cls: Protobuf message class for the expected success type.
 
     Returns:
-        Decoded success proto on success.
+        FfiConnectorHttpRequest on success (HTTP_REQUEST type).
 
     Raises:
-        RequestError: If the bytes represent a transformer error.
+        RequestError: If the result type is REQUEST_ERROR.
+        ResponseError: If the result type is RESPONSE_ERROR.
+        ValueError: If the result type is unknown or invalid.
     """
-    # Try to parse as RequestErrorProto first
-    try:
-        error_proto = RequestErrorProto()
-        error_proto.ParseFromString(result_bytes)
-
-        # If status is non-default, treat it as an actual error
-        if error_proto.status != 0:
-            raise RequestError(error_proto)
-    except RequestError:
-        # Re-raise our custom exception
-        raise
-    except Exception:
-        # Parsing failed or status is zero, try success parsing
-        pass
-
-    # Parse as success message
-    success = success_cls()
-    success.ParseFromString(result_bytes)
-    return success
+    result = FfiResult()
+    result.ParseFromString(result_bytes)
+    
+    # Use enum-based type checking
+    result_type = result.type
+    
+    if result_type == FfiResult.HTTP_REQUEST:
+        # Return the typed HTTP request directly
+        return result.http_request
+    elif result_type == FfiResult.REQUEST_ERROR:
+        raise RequestError(result.request_error)
+    elif result_type == FfiResult.RESPONSE_ERROR:
+        raise ResponseError(result.response_error)
+    else:
+        raise ValueError(f"Unknown result type: {result_type}")
 
 
 def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
     """
-    Parse FFI res_transformer bytes as either a success proto or a ResponseError.
-
-    Parse as ResponseError first; if parsing succeeds AND status is non-default,
-    treat it as an actual error and raise it. Otherwise, parse as success message.
+    Parse FFI res_transformer bytes using FfiResult proto with enum-based type checking.
 
     Args:
         result_bytes: Raw bytes returned by the res_transformer FFI call.
         success_cls: Protobuf message class for the expected success type.
 
     Returns:
-        Decoded success proto on success.
+        FfiConnectorHttpResponse on success (HTTP_RESPONSE type).
 
     Raises:
-        ResponseError: If the bytes represent a transformer error.
+        ResponseError: If the result type is RESPONSE_ERROR.
+        RequestError: If the result type is REQUEST_ERROR.
+        ValueError: If the result type is unknown or invalid.
     """
-    # Try to parse as ResponseErrorProto first
-    try:
-        error_proto = ResponseErrorProto()
-        error_proto.ParseFromString(result_bytes)
-
-        # If status is non-default, treat it as an actual error
-        if error_proto.status != 0:
-            raise ResponseError(error_proto)
-    except ResponseError:
-        # Re-raise our custom exception
-        raise
-    except Exception:
-        # Parsing failed or status is zero, try success parsing
-        pass
-
-    # Parse as success message
-    success = success_cls()
-    success.ParseFromString(result_bytes)
-    return success
+    result = FfiResult()
+    result.ParseFromString(result_bytes)
+    
+    # Use enum-based type checking
+    result_type = result.type
+    
+    if result_type == FfiResult.HTTP_RESPONSE:
+        # Return the typed HTTP response directly
+        return result.http_response
+    elif result_type == FfiResult.RESPONSE_ERROR:
+        raise ResponseError(result.response_error)
+    elif result_type == FfiResult.REQUEST_ERROR:
+        raise RequestError(result.request_error)
+    else:
+        raise ValueError(f"Unknown result type: {result_type}")
 
 
 class _ConnectorClientBase:

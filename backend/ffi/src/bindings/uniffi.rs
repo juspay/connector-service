@@ -17,7 +17,7 @@ mod uniffi_bindings_inner {
     use error_stack::Report;
     use grpc_api_types::payments::{
         Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, RequestError,
-        ResponseError,
+        ResponseError, FfiResult, ffi_result,
     };
     use http::header::{HeaderMap, HeaderName, HeaderValue};
     use prost::Message;
@@ -211,8 +211,8 @@ mod uniffi_bindings_inner {
     // ── Generic transformer runners ───────────────────────────────────────────
 
     /// Decode `request_bytes` as `Req`, build `FfiRequestData`, call `handler`,
-    /// and encode the resulting connector HTTP request as protobuf bytes.
-    /// If the handler returns an error, encode the RequestError to bytes.
+    /// and encode the resulting connector HTTP request as Result proto.
+    /// If the handler returns an error, encode the RequestError in Result.
     fn run_req_transformer<Req>(
         request_bytes: Vec<u8>,
         options_bytes: Vec<u8>,
@@ -227,24 +227,34 @@ mod uniffi_bindings_inner {
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return RequestError {
-                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                    error_message: Some(format!("Request payload decode failed: {e}")),
-                    error_code: None,
-                    status_code: Some(400),
-                }
-                .encode_to_vec()
+            return FfiResult {
+                r#type: ffi_result::Type::RequestError as i32,
+                payload: Some(ffi_result::Payload::RequestError(
+                    RequestError {
+                        status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                        error_message: Some(format!("Request payload decode failed: {e}")),
+                        error_code: None,
+                        status_code: Some(400),
+                    }
+                )),
+            }.encode_to_vec();
             }
         };
 
         let ffi_options = match parse_ffi_options_for_req(options_bytes) {
             Ok(o) => o,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::RequestError as i32,
+                payload: Some(ffi_result::Payload::RequestError(e)),
+            }.encode_to_vec(),
         };
 
         let ffi_metadata = match parse_metadata_for_req(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::RequestError as i32,
+                payload: Some(ffi_result::Payload::RequestError(e)),
+            }.encode_to_vec(),
         };
 
         let request = crate::types::FfiRequestData {
@@ -257,31 +267,48 @@ mod uniffi_bindings_inner {
 
         let result = match handler(request, environment) {
             Ok(r) => r,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::RequestError as i32,
+                payload: Some(ffi_result::Payload::RequestError(e)),
+            }.encode_to_vec(),
         };
 
         let connector_request = match result {
             Some(r) => r,
             None => {
-                return RequestError {
-                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                    error_message: Some("Request encoding failed".to_string()),
-                    error_code: None,
-                    status_code: Some(400),
-                }
-                .encode_to_vec()
+                return FfiResult {
+                    r#type: ffi_result::Type::RequestError as i32,
+                    payload: Some(ffi_result::Payload::RequestError(
+                        RequestError {
+                            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                            error_message: Some("Request encoding failed".to_string()),
+                            error_code: None,
+                            status_code: Some(400),
+                        }
+                    )),
+                }.encode_to_vec();
             }
         };
 
         match build_ffi_request_bytes(&connector_request) {
-            Ok(bytes) => bytes,
-            Err(e) => e.encode_to_vec(),
+            Ok(bytes) => {
+                let http_request = FfiConnectorHttpRequest::decode(Bytes::from(bytes))
+                    .expect("valid FfiConnectorHttpRequest");
+                FfiResult {
+                    r#type: ffi_result::Type::HttpRequest as i32,
+                    payload: Some(ffi_result::Payload::HttpRequest(http_request)),
+                }.encode_to_vec()
+            }
+            Err(e) => FfiResult {
+                r#type: ffi_result::Type::RequestError as i32,
+                payload: Some(ffi_result::Payload::RequestError(e)),
+            }.encode_to_vec(),
         }
     }
 
     /// Decode `response_bytes` as the domain `Response` and `request_bytes` as `Req`,
-    /// call `handler`, and encode the result as protobuf bytes.
-    /// If the handler returns an error, encode the ResponseError to bytes.
+    /// call `handler`, and encode the result as Result proto.
+    /// If the handler returns an error, encode the ResponseError in Result.
     fn run_res_transformer<Req, Res>(
         response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
@@ -298,30 +325,43 @@ mod uniffi_bindings_inner {
     {
         let domain_response = match build_domain_response(response_bytes) {
             Ok(r) => r,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::ResponseError as i32,
+                payload: Some(ffi_result::Payload::ResponseError(e)),
+            }.encode_to_vec(),
         };
 
         let payload = match Req::decode(Bytes::from(request_bytes)) {
             Ok(p) => p,
             Err(e) => {
-                return ResponseError {
-                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                    error_message: Some(format!("Request payload decode failed: {e}")),
-                    error_code: None,
-                    status_code: Some(400),
-                }
-                .encode_to_vec()
+                return FfiResult {
+                    r#type: ffi_result::Type::ResponseError as i32,
+                    payload: Some(ffi_result::Payload::ResponseError(
+                        ResponseError {
+                            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                            error_message: Some(format!("Request payload decode failed: {e}")),
+                            error_code: None,
+                            status_code: Some(400),
+                        }
+                    )),
+                }.encode_to_vec();
             }
         };
 
         let ffi_options = match parse_ffi_options_for_res(options_bytes) {
             Ok(o) => o,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::ResponseError as i32,
+                payload: Some(ffi_result::Payload::ResponseError(e)),
+            }.encode_to_vec(),
         };
 
         let ffi_metadata = match parse_metadata_for_res(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::ResponseError as i32,
+                payload: Some(ffi_result::Payload::ResponseError(e)),
+            }.encode_to_vec(),
         };
 
         let request = crate::types::FfiRequestData {
@@ -333,8 +373,18 @@ mod uniffi_bindings_inner {
         let environment = Some(ffi_options.environment());
 
         match handler(request, domain_response, environment) {
-            Ok(proto_response) => proto_response.encode_to_vec(),
-            Err(e) => e.encode_to_vec(),
+            Ok(proto_response) => {
+                let http_response = FfiConnectorHttpResponse::decode(Bytes::from(proto_response.encode_to_vec()))
+                    .expect("valid FfiConnectorHttpResponse");
+                FfiResult {
+                    r#type: ffi_result::Type::HttpResponse as i32,
+                    payload: Some(ffi_result::Payload::HttpResponse(http_response)),
+                }.encode_to_vec()
+            }
+            Err(e) => FfiResult {
+                r#type: ffi_result::Type::ResponseError as i32,
+                payload: Some(ffi_result::Payload::ResponseError(e)),
+            }.encode_to_vec(),
         }
     }
 
@@ -402,24 +452,34 @@ mod uniffi_bindings_inner {
         ) {
             Ok(p) => p,
             Err(e) => {
-                return ResponseError {
-                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                    error_message: Some(format!("EventServiceHandleRequest decode failed: {e}")),
-                    error_code: None,
-                    status_code: Some(400),
-                }
-                .encode_to_vec()
+                return FfiResult {
+                    r#type: ffi_result::Type::ResponseError as i32,
+                    payload: Some(ffi_result::Payload::ResponseError(
+                        ResponseError {
+                            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+                            error_message: Some(format!("EventServiceHandleRequest decode failed: {e}")),
+                            error_code: None,
+                            status_code: Some(400),
+                        }
+                    )),
+                }.encode_to_vec();
             }
         };
 
         let ffi_options = match parse_ffi_options_for_res(options_bytes) {
             Ok(o) => o,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::ResponseError as i32,
+                payload: Some(ffi_result::Payload::ResponseError(e)),
+            }.encode_to_vec(),
         };
 
         let ffi_metadata = match parse_metadata_for_res(&ffi_options) {
             Ok(m) => m,
-            Err(e) => return e.encode_to_vec(),
+            Err(e) => return FfiResult {
+                r#type: ffi_result::Type::ResponseError as i32,
+                payload: Some(ffi_result::Payload::ResponseError(e)),
+            }.encode_to_vec(),
         };
 
         let request = crate::types::FfiRequestData {
@@ -431,8 +491,18 @@ mod uniffi_bindings_inner {
         let environment = Some(ffi_options.environment());
 
         match crate::handlers::payments::handle_event_handler(request, environment) {
-            Ok(response) => response.encode_to_vec(),
-            Err(e) => e.encode_to_vec(),
+            Ok(response) => {
+                let http_response = FfiConnectorHttpResponse::decode(Bytes::from(response.encode_to_vec()))
+                    .expect("valid FfiConnectorHttpResponse");
+                FfiResult {
+                    r#type: ffi_result::Type::HttpResponse as i32,
+                    payload: Some(ffi_result::Payload::HttpResponse(http_response)),
+                }.encode_to_vec()
+            }
+            Err(e) => FfiResult {
+                r#type: ffi_result::Type::ResponseError as i32,
+                payload: Some(ffi_result::Payload::ResponseError(e)),
+            }.encode_to_vec(),
         }
     }
 }
