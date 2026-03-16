@@ -156,7 +156,6 @@ pub struct NuveiCard<
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum AlternativePaymentMethodType {
     #[serde(rename = "apmgw_Giropay")]
     Giropay,
@@ -169,7 +168,6 @@ pub enum AlternativePaymentMethodType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum NuveiBIC {
     #[serde(rename = "ABNANL2A")]
     Abnamro,
@@ -1075,7 +1073,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let redirection_data = response
             .payment_option
             .as_ref()
-            .and_then(|po| po.redirect_url.clone())
+            .and_then(|payment_option| payment_option.redirect_url.clone())
             .and_then(|url| Url::parse(&url).ok())
             .map(|url| Box::new(RedirectForm::from((url, Method::Get))));
 
