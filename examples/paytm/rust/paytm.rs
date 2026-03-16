@@ -21,6 +21,30 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
+fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+    serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_txn_001",  // Identification
+    "amount": {  // The amount for the payment
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {  // Payment method to be used
+        "payment_method": {
+            "upi_collect": {  // UPI Collect
+                "vpa_id": "test@upi",  // Virtual Payment Address
+            },
+        }
+    },
+    "capture_method": capture_method,  // Method for capturing the payment
+    "address": {  // Address Information
+        "billing_address": {
+        },
+    },
+    "auth_type": "NO_THREE_DS",  // Authentication Details
+    "session_token": "probe_session_token",  // Session and Token Information
+    })).unwrap_or_default()
+}
+
 fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "connector_transaction_id": connector_transaction_id,
@@ -31,6 +55,17 @@ fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest
     })).unwrap_or_default()
 }
 
+
+// Flow: PaymentService.Authorize (UpiCollect)
+pub async fn authorize(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
+    match response.status() {
+        PaymentStatus::Failure | PaymentStatus::AuthorizationFailed
+            => return Err(format!("Authorize failed: {:?}", response.error).into()),
+        PaymentStatus::Pending => return Ok("pending — await webhook".to_string()),
+        _  => return Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
+    }
+}
 
 // Flow: MerchantAuthenticationService.CreateSessionToken
 pub async fn create_session_token(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -53,11 +88,12 @@ pub async fn get(client: &ConnectorClient, merchant_transaction_id: &str) -> Res
 #[tokio::main]
 async fn main() {
     let client = build_client();
-    let flow = std::env::args().nth(1).unwrap_or_else(|| "create_session_token".to_string());
+    let flow = std::env::args().nth(1).unwrap_or_else(|| "authorize".to_string());
     let result: Result<String, Box<dyn std::error::Error>> = match flow.as_str() {
+        "authorize" => authorize(&client, "order_001").await,
         "create_session_token" => create_session_token(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: create_session_token, get", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: authorize, create_session_token, get", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L118) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L111) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L136) · [Rust](../../examples/revolv3/rust/revolv3.rs#L130)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L73) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L66) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L91) · [Rust](../../examples/revolv3/rust/revolv3.rs#L85)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,19 +122,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L143) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L137) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L158) · [Rust](../../examples/revolv3/rust/revolv3.rs#L152)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L98) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L92) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L113) · [Rust](../../examples/revolv3/rust/revolv3.rs#L107)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L162) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L156) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L174) · [Rust](../../examples/revolv3/rust/revolv3.rs#L167)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L117) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L111) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L129) · [Rust](../../examples/revolv3/rust/revolv3.rs#L122)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L199) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L191) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L196) · [Rust](../../examples/revolv3/rust/revolv3.rs#L189)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L154) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L146) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L151) · [Rust](../../examples/revolv3/rust/revolv3.rs#L144)
 
 ## API Reference
 
@@ -162,7 +162,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -180,7 +193,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L221) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L212) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L214) · [Rust](../../examples/revolv3/rust/revolv3.rs#L206)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L176) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L167) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L169) · [Rust](../../examples/revolv3/rust/revolv3.rs#L161)
 
 #### PaymentService.Capture
 
@@ -191,7 +204,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L230) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L221) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L226) · [Rust](../../examples/revolv3/rust/revolv3.rs#L217)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L185) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L176) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L181) · [Rust](../../examples/revolv3/rust/revolv3.rs#L172)
 
 #### PaymentService.Refund
 
@@ -202,7 +215,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L162) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L156) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L236) · [Rust](../../examples/revolv3/rust/revolv3.rs#L223)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L117) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L111) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L191) · [Rust](../../examples/revolv3/rust/revolv3.rs#L178)
 
 #### PaymentService.SetupRecurring
 
@@ -213,7 +226,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L239) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L230) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L246) · [Rust](../../examples/revolv3/rust/revolv3.rs#L229)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L194) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L185) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L201) · [Rust](../../examples/revolv3/rust/revolv3.rs#L184)
 
 #### PaymentService.Void
 
@@ -224,4 +237,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L316) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L300) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L315) · [Rust](../../examples/revolv3/rust/revolv3.rs#L298)
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L272) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L256) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L271) · [Rust](../../examples/revolv3/rust/revolv3.rs#L254)

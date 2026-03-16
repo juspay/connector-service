@@ -3,24 +3,110 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
       "Card": {
         "status": "error",
         "error": "Invalid Configuration: connector_account_details.api_secret"
       },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Bank of America"
       }
     },
     "capture": {
       "default": {
         "status": "error",
         "error": "Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -31,14 +117,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -47,19 +136,25 @@
         "error": "Invalid Configuration: connector_account_details.api_secret"
       }
     },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "setup_recurring": {
       "default": {
         "status": "error",
         "error": "Invalid Configuration: connector_account_details.api_secret"
       }
     },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "void": {
       "default": {
         "status": "error",
-        "required_fields": [
-          "Amount",
-          "Cancellation Reason"
-        ],
         "error": "Invalid Configuration: connector_account_details.api_secret"
       }
     }

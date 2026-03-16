@@ -3,16 +3,40 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
       "Card": {
         "status": "supported",
-        "required_fields": [
-          "description"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -29,43 +53,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
           "browser_info": {
             "color_depth": 24,
             "screen_height": 900,
@@ -91,15 +82,74 @@
           "body": "{\"auth\":{\"login\":\"probe_user\",\"tranKey\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"nonce\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"seed\":\"2020-01-01T00:00:00+00:00\"},\"payment\":{\"reference\":\"probe_txn_001\",\"description\":\"Probe payment\",\"amount\":{\"currency\":\"USD\",\"total\":1000}},\"instrument\":{\"card\":{\"number\":\"4111111111111111\",\"expiration\":\"03/30\",\"cvv\":\"737\"}},\"ipAddress\":\"1.2.3.4\",\"userAgent\":\"Mozilla/5.0 (probe-bot)\"}"
         }
       },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
       }
     },
     "capture": {
       "default": {
         "status": "error",
         "error": "Failed to encode connector request"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -110,20 +160,38 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
       "default": {
         "status": "error",
         "error": "Failed to encode connector request"
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

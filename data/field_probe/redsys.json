@@ -4,19 +4,48 @@
     "authenticate": {
       "default": {
         "status": "error",
-        "error": "Address is required"
-      }
-    },
-    "authorize": {
-      "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "error": "Stuck on field: continue_redirection_url — Missing required field: continue_redirection_url"
       }
     },
     "capture": {
       "default": {
         "status": "error",
         "error": "Failed to encode connector request"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -27,14 +56,18 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
         "status": "error",
-        "error": "Address is required"
+        "error": "Failed to encode connector request"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -43,12 +76,24 @@
         "error": "Failed to encode connector request"
       }
     },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "void": {
       "default": {
         "status": "error",
-        "required_fields": [
-          "currency"
-        ],
         "error": "Failed to encode connector request"
       }
     }

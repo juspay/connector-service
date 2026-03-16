@@ -96,10 +96,40 @@ let config = ConnectorConfig {
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
+| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [MerchantAuthenticationService.CreateSessionToken](#merchantauthenticationservicecreatesessiontoken) | Authentication | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
 
 ### Payments
+
+#### PaymentService.Authorize
+
+Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceAuthorizeRequest` |
+| **Response** | `PaymentServiceAuthorizeResponse` |
+
+**Supported payment method types:**
+
+| Payment Method | Supported |
+|----------------|:---------:|
+| UPI | ✓ |
+
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
+
+##### UPI Collect
+
+```python
+"payment_method": {
+    "upi_collect": {  # UPI Collect
+        "vpa_id": {"value": "test@upi"}  # Virtual Payment Address
+    }
+}
+```
+
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L62) · [Rust](../../examples/paytm/rust/paytm.rs#L60)
 
 #### PaymentService.Get
 
@@ -110,7 +140,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L50) · [Rust](../../examples/paytm/rust/paytm.rs#L47)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L87) · [Rust](../../examples/paytm/rust/paytm.rs#L82)
 
 ### Authentication
 
@@ -123,4 +153,4 @@ Create session token for payment processing. Maintains session state across mult
 | **Request** | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateSessionTokenResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L37) · [Rust](../../examples/paytm/rust/paytm.rs#L36)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L74) · [Rust](../../examples/paytm/rust/paytm.rs#L71)

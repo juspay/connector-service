@@ -3,22 +3,13 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
       "Card": {
         "status": "error",
-        "required_fields": [
-          "reference_id",
-          "customer_name"
-        ],
         "error": "Stuck on field: customer_name — Missing required field: customer_name"
-      },
-      "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -43,6 +34,16 @@
         }
       }
     },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "create_order": {
       "default": {
         "status": "supported",
@@ -62,6 +63,26 @@
           },
           "body": "{\"seller_payme_id\":\"probe_id\",\"sale_type\":\"authorize\",\"sale_price\":1000,\"currency\":\"USD\",\"sale_payment_method\":\"credit-card\",\"product_name\":null,\"transaction_id\":\"probe_order_001\",\"sale_callback_url\":null,\"sale_return_url\":null,\"language\":\"en\"}"
         }
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -87,14 +108,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -121,12 +145,24 @@
         }
       }
     },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "void": {
       "default": {
         "status": "supported",
-        "required_fields": [
-          "currency"
-        ],
         "proto_request": {
           "merchant_void_id": "probe_void_001",
           "connector_transaction_id": "probe_connector_txn_001",

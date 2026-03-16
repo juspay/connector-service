@@ -3,14 +3,109 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Card": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Loonio"
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -38,14 +133,42 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "not_implemented"
       }
     }
   }

@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L143) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L134) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L157) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L153)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L99) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L89) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L113) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L108)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L168) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L160) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L179) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L175)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L124) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L115) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L135) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L130)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L187) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L179) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L195) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L190)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L143) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L134) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L151) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L145)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L224) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L214) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L217) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L212)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L180) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L169) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L173) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L167)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L246) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L236) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L236) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L230)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L202) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L191) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L192) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L185)
 
 ## API Reference
 
@@ -149,6 +149,7 @@ Authorize a payment, then poll the connector for its current status using Get. U
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [PaymentMethodAuthenticationService.PreAuthenticate](#paymentmethodauthenticationservicepreauthenticate) | Authentication | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
@@ -168,7 +169,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -186,7 +186,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L268) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L257) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L254) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L247)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L224) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L212) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L210) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L202)
 
 #### PaymentService.Capture
 
@@ -197,7 +197,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L277) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L266) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L266) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L258)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L233) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L221) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L222) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L213)
 
 #### PaymentService.Get
 
@@ -208,7 +208,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L286) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L275) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L276) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L264)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L242) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L230) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L232) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L219)
 
 #### PaymentService.Refund
 
@@ -219,7 +219,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L187) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L179) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L284) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L270)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L143) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L134) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L268) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L253)
 
 #### PaymentService.Void
 
@@ -230,4 +230,17 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L295) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L284) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L294) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L276)
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L284) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L267) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L278) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L259)
+
+### Authentication
+
+#### PaymentMethodAuthenticationService.PreAuthenticate
+
+Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentMethodAuthenticationServicePreAuthenticateRequest` |
+| **Response** | `PaymentMethodAuthenticationServicePreAuthenticateResponse` |
+
+**Examples:** [Python](../../examples/nexixpay/python/nexixpay.py#L251) · [JavaScript](../../examples/nexixpay/javascript/nexixpay.js#L239) · [Kotlin](../../examples/nexixpay/kotlin/nexixpay.kt#L240) · [Rust](../../examples/nexixpay/rust/nexixpay.rs#L225)

@@ -3,14 +3,74 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Card": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "create_access_token": {
@@ -26,6 +86,36 @@
           },
           "body": "{\"grant_type\":\"password\",\"client_id\":\"probe_id\",\"client_secret\":\"probe_secret\",\"username\":\"probe_user\",\"password\":\"probe_pass\"}"
         }
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -63,14 +153,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -107,6 +200,26 @@
           },
           "body": "{\"amount\":1000,\"externalReference\":\"probe_refund_001\"}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "not_implemented"
       }
     }
   }

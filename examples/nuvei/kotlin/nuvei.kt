@@ -9,16 +9,63 @@ package examples.nuvei
 
 import payments.PaymentClient
 import payments.MerchantAuthenticationClient
+import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
-import payments.MerchantAuthenticationServiceCreateSessionTokenRequest
-import payments.PaymentServiceGetRequest
 import payments.PaymentServiceRefundRequest
 import payments.PaymentServiceVoidRequest
+import payments.PaymentServiceGetRequest
+import payments.MerchantAuthenticationServiceCreateSessionTokenRequest
+import payments.AuthenticationType
+import payments.CaptureMethod
+import payments.CountryAlpha2
 import payments.Currency
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
 
+
+private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAuthorizeRequest {
+    return PaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_txn_001"  // Identification
+        amountBuilder.apply {  // The amount for the payment
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        paymentMethodBuilder.apply {  // Payment method to be used
+            cardBuilder.apply {  // Generic card payment
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+            }
+        }
+        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
+        addressBuilder.apply {  // Address Information
+            billingAddressBuilder.apply {
+                firstNameBuilder.value = "John"  // Personal Information
+                lastNameBuilder.value = "Doe"
+                countryAlpha2Code = CountryAlpha2.US
+                emailBuilder.value = "test@example.com"  // Contact Information
+            }
+        }
+        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        sessionToken = "probe_session_token"  // Session and Token Information
+        browserInfoBuilder.apply {
+            colorDepth = 24  // Display Information
+            screenHeight = 900
+            screenWidth = 1440
+            javaEnabled = false  // Browser Settings
+            javaScriptEnabled = true
+            language = "en-US"
+            timeZoneOffsetMinutes = -480
+            acceptHeader = "application/json"  // Browser Headers
+            userAgent = "Mozilla/5.0 (probe-bot)"
+            acceptLanguage = "en-US,en;q=0.9"
+            ipAddress = "1.2.3.4"  // Device Information
+        }
+    }.build()
+}
 
 private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServiceCaptureRequest {
     return PaymentServiceCaptureRequest.newBuilder().apply {
@@ -70,6 +117,116 @@ val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     // .setConnectorConfig(...) — set your connector config here
     .build()
 
+
+// Scenario: Card Payment (Authorize + Capture)
+// Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val paymentClient = PaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
+
+    when (authorizeResponse.status.name) {
+        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
+        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
+    }
+
+    // Step 2: Capture — settle the reserved funds
+    val captureResponse = paymentClient.capture(buildCaptureRequest(authorizeResponse.connectorTransactionId ?: ""))
+
+    if (captureResponse.status.name == "FAILED")
+        throw RuntimeException("Capture failed: ${captureResponse.error.unifiedDetails.message}")
+
+    return mapOf("status" to captureResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+}
+
+// Scenario: Card Payment (Automatic Capture)
+// Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val paymentClient = PaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("AUTOMATIC"))
+
+    when (authorizeResponse.status.name) {
+        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
+        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
+    }
+
+    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+}
+
+// Scenario: Refund a Payment
+// Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val paymentClient = PaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("AUTOMATIC"))
+
+    when (authorizeResponse.status.name) {
+        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
+        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
+    }
+
+    // Step 2: Refund — return funds to the customer
+    val refundResponse = paymentClient.refund(buildRefundRequest(authorizeResponse.connectorTransactionId ?: ""))
+
+    if (refundResponse.status.name == "FAILED")
+        throw RuntimeException("Refund failed: ${refundResponse.error.unifiedDetails.message}")
+
+    return mapOf("status" to refundResponse.status.name)
+}
+
+// Scenario: Void a Payment
+// Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val paymentClient = PaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
+
+    when (authorizeResponse.status.name) {
+        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
+        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
+    }
+
+    // Step 2: Void — release reserved funds (cancel authorization)
+    val voidResponse = paymentClient.void(buildVoidRequest(authorizeResponse.connectorTransactionId ?: ""))
+
+    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+}
+
+// Scenario: Get Payment Status
+// Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val paymentClient = PaymentClient(config)
+
+    // Step 1: Authorize — reserve funds on the payment method
+    val authorizeResponse = paymentClient.authorize(buildAuthorizeRequest("MANUAL"))
+
+    when (authorizeResponse.status.name) {
+        "FAILED"  -> throw RuntimeException("Payment failed: ${authorizeResponse.error.unifiedDetails.message}")
+        "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
+    }
+
+    // Step 2: Get — retrieve current payment status from the connector
+    val getResponse = paymentClient.get(buildGetRequest(authorizeResponse.connectorTransactionId ?: ""))
+
+    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId)
+}
+
+// Flow: PaymentService.Authorize (Card)
+fun authorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = buildAuthorizeRequest("AUTOMATIC")
+    val response = client.authorize(request)
+    when (response.status.name) {
+        "FAILED"  -> throw RuntimeException("Authorize failed: ${response.error.unifiedDetails.message}")
+        "PENDING" -> println("Pending — await webhook before proceeding")
+        else      -> println("Authorized: ${response.connectorTransactionId}")
+    }
+}
 
 // Flow: PaymentService.Capture
 fun capture(txnId: String) {
@@ -125,13 +282,19 @@ fun void(txnId: String) {
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
-    val flow = args.firstOrNull() ?: "capture"
+    val flow = args.firstOrNull() ?: "processCheckoutCard"
     when (flow) {
+        "processCheckoutCard" -> processCheckoutCard(txnId)
+        "processCheckoutAutocapture" -> processCheckoutAutocapture(txnId)
+        "processRefund" -> processRefund(txnId)
+        "processVoidPayment" -> processVoidPayment(txnId)
+        "processGetPayment" -> processGetPayment(txnId)
+        "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "createSessionToken" -> createSessionToken(txnId)
         "get" -> get(txnId)
         "refund" -> refund(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: capture, createSessionToken, get, refund, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processRefund, processVoidPayment, processGetPayment, authorize, capture, createSessionToken, get, refund, void")
     }
 }

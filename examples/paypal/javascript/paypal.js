@@ -6,7 +6,7 @@
 // Run a scenario:  node paypal.js checkout_card
 'use strict';
 
-const { PaymentClient, RecurringPaymentClient, MerchantAuthenticationClient } = require('hs-playlib');
+const { PaymentClient, RecurringPaymentClient, MerchantAuthenticationClient, PaymentMethodAuthenticationClient } = require('hs-playlib');
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
 const _defaultConfig = ConnectorConfig.create({
@@ -35,56 +35,11 @@ function _buildAuthorizeRequest(captureMethod) {
             }
         },
         "captureMethod": captureMethod,  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        },
         "state": {  // State Information
             "accessToken": {  // Access token obtained from connector
                 "token": {"value": "probe_access_token"},  // The token string.
@@ -257,6 +212,7 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
             "name": "John Doe",  // Customer's full name
             "email": {"value": "test@example.com"},  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
+            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
             "phoneNumber": "4155552671",  // Customer's phone number
             "phoneCountryCode": "+1"  // Customer's phone country code
         },
@@ -317,6 +273,7 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "returnUrl": "https://example.com/recurring-return",
+        "connectorCustomerId": "cust_probe_123",
         "offSession": true,  // Behavioral Flags and Preferences
         "state": {  // State Information
             "accessToken": {  // Access token obtained from connector
@@ -415,13 +372,47 @@ async function get(merchantTransactionId, config = _defaultConfig) {
     return { status: getResponse.status };
 }
 
+// Flow: PaymentMethodAuthenticationService.PostAuthenticate
+async function postAuthenticate(merchantTransactionId, config = _defaultConfig) {
+    // Step 1: Post-Authenticate — validate authentication result with the issuing bank
+    const postAuthenticateresponse = await paymentMethodAuthenticationClient.postAuthenticate({
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {  // Payment Method
+            "card": {  // Generic card payment
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+            }
+        },
+        "address": {  // Address Information
+            "billingAddress": {
+            }
+        },
+        "connectorOrderReferenceId": "probe_order_ref_001",
+        "state": {  // State Information
+            "accessToken": {  // Access token obtained from connector
+                "token": {"value": "probe_access_token"},  // The token string.
+                "expiresInSeconds": 3600,  // Expiration timestamp (seconds since epoch)
+                "tokenType": "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        }
+    });
+
+    return { status: postResponse.status };
+}
+
 // Flow: RecurringPaymentService.Charge
 async function recurringCharge(merchantTransactionId, config = _defaultConfig) {
     // Step 1: Recurring Charge — charge against the stored mandate
     const recurringResponse = await recurringPaymentClient.charge({
         "connectorRecurringPaymentId": {  // Reference to existing mandate
             "mandateIdType": {
-                "connectorMandateId": "probe_mandate_123"
+                "connectorMandateId": "probe-mandate-123"
             }
         },
         "amount": {  // Amount Information
@@ -432,7 +423,7 @@ async function recurringCharge(merchantTransactionId, config = _defaultConfig) {
             "token": {"token": {"value": "probe_pm_token"}}  // Payment tokens
         },
         "returnUrl": "https://example.com/recurring-return",
-        "connectorCustomerId": "probe_cust_connector_001",
+        "connectorCustomerId": "cust_probe_123",
         "paymentMethodType": "PAY_PAL",
         "offSession": true,  // Behavioral Flags and Preferences
         "state": {  // State Information
@@ -473,6 +464,7 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
             "name": "John Doe",  // Customer's full name
             "email": {"value": "test@example.com"},  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
+            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
             "phoneNumber": "4155552671",  // Customer's phone number
             "phoneCountryCode": "+1"  // Customer's phone country code
         },
@@ -538,7 +530,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutCard, processCheckoutAutocapture, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, createAccessToken, get, recurringCharge, setupRecurring, voidPayment };
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, createAccessToken, get, postAuthenticate, recurringCharge, setupRecurring, voidPayment };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_card';

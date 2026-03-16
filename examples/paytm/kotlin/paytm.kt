@@ -7,15 +7,40 @@
 
 package examples.paytm
 
-import payments.MerchantAuthenticationClient
 import payments.PaymentClient
+import payments.MerchantAuthenticationClient
+import payments.PaymentServiceAuthorizeRequest
 import payments.MerchantAuthenticationServiceCreateSessionTokenRequest
 import payments.PaymentServiceGetRequest
+import payments.AuthenticationType
+import payments.CaptureMethod
 import payments.Currency
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
 
+
+private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAuthorizeRequest {
+    return PaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_txn_001"  // Identification
+        amountBuilder.apply {  // The amount for the payment
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        paymentMethodBuilder.apply {  // Payment method to be used
+            upiCollectBuilder.apply {  // UPI Collect
+                vpaIdBuilder.value = "test@upi"  // Virtual Payment Address
+            }
+        }
+        captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
+        addressBuilder.apply {  // Address Information
+            billingAddressBuilder.apply {
+            }
+        }
+        authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        sessionToken = "probe_session_token"  // Session and Token Information
+    }.build()
+}
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
@@ -32,6 +57,18 @@ val _defaultConfig: ConnectorConfig = ConnectorConfig.newBuilder()
     // .setConnectorConfig(...) — set your connector config here
     .build()
 
+
+// Flow: PaymentService.Authorize (UpiCollect)
+fun authorize(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = buildAuthorizeRequest("AUTOMATIC")
+    val response = client.authorize(request)
+    when (response.status.name) {
+        "FAILED"  -> throw RuntimeException("Authorize failed: ${response.error.unifiedDetails.message}")
+        "PENDING" -> println("Pending — await webhook before proceeding")
+        else      -> println("Authorized: ${response.connectorTransactionId}")
+    }
+}
 
 // Flow: MerchantAuthenticationService.CreateSessionToken
 fun createSessionToken(txnId: String) {
@@ -57,10 +94,11 @@ fun get(txnId: String) {
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
-    val flow = args.firstOrNull() ?: "createSessionToken"
+    val flow = args.firstOrNull() ?: "authorize"
     when (flow) {
+        "authorize" -> authorize(txnId)
         "createSessionToken" -> createSessionToken(txnId)
         "get" -> get(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: createSessionToken, get")
+        else -> System.err.println("Unknown flow: $flow. Available: authorize, createSessionToken, get")
     }
 }

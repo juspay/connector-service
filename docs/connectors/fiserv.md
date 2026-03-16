@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L130) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L121) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L144) · [Rust](../../examples/fiserv/rust/fiserv.rs#L140)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L85) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L76) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L98) · [Rust](../../examples/fiserv/rust/fiserv.rs#L95)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L155) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L147) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L166) · [Rust](../../examples/fiserv/rust/fiserv.rs#L162)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L110) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L102) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L120) · [Rust](../../examples/fiserv/rust/fiserv.rs#L117)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L174) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L166) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L182) · [Rust](../../examples/fiserv/rust/fiserv.rs#L177)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L129) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L121) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L136) · [Rust](../../examples/fiserv/rust/fiserv.rs#L132)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L211) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L201) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L204) · [Rust](../../examples/fiserv/rust/fiserv.rs#L199)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L166) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L156) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L158) · [Rust](../../examples/fiserv/rust/fiserv.rs#L154)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L233) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L223) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L223) · [Rust](../../examples/fiserv/rust/fiserv.rs#L217)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L188) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L178) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L177) · [Rust](../../examples/fiserv/rust/fiserv.rs#L172)
 
 ## API Reference
 
@@ -168,7 +168,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -186,7 +199,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L255) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L244) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L241) · [Rust](../../examples/fiserv/rust/fiserv.rs#L234)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L210) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L199) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L195) · [Rust](../../examples/fiserv/rust/fiserv.rs#L189)
 
 #### PaymentService.Capture
 
@@ -197,7 +210,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L264) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L253) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L253) · [Rust](../../examples/fiserv/rust/fiserv.rs#L245)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L219) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L208) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L207) · [Rust](../../examples/fiserv/rust/fiserv.rs#L200)
 
 #### PaymentService.Get
 
@@ -208,7 +221,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L273) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L262) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L263) · [Rust](../../examples/fiserv/rust/fiserv.rs#L251)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L228) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L217) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L217) · [Rust](../../examples/fiserv/rust/fiserv.rs#L206)
 
 #### PaymentService.Refund
 
@@ -219,7 +232,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L174) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L166) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L271) · [Rust](../../examples/fiserv/rust/fiserv.rs#L257)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L129) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L121) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L225) · [Rust](../../examples/fiserv/rust/fiserv.rs#L212)
 
 #### PaymentService.Void
 
@@ -230,4 +243,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L282) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L271) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L281) · [Rust](../../examples/fiserv/rust/fiserv.rs#L263)
+**Examples:** [Python](../../examples/fiserv/python/fiserv.py#L237) · [JavaScript](../../examples/fiserv/javascript/fiserv.js#L226) · [Kotlin](../../examples/fiserv/kotlin/fiserv.kt#L235) · [Rust](../../examples/fiserv/rust/fiserv.rs#L218)

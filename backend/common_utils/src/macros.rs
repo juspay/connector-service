@@ -113,6 +113,28 @@ mod id_type {
     }
 }
 
+/// Extracts a nested optional field or returns `MissingRequiredField` with the full dotted path.
+///
+/// The `$name` literal MUST be the full dotted path from the top-level request
+/// (e.g. `"billing_address.city"`, not `"billing_address"`).
+/// The field-probe binary relies on this convention to patch only the specific leaf field.
+///
+/// # Example
+/// ```rust,ignore
+/// let city = require_field!(billing_address.as_ref().and_then(|a| a.city.as_ref()), "billing_address.city")?;
+/// let country = require_field!(billing_address.as_ref().and_then(|a| a.country), "billing_address.country")?;
+/// ```
+#[macro_export]
+macro_rules! require_field {
+    ($expr:expr, $name:literal) => {
+        $expr.ok_or_else(|| {
+            error_stack::report!($crate::errors::ConnectorError::MissingRequiredField {
+                field_name: $name,
+            })
+        })
+    };
+}
+
 /// Collects names of all optional fields that are `None`.
 /// This is typically useful for constructing error messages including a list of all missing fields.
 #[macro_export]

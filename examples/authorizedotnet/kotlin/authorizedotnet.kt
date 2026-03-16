@@ -8,17 +8,23 @@
 package examples.authorizedotnet
 
 import payments.PaymentClient
+import payments.RecurringPaymentClient
 import payments.CustomerClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
+import payments.PaymentServiceSetupRecurringRequest
+import payments.RecurringPaymentServiceChargeRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
 import payments.CustomerServiceCreateRequest
+import payments.AcceptanceType
 import payments.AuthenticationType
 import payments.CaptureMethod
 import payments.CountryAlpha2
 import payments.Currency
+import payments.FutureUsage
+import payments.PaymentMethodType
 import payments.ConnectorConfig
 import payments.SdkOptions
 import payments.Environment
@@ -41,56 +47,11 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
         addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
     }.build()
 }
 
@@ -199,56 +160,11 @@ fun processCheckoutBank(txnId: String, config: ConnectorConfig = _defaultConfig)
             }
         }
         captureMethod = CaptureMethod.AUTOMATIC  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
         addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
     }.build())
 
     when (authorizeResponse.status.name) {
@@ -279,6 +195,99 @@ fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<
         throw RuntimeException("Refund failed: ${refundResponse.error.unifiedDetails.message}")
 
     return mapOf("status" to refundResponse.status.name)
+}
+
+// Scenario: Recurring / Mandate Payments
+// Store a payment mandate with SetupRecurring, then charge it repeatedly with RecurringPaymentService.Charge without requiring customer action.
+fun processRecurring(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val paymentClient = PaymentClient(config)
+    val recurringPaymentClient = RecurringPaymentClient(config)
+
+    // Step 1: Setup Recurring — store the payment mandate
+    val setupResponse = paymentClient.setup_recurring(PaymentServiceSetupRecurringRequest.newBuilder().apply {
+        merchantRecurringPaymentId = "probe_mandate_001"  // Identification
+        amountBuilder.apply {  // Mandate Details
+            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        paymentMethodBuilder.apply {
+            cardBuilder.apply {  // Generic card payment
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+            }
+        }
+        customerBuilder.apply {
+            name = "John Doe"  // Customer's full name
+            emailBuilder.value = "test@example.com"  // Customer's email address
+            id = "cust_probe_123"  // Internal customer ID
+            connectorCustomerId = "cust_probe_123"  // Customer ID in the connector system
+            phoneNumber = "4155552671"  // Customer's phone number
+            phoneCountryCode = "+1"  // Customer's phone country code
+        }
+        addressBuilder.apply {  // Address Information
+            billingAddressBuilder.apply {
+                firstNameBuilder.value = "John"  // Personal Information
+                lastNameBuilder.value = "Doe"
+                line1Builder.value = "123 Main St"  // Address Details
+                cityBuilder.value = "Seattle"
+                stateBuilder.value = "WA"
+                zipCodeBuilder.value = "98101"
+                countryAlpha2Code = CountryAlpha2.US
+                emailBuilder.value = "test@example.com"  // Contact Information
+                phoneNumberBuilder.value = "4155552671"
+                phoneCountryCode = "+1"
+            }
+        }
+        authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
+        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
+        returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
+        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
+        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
+        customerAcceptanceBuilder.apply {  // Details of customer acceptance
+            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
+            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        }
+        browserInfoBuilder.apply {  // Information about the customer's browser
+            colorDepth = 24  // Display Information
+            screenHeight = 900
+            screenWidth = 1440
+            javaEnabled = false  // Browser Settings
+            javaScriptEnabled = true
+            language = "en-US"
+            timeZoneOffsetMinutes = -480
+            acceptHeader = "application/json"  // Browser Headers
+            userAgent = "Mozilla/5.0 (probe-bot)"
+            acceptLanguage = "en-US,en;q=0.9"
+            ipAddress = "1.2.3.4"  // Device Information
+        }
+    }.build())
+
+    if (setupResponse.status.name == "FAILED")
+        throw RuntimeException("Setup failed: ${setupResponse.error.unifiedDetails.message}")
+
+    // Step 2: Recurring Charge — charge against the stored mandate
+    val recurringResponse = recurringPaymentClient.charge(RecurringPaymentServiceChargeRequest.newBuilder().apply {
+        amountBuilder.apply {  // Amount Information
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        returnUrl = "https://example.com/recurring-return"
+        connectorCustomerId = "cust_probe_123"
+        offSession = true  // Behavioral Flags and Preferences
+        connectorRecurringPaymentIdBuilder.apply {
+            connectorMandateIdBuilder.apply {
+                connectorMandateId = setupResponse.mandateReference.connectorMandateId.connectorMandateId  // from SetupRecurring
+            }
+        }
+    }.build())
+
+    if (recurringResponse.status.name == "FAILED")
+        throw RuntimeException("Recurring Charge failed: ${recurringResponse.error.unifiedDetails.message}")
+
+    return mapOf("status" to recurringResponse.status.name, "transactionId" to (recurringResponse.connectorTransactionId ?: ""))
 }
 
 // Scenario: Void a Payment
@@ -404,6 +413,35 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: RecurringPaymentService.Charge
+fun recurringCharge(txnId: String) {
+    val client = RecurringPaymentClient(_defaultConfig)
+    val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
+        connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
+            connectorMandateIdBuilder.apply {  // mandate_id sent by the connector
+                connectorMandateId = "probe-mandate-123"
+            }
+        }
+        amountBuilder.apply {  // Amount Information
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows)
+            tokenBuilder.apply {  // Payment tokens
+                tokenBuilder.value = "probe_pm_token"
+            }
+        }
+        returnUrl = "https://example.com/recurring-return"
+        connectorCustomerId = "cust_probe_123"
+        paymentMethodType = PaymentMethodType.PAY_PAL
+        offSession = true  // Behavioral Flags and Preferences
+    }.build()
+    val response = client.charge(request)
+    if (response.status.name == "FAILED")
+        throw RuntimeException("Recurring_Charge failed: ${response.error.unifiedDetails.message}")
+    println("Done: ${response.status.name}")
+}
+
 // Flow: PaymentService.Refund
 fun refund(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -412,6 +450,76 @@ fun refund(txnId: String) {
     if (response.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${response.error.unifiedDetails.message}")
     println("Done: ${response.status.name}")
+}
+
+// Flow: PaymentService.SetupRecurring
+fun setupRecurring(txnId: String) {
+    val client = PaymentClient(_defaultConfig)
+    val request = PaymentServiceSetupRecurringRequest.newBuilder().apply {
+        merchantRecurringPaymentId = "probe_mandate_001"  // Identification
+        amountBuilder.apply {  // Mandate Details
+            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        paymentMethodBuilder.apply {
+            cardBuilder.apply {  // Generic card payment
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+            }
+        }
+        customerBuilder.apply {
+            name = "John Doe"  // Customer's full name
+            emailBuilder.value = "test@example.com"  // Customer's email address
+            id = "cust_probe_123"  // Internal customer ID
+            connectorCustomerId = "cust_probe_123"  // Customer ID in the connector system
+            phoneNumber = "4155552671"  // Customer's phone number
+            phoneCountryCode = "+1"  // Customer's phone country code
+        }
+        addressBuilder.apply {  // Address Information
+            billingAddressBuilder.apply {
+                firstNameBuilder.value = "John"  // Personal Information
+                lastNameBuilder.value = "Doe"
+                line1Builder.value = "123 Main St"  // Address Details
+                cityBuilder.value = "Seattle"
+                stateBuilder.value = "WA"
+                zipCodeBuilder.value = "98101"
+                countryAlpha2Code = CountryAlpha2.US
+                emailBuilder.value = "test@example.com"  // Contact Information
+                phoneNumberBuilder.value = "4155552671"
+                phoneCountryCode = "+1"
+            }
+        }
+        authType = AuthenticationType.NO_THREE_DS  // Type of authentication to be used
+        enrolledFor3Ds = false  // Indicates if the customer is enrolled for 3D Secure
+        returnUrl = "https://example.com/mandate-return"  // URL to redirect after setup
+        setupFutureUsage = FutureUsage.OFF_SESSION  // Indicates future usage intention
+        requestIncrementalAuthorization = false  // Indicates if incremental authorization is requested
+        customerAcceptanceBuilder.apply {  // Details of customer acceptance
+            acceptanceType = AcceptanceType.OFFLINE  // Type of acceptance (e.g., online, offline).
+            acceptedAt = 0L  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        }
+        browserInfoBuilder.apply {  // Information about the customer's browser
+            colorDepth = 24  // Display Information
+            screenHeight = 900
+            screenWidth = 1440
+            javaEnabled = false  // Browser Settings
+            javaScriptEnabled = true
+            language = "en-US"
+            timeZoneOffsetMinutes = -480
+            acceptHeader = "application/json"  // Browser Headers
+            userAgent = "Mozilla/5.0 (probe-bot)"
+            acceptLanguage = "en-US,en;q=0.9"
+            ipAddress = "1.2.3.4"  // Device Information
+        }
+    }.build()
+    val response = client.setup_recurring(request)
+    when (response.status.name) {
+        "FAILED" -> throw RuntimeException("Setup failed: ${response.error.unifiedDetails.message}")
+        else     -> println("Mandate stored: ${response.connectorRecurringPaymentId}")
+    }
 }
 
 // Flow: PaymentService.Void
@@ -433,6 +541,7 @@ fun main(args: Array<String>) {
         "processCheckoutAutocapture" -> processCheckoutAutocapture(txnId)
         "processCheckoutBank" -> processCheckoutBank(txnId)
         "processRefund" -> processRefund(txnId)
+        "processRecurring" -> processRecurring(txnId)
         "processVoidPayment" -> processVoidPayment(txnId)
         "processGetPayment" -> processGetPayment(txnId)
         "processCreateCustomer" -> processCreateCustomer(txnId)
@@ -440,8 +549,10 @@ fun main(args: Array<String>) {
         "capture" -> capture(txnId)
         "createCustomer" -> createCustomer(txnId)
         "get" -> get(txnId)
+        "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
+        "setupRecurring" -> setupRecurring(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutBank, processRefund, processVoidPayment, processGetPayment, processCreateCustomer, authorize, capture, createCustomer, get, refund, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, void")
     }
 }

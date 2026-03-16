@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L130) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L121) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L144) · [Rust](../../examples/rapyd/rust/rapyd.rs#L140)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L86) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L77) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L99) · [Rust](../../examples/rapyd/rust/rapyd.rs#L96)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L155) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L147) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L166) · [Rust](../../examples/rapyd/rust/rapyd.rs#L162)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L111) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L103) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L121) · [Rust](../../examples/rapyd/rust/rapyd.rs#L118)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -136,25 +136,25 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L174) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L166) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L182) · [Rust](../../examples/rapyd/rust/rapyd.rs#L177)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L130) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L122) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L137) · [Rust](../../examples/rapyd/rust/rapyd.rs#L133)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L269) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L258) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L271) · [Rust](../../examples/rapyd/rust/rapyd.rs#L267)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L181) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L170) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L182) · [Rust](../../examples/rapyd/rust/rapyd.rs#L179)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L306) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L293) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L293) · [Rust](../../examples/rapyd/rust/rapyd.rs#L289)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L218) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L205) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L204) · [Rust](../../examples/rapyd/rust/rapyd.rs#L201)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L328) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L315) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L312) · [Rust](../../examples/rapyd/rust/rapyd.rs#L307)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L240) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L227) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L223) · [Rust](../../examples/rapyd/rust/rapyd.rs#L219)
 
 ## API Reference
 
@@ -184,8 +184,18 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Card | ✓ |
 | Google Pay | ✓ |
 | Apple Pay | ✓ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
 | PayPal | ✓ |
-| Samsung Pay | — |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ✓ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -252,7 +262,27 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L350) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L336) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L330) · [Rust](../../examples/rapyd/rust/rapyd.rs#L324)
+##### Samsung Pay
+
+```python
+"payment_method": {
+    "samsung_pay": {  # Samsung
+        "payment_credential": {
+            "method": "3DS",  # Method type
+            "recurring_payment": False,  # Whether this is a recurring payment
+            "card_brand": "VISA",
+            "card_last_four_digits": {"value": "1234"},  # Last four digits of card
+            "token_data": {
+                "type": "S",  # 3DS type
+                "version": "100",  # 3DS version
+                "data": {"value": "probe_samsung_token_data"}  # Token data
+            }
+        }
+    }
+}
+```
+
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L262) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L248) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L241) · [Rust](../../examples/rapyd/rust/rapyd.rs#L236)
 
 #### PaymentService.Capture
 
@@ -263,7 +293,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L359) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L345) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L342) · [Rust](../../examples/rapyd/rust/rapyd.rs#L335)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L271) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L257) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L253) · [Rust](../../examples/rapyd/rust/rapyd.rs#L247)
 
 #### PaymentService.Get
 
@@ -274,7 +304,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L368) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L354) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L352) · [Rust](../../examples/rapyd/rust/rapyd.rs#L341)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L280) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L266) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L263) · [Rust](../../examples/rapyd/rust/rapyd.rs#L253)
 
 #### PaymentService.Refund
 
@@ -285,7 +315,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L269) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L258) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L360) · [Rust](../../examples/rapyd/rust/rapyd.rs#L347)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L181) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L170) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L271) · [Rust](../../examples/rapyd/rust/rapyd.rs#L259)
 
 #### PaymentService.Void
 
@@ -296,4 +326,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L377) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L363) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L370) · [Rust](../../examples/rapyd/rust/rapyd.rs#L353)
+**Examples:** [Python](../../examples/rapyd/python/rapyd.py#L289) · [JavaScript](../../examples/rapyd/javascript/rapyd.js#L275) · [Kotlin](../../examples/rapyd/kotlin/rapyd.kt#L281) · [Rust](../../examples/rapyd/rust/rapyd.rs#L265)

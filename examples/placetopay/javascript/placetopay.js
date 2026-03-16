@@ -35,43 +35,11 @@ function _buildAuthorizeRequest(captureMethod) {
             }
         },
         "captureMethod": captureMethod,  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
         "browserInfo": {
             "colorDepth": 24,  // Display Information
             "screenHeight": 900,

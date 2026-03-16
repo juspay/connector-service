@@ -15,81 +15,81 @@ service definitions from `backend/grpc-api-types/proto/services.proto`.
 | Connector | Authorize | Capture | Get | Refund | Void |
 |-----------|:---:|:---:|:---:|:---:|:---:|
 | [ACI](connectors/aci.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Adyen](connectors/adyen.md) | ✓ | ✓ | ⚠ | ✓ | ✓ |
+| [Adyen](connectors/adyen.md) | ✓ | ✓ | ? | ✓ | ✓ |
 | [Airwallex](connectors/airwallex.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Authipay](connectors/authipay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Bambora](connectors/bambora.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Bamboraapac](connectors/bamboraapac.md) | ✓ | ✓ | ✓ | ✓ | ? |
-| [Bankofamerica](connectors/bankofamerica.md) | — | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Bamboraapac](connectors/bamboraapac.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
+| [Bankofamerica](connectors/bankofamerica.md) | x | ? | ? | ? | ? |
 | [Barclaycard](connectors/barclaycard.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Billwerk](connectors/billwerk.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Bluesnap](connectors/bluesnap.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Braintree](connectors/braintree.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Calida](connectors/calida.md) | — | ? | ✓ | ? | ? |
-| [Cashfree](connectors/cashfree.md) | ✓ | ? | ? | ? | ? |
-| [CashtoCode](connectors/cashtocode.md) | — | ? | ? | ? | ? |
+| [Braintree](connectors/braintree.md) | ✓ | ✓ | ✓ | ? | ✓ |
+| [Calida](connectors/calida.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
+| [Cashfree](connectors/cashfree.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [CashtoCode](connectors/cashtocode.md) | ? | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Celero](connectors/celero.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Checkout.com](connectors/checkout.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [CryptoPay](connectors/cryptopay.md) | — | ? | ✓ | ? | ? |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
 | [CyberSource](connectors/cybersource.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Datatrans](connectors/datatrans.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [dLocal](connectors/dlocal.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Elavon](connectors/elavon.md) | ✓ | ✓ | ✓ | ✓ | ? |
+| [Elavon](connectors/elavon.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
 | [Finix](connectors/finix.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Fiserv](connectors/fiserv.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Fiservemea](connectors/fiservemea.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Fiuu](connectors/fiuu.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Forte](connectors/forte.md) | ✓ | ⚠ | ✓ | ⚠ | ✓ |
+| [Forte](connectors/forte.md) | ✓ | ? | ✓ | ? | ✓ |
 | [Getnet](connectors/getnet.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Gigadat](connectors/gigadat.md) | — | ? | ✓ | ✓ | ? |
+| [Gigadat](connectors/gigadat.md) | ⚠ | ⚠ | ✓ | ✓ | ⚠ |
 | [Globalpay](connectors/globalpay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Helcim](connectors/helcim.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ |
+| [Helcim](connectors/helcim.md) | ✓ | ? | ✓ | ? | ? |
 | [Hipay](connectors/hipay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Hyperpg](connectors/hyperpg.md) | ✓ | ? | ✓ | ✓ | ? |
-| [Iatapay](connectors/iatapay.md) | ✓ | ? | ✓ | ✓ | ? |
-| [Jpmorgan](connectors/jpmorgan.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Loonio](connectors/loonio.md) | — | ? | ✓ | ? | ? |
-| [MiFinity](connectors/mifinity.md) | — | ? | ✓ | ? | ? |
-| [Mollie](connectors/mollie.md) | ✓ | ⚠ | ✓ | ✓ | ✓ |
-| [Multisafepay](connectors/multisafepay.md) | ✓ | ? | ✓ | ✓ | ? |
-| [Nexinets](connectors/nexinets.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
+| [Hyperpg](connectors/hyperpg.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
+| [Iatapay](connectors/iatapay.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
+| [Jpmorgan](connectors/jpmorgan.md) | x | ✓ | ✓ | ? | ✓ |
+| [Loonio](connectors/loonio.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
+| [MiFinity](connectors/mifinity.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
+| [Mollie](connectors/mollie.md) | ✓ | ? | ✓ | ✓ | ✓ |
+| [Multisafepay](connectors/multisafepay.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
+| [Nexinets](connectors/nexinets.md) | ✓ | ? | ✓ | ✓ | ? |
 | [Nexixpay](connectors/nexixpay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Nmi](connectors/nmi.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Noon](connectors/noon.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Novalnet](connectors/novalnet.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Nuvei](connectors/nuvei.md) | — | ✓ | ✓ | ✓ | ✓ |
-| [Paybox](connectors/paybox.md) | ✓ | ⚠ | ⚠ | ✓ | ✓ |
-| [Payload](connectors/payload.md) | — | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Payme](connectors/payme.md) | — | ✓ | ✓ | ✓ | ✓ |
+| [Nuvei](connectors/nuvei.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Paybox](connectors/paybox.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Payload](connectors/payload.md) | x | ? | ? | ? | ? |
+| [Payme](connectors/payme.md) | x | ✓ | ✓ | ✓ | ✓ |
 | [Paypal](connectors/paypal.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Paysafe](connectors/paysafe.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Paytm](connectors/paytm.md) | — | ? | ✓ | ? | ? |
-| [PayU](connectors/payu.md) | ✓ | ? | ✓ | ? | ? |
-| [PhonePe](connectors/phonepe.md) | ✓ | ? | ✓ | ? | ? |
-| [PlacetoPay](connectors/placetopay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Paysafe](connectors/paysafe.md) | x | ✓ | ✓ | ✓ | ✓ |
+| [Paytm](connectors/paytm.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ |
+| [PayU](connectors/payu.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ |
+| [PhonePe](connectors/phonepe.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ |
+| [PlacetoPay](connectors/placetopay.md) | ✓ | ? | ? | ? | ? |
 | [Powertranz](connectors/powertranz.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Rapyd](connectors/rapyd.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Razorpay](connectors/razorpay.md) | ✓ | ✓ | ✓ | ✓ | ? |
-| [Razorpay V2](connectors/razorpayv2.md) | ✓ | ? | ✓ | ✓ | ? |
-| [Redsys](connectors/redsys.md) | — | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Revolut](connectors/revolut.md) | ✓ | ✓ | ✓ | ✓ | ? |
+| [Razorpay](connectors/razorpay.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
+| [Razorpay V2](connectors/razorpayv2.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
+| [Redsys](connectors/redsys.md) | ? | ? | ? | ? | ? |
+| [Revolut](connectors/revolut.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
 | [Revolv3](connectors/revolv3.md) | ✓ | ✓ | ? | ✓ | ✓ |
-| [Shift4](connectors/shift4.md) | ✓ | ✓ | ✓ | ✓ | ? |
+| [Shift4](connectors/shift4.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
 | [Silverflow](connectors/silverflow.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Stax](connectors/stax.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Stripe](connectors/stripe.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Truelayer](connectors/truelayer.md) | — | ? | ✓ | ⚠ | ? |
-| [TrustPay](connectors/trustpay.md) | ✓ | ? | ✓ | ✓ | ? |
+| [Truelayer](connectors/truelayer.md) | ⚠ | ⚠ | ✓ | ? | ⚠ |
+| [TrustPay](connectors/trustpay.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
 | [Trustpayments](connectors/trustpayments.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Tsys](connectors/tsys.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Volt](connectors/volt.md) | — | ? | ✓ | ✓ | ? |
+| [Volt](connectors/volt.md) | ⚠ | ⚠ | ✓ | ✓ | ⚠ |
 | [Wellsfargo](connectors/wellsfargo.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Worldpay](connectors/worldpay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Worldpay](connectors/worldpay.md) | x | ✓ | ✓ | ✓ | ✓ |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Xendit](connectors/xendit.md) | ✓ | ✓ | ✓ | ✓ | ? |
-| [Zift](connectors/zift.md) | ✓ | ⚠ | ⚠ | ✓ | ⚠ |
+| [Xendit](connectors/xendit.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
+| [Zift](connectors/zift.md) | ✓ | ? | ? | ✓ | ? |
 
 ## Flow Details
 
@@ -104,84 +104,84 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 | Connector | Card | Google Pay | Apple Pay | SEPA | BACS | ACH | BECS | iDEAL | PayPal | BLIK | Klarna | Afterpay | UPI | Affirm | Samsung Pay |
 |-----------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [ACI](connectors/aci.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Adyen](connectors/adyen.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Airwallex](connectors/airwallex.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Authipay](connectors/authipay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Authorize.net](connectors/authorizedotnet.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Bambora](connectors/bambora.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Bamboraapac](connectors/bamboraapac.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Bankofamerica](connectors/bankofamerica.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Barclaycard](connectors/barclaycard.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Billwerk](connectors/billwerk.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Bluesnap](connectors/bluesnap.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Braintree](connectors/braintree.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Calida](connectors/calida.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Cashfree](connectors/cashfree.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [ACI](connectors/aci.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ⚠ |
+| [Adyen](connectors/adyen.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ |
+| [Airwallex](connectors/airwallex.md) | ✓ | ? | ? | ? | ? | ? | ? | ✓ | ? | ✓ | ? | ? | ? | ? | ? |
+| [Authipay](connectors/authipay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Authorize.net](connectors/authorizedotnet.md) | ✓ | ? | ? | ⚠ | ⚠ | ✓ | ⚠ | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Bambora](connectors/bambora.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Bamboraapac](connectors/bamboraapac.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Bankofamerica](connectors/bankofamerica.md) | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Barclaycard](connectors/barclaycard.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Billwerk](connectors/billwerk.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Bluesnap](connectors/bluesnap.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Braintree](connectors/braintree.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Calida](connectors/calida.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Cashfree](connectors/cashfree.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
 | [CashtoCode](connectors/cashtocode.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Celero](connectors/celero.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Checkout.com](connectors/checkout.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [CryptoPay](connectors/cryptopay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [CyberSource](connectors/cybersource.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Datatrans](connectors/datatrans.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [dLocal](connectors/dlocal.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Elavon](connectors/elavon.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Finix](connectors/finix.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Fiserv](connectors/fiserv.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Fiservemea](connectors/fiservemea.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Fiuu](connectors/fiuu.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Forte](connectors/forte.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Getnet](connectors/getnet.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Gigadat](connectors/gigadat.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Globalpay](connectors/globalpay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Helcim](connectors/helcim.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Hipay](connectors/hipay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Hyperpg](connectors/hyperpg.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Iatapay](connectors/iatapay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Jpmorgan](connectors/jpmorgan.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Loonio](connectors/loonio.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [MiFinity](connectors/mifinity.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Mollie](connectors/mollie.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Multisafepay](connectors/multisafepay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Nexinets](connectors/nexinets.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Nexixpay](connectors/nexixpay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Nmi](connectors/nmi.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Noon](connectors/noon.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Novalnet](connectors/novalnet.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Nuvei](connectors/nuvei.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Paybox](connectors/paybox.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Celero](connectors/celero.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Checkout.com](connectors/checkout.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [CyberSource](connectors/cybersource.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? |
+| [Datatrans](connectors/datatrans.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [dLocal](connectors/dlocal.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Elavon](connectors/elavon.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Finix](connectors/finix.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Fiserv](connectors/fiserv.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Fiservemea](connectors/fiservemea.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Fiuu](connectors/fiuu.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Forte](connectors/forte.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Getnet](connectors/getnet.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Gigadat](connectors/gigadat.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Globalpay](connectors/globalpay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Helcim](connectors/helcim.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Hipay](connectors/hipay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Hyperpg](connectors/hyperpg.md) | ✓ | ? | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ? | ? | ⚠ | ? | ? |
+| [Iatapay](connectors/iatapay.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
+| [Jpmorgan](connectors/jpmorgan.md) | ? | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Loonio](connectors/loonio.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [MiFinity](connectors/mifinity.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Mollie](connectors/mollie.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Multisafepay](connectors/multisafepay.md) | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Nexinets](connectors/nexinets.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Nexixpay](connectors/nexixpay.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Nmi](connectors/nmi.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Noon](connectors/noon.md) | ✓ | ✓ | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Novalnet](connectors/novalnet.md) | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Nuvei](connectors/nuvei.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Paybox](connectors/paybox.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
 | [Payload](connectors/payload.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
 | [Payme](connectors/payme.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Paypal](connectors/paypal.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Paypal](connectors/paypal.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Paysafe](connectors/paysafe.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Paytm](connectors/paytm.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [PayU](connectors/payu.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [PhonePe](connectors/phonepe.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [PlacetoPay](connectors/placetopay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Powertranz](connectors/powertranz.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Rapyd](connectors/rapyd.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Razorpay](connectors/razorpay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Razorpay V2](connectors/razorpayv2.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Paytm](connectors/paytm.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
+| [PayU](connectors/payu.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
+| [PhonePe](connectors/phonepe.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
+| [PlacetoPay](connectors/placetopay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Powertranz](connectors/powertranz.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Rapyd](connectors/rapyd.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ |
+| [Razorpay](connectors/razorpay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
+| [Razorpay V2](connectors/razorpayv2.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Redsys](connectors/redsys.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Revolut](connectors/revolut.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Revolv3](connectors/revolv3.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Shift4](connectors/shift4.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Silverflow](connectors/silverflow.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Stax](connectors/stax.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Stripe](connectors/stripe.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Truelayer](connectors/truelayer.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [TrustPay](connectors/trustpay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Trustpayments](connectors/trustpayments.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Tsys](connectors/tsys.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Volt](connectors/volt.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Wellsfargo](connectors/wellsfargo.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Revolut](connectors/revolut.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Revolv3](connectors/revolv3.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Shift4](connectors/shift4.md) | ✓ | ? | ? | ? | ? | ? | ? | ✓ | ? | ? | ? | ? | ? | ? | ? |
+| [Silverflow](connectors/silverflow.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Stax](connectors/stax.md) | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Stripe](connectors/stripe.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ |
+| [Truelayer](connectors/truelayer.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [TrustPay](connectors/trustpay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Trustpayments](connectors/trustpayments.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Tsys](connectors/tsys.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Volt](connectors/volt.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Wellsfargo](connectors/wellsfargo.md) | ✓ | ⚠ | ⚠ | ? | ? | ? | ? | ? | ⚠ | ? | ? | ? | ? | ? | ⚠ |
 | [Worldpay](connectors/worldpay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Worldpayxml](connectors/worldpayxml.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Xendit](connectors/xendit.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Zift](connectors/zift.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Worldpayxml](connectors/worldpayxml.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Xendit](connectors/xendit.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Zift](connectors/zift.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 
-**Legend:** ✓ Supported | — Not Supported | ⚠ Error | ? Unknown
+**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields
 
 #### PaymentService.Get
 
@@ -190,20 +190,20 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
 | [ACI](connectors/aci.md) | ✓ |  |
-| [Adyen](connectors/adyen.md) | ⚠ | Failed to encode connector request |
+| [Adyen](connectors/adyen.md) | ? | Failed to encode connector request |
 | [Airwallex](connectors/airwallex.md) | ✓ |  |
 | [Authipay](connectors/authipay.md) | ✓ |  |
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
 | [Braintree](connectors/braintree.md) | ✓ |  |
 | [Calida](connectors/calida.md) | ✓ |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
 | [Celero](connectors/celero.md) | ✓ |  |
 | [Checkout.com](connectors/checkout.md) | ✓ |  |
 | [CryptoPay](connectors/cryptopay.md) | ✓ |  |
@@ -234,20 +234,20 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | [Noon](connectors/noon.md) | ✓ |  |
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
-| [Paybox](connectors/paybox.md) | ⚠ | Stuck on field: connector_request_id — Missing required f... |
-| [Payload](connectors/payload.md) | ⚠ | Failed to obtain authentication type |
+| [Paybox](connectors/paybox.md) | ✓ |  |
+| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
 | [Paytm](connectors/paytm.md) | ✓ |  |
 | [PayU](connectors/payu.md) | ✓ |  |
 | [PhonePe](connectors/phonepe.md) | ✓ |  |
-| [PlacetoPay](connectors/placetopay.md) | ⚠ | Failed to encode connector request |
+| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
 | [Razorpay](connectors/razorpay.md) | ✓ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ✓ |  |
-| [Redsys](connectors/redsys.md) | ⚠ | Failed to encode connector request |
+| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
 | [Revolut](connectors/revolut.md) | ✓ |  |
 | [Revolv3](connectors/revolv3.md) | ? |  |
 | [Shift4](connectors/shift4.md) | ✓ |  |
@@ -264,7 +264,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ |  |
 | [Xendit](connectors/xendit.md) | ✓ |  |
-| [Zift](connectors/zift.md) | ⚠ | Failed to encode connector request |
+| [Zift](connectors/zift.md) | ? | Failed to encode connector request |
 
 #### PaymentService.Void
 
@@ -278,76 +278,76 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | [Authipay](connectors/authipay.md) | ✓ |  |
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Invalid Configuration: connector_account_details.api_secret |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
 | [Braintree](connectors/braintree.md) | ✓ |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
 | [Celero](connectors/celero.md) | ✓ |  |
 | [Checkout.com](connectors/checkout.md) | ✓ |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
 | [CyberSource](connectors/cybersource.md) | ✓ |  |
 | [Datatrans](connectors/datatrans.md) | ✓ |  |
 | [dLocal](connectors/dlocal.md) | ✓ |  |
-| [Elavon](connectors/elavon.md) | ? |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
 | [Finix](connectors/finix.md) | ✓ |  |
 | [Fiserv](connectors/fiserv.md) | ✓ |  |
 | [Fiservemea](connectors/fiservemea.md) | ✓ |  |
 | [Fiuu](connectors/fiuu.md) | ✓ |  |
 | [Forte](connectors/forte.md) | ✓ |  |
 | [Getnet](connectors/getnet.md) | ✓ |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
 | [Globalpay](connectors/globalpay.md) | ✓ |  |
-| [Helcim](connectors/helcim.md) | ⚠ | Failed to encode connector request |
+| [Helcim](connectors/helcim.md) | ? | Failed to encode connector request |
 | [Hipay](connectors/hipay.md) | ✓ |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
 | [Jpmorgan](connectors/jpmorgan.md) | ✓ |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
 | [Mollie](connectors/mollie.md) | ✓ |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ⚠ | Parsing failed |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ? | Parsing failed |
 | [Nexixpay](connectors/nexixpay.md) | ✓ |  |
 | [Nmi](connectors/nmi.md) | ✓ |  |
 | [Noon](connectors/noon.md) | ✓ |  |
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
 | [Paybox](connectors/paybox.md) | ✓ |  |
-| [Payload](connectors/payload.md) | ⚠ | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ⚠ | Failed to encode connector request |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ⚠ | Failed to encode connector request |
-| [Revolut](connectors/revolut.md) | ? |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
 | [Revolv3](connectors/revolv3.md) | ✓ |  |
-| [Shift4](connectors/shift4.md) | ? |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
 | [Silverflow](connectors/silverflow.md) | ✓ |  |
 | [Stax](connectors/stax.md) | ✓ |  |
 | [Stripe](connectors/stripe.md) | ✓ |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
 | [Trustpayments](connectors/trustpayments.md) | ✓ |  |
 | [Tsys](connectors/tsys.md) | ✓ |  |
-| [Volt](connectors/volt.md) | ? |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
 | [Wellsfargo](connectors/wellsfargo.md) | ✓ |  |
 | [Worldpay](connectors/worldpay.md) | ✓ |  |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ⚠ | Failed to encode connector request |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ? | Failed to encode connector request |
 
 #### PaymentService.Reverse
 
@@ -355,82 +355,82 @@ Reverse a captured payment before settlement. Recovers funds after capture but b
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
-| [Adyen](connectors/adyen.md) | ? |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
-| [Stripe](connectors/stripe.md) | ? |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 #### PaymentService.Capture
 
@@ -445,17 +445,17 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
 | [Braintree](connectors/braintree.md) | ✓ |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
 | [Celero](connectors/celero.md) | ✓ |  |
 | [Checkout.com](connectors/checkout.md) | ✓ |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
 | [CyberSource](connectors/cybersource.md) | ✓ |  |
 | [Datatrans](connectors/datatrans.md) | ✓ |  |
 | [dLocal](connectors/dlocal.md) | ✓ |  |
@@ -464,56 +464,56 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | [Fiserv](connectors/fiserv.md) | ✓ |  |
 | [Fiservemea](connectors/fiservemea.md) | ✓ |  |
 | [Fiuu](connectors/fiuu.md) | ✓ |  |
-| [Forte](connectors/forte.md) | ⚠ | Stuck on field: amount — Missing required field: amount |
+| [Forte](connectors/forte.md) | ? | Stuck on field: amount — Missing required field: amount |
 | [Getnet](connectors/getnet.md) | ✓ |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
 | [Globalpay](connectors/globalpay.md) | ✓ |  |
-| [Helcim](connectors/helcim.md) | ⚠ | Failed to encode connector request |
+| [Helcim](connectors/helcim.md) | ? | Failed to encode connector request |
 | [Hipay](connectors/hipay.md) | ✓ |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
 | [Jpmorgan](connectors/jpmorgan.md) | ✓ |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ⚠ | Stuck on field: description — Missing required field: des... |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ⚠ | Parsing failed |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ? | Stuck on field: description — Missing required field: des... |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ? | Parsing failed |
 | [Nexixpay](connectors/nexixpay.md) | ✓ |  |
 | [Nmi](connectors/nmi.md) | ✓ |  |
 | [Noon](connectors/noon.md) | ✓ |  |
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
-| [Paybox](connectors/paybox.md) | ⚠ | Stuck on field: connector_request_id — Missing required f... |
-| [Payload](connectors/payload.md) | ⚠ | Failed to obtain authentication type |
+| [Paybox](connectors/paybox.md) | ✓ |  |
+| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ⚠ | Failed to encode connector request |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
 | [Razorpay](connectors/razorpay.md) | ✓ |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ⚠ | Failed to encode connector request |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
 | [Revolut](connectors/revolut.md) | ✓ |  |
 | [Revolv3](connectors/revolv3.md) | ✓ |  |
 | [Shift4](connectors/shift4.md) | ✓ |  |
 | [Silverflow](connectors/silverflow.md) | ✓ |  |
 | [Stax](connectors/stax.md) | ✓ |  |
 | [Stripe](connectors/stripe.md) | ✓ |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
 | [Trustpayments](connectors/trustpayments.md) | ✓ |  |
 | [Tsys](connectors/tsys.md) | ✓ |  |
-| [Volt](connectors/volt.md) | ? |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
 | [Wellsfargo](connectors/wellsfargo.md) | ✓ |  |
 | [Worldpay](connectors/worldpay.md) | ✓ |  |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ |  |
 | [Xendit](connectors/xendit.md) | ✓ |  |
-| [Zift](connectors/zift.md) | ⚠ | Failed to encode connector request |
+| [Zift](connectors/zift.md) | ? | Failed to encode connector request |
 
 #### PaymentService.CreateOrder
 
@@ -521,82 +521,82 @@ Initialize an order in the payment processor system. Sets up payment context bef
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
-| [Adyen](connectors/adyen.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
 | [Airwallex](connectors/airwallex.md) | ✓ |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ⚠ | Stuck on field: billing_address — Missing required field:... |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ? | Stuck on field: billing_address — Missing required field:... |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
 | [Payme](connectors/payme.md) | ✓ |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
 | [Razorpay](connectors/razorpay.md) | ✓ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ✓ |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
-| [Stripe](connectors/stripe.md) | ? |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
 | [TrustPay](connectors/trustpay.md) | ✓ |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 #### PaymentService.Refund
 
@@ -611,17 +611,17 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
-| [Braintree](connectors/braintree.md) | ✓ |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
+| [Braintree](connectors/braintree.md) | ? | Invalid Configuration: merchant_account_id |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
 | [Celero](connectors/celero.md) | ✓ |  |
 | [Checkout.com](connectors/checkout.md) | ✓ |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
 | [CyberSource](connectors/cybersource.md) | ✓ |  |
 | [Datatrans](connectors/datatrans.md) | ✓ |  |
 | [dLocal](connectors/dlocal.md) | ✓ |  |
@@ -630,17 +630,17 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | [Fiserv](connectors/fiserv.md) | ✓ |  |
 | [Fiservemea](connectors/fiservemea.md) | ✓ |  |
 | [Fiuu](connectors/fiuu.md) | ✓ |  |
-| [Forte](connectors/forte.md) | ⚠ | Connector meta data not found |
+| [Forte](connectors/forte.md) | ? | Connector meta data not found |
 | [Getnet](connectors/getnet.md) | ✓ |  |
 | [Gigadat](connectors/gigadat.md) | ✓ |  |
 | [Globalpay](connectors/globalpay.md) | ✓ |  |
-| [Helcim](connectors/helcim.md) | ⚠ | Failed to encode connector request |
+| [Helcim](connectors/helcim.md) | ? | Failed to encode connector request |
 | [Hipay](connectors/hipay.md) | ✓ |  |
 | [Hyperpg](connectors/hyperpg.md) | ✓ |  |
 | [Iatapay](connectors/iatapay.md) | ✓ |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ✓ |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ? | Stuck on field: company_name — Missing required field: co... |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
 | [Mollie](connectors/mollie.md) | ✓ |  |
 | [Multisafepay](connectors/multisafepay.md) | ✓ |  |
 | [Nexinets](connectors/nexinets.md) | ✓ |  |
@@ -650,26 +650,26 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
 | [Paybox](connectors/paybox.md) | ✓ |  |
-| [Payload](connectors/payload.md) | ⚠ | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ⚠ | Failed to encode connector request |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
 | [Razorpay](connectors/razorpay.md) | ✓ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ✓ |  |
-| [Redsys](connectors/redsys.md) | ⚠ | Failed to encode connector request |
+| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
 | [Revolut](connectors/revolut.md) | ✓ |  |
 | [Revolv3](connectors/revolv3.md) | ✓ |  |
 | [Shift4](connectors/shift4.md) | ✓ |  |
 | [Silverflow](connectors/silverflow.md) | ✓ |  |
 | [Stax](connectors/stax.md) | ✓ |  |
 | [Stripe](connectors/stripe.md) | ✓ |  |
-| [Truelayer](connectors/truelayer.md) | ⚠ | Failed to decode message: None |
+| [Truelayer](connectors/truelayer.md) | ? | Failed to decode message: None |
 | [TrustPay](connectors/trustpay.md) | ✓ |  |
 | [Trustpayments](connectors/trustpayments.md) | ✓ |  |
 | [Tsys](connectors/tsys.md) | ✓ |  |
@@ -689,79 +689,79 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 |-----------|:---------:|-------|
 | [ACI](connectors/aci.md) | ✓ |  |
 | [Adyen](connectors/adyen.md) | ✓ |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ⚠ | Stuck on field: connector_customer_id is missing — Missin... |
-| [Bambora](connectors/bambora.md) | ? |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Invalid Configuration: connector_account_details.api_secret |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
 | [Checkout.com](connectors/checkout.md) | ✓ |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
 | [CyberSource](connectors/cybersource.md) | ✓ |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ⚠ | Stuck on field: order_category in metadata — Missing requ... |
-| [Novalnet](connectors/novalnet.md) | ⚠ | Stuck on field: webhook_url — Missing required field: web... |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ⚠ | Failed to obtain authentication type |
-| [Payme](connectors/payme.md) | ? |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ? | Stuck on field: description — Missing required field: des... |
+| [Novalnet](connectors/novalnet.md) | ✓ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payme](connectors/payme.md) | ⚠ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
 | [Revolv3](connectors/revolv3.md) | ✓ |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
 | [Stripe](connectors/stripe.md) | ✓ |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
 | [Wellsfargo](connectors/wellsfargo.md) | ✓ |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
 | [Zift](connectors/zift.md) | ✓ |  |
 
 ### RecurringPaymentService
@@ -774,80 +774,80 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 |-----------|:---------:|-------|
 | [ACI](connectors/aci.md) | ✓ |  |
 | [Adyen](connectors/adyen.md) | ✓ |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ⚠ | Stuck on field: valid mandate_id format — Missing require... |
-| [Bambora](connectors/bambora.md) | ? |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
 | [Checkout.com](connectors/checkout.md) | ✓ |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
 | [CyberSource](connectors/cybersource.md) | ✓ |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ⚠ | Stuck on field: payment_method_data.billing.address.first... |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ⚠ | Stuck on field: description — Missing required field: des... |
-| [Novalnet](connectors/novalnet.md) | ⚠ | Stuck on field: email — Missing required field: email |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ⚠ | Failed to obtain authentication type |
-| [Payme](connectors/payme.md) | ? |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ✓ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ✓ |  |
+| [Novalnet](connectors/novalnet.md) | ✓ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payme](connectors/payme.md) | ⚠ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
-| [Paysafe](connectors/paysafe.md) | ⚠ | Stuck on field: mandate_metadata — Missing required field... |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
+| [Paysafe](connectors/paysafe.md) | ? | Stuck on field: mandate_metadata — Missing required field... |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
 | [Stripe](connectors/stripe.md) | ✓ |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ✓ |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ? | Invalid Configuration: connector_config.merchant_name |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 ### CustomerService
 
@@ -857,82 +857,82 @@ Create customer record in the payment processor system. Stores customer details 
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
-| [Adyen](connectors/adyen.md) | ? |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
 | [Finix](connectors/finix.md) | ✓ |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
 | [Stax](connectors/stax.md) | ✓ |  |
 | [Stripe](connectors/stripe.md) | ✓ |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 ### PaymentMethodService
 
@@ -942,82 +942,82 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
-| [Adyen](connectors/adyen.md) | ? |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
 | [Braintree](connectors/braintree.md) | ✓ |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
 | [Finix](connectors/finix.md) | ✓ |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
 | [Hipay](connectors/hipay.md) | ✓ |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ⚠ | Invalid Configuration: profile_token |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ⚠ | Stuck on field: return_url — Missing required field: retu... |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ? | Invalid Configuration: profile_token |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ? | Invalid Configuration: account_id |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
 | [Stax](connectors/stax.md) | ✓ |  |
 | [Stripe](connectors/stripe.md) | ✓ |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 ### MerchantAuthenticationService
 
@@ -1027,82 +1027,82 @@ Generate short-lived connector authentication token. Provides secure credentials
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
-| [Adyen](connectors/adyen.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
 | [Airwallex](connectors/airwallex.md) | ✓ |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
 | [Getnet](connectors/getnet.md) | ✓ |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
 | [Globalpay](connectors/globalpay.md) | ✓ |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
 | [Iatapay](connectors/iatapay.md) | ✓ |  |
 | [Jpmorgan](connectors/jpmorgan.md) | ✓ |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
-| [Stripe](connectors/stripe.md) | ? |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
 | [Truelayer](connectors/truelayer.md) | ✓ |  |
 | [TrustPay](connectors/trustpay.md) | ✓ |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
 | [Volt](connectors/volt.md) | ✓ |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 #### MerchantAuthenticationService.CreateSessionToken
 
@@ -1110,82 +1110,82 @@ Create session token for payment processing. Maintains session state across mult
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
-| [Adyen](connectors/adyen.md) | ? |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
 | [Paytm](connectors/paytm.md) | ✓ |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
-| [Stripe](connectors/stripe.md) | ? |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 ### PaymentMethodAuthenticationService
 
@@ -1195,82 +1195,82 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ⚠ | Address is required |
-| [Adyen](connectors/adyen.md) | ⚠ | Address is required |
-| [Airwallex](connectors/airwallex.md) | ⚠ | Address is required |
-| [Authipay](connectors/authipay.md) | ⚠ | Address is required |
-| [Authorize.net](connectors/authorizedotnet.md) | ⚠ | Address is required |
-| [Bambora](connectors/bambora.md) | ⚠ | Address is required |
-| [Bamboraapac](connectors/bamboraapac.md) | ⚠ | Address is required |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Address is required |
-| [Barclaycard](connectors/barclaycard.md) | ⚠ | Address is required |
-| [Billwerk](connectors/billwerk.md) | ⚠ | Address is required |
-| [Bluesnap](connectors/bluesnap.md) | ⚠ | Address is required |
-| [Braintree](connectors/braintree.md) | ⚠ | Address is required |
-| [Calida](connectors/calida.md) | ⚠ | Address is required |
-| [Cashfree](connectors/cashfree.md) | ⚠ | Address is required |
-| [CashtoCode](connectors/cashtocode.md) | ⚠ | Address is required |
-| [Celero](connectors/celero.md) | ⚠ | Address is required |
-| [Checkout.com](connectors/checkout.md) | ⚠ | Address is required |
-| [CryptoPay](connectors/cryptopay.md) | ⚠ | Address is required |
-| [CyberSource](connectors/cybersource.md) | ⚠ | Address is required |
-| [Datatrans](connectors/datatrans.md) | ⚠ | Address is required |
-| [dLocal](connectors/dlocal.md) | ⚠ | Address is required |
-| [Elavon](connectors/elavon.md) | ⚠ | Address is required |
-| [Finix](connectors/finix.md) | ⚠ | Address is required |
-| [Fiserv](connectors/fiserv.md) | ⚠ | Address is required |
-| [Fiservemea](connectors/fiservemea.md) | ⚠ | Address is required |
-| [Fiuu](connectors/fiuu.md) | ⚠ | Address is required |
-| [Forte](connectors/forte.md) | ⚠ | Address is required |
-| [Getnet](connectors/getnet.md) | ⚠ | Address is required |
-| [Gigadat](connectors/gigadat.md) | ⚠ | Address is required |
-| [Globalpay](connectors/globalpay.md) | ⚠ | Address is required |
-| [Helcim](connectors/helcim.md) | ⚠ | Address is required |
-| [Hipay](connectors/hipay.md) | ⚠ | Address is required |
-| [Hyperpg](connectors/hyperpg.md) | ⚠ | Address is required |
-| [Iatapay](connectors/iatapay.md) | ⚠ | Address is required |
-| [Jpmorgan](connectors/jpmorgan.md) | ⚠ | Address is required |
-| [Loonio](connectors/loonio.md) | ⚠ | Address is required |
-| [MiFinity](connectors/mifinity.md) | ⚠ | Address is required |
-| [Mollie](connectors/mollie.md) | ⚠ | Address is required |
-| [Multisafepay](connectors/multisafepay.md) | ⚠ | Address is required |
-| [Nexinets](connectors/nexinets.md) | ⚠ | Address is required |
-| [Nexixpay](connectors/nexixpay.md) | ⚠ | Address is required |
-| [Nmi](connectors/nmi.md) | ⚠ | Address is required |
-| [Noon](connectors/noon.md) | ⚠ | Address is required |
-| [Novalnet](connectors/novalnet.md) | ⚠ | Address is required |
-| [Nuvei](connectors/nuvei.md) | ⚠ | Address is required |
-| [Paybox](connectors/paybox.md) | ⚠ | Address is required |
-| [Payload](connectors/payload.md) | ⚠ | Address is required |
-| [Payme](connectors/payme.md) | ⚠ | Address is required |
-| [Paypal](connectors/paypal.md) | ⚠ | Address is required |
-| [Paysafe](connectors/paysafe.md) | ⚠ | Address is required |
-| [Paytm](connectors/paytm.md) | ⚠ | Address is required |
-| [PayU](connectors/payu.md) | ⚠ | Address is required |
-| [PhonePe](connectors/phonepe.md) | ⚠ | Address is required |
-| [PlacetoPay](connectors/placetopay.md) | ⚠ | Address is required |
-| [Powertranz](connectors/powertranz.md) | ⚠ | Address is required |
-| [Rapyd](connectors/rapyd.md) | ⚠ | Address is required |
-| [Razorpay](connectors/razorpay.md) | ⚠ | Address is required |
-| [Razorpay V2](connectors/razorpayv2.md) | ⚠ | Address is required |
-| [Redsys](connectors/redsys.md) | ⚠ | Address is required |
-| [Revolut](connectors/revolut.md) | ⚠ | Address is required |
-| [Revolv3](connectors/revolv3.md) | ⚠ | Address is required |
-| [Shift4](connectors/shift4.md) | ⚠ | Address is required |
-| [Silverflow](connectors/silverflow.md) | ⚠ | Address is required |
-| [Stax](connectors/stax.md) | ⚠ | Address is required |
-| [Stripe](connectors/stripe.md) | ⚠ | Address is required |
-| [Truelayer](connectors/truelayer.md) | ⚠ | Address is required |
-| [TrustPay](connectors/trustpay.md) | ⚠ | Address is required |
-| [Trustpayments](connectors/trustpayments.md) | ⚠ | Address is required |
-| [Tsys](connectors/tsys.md) | ⚠ | Address is required |
-| [Volt](connectors/volt.md) | ⚠ | Address is required |
-| [Wellsfargo](connectors/wellsfargo.md) | ⚠ | Address is required |
-| [Worldpay](connectors/worldpay.md) | ⚠ | Address is required |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ | Address is required |
-| [Worldpayxml](connectors/worldpayxml.md) | ⚠ | Address is required |
-| [Xendit](connectors/xendit.md) | ⚠ | Address is required |
-| [Zift](connectors/zift.md) | ⚠ | Address is required |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ✓ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ✓ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ? | Stuck on field: connector_feature_data.link_data — Missin... |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 #### PaymentMethodAuthenticationService.Authenticate
 
@@ -1278,82 +1278,82 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ⚠ | Address is required |
-| [Adyen](connectors/adyen.md) | ⚠ | Address is required |
-| [Airwallex](connectors/airwallex.md) | ⚠ | Address is required |
-| [Authipay](connectors/authipay.md) | ⚠ | Address is required |
-| [Authorize.net](connectors/authorizedotnet.md) | ⚠ | Address is required |
-| [Bambora](connectors/bambora.md) | ⚠ | Address is required |
-| [Bamboraapac](connectors/bamboraapac.md) | ⚠ | Address is required |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Address is required |
-| [Barclaycard](connectors/barclaycard.md) | ⚠ | Address is required |
-| [Billwerk](connectors/billwerk.md) | ⚠ | Address is required |
-| [Bluesnap](connectors/bluesnap.md) | ⚠ | Address is required |
-| [Braintree](connectors/braintree.md) | ⚠ | Address is required |
-| [Calida](connectors/calida.md) | ⚠ | Address is required |
-| [Cashfree](connectors/cashfree.md) | ⚠ | Address is required |
-| [CashtoCode](connectors/cashtocode.md) | ⚠ | Address is required |
-| [Celero](connectors/celero.md) | ⚠ | Address is required |
-| [Checkout.com](connectors/checkout.md) | ⚠ | Address is required |
-| [CryptoPay](connectors/cryptopay.md) | ⚠ | Address is required |
-| [CyberSource](connectors/cybersource.md) | ⚠ | Address is required |
-| [Datatrans](connectors/datatrans.md) | ⚠ | Address is required |
-| [dLocal](connectors/dlocal.md) | ⚠ | Address is required |
-| [Elavon](connectors/elavon.md) | ⚠ | Address is required |
-| [Finix](connectors/finix.md) | ⚠ | Address is required |
-| [Fiserv](connectors/fiserv.md) | ⚠ | Address is required |
-| [Fiservemea](connectors/fiservemea.md) | ⚠ | Address is required |
-| [Fiuu](connectors/fiuu.md) | ⚠ | Address is required |
-| [Forte](connectors/forte.md) | ⚠ | Address is required |
-| [Getnet](connectors/getnet.md) | ⚠ | Address is required |
-| [Gigadat](connectors/gigadat.md) | ⚠ | Address is required |
-| [Globalpay](connectors/globalpay.md) | ⚠ | Address is required |
-| [Helcim](connectors/helcim.md) | ⚠ | Address is required |
-| [Hipay](connectors/hipay.md) | ⚠ | Address is required |
-| [Hyperpg](connectors/hyperpg.md) | ⚠ | Address is required |
-| [Iatapay](connectors/iatapay.md) | ⚠ | Address is required |
-| [Jpmorgan](connectors/jpmorgan.md) | ⚠ | Address is required |
-| [Loonio](connectors/loonio.md) | ⚠ | Address is required |
-| [MiFinity](connectors/mifinity.md) | ⚠ | Address is required |
-| [Mollie](connectors/mollie.md) | ⚠ | Address is required |
-| [Multisafepay](connectors/multisafepay.md) | ⚠ | Address is required |
-| [Nexinets](connectors/nexinets.md) | ⚠ | Address is required |
-| [Nexixpay](connectors/nexixpay.md) | ⚠ | Address is required |
-| [Nmi](connectors/nmi.md) | ⚠ | Address is required |
-| [Noon](connectors/noon.md) | ⚠ | Address is required |
-| [Novalnet](connectors/novalnet.md) | ⚠ | Address is required |
-| [Nuvei](connectors/nuvei.md) | ⚠ | Address is required |
-| [Paybox](connectors/paybox.md) | ⚠ | Address is required |
-| [Payload](connectors/payload.md) | ⚠ | Address is required |
-| [Payme](connectors/payme.md) | ⚠ | Address is required |
-| [Paypal](connectors/paypal.md) | ⚠ | Address is required |
-| [Paysafe](connectors/paysafe.md) | ⚠ | Address is required |
-| [Paytm](connectors/paytm.md) | ⚠ | Address is required |
-| [PayU](connectors/payu.md) | ⚠ | Address is required |
-| [PhonePe](connectors/phonepe.md) | ⚠ | Address is required |
-| [PlacetoPay](connectors/placetopay.md) | ⚠ | Address is required |
-| [Powertranz](connectors/powertranz.md) | ⚠ | Address is required |
-| [Rapyd](connectors/rapyd.md) | ⚠ | Address is required |
-| [Razorpay](connectors/razorpay.md) | ⚠ | Address is required |
-| [Razorpay V2](connectors/razorpayv2.md) | ⚠ | Address is required |
-| [Redsys](connectors/redsys.md) | ⚠ | Address is required |
-| [Revolut](connectors/revolut.md) | ⚠ | Address is required |
-| [Revolv3](connectors/revolv3.md) | ⚠ | Address is required |
-| [Shift4](connectors/shift4.md) | ⚠ | Address is required |
-| [Silverflow](connectors/silverflow.md) | ⚠ | Address is required |
-| [Stax](connectors/stax.md) | ⚠ | Address is required |
-| [Stripe](connectors/stripe.md) | ⚠ | Address is required |
-| [Truelayer](connectors/truelayer.md) | ⚠ | Address is required |
-| [TrustPay](connectors/trustpay.md) | ⚠ | Address is required |
-| [Trustpayments](connectors/trustpayments.md) | ⚠ | Address is required |
-| [Tsys](connectors/tsys.md) | ⚠ | Address is required |
-| [Volt](connectors/volt.md) | ⚠ | Address is required |
-| [Wellsfargo](connectors/wellsfargo.md) | ⚠ | Address is required |
-| [Worldpay](connectors/worldpay.md) | ⚠ | Address is required |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ | Address is required |
-| [Worldpayxml](connectors/worldpayxml.md) | ⚠ | Address is required |
-| [Xendit](connectors/xendit.md) | ⚠ | Address is required |
-| [Zift](connectors/zift.md) | ⚠ | Address is required |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ? | Stuck on field: redirect_response — Missing required fiel... |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ? | Stuck on field: continue_redirection_url — Missing requir... |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 #### PaymentMethodAuthenticationService.PostAuthenticate
 
@@ -1361,82 +1361,82 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ⚠ | Address is required |
-| [Adyen](connectors/adyen.md) | ⚠ | Address is required |
-| [Airwallex](connectors/airwallex.md) | ⚠ | Address is required |
-| [Authipay](connectors/authipay.md) | ⚠ | Address is required |
-| [Authorize.net](connectors/authorizedotnet.md) | ⚠ | Address is required |
-| [Bambora](connectors/bambora.md) | ⚠ | Address is required |
-| [Bamboraapac](connectors/bamboraapac.md) | ⚠ | Address is required |
-| [Bankofamerica](connectors/bankofamerica.md) | ⚠ | Address is required |
-| [Barclaycard](connectors/barclaycard.md) | ⚠ | Address is required |
-| [Billwerk](connectors/billwerk.md) | ⚠ | Address is required |
-| [Bluesnap](connectors/bluesnap.md) | ⚠ | Address is required |
-| [Braintree](connectors/braintree.md) | ⚠ | Address is required |
-| [Calida](connectors/calida.md) | ⚠ | Address is required |
-| [Cashfree](connectors/cashfree.md) | ⚠ | Address is required |
-| [CashtoCode](connectors/cashtocode.md) | ⚠ | Address is required |
-| [Celero](connectors/celero.md) | ⚠ | Address is required |
-| [Checkout.com](connectors/checkout.md) | ⚠ | Address is required |
-| [CryptoPay](connectors/cryptopay.md) | ⚠ | Address is required |
-| [CyberSource](connectors/cybersource.md) | ⚠ | Address is required |
-| [Datatrans](connectors/datatrans.md) | ⚠ | Address is required |
-| [dLocal](connectors/dlocal.md) | ⚠ | Address is required |
-| [Elavon](connectors/elavon.md) | ⚠ | Address is required |
-| [Finix](connectors/finix.md) | ⚠ | Address is required |
-| [Fiserv](connectors/fiserv.md) | ⚠ | Address is required |
-| [Fiservemea](connectors/fiservemea.md) | ⚠ | Address is required |
-| [Fiuu](connectors/fiuu.md) | ⚠ | Address is required |
-| [Forte](connectors/forte.md) | ⚠ | Address is required |
-| [Getnet](connectors/getnet.md) | ⚠ | Address is required |
-| [Gigadat](connectors/gigadat.md) | ⚠ | Address is required |
-| [Globalpay](connectors/globalpay.md) | ⚠ | Address is required |
-| [Helcim](connectors/helcim.md) | ⚠ | Address is required |
-| [Hipay](connectors/hipay.md) | ⚠ | Address is required |
-| [Hyperpg](connectors/hyperpg.md) | ⚠ | Address is required |
-| [Iatapay](connectors/iatapay.md) | ⚠ | Address is required |
-| [Jpmorgan](connectors/jpmorgan.md) | ⚠ | Address is required |
-| [Loonio](connectors/loonio.md) | ⚠ | Address is required |
-| [MiFinity](connectors/mifinity.md) | ⚠ | Address is required |
-| [Mollie](connectors/mollie.md) | ⚠ | Address is required |
-| [Multisafepay](connectors/multisafepay.md) | ⚠ | Address is required |
-| [Nexinets](connectors/nexinets.md) | ⚠ | Address is required |
-| [Nexixpay](connectors/nexixpay.md) | ⚠ | Address is required |
-| [Nmi](connectors/nmi.md) | ⚠ | Address is required |
-| [Noon](connectors/noon.md) | ⚠ | Address is required |
-| [Novalnet](connectors/novalnet.md) | ⚠ | Address is required |
-| [Nuvei](connectors/nuvei.md) | ⚠ | Address is required |
-| [Paybox](connectors/paybox.md) | ⚠ | Address is required |
-| [Payload](connectors/payload.md) | ⚠ | Address is required |
-| [Payme](connectors/payme.md) | ⚠ | Address is required |
-| [Paypal](connectors/paypal.md) | ⚠ | Address is required |
-| [Paysafe](connectors/paysafe.md) | ⚠ | Address is required |
-| [Paytm](connectors/paytm.md) | ⚠ | Address is required |
-| [PayU](connectors/payu.md) | ⚠ | Address is required |
-| [PhonePe](connectors/phonepe.md) | ⚠ | Address is required |
-| [PlacetoPay](connectors/placetopay.md) | ⚠ | Address is required |
-| [Powertranz](connectors/powertranz.md) | ⚠ | Address is required |
-| [Rapyd](connectors/rapyd.md) | ⚠ | Address is required |
-| [Razorpay](connectors/razorpay.md) | ⚠ | Address is required |
-| [Razorpay V2](connectors/razorpayv2.md) | ⚠ | Address is required |
-| [Redsys](connectors/redsys.md) | ⚠ | Address is required |
-| [Revolut](connectors/revolut.md) | ⚠ | Address is required |
-| [Revolv3](connectors/revolv3.md) | ⚠ | Address is required |
-| [Shift4](connectors/shift4.md) | ⚠ | Address is required |
-| [Silverflow](connectors/silverflow.md) | ⚠ | Address is required |
-| [Stax](connectors/stax.md) | ⚠ | Address is required |
-| [Stripe](connectors/stripe.md) | ⚠ | Address is required |
-| [Truelayer](connectors/truelayer.md) | ⚠ | Address is required |
-| [TrustPay](connectors/trustpay.md) | ⚠ | Address is required |
-| [Trustpayments](connectors/trustpayments.md) | ⚠ | Address is required |
-| [Tsys](connectors/tsys.md) | ⚠ | Address is required |
-| [Volt](connectors/volt.md) | ⚠ | Address is required |
-| [Wellsfargo](connectors/wellsfargo.md) | ⚠ | Address is required |
-| [Worldpay](connectors/worldpay.md) | ⚠ | Address is required |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ | Address is required |
-| [Worldpayxml](connectors/worldpayxml.md) | ⚠ | Address is required |
-| [Xendit](connectors/xendit.md) | ⚠ | Address is required |
-| [Zift](connectors/zift.md) | ⚠ | Address is required |
+| [ACI](connectors/aci.md) | ⚠ |  |
+| [Adyen](connectors/adyen.md) | ⚠ |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ? | Stuck on field: redirect_response — Missing required fiel... |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ? | Stuck on field: redirect_response — Missing required fiel... |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ✓ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ? | Stuck on field: connector_feature_data.link_data — Missin... |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 ### DisputeService
 
@@ -1446,82 +1446,82 @@ Upload evidence to dispute customer chargeback. Provides documentation like rece
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
 | [Adyen](connectors/adyen.md) | ✓ |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
-| [Stripe](connectors/stripe.md) | ? |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 #### DisputeService.Defend
 
@@ -1529,82 +1529,82 @@ Submit defense with reason code for dispute. Presents formal argument against cu
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
 | [Adyen](connectors/adyen.md) | ✓ |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
-| [Stripe](connectors/stripe.md) | ? |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 #### DisputeService.Accept
 
@@ -1612,82 +1612,82 @@ Concede dispute and accepts chargeback loss. Acknowledges liability and stops di
 
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
-| [ACI](connectors/aci.md) | ? |  |
+| [ACI](connectors/aci.md) | ⚠ |  |
 | [Adyen](connectors/adyen.md) | ✓ |  |
-| [Airwallex](connectors/airwallex.md) | ? |  |
-| [Authipay](connectors/authipay.md) | ? |  |
-| [Authorize.net](connectors/authorizedotnet.md) | ? |  |
-| [Bambora](connectors/bambora.md) | ? |  |
-| [Bamboraapac](connectors/bamboraapac.md) | ? |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? |  |
-| [Barclaycard](connectors/barclaycard.md) | ? |  |
-| [Billwerk](connectors/billwerk.md) | ? |  |
-| [Bluesnap](connectors/bluesnap.md) | ? |  |
-| [Braintree](connectors/braintree.md) | ? |  |
-| [Calida](connectors/calida.md) | ? |  |
-| [Cashfree](connectors/cashfree.md) | ? |  |
-| [CashtoCode](connectors/cashtocode.md) | ? |  |
-| [Celero](connectors/celero.md) | ? |  |
-| [Checkout.com](connectors/checkout.md) | ? |  |
-| [CryptoPay](connectors/cryptopay.md) | ? |  |
-| [CyberSource](connectors/cybersource.md) | ? |  |
-| [Datatrans](connectors/datatrans.md) | ? |  |
-| [dLocal](connectors/dlocal.md) | ? |  |
-| [Elavon](connectors/elavon.md) | ? |  |
-| [Finix](connectors/finix.md) | ? |  |
-| [Fiserv](connectors/fiserv.md) | ? |  |
-| [Fiservemea](connectors/fiservemea.md) | ? |  |
-| [Fiuu](connectors/fiuu.md) | ? |  |
-| [Forte](connectors/forte.md) | ? |  |
-| [Getnet](connectors/getnet.md) | ? |  |
-| [Gigadat](connectors/gigadat.md) | ? |  |
-| [Globalpay](connectors/globalpay.md) | ? |  |
-| [Helcim](connectors/helcim.md) | ? |  |
-| [Hipay](connectors/hipay.md) | ? |  |
-| [Hyperpg](connectors/hyperpg.md) | ? |  |
-| [Iatapay](connectors/iatapay.md) | ? |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? |  |
-| [Loonio](connectors/loonio.md) | ? |  |
-| [MiFinity](connectors/mifinity.md) | ? |  |
-| [Mollie](connectors/mollie.md) | ? |  |
-| [Multisafepay](connectors/multisafepay.md) | ? |  |
-| [Nexinets](connectors/nexinets.md) | ? |  |
-| [Nexixpay](connectors/nexixpay.md) | ? |  |
-| [Nmi](connectors/nmi.md) | ? |  |
-| [Noon](connectors/noon.md) | ? |  |
-| [Novalnet](connectors/novalnet.md) | ? |  |
-| [Nuvei](connectors/nuvei.md) | ? |  |
-| [Paybox](connectors/paybox.md) | ? |  |
-| [Payload](connectors/payload.md) | ? |  |
-| [Payme](connectors/payme.md) | ? |  |
-| [Paypal](connectors/paypal.md) | ? |  |
-| [Paysafe](connectors/paysafe.md) | ? |  |
-| [Paytm](connectors/paytm.md) | ? |  |
-| [PayU](connectors/payu.md) | ? |  |
-| [PhonePe](connectors/phonepe.md) | ? |  |
-| [PlacetoPay](connectors/placetopay.md) | ? |  |
-| [Powertranz](connectors/powertranz.md) | ? |  |
-| [Rapyd](connectors/rapyd.md) | ? |  |
-| [Razorpay](connectors/razorpay.md) | ? |  |
-| [Razorpay V2](connectors/razorpayv2.md) | ? |  |
-| [Redsys](connectors/redsys.md) | ? |  |
-| [Revolut](connectors/revolut.md) | ? |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
-| [Shift4](connectors/shift4.md) | ? |  |
-| [Silverflow](connectors/silverflow.md) | ? |  |
-| [Stax](connectors/stax.md) | ? |  |
-| [Stripe](connectors/stripe.md) | ? |  |
-| [Truelayer](connectors/truelayer.md) | ? |  |
-| [TrustPay](connectors/trustpay.md) | ? |  |
-| [Trustpayments](connectors/trustpayments.md) | ? |  |
-| [Tsys](connectors/tsys.md) | ? |  |
-| [Volt](connectors/volt.md) | ? |  |
-| [Wellsfargo](connectors/wellsfargo.md) | ? |  |
-| [Worldpay](connectors/worldpay.md) | ? |  |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ? |  |
-| [Worldpayxml](connectors/worldpayxml.md) | ? |  |
-| [Xendit](connectors/xendit.md) | ? |  |
-| [Zift](connectors/zift.md) | ? |  |
+| [Airwallex](connectors/airwallex.md) | ⚠ |  |
+| [Authipay](connectors/authipay.md) | ⚠ |  |
+| [Authorize.net](connectors/authorizedotnet.md) | ⚠ |  |
+| [Bambora](connectors/bambora.md) | ⚠ |  |
+| [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
+| [Bankofamerica](connectors/bankofamerica.md) | ⚠ |  |
+| [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
+| [Billwerk](connectors/billwerk.md) | ⚠ |  |
+| [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
+| [Braintree](connectors/braintree.md) | ⚠ |  |
+| [Calida](connectors/calida.md) | ⚠ |  |
+| [Cashfree](connectors/cashfree.md) | ⚠ |  |
+| [CashtoCode](connectors/cashtocode.md) | ⚠ |  |
+| [Celero](connectors/celero.md) | ⚠ |  |
+| [Checkout.com](connectors/checkout.md) | ⚠ |  |
+| [CryptoPay](connectors/cryptopay.md) | ⚠ |  |
+| [CyberSource](connectors/cybersource.md) | ⚠ |  |
+| [Datatrans](connectors/datatrans.md) | ⚠ |  |
+| [dLocal](connectors/dlocal.md) | ⚠ |  |
+| [Elavon](connectors/elavon.md) | ⚠ |  |
+| [Finix](connectors/finix.md) | ⚠ |  |
+| [Fiserv](connectors/fiserv.md) | ⚠ |  |
+| [Fiservemea](connectors/fiservemea.md) | ⚠ |  |
+| [Fiuu](connectors/fiuu.md) | ⚠ |  |
+| [Forte](connectors/forte.md) | ⚠ |  |
+| [Getnet](connectors/getnet.md) | ⚠ |  |
+| [Gigadat](connectors/gigadat.md) | ⚠ |  |
+| [Globalpay](connectors/globalpay.md) | ⚠ |  |
+| [Helcim](connectors/helcim.md) | ⚠ |  |
+| [Hipay](connectors/hipay.md) | ⚠ |  |
+| [Hyperpg](connectors/hyperpg.md) | ⚠ |  |
+| [Iatapay](connectors/iatapay.md) | ⚠ |  |
+| [Jpmorgan](connectors/jpmorgan.md) | ⚠ |  |
+| [Loonio](connectors/loonio.md) | ⚠ |  |
+| [MiFinity](connectors/mifinity.md) | ⚠ |  |
+| [Mollie](connectors/mollie.md) | ⚠ |  |
+| [Multisafepay](connectors/multisafepay.md) | ⚠ |  |
+| [Nexinets](connectors/nexinets.md) | ⚠ |  |
+| [Nexixpay](connectors/nexixpay.md) | ⚠ |  |
+| [Nmi](connectors/nmi.md) | ⚠ |  |
+| [Noon](connectors/noon.md) | ⚠ |  |
+| [Novalnet](connectors/novalnet.md) | ⚠ |  |
+| [Nuvei](connectors/nuvei.md) | ⚠ |  |
+| [Paybox](connectors/paybox.md) | ⚠ |  |
+| [Payload](connectors/payload.md) | ⚠ |  |
+| [Payme](connectors/payme.md) | ⚠ |  |
+| [Paypal](connectors/paypal.md) | ⚠ |  |
+| [Paysafe](connectors/paysafe.md) | ⚠ |  |
+| [Paytm](connectors/paytm.md) | ⚠ |  |
+| [PayU](connectors/payu.md) | ⚠ |  |
+| [PhonePe](connectors/phonepe.md) | ⚠ |  |
+| [PlacetoPay](connectors/placetopay.md) | ⚠ |  |
+| [Powertranz](connectors/powertranz.md) | ⚠ |  |
+| [Rapyd](connectors/rapyd.md) | ⚠ |  |
+| [Razorpay](connectors/razorpay.md) | ⚠ |  |
+| [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
+| [Redsys](connectors/redsys.md) | ⚠ |  |
+| [Revolut](connectors/revolut.md) | ⚠ |  |
+| [Revolv3](connectors/revolv3.md) | ⚠ |  |
+| [Shift4](connectors/shift4.md) | ⚠ |  |
+| [Silverflow](connectors/silverflow.md) | ⚠ |  |
+| [Stax](connectors/stax.md) | ⚠ |  |
+| [Stripe](connectors/stripe.md) | ⚠ |  |
+| [Truelayer](connectors/truelayer.md) | ⚠ |  |
+| [TrustPay](connectors/trustpay.md) | ⚠ |  |
+| [Trustpayments](connectors/trustpayments.md) | ⚠ |  |
+| [Tsys](connectors/tsys.md) | ⚠ |  |
+| [Volt](connectors/volt.md) | ⚠ |  |
+| [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
+| [Worldpay](connectors/worldpay.md) | ⚠ |  |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
+| [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
+| [Xendit](connectors/xendit.md) | ⚠ |  |
+| [Zift](connectors/zift.md) | ⚠ |  |
 
 ## Payment Methods
 

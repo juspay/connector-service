@@ -3,16 +3,12 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
       "Blik": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -25,57 +21,14 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
             "billing_address": {
               "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
+              "last_name": "Doe"
             }
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
           "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -92,14 +45,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"blik\":{\"shopper_name\":\"John Doe\"},\"type\":\"blik\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":{\"accept_header\":\"application/json\",\"browser\":{\"java_enabled\":false,\"javascript_enabled\":true,\"user_agent\":\"Mozilla/5.0 (probe-bot)\"},\"ip_address\":\"1.2.3.4\",\"language\":\"en-US\",\"mobile\":null,\"screen_color_depth\":24,\"screen_height\":900,\"screen_width\":1440,\"timezone\":\"-480\"}}"
+          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"blik\":{\"shopper_name\":\"John Doe\"},\"type\":\"blik\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":null,\"device_data\":null}"
         }
       },
       "Card": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -116,57 +66,11 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
           "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -183,14 +87,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvc\":\"737\",\"name\":\"John Doe\"},\"type\":\"card\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":{\"accept_header\":\"application/json\",\"browser\":{\"java_enabled\":false,\"javascript_enabled\":true,\"user_agent\":\"Mozilla/5.0 (probe-bot)\"},\"ip_address\":\"1.2.3.4\",\"language\":\"en-US\",\"mobile\":null,\"screen_color_depth\":24,\"screen_height\":900,\"screen_width\":1440,\"timezone\":\"-480\"}}"
+          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvc\":\"737\",\"name\":\"John Doe\"},\"type\":\"card\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":null,\"device_data\":null}"
         }
       },
       "Ideal": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -201,57 +102,11 @@
             "ideal": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
           "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -268,12 +123,8 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"ideal\":{},\"type\":\"ideal\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":{\"accept_header\":\"application/json\",\"browser\":{\"java_enabled\":false,\"javascript_enabled\":true,\"user_agent\":\"Mozilla/5.0 (probe-bot)\"},\"ip_address\":\"1.2.3.4\",\"language\":\"en-US\",\"mobile\":null,\"screen_color_depth\":24,\"screen_height\":900,\"screen_width\":1440,\"timezone\":\"-480\"}}"
+          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"ideal\":{},\"type\":\"ideal\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":null,\"device_data\":null}"
         }
-      },
-      "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
       }
     },
     "capture": {
@@ -323,6 +174,11 @@
         }
       }
     },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "create_order": {
       "default": {
         "status": "supported",
@@ -350,6 +206,26 @@
           },
           "body": "{\"request_id\":\"create_probe_order_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"merchant_order_id\":\"probe_order_001\",\"referrer_data\":{\"type\":\"hyperswitch\",\"version\":\"1.0.0\"},\"order\":null}"
         }
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -383,14 +259,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -423,6 +302,21 @@
           },
           "body": "{\"payment_attempt_id\":\"probe_connector_txn_001\",\"amount\":\"10.00\",\"reason\":\"customer_request\",\"request_id\":\"refund_probe_refund_001\"}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

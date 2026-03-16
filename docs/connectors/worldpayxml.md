@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L130) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L121) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L144) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L140)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L85) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L76) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L98) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L95)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L155) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L147) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L166) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L162)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L110) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L102) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L120) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L117)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L174) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L166) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L182) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L177)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L129) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L121) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L136) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L132)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L211) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L201) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L204) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L199)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L166) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L156) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L158) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L154)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L233) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L223) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L223) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L217)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L188) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L178) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L177) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L172)
 
 ## API Reference
 
@@ -168,7 +168,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -186,7 +185,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L255) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L244) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L241) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L234)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L210) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L199) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L195) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L189)
 
 #### PaymentService.Capture
 
@@ -197,7 +196,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L264) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L253) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L253) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L245)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L219) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L208) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L207) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L200)
 
 #### PaymentService.Get
 
@@ -208,7 +207,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L273) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L262) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L263) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L251)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L228) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L217) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L217) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L206)
 
 #### PaymentService.Refund
 
@@ -219,7 +218,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L174) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L166) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L271) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L257)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L129) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L121) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L225) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L212)
 
 #### PaymentService.Void
 
@@ -230,4 +229,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L282) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L271) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L281) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L263)
+**Examples:** [Python](../../examples/worldpayxml/python/worldpayxml.py#L237) · [JavaScript](../../examples/worldpayxml/javascript/worldpayxml.js#L226) · [Kotlin](../../examples/worldpayxml/kotlin/worldpayxml.kt#L235) · [Rust](../../examples/worldpayxml/rust/worldpayxml.rs#L218)

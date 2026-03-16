@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L121) · [JavaScript](../../examples/xendit/javascript/xendit.js#L114) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L136) · [Rust](../../examples/xendit/rust/xendit.rs#L133)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L82) · [JavaScript](../../examples/xendit/javascript/xendit.js#L75) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L96) · [Rust](../../examples/xendit/rust/xendit.rs#L94)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,19 +122,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L146) · [JavaScript](../../examples/xendit/javascript/xendit.js#L140) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L158) · [Rust](../../examples/xendit/rust/xendit.rs#L155)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L107) · [JavaScript](../../examples/xendit/javascript/xendit.js#L101) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L118) · [Rust](../../examples/xendit/rust/xendit.rs#L116)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L165) · [JavaScript](../../examples/xendit/javascript/xendit.js#L159) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L174) · [Rust](../../examples/xendit/rust/xendit.rs#L170)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L126) · [JavaScript](../../examples/xendit/javascript/xendit.js#L120) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L134) · [Rust](../../examples/xendit/rust/xendit.rs#L131)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L202) · [JavaScript](../../examples/xendit/javascript/xendit.js#L194) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L196) · [Rust](../../examples/xendit/rust/xendit.rs#L192)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L163) · [JavaScript](../../examples/xendit/javascript/xendit.js#L155) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L156) · [Rust](../../examples/xendit/rust/xendit.rs#L153)
 
 ## API Reference
 
@@ -161,7 +161,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -179,7 +192,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L224) · [JavaScript](../../examples/xendit/javascript/xendit.js#L215) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L214) · [Rust](../../examples/xendit/rust/xendit.rs#L209)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L185) · [JavaScript](../../examples/xendit/javascript/xendit.js#L176) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L174) · [Rust](../../examples/xendit/rust/xendit.rs#L170)
 
 #### PaymentService.Capture
 
@@ -190,7 +203,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L233) · [JavaScript](../../examples/xendit/javascript/xendit.js#L224) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L226) · [Rust](../../examples/xendit/rust/xendit.rs#L220)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L194) · [JavaScript](../../examples/xendit/javascript/xendit.js#L185) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L186) · [Rust](../../examples/xendit/rust/xendit.rs#L181)
 
 #### PaymentService.Get
 
@@ -201,7 +214,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L242) · [JavaScript](../../examples/xendit/javascript/xendit.js#L233) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L236) · [Rust](../../examples/xendit/rust/xendit.rs#L226)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L203) · [JavaScript](../../examples/xendit/javascript/xendit.js#L194) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L196) · [Rust](../../examples/xendit/rust/xendit.rs#L187)
 
 #### PaymentService.Refund
 
@@ -212,4 +225,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/xendit/python/xendit.py#L165) · [JavaScript](../../examples/xendit/javascript/xendit.js#L159) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L244) · [Rust](../../examples/xendit/rust/xendit.rs#L232)
+**Examples:** [Python](../../examples/xendit/python/xendit.py#L126) · [JavaScript](../../examples/xendit/javascript/xendit.js#L120) · [Kotlin](../../examples/xendit/kotlin/xendit.kt#L204) · [Rust](../../examples/xendit/rust/xendit.rs#L193)

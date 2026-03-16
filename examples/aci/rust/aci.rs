@@ -40,56 +40,13 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         }
     },
     "capture_method": capture_method,  // Method for capturing the payment
-    "customer": {  // Customer Information
-        "name": "John Doe",  // Customer's full name
-        "email": "test@example.com",  // Customer's email address
-        "id": "cust_probe_123",  // Internal customer ID
-        "phone_number": "4155552671",  // Customer's phone number
-        "phone_country_code": "+1",  // Customer's phone country code
-    },
     "address": {  // Address Information
-        "shipping_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
-        },
         "billing_address": {
             "first_name": "John",  // Personal Information
             "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
-    "browser_info": {
-        "color_depth": 24,  // Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information
-    },
     })).unwrap_or_default()
 }
 
@@ -219,6 +176,7 @@ pub async fn process_recurring(client: &ConnectorClient, merchant_transaction_id
             "name": "John Doe",  // Customer's full name
             "email": "test@example.com",  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
+            "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
             "phone_number": "4155552671",  // Customer's phone number
             "phone_country_code": "+1",  // Customer's phone country code
         },
@@ -271,6 +229,7 @@ pub async fn process_recurring(client: &ConnectorClient, merchant_transaction_id
             "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "return_url": "https://example.com/recurring-return",
+        "connector_customer_id": "cust_probe_123",
         "off_session": true,  // Behavioral Flags and Preferences
         // "connector_recurring_payment_id": ???,  // TODO: extract from setup_response.mandate_reference
     })).unwrap_or_default(), &HashMap::new(), None).await?;
@@ -346,7 +305,7 @@ pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id:
     let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
     "connector_recurring_payment_id": {  // Reference to existing mandate
         "mandate_id_type": {
-            "connector_mandate_id": "probe_mandate_123",
+            "connector_mandate_id": "probe-mandate-123",
         },
     },
     "amount": {  // Amount Information
@@ -359,7 +318,7 @@ pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id:
         }
     },
     "return_url": "https://example.com/recurring-return",
-    "connector_customer_id": "probe_cust_connector_001",
+    "connector_customer_id": "cust_probe_123",
     "payment_method_type": "PAY_PAL",
     "off_session": true,  // Behavioral Flags and Preferences
     })).unwrap_or_default(), &HashMap::new(), None).await?;
@@ -395,6 +354,7 @@ pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: 
         "name": "John Doe",  // Customer's full name
         "email": "test@example.com",  // Customer's email address
         "id": "cust_probe_123",  // Internal customer ID
+        "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
         "phone_number": "4155552671",  // Customer's phone number
         "phone_country_code": "+1",  // Customer's phone country code
     },

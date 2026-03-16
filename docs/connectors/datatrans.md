@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L130) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L121) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L144) · [Rust](../../examples/datatrans/rust/datatrans.rs#L140)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L85) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L76) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L98) · [Rust](../../examples/datatrans/rust/datatrans.rs#L95)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L155) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L147) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L166) · [Rust](../../examples/datatrans/rust/datatrans.rs#L162)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L110) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L102) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L120) · [Rust](../../examples/datatrans/rust/datatrans.rs#L117)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L174) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L166) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L182) · [Rust](../../examples/datatrans/rust/datatrans.rs#L177)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L129) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L121) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L136) · [Rust](../../examples/datatrans/rust/datatrans.rs#L132)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L211) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L201) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L204) · [Rust](../../examples/datatrans/rust/datatrans.rs#L199)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L166) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L156) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L158) · [Rust](../../examples/datatrans/rust/datatrans.rs#L154)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L233) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L223) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L223) · [Rust](../../examples/datatrans/rust/datatrans.rs#L217)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L188) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L178) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L177) · [Rust](../../examples/datatrans/rust/datatrans.rs#L172)
 
 ## API Reference
 
@@ -168,7 +168,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -186,7 +199,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L255) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L244) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L241) · [Rust](../../examples/datatrans/rust/datatrans.rs#L234)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L210) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L199) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L195) · [Rust](../../examples/datatrans/rust/datatrans.rs#L189)
 
 #### PaymentService.Capture
 
@@ -197,7 +210,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L264) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L253) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L253) · [Rust](../../examples/datatrans/rust/datatrans.rs#L245)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L219) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L208) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L207) · [Rust](../../examples/datatrans/rust/datatrans.rs#L200)
 
 #### PaymentService.Get
 
@@ -208,7 +221,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L273) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L262) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L263) · [Rust](../../examples/datatrans/rust/datatrans.rs#L251)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L228) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L217) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L217) · [Rust](../../examples/datatrans/rust/datatrans.rs#L206)
 
 #### PaymentService.Refund
 
@@ -219,7 +232,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L174) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L166) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L271) · [Rust](../../examples/datatrans/rust/datatrans.rs#L257)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L129) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L121) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L225) · [Rust](../../examples/datatrans/rust/datatrans.rs#L212)
 
 #### PaymentService.Void
 
@@ -230,4 +243,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L282) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L271) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L281) · [Rust](../../examples/datatrans/rust/datatrans.rs#L263)
+**Examples:** [Python](../../examples/datatrans/python/datatrans.py#L237) · [JavaScript](../../examples/datatrans/javascript/datatrans.js#L226) · [Kotlin](../../examples/datatrans/kotlin/datatrans.kt#L235) · [Rust](../../examples/datatrans/rust/datatrans.rs#L218)

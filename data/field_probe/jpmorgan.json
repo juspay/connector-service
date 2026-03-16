@@ -3,28 +3,69 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
       "Ach": {
         "status": "error",
-        "required_fields": [
-          "company_name"
-        ],
         "error": "Stuck on field: company_name — Missing required field: company_name"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only ACH Bank Debit is supported"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only ACH Bank Debit is supported"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
       },
       "Card": {
         "status": "error",
-        "required_fields": [
-          "company_name"
-        ],
         "error": "Stuck on field: company_name — Missing required field: company_name"
       },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only ACH Bank Debit is supported"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
       }
     },
     "capture": {
@@ -75,6 +116,36 @@
         }
       }
     },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -108,23 +179,38 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
       "default": {
         "status": "error",
-        "required_fields": [
-          "company_name"
-        ],
         "error": "Stuck on field: company_name — Missing required field: company_name"
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

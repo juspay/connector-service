@@ -3,112 +3,59 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
-      "Ach": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Affirm": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Afterpay": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "ApplePay": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Bacs": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Becs": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Blik": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Card": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "GooglePay": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Ideal": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "Klarna": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "PaypalRedirect": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
-      "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
-      },
-      "Sepa": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
-      },
       "UpiCollect": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Missing required field: session_token"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "upi_collect": {
+              "vpa_id": "test@upi"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "session_token": "probe_session_token"
+        },
+        "sample": {
+          "url": "https://securestage.paytmpayments.com/theia/api/v1/processTransaction?mid=probe_merchant&orderId=probe_txn_001",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"head\":{\"txnToken\":\"probe_session_token\"},\"body\":{\"requestType\":\"NATIVE\",\"mid\":\"probe_merchant\",\"orderId\":\"probe_txn_001\",\"paymentMode\":\"UPI\",\"payerAccount\":\"test@upi\",\"channelCode\":\"\",\"channelId\":\"WEB\",\"txnToken\":\"probe_session_token\",\"authMode\":null}}"
+        }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "create_session_token": {
@@ -129,6 +76,21 @@
           },
           "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"0000000000\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"body\":{\"requestType\":\"Payment\",\"mid\":\"probe_merchant\",\"orderId\":\"\",\"websiteName\":\"probe_website\",\"txnAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"},\"userInfo\":{\"custId\":\"cus_default\",\"mobile\":null,\"email\":null,\"firstName\":null,\"lastName\":null},\"enablePaymentMode\":[{\"mode\":\"UPI\",\"channels\":[\"UPIPUSH\",\"UPI\"]}],\"callbackUrl\":\"https://default-callback.com\",\"shippingInfo\":[{\"trackingNo\":\"\",\"chargeAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"}}]}}"
         }
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -154,14 +116,42 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "not_implemented"
       }
     }
   }

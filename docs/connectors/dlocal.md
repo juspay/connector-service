@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L130) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L121) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L144) · [Rust](../../examples/dlocal/rust/dlocal.rs#L140)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L91) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L82) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L105) · [Rust](../../examples/dlocal/rust/dlocal.rs#L101)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L155) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L147) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L166) · [Rust](../../examples/dlocal/rust/dlocal.rs#L162)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L116) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L108) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L127) · [Rust](../../examples/dlocal/rust/dlocal.rs#L123)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L174) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L166) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L182) · [Rust](../../examples/dlocal/rust/dlocal.rs#L177)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L135) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L127) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L143) · [Rust](../../examples/dlocal/rust/dlocal.rs#L138)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L211) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L201) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L204) · [Rust](../../examples/dlocal/rust/dlocal.rs#L199)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L172) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L162) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L165) · [Rust](../../examples/dlocal/rust/dlocal.rs#L160)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L233) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L223) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L223) · [Rust](../../examples/dlocal/rust/dlocal.rs#L217)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L194) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L184) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L184) · [Rust](../../examples/dlocal/rust/dlocal.rs#L178)
 
 ## API Reference
 
@@ -168,7 +168,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -186,7 +199,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L255) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L244) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L241) · [Rust](../../examples/dlocal/rust/dlocal.rs#L234)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L216) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L205) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L202) · [Rust](../../examples/dlocal/rust/dlocal.rs#L195)
 
 #### PaymentService.Capture
 
@@ -197,7 +210,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L264) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L253) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L253) · [Rust](../../examples/dlocal/rust/dlocal.rs#L245)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L225) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L214) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L214) · [Rust](../../examples/dlocal/rust/dlocal.rs#L206)
 
 #### PaymentService.Get
 
@@ -208,7 +221,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L273) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L262) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L263) · [Rust](../../examples/dlocal/rust/dlocal.rs#L251)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L234) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L223) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L224) · [Rust](../../examples/dlocal/rust/dlocal.rs#L212)
 
 #### PaymentService.Refund
 
@@ -219,7 +232,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L174) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L166) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L271) · [Rust](../../examples/dlocal/rust/dlocal.rs#L257)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L135) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L127) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L232) · [Rust](../../examples/dlocal/rust/dlocal.rs#L218)
 
 #### PaymentService.Void
 
@@ -230,4 +243,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L282) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L271) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L281) · [Rust](../../examples/dlocal/rust/dlocal.rs#L263)
+**Examples:** [Python](../../examples/dlocal/python/dlocal.py#L243) · [JavaScript](../../examples/dlocal/javascript/dlocal.js#L232) · [Kotlin](../../examples/dlocal/kotlin/dlocal.kt#L242) · [Rust](../../examples/dlocal/rust/dlocal.rs#L224)

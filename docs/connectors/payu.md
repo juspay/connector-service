@@ -115,7 +115,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | UPI | ✓ |
-| Samsung Pay | — |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -129,7 +128,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L105) · [Rust](../../examples/payu/rust/payu.rs#L104)
+**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L67) · [Rust](../../examples/payu/rust/payu.rs#L67)
 
 #### PaymentService.Get
 
@@ -140,4 +139,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L117) · [Rust](../../examples/payu/rust/payu.rs#L115)
+**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L79) · [Rust](../../examples/payu/rust/payu.rs#L78)

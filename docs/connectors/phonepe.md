@@ -115,7 +115,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | UPI | ✓ |
-| Samsung Pay | — |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -129,7 +128,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L106) · [Rust](../../examples/phonepe/rust/phonepe.rs#L105)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L61) · [Rust](../../examples/phonepe/rust/phonepe.rs#L61)
 
 #### PaymentService.Get
 
@@ -140,4 +139,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L118) · [Rust](../../examples/phonepe/rust/phonepe.rs#L116)
+**Examples:** [Python](../../examples/phonepe/python/phonepe.py) · [JavaScript](../../examples/phonepe/javascript/phonepe.js) · [Kotlin](../../examples/phonepe/kotlin/phonepe.kt#L73) · [Rust](../../examples/phonepe/rust/phonepe.rs#L72)

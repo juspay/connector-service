@@ -3,16 +3,40 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
       "Card": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -29,56 +53,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -90,12 +68,36 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"query\":\"mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id legacyId createdAt amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"paymentMethodId\":\"probe_pm_token\",\"transaction\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"channel\":\"HyperSwitchBT_Ecom\",\"customerDetails\":{\"email\":\"test@example.com\"},\"orderId\":\"probe_txn_001\"}}}}"
+          "body": "{\"query\":\"mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id legacyId createdAt amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"paymentMethodId\":\"probe_pm_token\",\"transaction\":{\"amount\":\"10.00\",\"merchantAccountId\":\"probe_merchant_acct\",\"channel\":\"HyperSwitchBT_Ecom\",\"orderId\":\"probe_txn_001\"}}}}"
         }
       },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
       }
     },
     "capture": {
@@ -120,6 +122,41 @@
           },
           "body": "{\"query\":\"mutation captureTransaction($input: CaptureTransactionInput!) { captureTransaction(input: $input) { clientMutationId transaction { id legacyId amount { value currencyCode } status } } }\",\"variables\":{\"input\":{\"transactionId\":\"probe_connector_txn_001\",\"transaction\":{\"amount\":\"10.00\"}}}}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -147,20 +184,34 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through braintree"
       }
     },
     "refund": {
       "default": {
         "status": "error",
         "error": "Invalid Configuration: merchant_account_id"
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "tokenize": {
@@ -184,6 +235,7 @@
             "name": "John Doe",
             "email": "test@example.com",
             "id": "cust_probe_123",
+            "connector_customer_id": "cust_probe_123",
             "phone_number": "4155552671",
             "phone_country_code": "+1"
           },

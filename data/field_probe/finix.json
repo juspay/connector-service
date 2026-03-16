@@ -3,16 +3,12 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
       "Ach": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -27,56 +23,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -92,9 +42,6 @@
       },
       "Affirm": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -105,56 +52,10 @@
             "affirm": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -170,9 +71,6 @@
       },
       "Afterpay": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -183,56 +81,10 @@
             "afterpay_clearpay": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -248,9 +100,6 @@
       },
       "ApplePay": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -271,56 +120,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -336,9 +139,6 @@
       },
       "Bacs": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -353,56 +153,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -418,9 +172,6 @@
       },
       "Becs": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -435,56 +186,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -500,9 +205,6 @@
       },
       "Blik": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -515,56 +217,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -580,9 +236,6 @@
       },
       "Card": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -599,56 +252,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -664,9 +271,6 @@
       },
       "GooglePay": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -690,56 +294,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -755,9 +313,6 @@
       },
       "Ideal": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -768,56 +323,10 @@
             "ideal": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -833,9 +342,6 @@
       },
       "Klarna": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -846,56 +352,10 @@
             "klarna": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -911,9 +371,6 @@
       },
       "PaypalRedirect": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -926,56 +383,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -990,14 +401,48 @@
         }
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "samsung_pay": {
+              "payment_credential": {
+                "method": "3DS",
+                "recurring_payment": false,
+                "card_brand": "VISA",
+                "card_last_four_digits": "1234",
+                "token_data": {
+                  "type": "S",
+                  "version": "100",
+                  "data": "probe_samsung_token_data"
+                }
+              }
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "payment_method_token": "probe_pm_token"
+        },
+        "sample": {
+          "url": "https://finix.sandbox-payments-api.com/transfers",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"source\":\"probe_pm_token\",\"merchant\":\"probe_merchant\",\"idempotency_id\":\"probe_txn_001\"}"
+        }
       },
       "Sepa": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -1011,56 +456,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -1076,9 +475,6 @@
       },
       "UpiCollect": {
         "status": "supported",
-        "required_fields": [
-          "payment_method_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -1091,56 +487,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          },
           "payment_method_token": "probe_pm_token"
         },
         "sample": {
@@ -1178,6 +528,11 @@
         }
       }
     },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "create_customer": {
       "default": {
         "status": "supported",
@@ -1212,6 +567,31 @@
         }
       }
     },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -1236,14 +616,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -1271,6 +654,16 @@
         }
       }
     },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "tokenize": {
       "default": {
         "status": "supported",
@@ -1292,6 +685,7 @@
             "name": "John Doe",
             "email": "test@example.com",
             "id": "cust_probe_123",
+            "connector_customer_id": "cust_probe_123",
             "phone_number": "4155552671",
             "phone_country_code": "+1"
           },

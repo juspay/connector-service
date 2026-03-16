@@ -40,58 +40,38 @@ def _build_authorize_request(capture_method: str):
                 }
             },
             "capture_method": capture_method,  # Method for capturing the payment
-            "customer": {  # Customer Information
-                "name": "John Doe",  # Customer's full name
-                "email": {"value": "test@example.com"},  # Customer's email address
-                "id": "cust_probe_123",  # Internal customer ID
-                "phone_number": "4155552671",  # Customer's phone number
-                "phone_country_code": "+1"  # Customer's phone country code
-            },
             "address": {  # Address Information
-                "shipping_address": {
-                    "first_name": {"value": "John"},  # Personal Information
-                    "last_name": {"value": "Doe"},
-                    "line1": {"value": "123 Main St"},  # Address Details
-                    "city": {"value": "Seattle"},
-                    "state": {"value": "WA"},
-                    "zip_code": {"value": "98101"},
-                    "country_alpha2_code": "US",
-                    "email": {"value": "test@example.com"},  # Contact Information
-                    "phone_number": {"value": "4155552671"},
-                    "phone_country_code": "+1"
-                },
                 "billing_address": {
-                    "first_name": {"value": "John"},  # Personal Information
-                    "last_name": {"value": "Doe"},
-                    "line1": {"value": "123 Main St"},  # Address Details
-                    "city": {"value": "Seattle"},
-                    "state": {"value": "WA"},
-                    "zip_code": {"value": "98101"},
-                    "country_alpha2_code": "US",
-                    "email": {"value": "test@example.com"},  # Contact Information
-                    "phone_number": {"value": "4155552671"},
-                    "phone_country_code": "+1"
                 }
             },
-            "auth_type": "NO_THREE_DS",  # Authentication Details
-            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
-            "webhook_url": "https://example.com/webhook",
-            "complete_authorize_url": "https://example.com/complete",
-            "browser_info": {
-                "color_depth": 24,  # Display Information
-                "screen_height": 900,
-                "screen_width": 1440,
-                "java_enabled": False,  # Browser Settings
-                "java_script_enabled": True,
-                "language": "en-US",
-                "time_zone_offset_minutes": -480,
-                "accept_header": "application/json",  # Browser Headers
-                "user_agent": "Mozilla/5.0 (probe-bot)",
-                "accept_language": "en-US,en;q=0.9",
-                "ip_address": "1.2.3.4"  # Device Information
-            }
+            "auth_type": "NO_THREE_DS"  # Authentication Details
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
+    )
+
+def _build_capture_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_capture_id": "probe_capture_001",  # Identification
+            "connector_transaction_id": connector_transaction_id,
+            "amount_to_capture": {  # Capture Details
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            }
+        },
+        payment_pb2.PaymentServiceCaptureRequest(),
+    )
+
+def _build_get_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "connector_transaction_id": connector_transaction_id,
+            "amount": {  # Amount Information
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            }
+        },
+        payment_pb2.PaymentServiceGetRequest(),
     )
 
 def _build_void_request(connector_transaction_id: str):
@@ -106,6 +86,31 @@ def _build_void_request(connector_transaction_id: str):
         },
         payment_pb2.PaymentServiceVoidRequest(),
     )
+async def process_checkout_card(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Card Payment (Authorize + Capture)
+
+    Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+    """
+    payment_client = PaymentClient(config)
+
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
+
+    # Step 2: Capture — settle the reserved funds
+    capture_response = await payment_client.capture(_build_capture_request(authorize_response.connector_transaction_id))
+
+    if capture_response.status == "FAILED":
+        raise RuntimeError(f"Capture failed: {capture_response.error}")
+
+    return {"status": capture_response.status, "transaction_id": authorize_response.connector_transaction_id}
+
+
 async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Card Payment (Automatic Capture)
 
@@ -184,6 +189,28 @@ async def process_void_payment(merchant_transaction_id: str, config: sdk_config_
     return {"status": void_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
+async def process_get_payment(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Get Payment Status
+
+    Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+    """
+    payment_client = PaymentClient(config)
+
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
+
+    # Step 2: Get — retrieve current payment status from the connector
+    get_response = await payment_client.get(_build_get_request(authorize_response.connector_transaction_id))
+
+    return {"status": get_response.status, "transaction_id": get_response.connector_transaction_id}
+
+
 async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Authorize (Card)"""
     payment_client = PaymentClient(config)
@@ -191,6 +218,24 @@ async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.Connect
     authorize_response = await payment_client.authorize(_build_authorize_request("AUTOMATIC"))
 
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
+
+
+async def capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Capture"""
+    payment_client = PaymentClient(config)
+
+    capture_response = await payment_client.capture(_build_capture_request("probe_connector_txn_001"))
+
+    return {"status": capture_response.status}
+
+
+async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Get"""
+    payment_client = PaymentClient(config)
+
+    get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
+
+    return {"status": get_response.status}
 
 
 async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
@@ -202,7 +247,7 @@ async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorCon
     return {"status": void_response.status}
 
 if __name__ == "__main__":
-    scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_autocapture"
+    scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_card"
     fn = globals().get(f"process_{scenario}")
     if not fn:
         available = [k[8:] for k in globals() if k.startswith("process_")]

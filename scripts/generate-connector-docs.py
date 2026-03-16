@@ -713,7 +713,8 @@ def generate_connector_doc(
                 a("|----------------|:---------:|")
                 for pm_key, pm_label in _PROBE_PM_DISPLAY.items():
                     if pm_key in pm_support:
-                        mark = "✓" if pm_support[pm_key] else "—"
+                        pm_status = probe_connector.get("flows", {}).get("authorize", {}).get(pm_key, {}).get("status", "unknown")
+                        mark = _status_to_mark(pm_status)
                         a(f"| {pm_label} | {mark} |")
                 a("")
 
@@ -928,13 +929,25 @@ def cmd_generate(connectors: list[str], output_dir: Path, probe_path: Optional[P
 
 # ─── All Connectors Coverage Document ─────────────────────────────────────────
 
+def _status_to_mark(status: str) -> str:
+    """Map a probe status string to a display icon."""
+    if status == "supported":
+        return "✓"
+    elif status == "not_supported":
+        return "x"
+    elif status == "not_implemented":
+        return "⚠"
+    else:
+        return "?"
+
+
 def _get_flow_status(flows: dict, flow_key: str) -> tuple[str, str]:
     """
     Get the status of a flow from probe data.
     Returns (status_mark, notes) tuple.
     """
     flow_data = flows.get(flow_key, {})
-    
+
     # For PM-aware flows, check if there's any supported PM
     if flow_key in _PM_AWARE_FLOWS:
         supported_pms = [
@@ -943,24 +956,29 @@ def _get_flow_status(flows: dict, flow_key: str) -> tuple[str, str]:
         ]
         if supported_pms:
             return ("✓", f"{len(supported_pms)} PMs")
-        # Check if there are any PM entries at all
+        # Check if all PM entries are not_implemented → ⚠
         pm_entries = [pm for pm in flow_data.keys() if pm != "default"]
         if pm_entries:
-            return ("—", "")
-    
+            statuses = {flow_data[pm].get("status") for pm in pm_entries}
+            if statuses == {"not_implemented"}:
+                return ("⚠", "")
+            return ("x", "")
+
     # For flows with only 'default' entry
     default_entry = flow_data.get("default", {})
     status = default_entry.get("status", "unknown")
-    
+
     if status == "supported":
         return ("✓", "")
     elif status == "error":
         error_msg = default_entry.get("error", "")
         if len(error_msg) > 60:
             error_msg = error_msg[:57] + "..."
-        return ("⚠", error_msg if error_msg else "Error")
+        return ("?", error_msg if error_msg else "Error")
     elif status == "not_supported":
-        return ("—", "")
+        return ("x", "")
+    elif status == "not_implemented":
+        return ("⚠", "")
     else:
         return ("?", "")
 
@@ -1112,21 +1130,14 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
                     
                     for pm_key in _PROBE_PM_DISPLAY:
                         pm_data = flow_data.get(pm_key, {})
-                        status = pm_data.get("default", {}).get("status", "unknown")
-                        if status == "supported":
-                            row.append("✓")
-                        elif status == "not_supported":
-                            row.append("—")
-                        elif status == "error":
-                            row.append("⚠")
-                        else:
-                            row.append("?")
+                        status = pm_data.get("status", "unknown")
+                        row.append(_status_to_mark(status))
                     
                     a("| " + " | ".join(row) + " |")
                 a("")
                 
                 # Legend
-                a("**Legend:** ✓ Supported | — Not Supported | ⚠ Error | ? Unknown")
+                a("**Legend:** ✓ Supported | x Not Supported | ⚠ Not Implemented | ? Error / Missing required fields")
                 a("")
             else:
                 # For other flows, show simple supported/not supported
@@ -1412,6 +1423,9 @@ def main():
         return
 
     cmd_generate(targets, Path(args.output_dir), probe_path=probe_path)
+
+    # Always regenerate all_connector.md when running --all or specific connectors
+    cmd_all_connectors_doc(Path(args.output_dir).parent, probe_path=probe_path)
 
 
 if __name__ == "__main__":

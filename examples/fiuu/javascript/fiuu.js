@@ -6,7 +6,7 @@
 // Run a scenario:  node fiuu.js checkout_card
 'use strict';
 
-const { PaymentClient } = require('hs-playlib');
+const { PaymentClient, RecurringPaymentClient } = require('hs-playlib');
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
 const _defaultConfig = ConnectorConfig.create({
@@ -35,56 +35,12 @@ function _buildAuthorizeRequest(captureMethod) {
             }
         },
         "captureMethod": captureMethod,  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
+        "webhookUrl": "https://example.com/webhook"
     };
 }
 
@@ -190,56 +146,12 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
             }
         },
         "captureMethod": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
+        "webhookUrl": "https://example.com/webhook"
     });
 
     if (authorizeResponse.status === 'FAILED') {
@@ -360,6 +272,49 @@ async function get(merchantTransactionId, config = _defaultConfig) {
     return { status: getResponse.status };
 }
 
+// Flow: RecurringPaymentService.Charge
+async function recurringCharge(merchantTransactionId, config = _defaultConfig) {
+    // Step 1: Recurring Charge — charge against the stored mandate
+    const recurringResponse = await recurringPaymentClient.charge({
+        "connectorRecurringPaymentId": {  // Reference to existing mandate
+            "mandateIdType": {
+                "connectorMandateId": "probe-mandate-123"
+            }
+        },
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {  // Optional payment Method Information (for network transaction flows)
+            "token": {"token": {"value": "probe_pm_token"}}  // Payment tokens
+        },
+        "returnUrl": "https://example.com/recurring-return",
+        "address": {  // Address Information
+            "billingAddress": {
+                "firstName": {"value": "John"},  // Personal Information
+                "lastName": {"value": "Doe"},
+                "line1": {"value": "123 Main St"},  // Address Details
+                "city": {"value": "Seattle"},
+                "state": {"value": "WA"},
+                "zipCode": {"value": "98101"},
+                "countryAlpha2Code": "US",
+                "email": {"value": "test@example.com"},  // Contact Information
+                "phoneNumber": {"value": "4155552671"},
+                "phoneCountryCode": "+1"
+            }
+        },
+        "connectorCustomerId": "cust_probe_123",
+        "paymentMethodType": "PAY_PAL",
+        "offSession": true  // Behavioral Flags and Preferences
+    });
+
+    if (recurringResponse.status === 'FAILED') {
+        throw new Error(`Recurring_Charge failed: ${recurringResponse.error?.message}`);
+    }
+
+    return { status: recurringResponse.status };
+}
+
 // Flow: PaymentService.Void
 async function voidPayment(merchantTransactionId, config = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -370,7 +325,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, voidPayment };
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, recurringCharge, voidPayment };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_card';

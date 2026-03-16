@@ -3,11 +3,38 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -26,56 +53,10 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "auth_type": "NO_THREE_DS"
         },
         "sample": {
           "url": "https://webservices.securetrading.net/json/",
@@ -85,12 +66,36 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"accounttypedescription\":\"ECOM\",\"baseamount\":\"1000\",\"billingfirstname\":\"John\",\"billinglastname\":\"Doe\",\"credentialsonfile\":\"1\",\"currencyiso3a\":\"USD\",\"orderreference\":\"probe_txn_001\",\"requesttypedescriptions\":[\"AUTH\"],\"sitereference\":\"probe_site_ref\",\"settlestatus\":\"0\",\"pan\":\"4111111111111111\",\"expirydate\":\"03/30\",\"securitycode\":\"737\"}]}"
+          "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"accounttypedescription\":\"ECOM\",\"baseamount\":\"1000\",\"credentialsonfile\":\"1\",\"currencyiso3a\":\"USD\",\"orderreference\":\"probe_txn_001\",\"requesttypedescriptions\":[\"AUTH\"],\"sitereference\":\"probe_site_ref\",\"settlestatus\":\"0\",\"pan\":\"4111111111111111\",\"expirydate\":\"03/30\",\"securitycode\":\"737\"}]}"
         }
       },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
       }
     },
     "capture": {
@@ -114,6 +119,41 @@
           },
           "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"requesttypedescriptions\":[\"TRANSACTIONUPDATE\"],\"filter\":{\"sitereference\":[{\"value\":\"probe_site_ref\"}],\"transactionreference\":[{\"value\":\"probe_connector_txn_001\"}]},\"updates\":{\"settlestatus\":\"0\"}}]}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -140,14 +180,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -173,6 +216,21 @@
           },
           "body": "{\"alias\":\"probe_user\",\"version\":\"1.00\",\"request\":[{\"requesttypedescriptions\":[\"REFUND\"],\"baseamount\":\"1000\",\"currencyiso3a\":\"USD\",\"parenttransactionreference\":\"probe_connector_txn_001\",\"sitereference\":\"probe_site_ref\"}]}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

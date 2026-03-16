@@ -108,13 +108,13 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L96) · [JavaScript](../../examples/zift/javascript/zift.js#L93) · [Kotlin](../../examples/zift/kotlin/zift.kt#L116) · [Rust](../../examples/zift/rust/zift.rs#L112)
+**Examples:** [Python](../../examples/zift/python/zift.py#L52) · [JavaScript](../../examples/zift/javascript/zift.js#L49) · [Kotlin](../../examples/zift/kotlin/zift.kt#L72) · [Rust](../../examples/zift/rust/zift.rs#L68)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L115) · [JavaScript](../../examples/zift/javascript/zift.js#L112) · [Kotlin](../../examples/zift/kotlin/zift.kt#L132) · [Rust](../../examples/zift/rust/zift.rs#L127)
+**Examples:** [Python](../../examples/zift/python/zift.py#L71) · [JavaScript](../../examples/zift/javascript/zift.js#L68) · [Kotlin](../../examples/zift/kotlin/zift.kt#L88) · [Rust](../../examples/zift/rust/zift.rs#L83)
 
 ## API Reference
 
@@ -140,7 +140,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -158,7 +171,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L152) · [JavaScript](../../examples/zift/javascript/zift.js#L146) · [Kotlin](../../examples/zift/kotlin/zift.kt#L153) · [Rust](../../examples/zift/rust/zift.rs#L148)
+**Examples:** [Python](../../examples/zift/python/zift.py#L108) · [JavaScript](../../examples/zift/javascript/zift.js#L102) · [Kotlin](../../examples/zift/kotlin/zift.kt#L109) · [Rust](../../examples/zift/rust/zift.rs#L104)
 
 #### PaymentService.Refund
 
@@ -169,7 +182,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L115) · [JavaScript](../../examples/zift/javascript/zift.js#L112) · [Kotlin](../../examples/zift/kotlin/zift.kt#L165) · [Rust](../../examples/zift/rust/zift.rs#L159)
+**Examples:** [Python](../../examples/zift/python/zift.py#L71) · [JavaScript](../../examples/zift/javascript/zift.js#L68) · [Kotlin](../../examples/zift/kotlin/zift.kt#L121) · [Rust](../../examples/zift/rust/zift.rs#L115)
 
 #### PaymentService.SetupRecurring
 
@@ -180,4 +193,4 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L161) · [JavaScript](../../examples/zift/javascript/zift.js#L155) · [Kotlin](../../examples/zift/kotlin/zift.kt#L175) · [Rust](../../examples/zift/rust/zift.rs#L165)
+**Examples:** [Python](../../examples/zift/python/zift.py#L117) · [JavaScript](../../examples/zift/javascript/zift.js#L111) · [Kotlin](../../examples/zift/kotlin/zift.kt#L131) · [Rust](../../examples/zift/rust/zift.rs#L121)

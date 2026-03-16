@@ -216,9 +216,6 @@ _DYNAMIC_FIELDS: dict[tuple[str, str, str], str] = {
 # (e.g. customer IDs and token PMs that don't correspond to real objects).
 _SCENARIO_DROP_FIELDS: dict[tuple[str, str], frozenset[str]] = {
     ("recurring", "recurring_charge"): frozenset({
-        # connector_customer_id is a probe placeholder; real recurring charges use
-        # the mandate (pm_xxx) without needing a customer lookup.
-        "connector_customer_id",
         # payment_method_type from probe is "PAY_PAL" which is wrong for card mandates.
         "payment_method_type",
         # payment_method token is a static probe placeholder — mandate provides the PM.

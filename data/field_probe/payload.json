@@ -3,8 +3,7 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
@@ -58,7 +57,7 @@
       },
       "SamsungPay": {
         "status": "error",
-        "error": "Payment method data construction failed"
+        "error": "Failed to obtain authentication type"
       },
       "Sepa": {
         "status": "error",
@@ -75,6 +74,41 @@
         "error": "Failed to obtain authentication type"
       }
     },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "get": {
       "default": {
         "status": "error",
@@ -83,14 +117,12 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "recurring_charge": {
@@ -105,10 +137,20 @@
         "error": "Failed to obtain authentication type"
       }
     },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "setup_recurring": {
       "default": {
         "status": "error",
         "error": "Failed to obtain authentication type"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

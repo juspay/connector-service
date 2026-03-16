@@ -114,7 +114,6 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | UPI | ✓ |
-| Samsung Pay | — |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -128,4 +127,4 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/cashfree/python/cashfree.py) · [JavaScript](../../examples/cashfree/javascript/cashfree.js) · [Kotlin](../../examples/cashfree/kotlin/cashfree.kt#L95) · [Rust](../../examples/cashfree/rust/cashfree.rs#L95)
+**Examples:** [Python](../../examples/cashfree/python/cashfree.py) · [JavaScript](../../examples/cashfree/javascript/cashfree.js) · [Kotlin](../../examples/cashfree/kotlin/cashfree.kt#L49) · [Rust](../../examples/cashfree/rust/cashfree.rs#L50)

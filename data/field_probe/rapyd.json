@@ -3,16 +3,24 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
       "ApplePay": {
         "status": "supported",
-        "required_fields": [
-          "Apple pay encrypted data"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -33,56 +41,11 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://sandboxapi.rapyd.net/v1/payments",
@@ -97,6 +60,18 @@
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":{\"type\":\"apple_pay\",\"details\":\"eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9\"}},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
         }
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
       },
       "Card": {
         "status": "supported",
@@ -116,56 +91,11 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://sandboxapi.rapyd.net/v1/payments",
@@ -178,14 +108,11 @@
             "timestamp": "0000000000",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"in_amex_card\",\"fields\":{\"number\":\"4111111111111111\",\"expiration_month\":\"03\",\"expiration_year\":\"2030\",\"name\":\"John Doe\",\"cvv\":\"737\"},\"address\":null,\"digital_wallet\":null},\"payment_method_options\":{\"3d_required\":false},\"merchant_reference_id\":\"probe_txn_001\",\"capture\":true,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
+          "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"in_amex_card\",\"fields\":{\"number\":\"4111111111111111\",\"expiration_month\":\"03\",\"expiration_year\":\"2030\",\"name\":\"\",\"cvv\":\"737\"},\"address\":null,\"digital_wallet\":null},\"payment_method_options\":{\"3d_required\":false},\"merchant_reference_id\":\"probe_txn_001\",\"capture\":true,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
         }
       },
       "GooglePay": {
         "status": "supported",
-        "required_fields": [
-          "gpay wallet_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -209,56 +136,11 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://sandboxapi.rapyd.net/v1/payments",
@@ -274,6 +156,14 @@
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":{\"type\":\"google_pay\",\"details\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"}},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
         }
       },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
       "PaypalRedirect": {
         "status": "supported",
         "proto_request": {
@@ -288,56 +178,11 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://sandboxapi.rapyd.net/v1/payments",
@@ -354,8 +199,56 @@
         }
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "samsung_pay": {
+              "payment_credential": {
+                "method": "3DS",
+                "recurring_payment": false,
+                "card_brand": "VISA",
+                "card_last_four_digits": "1234",
+                "token_data": {
+                  "type": "S",
+                  "version": "100",
+                  "data": "probe_samsung_token_data"
+                }
+              }
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
+        },
+        "sample": {
+          "url": "https://sandboxapi.rapyd.net/v1/payments",
+          "method": "Post",
+          "headers": {
+            "access_key": "probe_key",
+            "content-type": "application/json",
+            "salt": "probeSaltVal0001",
+            "signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":null},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
+        }
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: payment_method"
       }
     },
     "capture": {
@@ -382,6 +275,41 @@
           },
           "body": "{\"amount\":\"10.00\",\"receipt_email\":null,\"statement_descriptor\":null}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -411,14 +339,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -447,6 +378,21 @@
           },
           "body": "{\"payment\":\"probe_connector_txn_001\",\"amount\":\"10.00\",\"currency\":\"USD\"}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

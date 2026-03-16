@@ -10,6 +10,7 @@ package examples.paypal
 import payments.PaymentClient
 import payments.RecurringPaymentClient
 import payments.MerchantAuthenticationClient
+import payments.PaymentMethodAuthenticationClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
@@ -18,6 +19,7 @@ import payments.RecurringPaymentServiceChargeRequest
 import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
 import payments.MerchantAuthenticationServiceCreateAccessTokenRequest
+import payments.PaymentMethodAuthenticationServicePostAuthenticateRequest
 import payments.AcceptanceType
 import payments.AuthenticationType
 import payments.CaptureMethod
@@ -47,56 +49,11 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
         addressBuilder.apply {  // Address Information
-            shippingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
-            }
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
-        webhookUrl = "https://example.com/webhook"
-        completeAuthorizeUrl = "https://example.com/complete"
-        browserInfoBuilder.apply {
-            colorDepth = 24  // Display Information
-            screenHeight = 900
-            screenWidth = 1440
-            javaEnabled = false  // Browser Settings
-            javaScriptEnabled = true
-            language = "en-US"
-            timeZoneOffsetMinutes = -480
-            acceptHeader = "application/json"  // Browser Headers
-            userAgent = "Mozilla/5.0 (probe-bot)"
-            acceptLanguage = "en-US,en;q=0.9"
-            ipAddress = "1.2.3.4"  // Device Information
-        }
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
                 tokenBuilder.value = "probe_access_token"  // The token string.
@@ -268,6 +225,7 @@ fun processRecurring(txnId: String, config: ConnectorConfig = _defaultConfig): M
             name = "John Doe"  // Customer's full name
             emailBuilder.value = "test@example.com"  // Customer's email address
             id = "cust_probe_123"  // Internal customer ID
+            connectorCustomerId = "cust_probe_123"  // Customer ID in the connector system
             phoneNumber = "4155552671"  // Customer's phone number
             phoneCountryCode = "+1"  // Customer's phone country code
         }
@@ -326,6 +284,7 @@ fun processRecurring(txnId: String, config: ConnectorConfig = _defaultConfig): M
             currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
         }
         returnUrl = "https://example.com/recurring-return"
+        connectorCustomerId = "cust_probe_123"
         offSession = true  // Behavioral Flags and Preferences
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
@@ -425,13 +384,47 @@ fun get(txnId: String) {
     println("Status: ${response.status.name}")
 }
 
+// Flow: PaymentMethodAuthenticationService.PostAuthenticate
+fun postAuthenticate(txnId: String) {
+    val client = PaymentMethodAuthenticationClient(_defaultConfig)
+    val request = PaymentMethodAuthenticationServicePostAuthenticateRequest.newBuilder().apply {
+        amountBuilder.apply {  // Amount Information
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        paymentMethodBuilder.apply {  // Payment Method
+            cardBuilder.apply {  // Generic card payment
+                cardNumberBuilder.value = "4111111111111111"  // Card Identification
+                cardExpMonthBuilder.value = "03"
+                cardExpYearBuilder.value = "2030"
+                cardCvcBuilder.value = "737"
+                cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
+            }
+        }
+        addressBuilder.apply {  // Address Information
+            billingAddressBuilder.apply {
+            }
+        }
+        connectorOrderReferenceId = "probe_order_ref_001"
+        stateBuilder.apply {  // State Information
+            accessTokenBuilder.apply {  // Access token obtained from connector
+                tokenBuilder.value = "probe_access_token"  // The token string.
+                expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
+                tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
+            }
+        }
+    }.build()
+    val response = client.post_authenticate(request)
+    println("Status: ${response.status.name}")
+}
+
 // Flow: RecurringPaymentService.Charge
 fun recurringCharge(txnId: String) {
     val client = RecurringPaymentClient(_defaultConfig)
     val request = RecurringPaymentServiceChargeRequest.newBuilder().apply {
         connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
             connectorMandateIdBuilder.apply {  // mandate_id sent by the connector
-                connectorMandateId = "probe_mandate_123"
+                connectorMandateId = "probe-mandate-123"
             }
         }
         amountBuilder.apply {  // Amount Information
@@ -444,7 +437,7 @@ fun recurringCharge(txnId: String) {
             }
         }
         returnUrl = "https://example.com/recurring-return"
-        connectorCustomerId = "probe_cust_connector_001"
+        connectorCustomerId = "cust_probe_123"
         paymentMethodType = PaymentMethodType.PAY_PAL
         offSession = true  // Behavioral Flags and Preferences
         stateBuilder.apply {  // State Information
@@ -493,6 +486,7 @@ fun setupRecurring(txnId: String) {
             name = "John Doe"  // Customer's full name
             emailBuilder.value = "test@example.com"  // Customer's email address
             id = "cust_probe_123"  // Internal customer ID
+            connectorCustomerId = "cust_probe_123"  // Customer ID in the connector system
             phoneNumber = "4155552671"  // Customer's phone number
             phoneCountryCode = "+1"  // Customer's phone country code
         }
@@ -572,10 +566,11 @@ fun main(args: Array<String>) {
         "capture" -> capture(txnId)
         "createAccessToken" -> createAccessToken(txnId)
         "get" -> get(txnId)
+        "postAuthenticate" -> postAuthenticate(txnId)
         "recurringCharge" -> recurringCharge(txnId)
         "refund" -> refund(txnId)
         "setupRecurring" -> setupRecurring(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, createAccessToken, get, recurringCharge, refund, setupRecurring, void")
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, createAccessToken, get, postAuthenticate, recurringCharge, refund, setupRecurring, void")
     }
 }

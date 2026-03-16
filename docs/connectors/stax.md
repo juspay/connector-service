@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L133) · [JavaScript](../../examples/stax/javascript/stax.js#L122) · [Kotlin](../../examples/stax/kotlin/stax.kt#L149) · [Rust](../../examples/stax/rust/stax.rs#L141)
+**Examples:** [Python](../../examples/stax/python/stax.py#L88) · [JavaScript](../../examples/stax/javascript/stax.js#L77) · [Kotlin](../../examples/stax/kotlin/stax.kt#L104) · [Rust](../../examples/stax/rust/stax.rs#L96)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L158) · [JavaScript](../../examples/stax/javascript/stax.js#L148) · [Kotlin](../../examples/stax/kotlin/stax.kt#L171) · [Rust](../../examples/stax/rust/stax.rs#L163)
+**Examples:** [Python](../../examples/stax/python/stax.py#L113) · [JavaScript](../../examples/stax/javascript/stax.js#L103) · [Kotlin](../../examples/stax/kotlin/stax.kt#L126) · [Rust](../../examples/stax/rust/stax.rs#L118)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -136,37 +136,37 @@ Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L177) · [JavaScript](../../examples/stax/javascript/stax.js#L167) · [Kotlin](../../examples/stax/kotlin/stax.kt#L187) · [Rust](../../examples/stax/rust/stax.rs#L178)
+**Examples:** [Python](../../examples/stax/python/stax.py#L132) · [JavaScript](../../examples/stax/javascript/stax.js#L122) · [Kotlin](../../examples/stax/kotlin/stax.kt#L142) · [Rust](../../examples/stax/rust/stax.rs#L133)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L263) · [JavaScript](../../examples/stax/javascript/stax.js#L250) · [Kotlin](../../examples/stax/kotlin/stax.kt#L267) · [Rust](../../examples/stax/rust/stax.rs#L259)
+**Examples:** [Python](../../examples/stax/python/stax.py#L173) · [JavaScript](../../examples/stax/javascript/stax.js#L160) · [Kotlin](../../examples/stax/kotlin/stax.kt#L177) · [Rust](../../examples/stax/rust/stax.rs#L169)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L300) · [JavaScript](../../examples/stax/javascript/stax.js#L285) · [Kotlin](../../examples/stax/kotlin/stax.kt#L289) · [Rust](../../examples/stax/rust/stax.rs#L281)
+**Examples:** [Python](../../examples/stax/python/stax.py#L210) · [JavaScript](../../examples/stax/javascript/stax.js#L195) · [Kotlin](../../examples/stax/kotlin/stax.kt#L199) · [Rust](../../examples/stax/rust/stax.rs#L191)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L322) · [JavaScript](../../examples/stax/javascript/stax.js#L307) · [Kotlin](../../examples/stax/kotlin/stax.kt#L308) · [Rust](../../examples/stax/rust/stax.rs#L299)
+**Examples:** [Python](../../examples/stax/python/stax.py#L232) · [JavaScript](../../examples/stax/javascript/stax.js#L217) · [Kotlin](../../examples/stax/kotlin/stax.kt#L218) · [Rust](../../examples/stax/rust/stax.rs#L209)
 
 ### Create Customer
 
 Register a customer record in the connector system. Returns a connector_customer_id that can be reused for recurring payments and tokenized card storage.
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L344) · [JavaScript](../../examples/stax/javascript/stax.js#L329) · [Kotlin](../../examples/stax/kotlin/stax.kt#L327) · [Rust](../../examples/stax/rust/stax.rs#L317)
+**Examples:** [Python](../../examples/stax/python/stax.py#L254) · [JavaScript](../../examples/stax/javascript/stax.js#L239) · [Kotlin](../../examples/stax/kotlin/stax.kt#L237) · [Rust](../../examples/stax/rust/stax.rs#L227)
 
 ### Tokenize Payment Method
 
 Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L378) · [JavaScript](../../examples/stax/javascript/stax.js#L358) · [Kotlin](../../examples/stax/kotlin/stax.kt#L356) · [Rust](../../examples/stax/rust/stax.rs#L344)
+**Examples:** [Python](../../examples/stax/python/stax.py#L288) · [JavaScript](../../examples/stax/javascript/stax.js#L268) · [Kotlin](../../examples/stax/kotlin/stax.kt#L266) · [Rust](../../examples/stax/rust/stax.rs#L254)
 
 ## API Reference
 
@@ -196,11 +196,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
 | SEPA | ✓ |
 | BACS | ✓ |
 | ACH | ✓ |
 | BECS | ✓ |
-| Samsung Pay | — |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -265,7 +274,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L429) · [JavaScript](../../examples/stax/javascript/stax.js#L403) · [Kotlin](../../examples/stax/kotlin/stax.kt#L401) · [Rust](../../examples/stax/rust/stax.rs#L389)
+**Examples:** [Python](../../examples/stax/python/stax.py#L340) · [JavaScript](../../examples/stax/javascript/stax.js#L314) · [Kotlin](../../examples/stax/kotlin/stax.kt#L312) · [Rust](../../examples/stax/rust/stax.rs#L300)
 
 #### PaymentService.Capture
 
@@ -276,7 +285,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L438) · [JavaScript](../../examples/stax/javascript/stax.js#L412) · [Kotlin](../../examples/stax/kotlin/stax.kt#L413) · [Rust](../../examples/stax/rust/stax.rs#L400)
+**Examples:** [Python](../../examples/stax/python/stax.py#L349) · [JavaScript](../../examples/stax/javascript/stax.js#L323) · [Kotlin](../../examples/stax/kotlin/stax.kt#L324) · [Rust](../../examples/stax/rust/stax.rs#L311)
 
 #### PaymentService.Get
 
@@ -287,7 +296,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L447) · [JavaScript](../../examples/stax/javascript/stax.js#L421) · [Kotlin](../../examples/stax/kotlin/stax.kt#L449) · [Rust](../../examples/stax/rust/stax.rs#L430)
+**Examples:** [Python](../../examples/stax/python/stax.py#L358) · [JavaScript](../../examples/stax/javascript/stax.js#L332) · [Kotlin](../../examples/stax/kotlin/stax.kt#L360) · [Rust](../../examples/stax/rust/stax.rs#L341)
 
 #### PaymentService.Refund
 
@@ -298,7 +307,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L263) · [JavaScript](../../examples/stax/javascript/stax.js#L250) · [Kotlin](../../examples/stax/kotlin/stax.kt#L457) · [Rust](../../examples/stax/rust/stax.rs#L436)
+**Examples:** [Python](../../examples/stax/python/stax.py#L173) · [JavaScript](../../examples/stax/javascript/stax.js#L160) · [Kotlin](../../examples/stax/kotlin/stax.kt#L368) · [Rust](../../examples/stax/rust/stax.rs#L347)
 
 #### PaymentMethodService.Tokenize
 
@@ -309,7 +318,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L378) · [JavaScript](../../examples/stax/javascript/stax.js#L358) · [Kotlin](../../examples/stax/kotlin/stax.kt#L467) · [Rust](../../examples/stax/rust/stax.rs#L442)
+**Examples:** [Python](../../examples/stax/python/stax.py#L288) · [JavaScript](../../examples/stax/javascript/stax.js#L268) · [Kotlin](../../examples/stax/kotlin/stax.kt#L378) · [Rust](../../examples/stax/rust/stax.rs#L353)
 
 #### PaymentService.Void
 
@@ -320,7 +329,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L456) · [JavaScript](../../examples/stax/javascript/stax.js#L430) · [Kotlin](../../examples/stax/kotlin/stax.kt#L510) · [Rust](../../examples/stax/rust/stax.rs#L485)
+**Examples:** [Python](../../examples/stax/python/stax.py#L367) · [JavaScript](../../examples/stax/javascript/stax.js#L341) · [Kotlin](../../examples/stax/kotlin/stax.kt#L422) · [Rust](../../examples/stax/rust/stax.rs#L397)
 
 ### Customers
 
@@ -333,4 +342,4 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/stax/python/stax.py#L344) · [JavaScript](../../examples/stax/javascript/stax.js#L329) · [Kotlin](../../examples/stax/kotlin/stax.kt#L423) · [Rust](../../examples/stax/rust/stax.rs#L406)
+**Examples:** [Python](../../examples/stax/python/stax.py#L254) · [JavaScript](../../examples/stax/javascript/stax.js#L239) · [Kotlin](../../examples/stax/kotlin/stax.kt#L334) · [Rust](../../examples/stax/rust/stax.rs#L317)

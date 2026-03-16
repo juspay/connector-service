@@ -108,13 +108,13 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L108) · [JavaScript](../../examples/helcim/javascript/helcim.js#L103) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L110) · [Rust](../../examples/helcim/rust/helcim.rs#L109)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L69) · [JavaScript](../../examples/helcim/javascript/helcim.js#L64) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L70) · [Rust](../../examples/helcim/rust/helcim.rs#L70)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L127) · [JavaScript](../../examples/helcim/javascript/helcim.js#L122) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L126) · [Rust](../../examples/helcim/rust/helcim.rs#L124)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L88) · [JavaScript](../../examples/helcim/javascript/helcim.js#L83) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L86) · [Rust](../../examples/helcim/rust/helcim.rs#L85)
 
 ## API Reference
 
@@ -139,7 +139,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -157,7 +170,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L149) · [JavaScript](../../examples/helcim/javascript/helcim.js#L143) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L144) · [Rust](../../examples/helcim/rust/helcim.rs#L141)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L110) · [JavaScript](../../examples/helcim/javascript/helcim.js#L104) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L104) · [Rust](../../examples/helcim/rust/helcim.rs#L102)
 
 #### PaymentService.Get
 
@@ -168,4 +181,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L158) · [JavaScript](../../examples/helcim/javascript/helcim.js#L152) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L156) · [Rust](../../examples/helcim/rust/helcim.rs#L152)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L119) · [JavaScript](../../examples/helcim/javascript/helcim.js#L113) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L116) · [Rust](../../examples/helcim/rust/helcim.rs#L113)

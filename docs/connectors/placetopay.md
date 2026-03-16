@@ -108,7 +108,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L97) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L94) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L100) · [Rust](../../examples/placetopay/rust/placetopay.rs#L100)
+**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L65) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L62) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L67) · [Rust](../../examples/placetopay/rust/placetopay.rs#L68)
 
 ## API Reference
 
@@ -132,7 +132,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
-| Samsung Pay | — |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -150,4 +163,4 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L116) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L112) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L115) · [Rust](../../examples/placetopay/rust/placetopay.rs#L114)
+**Examples:** [Python](../../examples/placetopay/python/placetopay.py#L84) · [JavaScript](../../examples/placetopay/javascript/placetopay.js#L80) · [Kotlin](../../examples/placetopay/kotlin/placetopay.kt#L82) · [Rust](../../examples/placetopay/rust/placetopay.rs#L82)

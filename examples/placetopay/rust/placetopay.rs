@@ -40,43 +40,11 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         }
     },
     "capture_method": capture_method,  // Method for capturing the payment
-    "customer": {  // Customer Information
-        "name": "John Doe",  // Customer's full name
-        "email": "test@example.com",  // Customer's email address
-        "id": "cust_probe_123",  // Internal customer ID
-        "phone_number": "4155552671",  // Customer's phone number
-        "phone_country_code": "+1",  // Customer's phone country code
-    },
     "address": {  // Address Information
-        "shipping_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
-        },
         "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
     "browser_info": {
         "color_depth": 24,  // Display Information
         "screen_height": 900,

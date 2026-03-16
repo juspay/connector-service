@@ -35,56 +35,11 @@ function _buildAuthorizeRequest(captureMethod) {
             }
         },
         "captureMethod": captureMethod,  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
+        "authType": "NO_THREE_DS"  // Authentication Details
     };
 }
 
@@ -190,56 +145,11 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
             }
         },
         "captureMethod": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
+        "authType": "NO_THREE_DS"  // Authentication Details
     });
 
     if (authorizeResponse.status === 'FAILED') {
@@ -273,56 +183,11 @@ async function processCheckoutBank(merchantTransactionId, config = _defaultConfi
             }
         },
         "captureMethod": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shippingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            },
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
-        "authType": "NO_THREE_DS",  // Authentication Details
-        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhookUrl": "https://example.com/webhook",
-        "completeAuthorizeUrl": "https://example.com/complete",
-        "browserInfo": {
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
-        }
+        "authType": "NO_THREE_DS"  // Authentication Details
     });
 
     if (authorizeResponse.status === 'FAILED') {
@@ -397,6 +262,7 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
             "name": "John Doe",  // Customer's full name
             "email": {"value": "test@example.com"},  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
+            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
             "phoneNumber": "4155552671",  // Customer's phone number
             "phoneCountryCode": "+1"  // Customer's phone country code
         },
@@ -450,6 +316,7 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
             "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "returnUrl": "https://example.com/recurring-return",
+        "connectorCustomerId": "cust_probe_123",
         "offSession": true  // Behavioral Flags and Preferences
     });
 
@@ -537,7 +404,7 @@ async function recurringCharge(merchantTransactionId, config = _defaultConfig) {
     const recurringResponse = await recurringPaymentClient.charge({
         "connectorRecurringPaymentId": {  // Reference to existing mandate
             "mandateIdType": {
-                "connectorMandateId": "probe_mandate_123"
+                "connectorMandateId": "probe-mandate-123"
             }
         },
         "amount": {  // Amount Information
@@ -548,7 +415,7 @@ async function recurringCharge(merchantTransactionId, config = _defaultConfig) {
             "token": {"token": {"value": "probe_pm_token"}}  // Payment tokens
         },
         "returnUrl": "https://example.com/recurring-return",
-        "connectorCustomerId": "probe_cust_connector_001",
+        "connectorCustomerId": "cust_probe_123",
         "paymentMethodType": "PAY_PAL",
         "offSession": true  // Behavioral Flags and Preferences
     });
@@ -582,6 +449,7 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
             "name": "John Doe",  // Customer's full name
             "email": {"value": "test@example.com"},  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
+            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
             "phoneNumber": "4155552671",  // Customer's phone number
             "phoneCountryCode": "+1"  // Customer's phone country code
         },

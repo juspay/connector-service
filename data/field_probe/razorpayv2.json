@@ -3,16 +3,12 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
       "Ach": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -27,57 +23,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -87,14 +38,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Affirm": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -105,57 +53,12 @@
             "affirm": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -165,14 +68,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Afterpay": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -183,57 +83,12 @@
             "afterpay_clearpay": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -243,14 +98,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "ApplePay": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -271,57 +123,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -331,14 +138,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Bacs": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -353,57 +157,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -413,14 +172,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Becs": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -435,57 +191,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -495,14 +206,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Blik": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -515,57 +223,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -575,14 +238,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Card": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -599,57 +259,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -659,14 +274,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "GooglePay": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -690,57 +302,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -750,14 +317,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Ideal": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -768,57 +332,12 @@
             "ideal": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -828,14 +347,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "Klarna": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -846,57 +362,12 @@
             "klarna": {}
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -906,14 +377,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "PaypalRedirect": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -926,57 +394,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -986,18 +409,53 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Payment method data construction failed"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "samsung_pay": {
+              "payment_credential": {
+                "method": "3DS",
+                "recurring_payment": false,
+                "card_brand": "VISA",
+                "card_last_four_digits": "1234",
+                "token_data": {
+                  "type": "S",
+                  "version": "100",
+                  "data": "probe_samsung_token_data"
+                }
+              }
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "merchant_order_id": "probe_order_001"
+        },
+        "sample": {
+          "url": "https://api.razorpay.com/v1/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Basic cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+        }
       },
       "Sepa": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -1011,57 +469,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments",
@@ -1071,14 +484,11 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":null,\"save\":false}"
         }
       },
       "UpiCollect": {
         "status": "supported",
-        "required_fields": [
-          "reference_id"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -1091,57 +501,12 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "merchant_order_id": "probe_order_001",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://api.razorpay.com/v1/payments/create/upi",
@@ -1151,8 +516,23 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"test@example.com\",\"contact\":\"+14155552671\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":{\"flow\":\"collect\",\"vpa\":\"test@upi\",\"expiry_time\":15},\"save\":false}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"order_id\":\"probe_order_001\",\"email\":\"customer@example.com\",\"contact\":\"9999999999\",\"method\":\"upi\",\"description\":\"Payment via RazorpayV2\",\"notes\":null,\"callback_url\":\"https://example.com/return\",\"upi\":{\"flow\":\"collect\",\"vpa\":\"test@upi\",\"expiry_time\":15},\"save\":false}"
         }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "create_order": {
@@ -1175,6 +555,26 @@
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"receipt\":\"probe_order_001\",\"payment_capture\":true}"
         }
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
@@ -1201,14 +601,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -1234,6 +637,26 @@
           },
           "body": "{\"amount\":1000}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "not_implemented"
       }
     }
   }

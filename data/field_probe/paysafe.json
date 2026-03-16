@@ -3,8 +3,7 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
@@ -58,7 +57,7 @@
       },
       "SamsungPay": {
         "status": "error",
-        "error": "Payment method data construction failed"
+        "error": "Invalid Configuration: account_id"
       },
       "Sepa": {
         "status": "error",
@@ -92,6 +91,41 @@
         }
       }
     },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -116,22 +150,17 @@
     },
     "post_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "pre_authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "recurring_charge": {
       "default": {
         "status": "error",
-        "required_fields": [
-          "mandate_metadata"
-        ],
         "error": "Stuck on field: mandate_metadata — Missing required field: mandate_metadata"
       }
     },
@@ -160,6 +189,16 @@
         }
       }
     },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "tokenize": {
       "default": {
         "status": "error",
@@ -169,9 +208,6 @@
     "void": {
       "default": {
         "status": "supported",
-        "required_fields": [
-          "amount"
-        ],
         "proto_request": {
           "merchant_void_id": "probe_void_001",
           "connector_transaction_id": "probe_connector_txn_001",

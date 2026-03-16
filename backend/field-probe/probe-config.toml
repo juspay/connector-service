@@ -86,4 +86,16 @@ paypal = '{"authorize_id":"probe_auth_001","capture_id":"probe_cap_001","psync_f
 forte = '{"auth_id":"probe_auth_001"}'
 authorizedotnet = '{"creditCard":{"cardNumber":"4111111111111111","expirationDate":"2025-12"}}'
 hyperpg = '{"order_id":"probe_order_001"}'
+paybox  = '{"connector_request_id":"probe_req_001"}'
 default = '{}'
+
+# Header fields whose values are always random/dynamic and should be replaced
+# with a static placeholder in sample output.
+[normalize_headers]
+replace_with_static = ["salt", "idempotency-key", "timestamp", "x-request-id", "x-nonce"]
+
+# JSON body field names whose values are always dynamic (timestamps, nonces, IDs)
+# and should be replaced with static placeholders in sample output.
+[normalize_json]
+dynamic_fields = ["nonce", "invoiceNumber", "timestamp", "requestTimestamp"]
+digit_value_fields = ["NUMQUESTION"]

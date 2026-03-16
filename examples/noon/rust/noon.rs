@@ -40,57 +40,12 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         }
     },
     "capture_method": capture_method,  // Method for capturing the payment
-    "customer": {  // Customer Information
-        "name": "John Doe",  // Customer's full name
-        "email": "test@example.com",  // Customer's email address
-        "id": "cust_probe_123",  // Internal customer ID
-        "phone_number": "4155552671",  // Customer's phone number
-        "phone_country_code": "+1",  // Customer's phone country code
-    },
     "address": {  // Address Information
-        "shipping_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
-        },
         "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
-    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-    "webhook_url": "https://example.com/webhook",
-    "complete_authorize_url": "https://example.com/complete",
     "order_category": "mobile",  // Order Details
-    "browser_info": {
-        "color_depth": 24,  // Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information
-    },
     "description": "Probe payment",
     })).unwrap_or_default()
 }
@@ -203,57 +158,12 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
             }
         },
         "capture_method": "AUTOMATIC",  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": "test@example.com",  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "phone_number": "4155552671",  // Customer's phone number
-            "phone_country_code": "+1",  // Customer's phone country code
-        },
         "address": {  // Address Information
-            "shipping_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
-            },
             "billing_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
             },
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
-        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
-        "webhook_url": "https://example.com/webhook",
-        "complete_authorize_url": "https://example.com/complete",
         "order_category": "mobile",  // Order Details
-        "browser_info": {
-            "color_depth": 24,  // Display Information
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,  // Browser Settings
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",  // Browser Headers
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4",  // Device Information
-        },
         "description": "Probe payment",
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
@@ -347,6 +257,32 @@ pub async fn get(client: &ConnectorClient, merchant_transaction_id: &str) -> Res
     return Ok(format!("status: {:?}", response.status()));
 }
 
+// Flow: RecurringPaymentService.Charge
+pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
+    "connector_recurring_payment_id": {  // Reference to existing mandate
+        "mandate_id_type": {
+            "connector_mandate_id": "probe-mandate-123",
+        },
+    },
+    "amount": {  // Amount Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {  // Optional payment Method Information (for network transaction flows)
+        "payment_method": {
+            "token": "probe_pm_token",  // Payment tokens
+        }
+    },
+    "return_url": "https://example.com/recurring-return",
+    "description": "Probe payment",
+    "connector_customer_id": "cust_probe_123",
+    "payment_method_type": "PAY_PAL",
+    "off_session": true,  // Behavioral Flags and Preferences
+    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    return Ok(format!("status: {:?}", response.status()));
+}
+
 // Flow: PaymentService.Refund
 pub async fn refund(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
@@ -374,9 +310,10 @@ async fn main() {
         "authorize" => authorize(&client, "order_001").await,
         "capture" => capture(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
+        "recurring_charge" => recurring_charge(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_card, process_checkout_autocapture, process_checkout_wallet, process_refund, process_void_payment, process_get_payment, authorize, capture, get, refund, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_card, process_checkout_autocapture, process_checkout_wallet, process_refund, process_void_payment, process_get_payment, authorize, capture, get, recurring_charge, refund, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

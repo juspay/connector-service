@@ -3,8 +3,7 @@
   "flows": {
     "authenticate": {
       "default": {
-        "status": "error",
-        "error": "Address is required"
+        "status": "not_implemented"
       }
     },
     "authorize": {
@@ -58,7 +57,7 @@
       },
       "SamsungPay": {
         "status": "error",
-        "error": "Payment method data construction failed"
+        "error": "Invalid Configuration: connector_config.merchant_name"
       },
       "Sepa": {
         "status": "error",
@@ -94,6 +93,41 @@
         }
       }
     },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
@@ -121,13 +155,13 @@
     "post_authenticate": {
       "default": {
         "status": "error",
-        "error": "Address is required"
+        "error": "Stuck on field: connector_feature_data.link_data — Missing required field: connector_feature_data.link_data"
       }
     },
     "pre_authenticate": {
       "default": {
         "status": "error",
-        "error": "Address is required"
+        "error": "Stuck on field: connector_feature_data.link_data — Missing required field: connector_feature_data.link_data"
       }
     },
     "recurring_charge": {
@@ -161,6 +195,21 @@
           },
           "body": "{\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"reference\":\"probe-refund-001\"}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {

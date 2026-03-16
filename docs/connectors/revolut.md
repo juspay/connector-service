@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L121) · [JavaScript](../../examples/revolut/javascript/revolut.js#L114) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L136) · [Rust](../../examples/revolut/rust/revolut.rs#L133)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L76) · [JavaScript](../../examples/revolut/javascript/revolut.js#L69) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L90) · [Rust](../../examples/revolut/rust/revolut.rs#L88)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L146) · [JavaScript](../../examples/revolut/javascript/revolut.js#L140) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L158) · [Rust](../../examples/revolut/rust/revolut.rs#L155)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L101) · [JavaScript](../../examples/revolut/javascript/revolut.js#L95) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L112) · [Rust](../../examples/revolut/rust/revolut.rs#L110)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -136,7 +136,7 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L165) · [JavaScript](../../examples/revolut/javascript/revolut.js#L159) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L174) · [Rust](../../examples/revolut/rust/revolut.rs#L170)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L120) · [JavaScript](../../examples/revolut/javascript/revolut.js#L114) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L128) · [Rust](../../examples/revolut/rust/revolut.rs#L125)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -150,19 +150,19 @@ Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L260) · [JavaScript](../../examples/revolut/javascript/revolut.js#L251) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L263) · [Rust](../../examples/revolut/rust/revolut.rs#L260)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L170) · [JavaScript](../../examples/revolut/javascript/revolut.js#L161) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L172) · [Rust](../../examples/revolut/rust/revolut.rs#L170)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L345) · [JavaScript](../../examples/revolut/javascript/revolut.js#L333) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L342) · [Rust](../../examples/revolut/rust/revolut.rs#L340)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L210) · [JavaScript](../../examples/revolut/javascript/revolut.js#L198) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L206) · [Rust](../../examples/revolut/rust/revolut.rs#L205)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L382) · [JavaScript](../../examples/revolut/javascript/revolut.js#L368) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L364) · [Rust](../../examples/revolut/rust/revolut.rs#L362)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L247) · [JavaScript](../../examples/revolut/javascript/revolut.js#L233) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L228) · [Rust](../../examples/revolut/rust/revolut.rs#L227)
 
 ## API Reference
 
@@ -202,7 +202,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Afterpay | ✓ |
 | UPI | ✓ |
 | Affirm | ✓ |
-| Samsung Pay | — |
+| Samsung Pay | ✓ |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -372,7 +372,27 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L404) · [JavaScript](../../examples/revolut/javascript/revolut.js#L389) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L382) · [Rust](../../examples/revolut/rust/revolut.rs#L379)
+##### Samsung Pay
+
+```python
+"payment_method": {
+    "samsung_pay": {  # Samsung
+        "payment_credential": {
+            "method": "3DS",  # Method type
+            "recurring_payment": False,  # Whether this is a recurring payment
+            "card_brand": "VISA",
+            "card_last_four_digits": {"value": "1234"},  # Last four digits of card
+            "token_data": {
+                "type": "S",  # 3DS type
+                "version": "100",  # 3DS version
+                "data": {"value": "probe_samsung_token_data"}  # Token data
+            }
+        }
+    }
+}
+```
+
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L269) · [JavaScript](../../examples/revolut/javascript/revolut.js#L254) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L246) · [Rust](../../examples/revolut/rust/revolut.rs#L244)
 
 #### PaymentService.Capture
 
@@ -383,7 +403,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L413) · [JavaScript](../../examples/revolut/javascript/revolut.js#L398) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L394) · [Rust](../../examples/revolut/rust/revolut.rs#L390)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L278) · [JavaScript](../../examples/revolut/javascript/revolut.js#L263) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L258) · [Rust](../../examples/revolut/rust/revolut.rs#L255)
 
 #### PaymentService.Get
 
@@ -394,7 +414,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L422) · [JavaScript](../../examples/revolut/javascript/revolut.js#L407) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L404) · [Rust](../../examples/revolut/rust/revolut.rs#L396)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L287) · [JavaScript](../../examples/revolut/javascript/revolut.js#L272) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L268) · [Rust](../../examples/revolut/rust/revolut.rs#L261)
 
 #### PaymentService.Refund
 
@@ -405,4 +425,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/revolut/python/revolut.py#L345) · [JavaScript](../../examples/revolut/javascript/revolut.js#L333) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L412) · [Rust](../../examples/revolut/rust/revolut.rs#L402)
+**Examples:** [Python](../../examples/revolut/python/revolut.py#L210) · [JavaScript](../../examples/revolut/javascript/revolut.js#L198) · [Kotlin](../../examples/revolut/kotlin/revolut.kt#L276) · [Rust](../../examples/revolut/rust/revolut.rs#L267)
