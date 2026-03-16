@@ -19,15 +19,15 @@ import com.google.protobuf.Parser
 
 /**
  * Exception raised when req_transformer fails.
- * Wraps RequestErrorProto and provides access to proto fields.
+ * Wraps RequestError and provides access to proto fields.
  */
-class RequestError(val proto: SdkConfig.RequestError) : Exception(proto.errorMessage)
+class RequestError(val proto: types.SdkConfig.RequestError) : Exception(proto.getErrorMessage())
 
 /**
  * Exception raised when res_transformer fails.
- * Wraps ResponseErrorProto and provides access to proto fields.
+ * Wraps ResponseError and provides access to proto fields.
  */
-class ResponseError(val proto: SdkConfig.ResponseError) : Exception(proto.errorMessage)
+class ResponseError(val proto: types.SdkConfig.ResponseError) : Exception(proto.getErrorMessage())
 
 open class ConnectorClient(
     val config: ConnectorConfig,
@@ -81,12 +81,12 @@ open class ConnectorClient(
      * @throws IllegalStateException if result type is unknown
      */
     private fun checkReqError(resultBytes: ByteArray): FfiConnectorHttpRequest {
-        val result = FfiResult.parseFrom(resultBytes)
-        return when (result.type) {
-            FfiResult.Type.HTTP_REQUEST -> result.httpRequest
-            FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.requestError)
-            FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.responseError)
-            else -> throw IllegalStateException("Unknown result type: ${result.type}")
+        val result = types.SdkConfig.FfiResult.parseFrom(resultBytes)
+        return when (result.getType()) {
+            types.SdkConfig.FfiResult.Type.HTTP_REQUEST -> result.getHttpRequest()
+            types.SdkConfig.FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.getRequestError())
+            types.SdkConfig.FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.getResponseError())
+            else -> throw IllegalStateException("Unknown result type: ${result.getType()}")
         }
     }
 
@@ -100,12 +100,12 @@ open class ConnectorClient(
      * @throws IllegalStateException if result type is unknown
      */
     private fun checkResError(resultBytes: ByteArray): FfiConnectorHttpResponse {
-        val result = FfiResult.parseFrom(resultBytes)
-        return when (result.type) {
-            FfiResult.Type.HTTP_RESPONSE -> result.httpResponse
-            FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.responseError)
-            FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.requestError)
-            else -> throw IllegalStateException("Unknown result type: ${result.type}")
+        val result = types.SdkConfig.FfiResult.parseFrom(resultBytes)
+        return when (result.getType()) {
+            types.SdkConfig.FfiResult.Type.HTTP_RESPONSE -> result.getHttpResponse()
+            types.SdkConfig.FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.getResponseError())
+            types.SdkConfig.FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.getRequestError())
+            else -> throw IllegalStateException("Unknown result type: ${result.getType()}")
         }
     }
 
