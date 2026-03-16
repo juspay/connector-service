@@ -29,7 +29,7 @@ from typing import Optional, Any
 
 from .generated import connector_service_ffi as _ffi
 from ._generated_flows import SERVICE_FLOWS
-from .http_client import execute, HttpRequest, create_client
+from .http_client import execute, HttpRequest, create_client, merge_http_config, DEFAULT_HTTP_CONFIG
 from .generated.sdk_config_pb2 import (
     ConnectorConfig,
     RequestConfig,
@@ -148,7 +148,6 @@ def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
     success.ParseFromString(result_bytes)
     return success
 
-
 class _ConnectorClientBase:
     """Base class for per-service connector clients. Do not instantiate directly."""
 
@@ -168,33 +167,26 @@ class _ConnectorClientBase:
         """
         self.config = config
         self.defaults = defaults or RequestConfig()
-        # Instance-level cache: create the primary asynchronous connection pool at startup
-        self.client = create_client(
-            self.defaults.http if self.defaults.HasField("http") else None
-        )
+        # Client default: proto defaults + optional client config (merged at init, stored)
+        client_http = self.defaults.http if self.defaults.HasField("http") else None
+        self._default_http = merge_http_config(DEFAULT_HTTP_CONFIG, client_http)
+        self.client = create_client(self._default_http)
 
     def _resolve_config(
         self, options: Optional[RequestConfig] = None
-    ) -> tuple[FfiOptions, Optional[HttpConfig]]:
+    ) -> tuple[FfiOptions, HttpConfig]:
         """
-        Merges request-level options with client defaults.
-        Environment comes from ConnectorConfig.options. Connector identity comes from
-        ConnectorConfig.connector_config. HTTP/vault from defaults + request override.
+        Per-request override falls back to client default (stored at init).
         """
-        environment = self.config.options.environment
-        connector_config = self.config.connector_config
-
-        # HTTP: request override > client defaults
-        http_config = (
-            options.http
-            if (options and options.HasField("http"))
-            else (self.defaults.http if self.defaults.HasField("http") else None)
-        )
+        environment = self.config.environment
+        override_http = options.http if (options and options.HasField("http")) else None
+        http_config = merge_http_config(self._default_http, override_http)
 
         # Resolve FFI Context
         ffi = FfiOptions(
             environment=environment,
-            connector_config=connector_config,
+            connector=self.config.connector,
+            auth=self.config.auth,
         )
 
         return ffi, http_config
@@ -246,10 +238,13 @@ class _ConnectorClientBase:
             body=connector_req.body if connector_req.HasField("body") else None,
         )
 
-        # 3. Execute the HTTP request using the instance-owned AsyncClient
-        response = await execute(
-            connector_request, self.client, http_config=http_config
+        # 3. Execute (http_config is always complete; pass ms, convert to sec inside)
+        resolved_ms = (
+            http_config.total_timeout_ms,
+            http_config.connect_timeout_ms,
+            http_config.response_timeout_ms,
         )
+        response = await execute(connector_request, self.client, resolved_ms)
 
         # 4. Encode HTTP response for FFI
         res_proto = FfiConnectorHttpResponse(
