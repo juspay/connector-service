@@ -8,7 +8,7 @@ common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 config_patch_derive = { path = "../config_patch_derive" }
 anyhow = "1.0"
 rdkafka = { version = "0.36", optional = true }
-tracing-kafka = { path = "../tracing-kafka", optional = true }
+tracing-kafka = { git = "https://github.com/juspay/framework-libs-rs", branch = "feat/kafka-writer", features = ["layer"], optional = true }
 tracing = { workspace = true }
 once_cell = "1.19"
 chrono = "0.4.31"

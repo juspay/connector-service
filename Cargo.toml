@@ -11,7 +11,6 @@ members = [
   "backend/common_utils",
   "backend/interfaces",
   "backend/domain_types",
-  "backend/tracing-kafka",
   "backend/cards",
   "sdk/rust",
   "backend/composite-service",

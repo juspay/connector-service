@@ -4,7 +4,7 @@ use hyperswitch_masking::ErasedMaskSerialize;
 use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
-use tracing_kafka::{builder::KafkaWriterBuilder, KafkaWriter};
+use tracing_kafka::{KafkaWriter, KafkaWriterBuilder};
 
 use crate::{
     events::{Event, EventConfig},
