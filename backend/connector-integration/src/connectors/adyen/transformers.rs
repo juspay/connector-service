@@ -3009,17 +3009,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             get_address_info(item.router_data.resource_common_data.get_optional_billing())
                 .and_then(Result::ok);
 
-        let testing_data = item
-            .router_data
-            .request
-            .get_connector_testing_data()
-            .map(AdyenTestingData::try_from)
-            .transpose()?;
-        let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
-        let card_holder_name = test_holder_name.or(item
+        let card_holder_name = item
             .router_data
             .resource_common_data
-            .get_optional_billing_full_name());
+            .get_optional_billing_full_name();
 
         let additional_data = get_additional_data(&item.router_data);
 
