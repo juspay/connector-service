@@ -17,9 +17,11 @@ SKIP_TAGS = {'@skip_python'}
 
 def before_scenario(context, scenario):
     """Reset state and check skip tags."""
+    context.base_url = ''
     context.method = ''
     context.url = ''
     context.headers = {}
+    context.query_params = []
     context.body = None
     context.proxy_url = None
     context.response_timeout_ms = None

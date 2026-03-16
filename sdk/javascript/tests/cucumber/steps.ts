@@ -25,13 +25,17 @@ Before(function (this: SanityWorld, { pickle }) {
 
 // ── Given ───────────────────────────────────────────────────────
 
-Given('the echo server is running on port {int}', function (_port: number) {
-  // Started externally.
+Given('the echo server is running on port {int}', function (this: SanityWorld, port: number) {
+  this.baseUrl = `http://localhost:${port}`;
 });
 
 Given('a {string} request to {string}', function (this: SanityWorld, method: string, url: string) {
   this.method = method;
   this.url = url;
+});
+
+Given('query parameter {string} is {string}', function (this: SanityWorld, name: string, value: string) {
+  this.queryParams.push([name, value]);
 });
 
 Given('header {string} is {string}', function (this: SanityWorld, name: string, value: string) {
@@ -60,10 +64,12 @@ When('the request is sent', async function (this: SanityWorld) {
   if (fs.existsSync(captureFile)) fs.unlinkSync(captureFile);
   if (fs.existsSync(actualFile)) fs.unlinkSync(actualFile);
 
+  const fullUrl = this.resolveUrl();
+
   // Build request
   const request: any = {
     method: this.method,
-    url: this.url,
+    url: fullUrl,
     headers: { ...this.headers, 'x-source': this.sourceId, 'x-scenario-id': this.scenarioId },
     body: this.body,
   };

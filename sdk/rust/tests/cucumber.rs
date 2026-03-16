@@ -77,9 +77,11 @@ static SKIP_IDS: LazyLock<Vec<String>> = LazyLock::new(|| {
 
 #[derive(Debug, Default, World)]
 pub struct SanityWorld {
+    base_url: String,
     method: String,
     url: String,
     headers: HashMap<String, String>,
+    query_params: Vec<(String, String)>,
     body: Option<String>,
     proxy_url: Option<String>,
     response_timeout_ms: Option<u32>,
@@ -87,6 +89,22 @@ pub struct SanityWorld {
     source_id: String,
     skipped: bool,
     judged: bool,
+}
+
+impl SanityWorld {
+    /// Resolve the full URL from base + path + query params.
+    fn resolve_url(&self) -> String {
+        let mut url = if self.url.starts_with('/') {
+            format!("{}{}", self.base_url, self.url)
+        } else {
+            self.url.clone()
+        };
+        if !self.query_params.is_empty() {
+            let qs: Vec<String> = self.query_params.iter().map(|(k, v)| format!("{}={}", k, v)).collect();
+            url = format!("{}?{}", url, qs.join("&"));
+        }
+        url
+    }
 }
 
 #[derive(Serialize)]
@@ -114,12 +132,19 @@ struct SdkError {
 // ── Given ───────────────────────────────────────────────────────
 
 #[given(expr = "the echo server is running on port {int}")]
-async fn echo_server_running(_w: &mut SanityWorld, _port: i32) {}
+async fn echo_server_running(w: &mut SanityWorld, port: i32) {
+    w.base_url = format!("http://localhost:{}", port);
+}
 
 #[given(expr = "a {string} request to {string}")]
 async fn set_request(w: &mut SanityWorld, method: String, url: String) {
     w.method = method;
     w.url = url;
+}
+
+#[given(expr = "query parameter {string} is {string}")]
+async fn set_query_param(w: &mut SanityWorld, name: String, value: String) {
+    w.query_params.push((name, value));
 }
 
 #[given(expr = "header {string} is {string}")]
@@ -146,8 +171,6 @@ async fn set_proxy(w: &mut SanityWorld, url: String) {
 
 #[when("the request is sent")]
 async fn execute_request(w: &mut SanityWorld) {
-    // Scenario ID is resolved from the title in the main() scenario hook below.
-    // For now, if it's empty, it means the hook didn't find a match.
     if w.scenario_id.is_empty() {
         panic!("Could not resolve scenario ID from Gherkin title");
     }
@@ -161,6 +184,8 @@ async fn execute_request(w: &mut SanityWorld) {
     let capture_file = artifacts_dir().join(format!("capture_{}.json", w.source_id));
     let _ = fs::remove_file(&actual_file);
     let _ = fs::remove_file(&capture_file);
+
+    let full_url = w.resolve_url();
 
     let method = match w.method.as_str() {
         "POST" => Method::Post,
@@ -189,12 +214,12 @@ async fn execute_request(w: &mut SanityWorld) {
         }
     });
 
-    let request = HttpRequest { url: w.url.clone(), method, headers, body };
+    let request = HttpRequest { url: full_url, method, headers, body };
 
     let proxy_cfg = w.proxy_url.as_ref().map(|url| ProxyConfig {
         http_url: Some(url.clone()),
         https_url: None,
-        bypass_urls: vec![w.url.clone()],
+        bypass_urls: vec![w.resolve_url()],
     });
 
     let options = HttpOptions {
@@ -242,25 +267,21 @@ async fn execute_request(w: &mut SanityWorld) {
 #[then(expr = "the response status should be {int}")]
 async fn check_status(w: &mut SanityWorld, _expected: i32) {
     if w.skipped { return; }
-    // validated by judge
 }
 
 #[then(expr = "the response body should be {string}")]
 async fn check_body(w: &mut SanityWorld, _expected: String) {
     if w.skipped { return; }
-    // validated by judge
 }
 
 #[then(expr = "the response header {string} should be {string}")]
 async fn check_header(w: &mut SanityWorld, _name: String, _value: String) {
     if w.skipped { return; }
-    // validated by judge
 }
 
 #[then(expr = "the response should have multi-value header {string} with values {string}")]
 async fn check_multi_header(w: &mut SanityWorld, _name: String, _values: String) {
     if w.skipped { return; }
-    // validated by judge
 }
 
 #[then(expr = "the SDK should return error {string}")]

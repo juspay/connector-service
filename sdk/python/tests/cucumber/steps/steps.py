@@ -31,13 +31,18 @@ TITLE_TO_ID = {s['title']: s['id'] for s in _manifest['scenarios'] if 'title' in
 
 @given('the echo server is running on port {port:d}')
 def step_echo_server(context, port):
-    pass  # started externally
+    context.base_url = f'http://localhost:{port}'
 
 
 @given('a "{method}" request to "{url}"')
 def step_request(context, method, url):
     context.method = method
     context.url = url
+
+
+@given('query parameter "{name}" is "{value}"')
+def step_query_param(context, name, value):
+    context.query_params.append((name, value))
 
 
 @given('header "{name}" is "{value}"')
@@ -67,6 +72,17 @@ def step_proxy(context, url):
 
 # ── When (thin: execute + write actual JSON) ─────────────────────
 
+def _resolve_url(context):
+    """Resolve full URL from base + path + query params."""
+    url = context.url
+    if url.startswith('/'):
+        url = f'{context.base_url}{url}'
+    if context.query_params:
+        qs = '&'.join(f'{k}={v}' for k, v in context.query_params)
+        url = f'{url}?{qs}'
+    return url
+
+
 @when('the request is sent')
 def step_execute(context):
     # Resolve scenario ID from the Gherkin scenario title.
@@ -83,6 +99,8 @@ def step_execute(context):
     for f in [actual_file, capture_file]:
         if os.path.exists(f):
             os.unlink(f)
+
+    full_url = _resolve_url(context)
 
     headers = dict(context.headers)
     headers['x-source'] = context.source_id
@@ -116,7 +134,7 @@ def step_execute(context):
         merged = merge_http_config(base, override)
         resolved_ms = (merged.total_timeout_ms, merged.connect_timeout_ms, merged.response_timeout_ms)
 
-    request = HttpRequest(url=context.url, method=context.method, headers=headers, body=body)
+    request = HttpRequest(url=full_url, method=context.method, headers=headers, body=body)
     output = {}
 
     try:

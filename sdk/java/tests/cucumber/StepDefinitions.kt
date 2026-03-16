@@ -18,9 +18,11 @@ import java.util.Base64
  * logic is delegated to the shared judge_scenario.js (single source of truth).
  */
 class StepDefinitions {
+    private var baseUrl = ""
     private var method = ""
     private var url = ""
     private var headers = mutableMapOf<String, String>()
+    private var queryParams = mutableListOf<Pair<String, String>>()
     private var body: String? = null
     private var proxyUrl: String? = null
     private var responseTimeoutMs: Int? = null
@@ -52,9 +54,20 @@ class StepDefinitions {
         }
     }
 
+    /** Resolve the full URL from base + path + query params. */
+    private fun resolveUrl(): String {
+        var resolved = if (url.startsWith("/")) "$baseUrl$url" else url
+        if (queryParams.isNotEmpty()) {
+            val qs = queryParams.joinToString("&") { "${it.first}=${it.second}" }
+            resolved = "$resolved?$qs"
+        }
+        return resolved
+    }
+
     @Before
     fun setUp(scenario: Scenario) {
-        method = ""; url = ""; headers = mutableMapOf(); body = null
+        baseUrl = ""; method = ""; url = ""; headers = mutableMapOf()
+        queryParams = mutableListOf(); body = null
         proxyUrl = null; responseTimeoutMs = null; judged = false
 
         // Resolve scenario ID from the Gherkin scenario title.
@@ -65,10 +78,13 @@ class StepDefinitions {
     // ── Given ───────────────────────────────────────────────────
 
     @Given("the echo server is running on port {int}")
-    fun echoServerRunning(port: Int) {}
+    fun echoServerRunning(port: Int) { baseUrl = "http://localhost:$port" }
 
     @Given("a {string} request to {string}")
     fun setRequest(method: String, url: String) { this.method = method; this.url = url }
+
+    @Given("query parameter {string} is {string}")
+    fun setQueryParam(name: String, value: String) { queryParams.add(name to value) }
 
     @Given("header {string} is {string}")
     fun setHeader(name: String, value: String) { headers[name] = value }
@@ -88,6 +104,8 @@ class StepDefinitions {
     fun executeRequest() {
         require(scenarioId.isNotEmpty()) { "Could not resolve scenario ID from Gherkin title" }
 
+        val fullUrl = resolveUrl()
+
         val actualFile = File(artifactsDir, "actual_$sourceId.json")
         val captureFile = File(artifactsDir, "capture_$sourceId.json")
         actualFile.delete(); captureFile.delete()
@@ -101,7 +119,7 @@ class StepDefinitions {
             else b.toByteArray(StandardCharsets.UTF_8)
         }
 
-        val request = HttpRequest(url = url, method = method, headers = reqHeaders, body = bodyBytes)
+        val request = HttpRequest(url = fullUrl, method = method, headers = reqHeaders, body = bodyBytes)
 
         val httpConfig = responseTimeoutMs?.let {
             HttpConfig.newBuilder().setResponseTimeoutMs(it).build()
