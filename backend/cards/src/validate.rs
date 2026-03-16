@@ -276,6 +276,18 @@ impl<'de> Deserialize<'de> for NetworkToken {
     }
 }
 
+impl std::hash::Hash for CardNumber {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.peek().hash(state);
+    }
+}
+
+impl std::hash::Hash for NetworkToken {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.peek().hash(state);
+    }
+}
+
 pub enum CardNumberStrategy {}
 
 impl<T> Strategy<T> for CardNumberStrategy

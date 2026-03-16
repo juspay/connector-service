@@ -10,7 +10,7 @@ ucs_env = { path = "../ucs_env" }
 connector_service_ffi = { package = "ffi", path = "../ffi" }
 
 tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread"] }
-tonic = "0.14.5"
+tonic = { workspace = true }
 http = "1.2.0"
 tower = "0.5.2"
 tokio-stream = { version = "0.1.17", features = ["net"] }
