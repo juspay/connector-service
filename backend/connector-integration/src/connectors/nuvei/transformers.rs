@@ -152,17 +152,27 @@ pub struct NuveiCard<
     pub cvv: Secret<String>,
 }
 
-// ACH Bank Transfer specific structures
+// ACH Bank Transfer and Bank Redirect specific structures
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
-pub struct NuveiAlternativePaymentMethod {
-    #[serde(rename = "paymentMethod")]
-    pub payment_method: String,
-    #[serde(rename = "AccountNumber")]
-    pub account_number: Secret<String>,
-    #[serde(rename = "RoutingNumber")]
-    pub routing_number: Secret<String>,
-    #[serde(rename = "SECCode", skip_serializing_if = "Option::is_none")]
-    pub sec_code: Option<String>,
+#[serde(untagged)]
+pub enum NuveiAlternativePaymentMethod {
+    Ach {
+        #[serde(rename = "paymentMethod")]
+        payment_method: String,
+        #[serde(rename = "AccountNumber")]
+        account_number: Secret<String>,
+        #[serde(rename = "RoutingNumber")]
+        routing_number: Secret<String>,
+        #[serde(rename = "SECCode", skip_serializing_if = "Option::is_none")]
+        sec_code: Option<String>,
+    },
+    Redirect {
+        #[serde(rename = "paymentMethod")]
+        payment_method: String,
+        #[serde(rename = "BIC")]
+        bank_id: Option<String>,
+    },
 }
 
 #[derive(Debug, Serialize)]
@@ -697,7 +707,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                         NuveiPaymentOption {
                             card: None,
-                            alternative_payment_method: Some(NuveiAlternativePaymentMethod {
+                            alternative_payment_method: Some(NuveiAlternativePaymentMethod::Ach {
                                 payment_method: "apmgw_ACH".to_string(),
                                 account_number: Secret::new(account_number.to_string()),
                                 routing_number: Secret::new(routing_number.to_string()),
