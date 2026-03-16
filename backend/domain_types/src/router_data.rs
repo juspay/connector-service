@@ -261,6 +261,7 @@ pub enum ConnectorSpecificConfig {
     Ppro {
         api_key: Secret<String>,
         merchant_id: Secret<String>,
+        base_url: Option<String>,
     },
 
     // --- Two-field connectors ---
@@ -945,6 +946,10 @@ impl ConnectorSpecificConfig {
                 merchant_identity_id,
                 merchant_id
             },
+            Ppro {
+                api_key,
+                merchant_id
+            },
         )
     }
 
@@ -1311,6 +1316,10 @@ impl ConnectorSpecificConfig {
                     finix_user_name,
                     finix_password,
                     merchant_identity_id,
+                    merchant_id
+                },
+                Ppro {
+                    api_key,
                     merchant_id
                 }
             ),
@@ -2676,9 +2685,10 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 _ => Err(err().into()),
             },
             ConnectorEnum::Ppro => match auth {
-                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(ConnectorSpecificAuth::Ppro {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(ConnectorSpecificConfig::Ppro {
                     api_key: api_key.clone(),
                     merchant_id: key1.clone(),
+                    base_url: None,
                 }),
                 _ => Err(err().into()),
             },

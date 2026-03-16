@@ -1394,9 +1394,10 @@ fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             merchant_id: m(),
             base_url: None,
         },
-        ConnectorEnum::Ppro => ConnectorSpecificAuth::Ppro {
+        ConnectorEnum::Ppro => ConnectorSpecificConfig::Ppro {
             api_key: k(),
             merchant_id: m(),
+            base_url: None,
         },
     }
 }

@@ -33,7 +33,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{
@@ -83,13 +83,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
     {
         match auth_type {
-            ConnectorSpecificAuth::Ppro {
+            ConnectorSpecificConfig::Ppro {
                 api_key,
                 merchant_id,
+                ..
             } => Ok(vec![
                 (
                     headers::AUTHORIZATION.to_string(),
@@ -309,7 +310,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            let mut header = self.get_auth_header(&req.connector_auth_type)?;
+            let mut header = self.get_auth_header(&req.connector_config)?;
             header.push((
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
@@ -409,7 +410,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
         let event: PproWebhookEvent = request
             .body
@@ -423,7 +424,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let event: PproWebhookEvent = request
             .body
@@ -474,7 +475,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::RefundWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
@@ -519,7 +520,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
@@ -531,7 +532,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorSpecificAuth>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
@@ -812,7 +813,7 @@ macros::macro_connector_implementation!(
                 headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
                 req.resource_common_data.connector_request_reference_id.clone().into(),
             ));
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -845,7 +846,7 @@ macros::macro_connector_implementation!(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -884,7 +885,7 @@ macros::macro_connector_implementation!(
                 headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
                 req.resource_common_data.connector_request_reference_id.clone().into(),
             ));
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -923,7 +924,7 @@ macros::macro_connector_implementation!(
                 headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
                 req.resource_common_data.connector_request_reference_id.clone().into(),
             ));
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -962,7 +963,7 @@ macros::macro_connector_implementation!(
                 headers::REQUEST_IDEMPOTENCY_KEY.to_string(),
                 req.resource_common_data.connector_request_reference_id.clone().into(),
             ));
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -996,7 +997,7 @@ macros::macro_connector_implementation!(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -1027,7 +1028,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
-            let mut header = self.get_auth_header(&req.connector_auth_type)?;
+            let mut header = self.get_auth_header(&req.connector_config)?;
             header.push((
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
