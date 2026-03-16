@@ -55,7 +55,7 @@ mod uniffi_bindings_inner {
 
         // 3. Convert proto config to domain ConnectorSpecificConfig
         let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-            .map_err(|e| <Report<ConnectorError> as ReportInto<RequestError>>::report_into(e))?;
+            .map_err(<Report<ConnectorError> as ReportInto<RequestError>>::report_into)?;
 
         Ok(crate::types::FfiMetadataPayload {
             connector,
@@ -93,7 +93,7 @@ mod uniffi_bindings_inner {
 
         // 3. Convert proto config to domain ConnectorSpecificConfig
         let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-            .map_err(|e| <Report<ConnectorError> as ReportInto<ResponseError>>::report_into(e))?;
+            .map_err(<Report<ConnectorError> as ReportInto<ResponseError>>::report_into)?;
 
         Ok(crate::types::FfiMetadataPayload {
             connector,
