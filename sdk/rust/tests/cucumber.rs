@@ -5,7 +5,7 @@
 
 use base64::{engine::general_purpose, Engine as _};
 use common_utils::request::Method;
-use cucumber::{given, then, when, World};
+use cucumber::{gherkin::Step, given, then, when, World};
 use hyperswitch_payments_client::http_client::{HttpClient, HttpOptions, HttpRequest, ProxyConfig};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -155,6 +155,17 @@ async fn set_header(w: &mut SanityWorld, name: String, value: String) {
 #[given(expr = "body is {string}")]
 async fn set_body(w: &mut SanityWorld, body: String) {
     w.body = Some(body.replace("\\r\\n", "\r\n").replace("\\n", "\n"));
+}
+
+#[given("body is:")]
+async fn set_body_docstring(w: &mut SanityWorld, step: &Step) {
+    let text = step.docstring.as_ref().expect("Missing doc string for 'body is:'").as_str();
+    let ct = w.headers.get("Content-Type").map(|s| s.to_lowercase()).unwrap_or_default();
+    if ct.contains("multipart/") {
+        w.body = Some(text.replace('\n', "\r\n") + "\r\n");
+    } else {
+        w.body = Some(text.to_string());
+    }
 }
 
 #[given(expr = "a response timeout of {int} ms")]

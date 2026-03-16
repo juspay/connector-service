@@ -92,6 +92,16 @@ class StepDefinitions {
     @Given("body is {string}")
     fun setBody(body: String) { this.body = body.replace("\\r\\n", "\r\n").replace("\\n", "\n") }
 
+    @Given("body is:")
+    fun setBodyDocString(docString: String) {
+        val ct = (headers["Content-Type"] ?: "").lowercase()
+        body = if ("multipart/" in ct) {
+            docString.replace("\n", "\r\n") + "\r\n"
+        } else {
+            docString
+        }
+    }
+
     @Given("a response timeout of {int} ms")
     fun setResponseTimeout(ms: Int) { responseTimeoutMs = ms }
 

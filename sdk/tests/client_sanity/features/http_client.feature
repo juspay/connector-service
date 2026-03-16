@@ -82,7 +82,14 @@ Feature: HTTP Client Sanity
     Given a "POST" request to "/sanity/v1/upload"
     And header "Accept" is "*/*"
     And header "Content-Type" is "multipart/form-data; boundary=SanityBoundary"
-    And body is "-----SanityBoundary\r\nContent-Disposition: form-data; name=\"field1\"\r\n\r\nvalue1\r\n-----SanityBoundary--\r\n"
+    And body is:
+      """
+      -----SanityBoundary
+      Content-Disposition: form-data; name="field1"
+
+      value1
+      -----SanityBoundary--
+      """
     When the request is sent
     Then the response status should be 200
     And the response body should be '{"status":"ok"}'

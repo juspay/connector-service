@@ -60,6 +60,16 @@ def step_body_double(context, body):
     context.body = body.replace('\\r\\n', '\r\n').replace('\\n', '\n')
 
 
+@given('body is')
+def step_body_docstring(context):
+    """Handle doc string bodies. Multipart bodies need \\r\\n line endings."""
+    text = context.text
+    ct = (context.headers.get('Content-Type', '') or '').lower()
+    if 'multipart/' in ct:
+        text = text.replace('\n', '\r\n') + '\r\n'
+    context.body = text
+
+
 @given('a response timeout of {ms:d} ms')
 def step_timeout(context, ms):
     context.response_timeout_ms = ms

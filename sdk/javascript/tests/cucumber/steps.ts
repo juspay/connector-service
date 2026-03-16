@@ -46,6 +46,16 @@ Given('body is {string}', function (this: SanityWorld, body: string) {
   this.body = body.replace(/\\r\\n/g, '\r\n').replace(/\\n/g, '\n');
 });
 
+Given('body is:', function (this: SanityWorld, docString: string) {
+  // Doc strings use \n; multipart bodies need \r\n line endings and a trailing \r\n.
+  const ct = (this.headers['Content-Type'] || '').toLowerCase();
+  if (ct.includes('multipart/')) {
+    this.body = docString.replace(/\n/g, '\r\n') + '\r\n';
+  } else {
+    this.body = docString;
+  }
+});
+
 Given('a response timeout of {int} ms', function (this: SanityWorld, ms: number) {
   this.responseTimeoutMs = ms;
 });
