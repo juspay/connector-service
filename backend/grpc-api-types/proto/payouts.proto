@@ -53,6 +53,16 @@ message PayoutEnums {
 }
 
 // ============================================================================
+// DEPENDENT MESSAGES
+// ============================================================================
+
+// Container for various address types related to a payout
+message PayoutAddress {
+  Address shipping_address = 1;
+  Address billing_address = 2;
+}
+
+// ============================================================================
 // PAYOUT METHOD DATA MESSAGES
 // ============================================================================
 
@@ -62,15 +72,6 @@ message CardPayout {
   SecretString card_exp_year = 3;
   optional SecretString card_holder_name = 4;
   optional CardNetwork card_network = 5;
-}
-
-message BankPayout {
-  oneof bank_details {
-    AchBankTransferPayout ach = 1;
-    BacsBankTransferPayout bacs = 2;
-    SepaBankTransferPayout sepa = 3;
-    PixBankTransferPayout pix = 4;
-  }
 }
 
 message AchBankTransferPayout {
@@ -97,7 +98,6 @@ message SepaBankTransferPayout {
   optional SecretString bic = 5;
 }
 
-
 message PixBankTransferPayout {
   optional BankNames bank_name = 1;
   optional string bank_branch = 2;
@@ -105,7 +105,6 @@ message PixBankTransferPayout {
   SecretString pix_key = 4;
   optional SecretString tax_id = 5;
 }
-
 
 message ApplePayDecrypt {
   CardNumberType dpan = 1;
@@ -125,23 +124,6 @@ message Venmo {
   optional SecretString telephone_number = 1;
 }
 
-message Wallet {
-  oneof wallet_details {
-    ApplePayDecrypt apple_pay_decrypt = 1;
-    Paypal paypal = 2;
-    Venmo venmo = 3;
-  }
-}
-
-
-
-message BankRedirect {
-  oneof bank_redirect_details {
-    InteracPayout interac = 1;
-    OpenBankingUkPayout open_banking_uk = 2;
-  }
-}
-
 message InteracPayout {
   optional SecretString email = 1;
 }
@@ -156,24 +138,31 @@ message Passthrough {
   PaymentMethodType token_type = 2;
 }
 
-message PayoutMethodData {
+// PayoutMethod represents a payout instrument used to process a payout
+// It contains a oneof field with all possible payout method 
+message PayoutMethod {
   oneof payout_method_data {
+    // CARD METHODS
     CardPayout card = 1;
-    BankPayout bank = 2;
-    Wallet wallet = 3;
-    BankRedirect bank_redirect = 4;
-    Passthrough passthrough = 5;
+
+    // BANK TRANSFER METHODS
+    AchBankTransferPayout ach = 2;
+    BacsBankTransferPayout bacs = 3;
+    SepaBankTransferPayout sepa = 4;
+    PixBankTransferPayout pix = 5;
+
+    // DIGITAL WALLETS
+    ApplePayDecrypt apple_pay_decrypt = 6;
+    Paypal paypal = 7;
+    Venmo venmo = 8;
+
+    // BANK REDIRECT
+    InteracPayout interac = 9;
+    OpenBankingUkPayout open_banking_uk = 10;
+
+    // PASSTHROUGH METHOD
+    Passthrough passthrough = 11;
   }
-}
-
-// ============================================================================
-// DEPENDENT MESSAGES
-// ============================================================================
-
-// Container for various address types related to a payout
-message PayoutAddress {
-  Address shipping_address = 1;
-  Address billing_address = 2;
 }
 
 // ============================================================================
@@ -189,7 +178,7 @@ message PayoutServiceCreateRequest {
   // Metadata
   optional SecretString connector_feature_data = 3;
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 4;
+  optional PayoutMethod payout_method_data = 4;
   // Quote ID
   optional string connector_quote_id = 5;
   // Connector Payout ID
@@ -233,7 +222,7 @@ message PayoutServiceTransferRequest {
   // Address Information
   PayoutAddress address = 2;
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 3;
+  optional PayoutMethod payout_method_data = 3;
   // Quote ID
   optional string connector_quote_id = 4;
   // Amount Information
@@ -363,7 +352,7 @@ message PayoutServiceCreateLinkRequest {
   // Metadata
   optional SecretString connector_feature_data = 3;
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 4;
+  optional PayoutMethod payout_method_data = 4;
   // Quote ID
   optional string connector_quote_id = 5;
   // Connector Payout ID
@@ -407,7 +396,7 @@ message PayoutServiceCreateRecipientRequest {
   // Address Information
   PayoutAddress address = 2;
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 3;
+  optional PayoutMethod payout_method_data = 3;
   // Amount Information
   Money amount = 4;
   // Entity representing the Payout
@@ -439,7 +428,7 @@ message PayoutServiceEnrollDisburseAccountRequest {
   // Address Information
   PayoutAddress address = 2;
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 3;
+  optional PayoutMethod payout_method_data = 3;
   // Amount Information
   Money amount = 4;
   // Customer Details
@@ -469,7 +458,7 @@ message PayoutMethodEligibilityRequest {
   // Metadata
   optional SecretString connector_feature_data = 2;
   // Payout Method Data
-  optional PayoutMethodData payout_method_data = 3;
+  optional PayoutMethod payout_method_data = 3;
   // Amount Information
   Money amount = 4;
   // Connector Payout ID
