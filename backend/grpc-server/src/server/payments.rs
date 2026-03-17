@@ -100,9 +100,9 @@ struct EventParams<'a> {
 #[derive(Debug, serde::Serialize)]
 struct CardTokenData {
     card_number: String,
-    cvv: String,
-    exp_month: String,
-    exp_year: String,
+    card_cvc: String,
+    card_exp_month: String,
+    card_exp_year: String,
 }
 
 trait ToTokenData {
@@ -117,17 +117,17 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
                 .as_ref()
                 .map(|cn| cn.to_string())
                 .unwrap_or_default(),
-            cvv: self
+            card_cvc: self
                 .card_cvc
                 .as_ref()
                 .map(|cvc| cvc.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_month: self
+            card_exp_month: self
                 .card_exp_month
                 .as_ref()
                 .map(|em| em.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_year: self
+            card_exp_year: self
                 .card_exp_year
                 .as_ref()
                 .map(|ey| ey.clone().expose().to_string())
@@ -150,17 +150,17 @@ impl ToTokenData for grpc_api_types::payments::ProxyCardDetails {
                 .as_ref()
                 .map(|cn| cn.peek().to_owned())
                 .unwrap_or_default(),
-            cvv: self
+            card_cvc: self
                 .card_cvc
                 .as_ref()
                 .map(|cvc| cvc.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_month: self
+            card_exp_month: self
                 .card_exp_month
                 .as_ref()
                 .map(|em| em.clone().expose().to_string())
                 .unwrap_or_default(),
-            exp_year: self
+            card_exp_year: self
                 .card_exp_year
                 .as_ref()
                 .map(|ey| ey.clone().expose().to_string())
