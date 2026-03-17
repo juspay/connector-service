@@ -10,7 +10,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # First-party dependencies
 grpc-api-types = { path = "../grpc-api-types" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
 connector-integration = { path = "../connector-integration" }
 external-services = { path = "../external-services", default-features = false }
 interfaces = { path = "../interfaces" }
@@ -35,6 +35,8 @@ uniffi = { version = "0.28", optional = true }
 prost = { workspace = true }
 bytes = { workspace = true }
 thiserror = { workspace = true }
+base64 = "0.22"
+tokio = { version = "1", features = ["full"] }
 
 [build-dependencies]
 prost-build = { workspace = true }
