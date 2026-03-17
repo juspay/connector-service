@@ -618,7 +618,7 @@ impl<
             + serde::de::DeserializeOwned
             + Clone
             + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<T> //
+    > ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<T>
 {
     type Error = ApplicationErrorResponse;
 
