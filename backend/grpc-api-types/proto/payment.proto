@@ -488,8 +488,8 @@ enum Connector {
   SIGNIFYD = 86; PLAID = 87; RISKIFIED = 88; XENDIT = 89; ZEN = 90; ZSL = 91;
   PHONEPE = 92; CASHFREE = 93; PAYTM = 94; CALIDA = 95; PAYLOAD = 96; AUTHIPAY = 97;
   SILVERFLOW = 98; CELERO = 99; TRUSTPAYMENTS = 100; PAYSAFE = 101; BARCLAYCARD = 102;
-  WORLDPAYXML = 103; REVOLUT = 104; LOONIO = 105; GIGADAT = 106; HYPERPG = 107; ZIFT = 108; REVOLV3 = 109; TRUELAYER = 110;  FINIX = 111;
- PPRO = 112;
+  WORLDPAYXML = 103; REVOLUT = 104; LOONIO = 105; GIGADAT = 106; HYPERPG = 107; ZIFT = 108; REVOLV3 = 109; TRUELAYER = 110; FINIX = 111;
+  PEACHPAYMENTS = 112; PPRO = 113;
 }
 
 // Payment method types
@@ -3307,6 +3307,12 @@ message CoingateConfig {
   optional string base_url = 50;
 }
 
+message PeachpaymentsConfig {
+  SecretString api_key = 1;
+  SecretString tenant_id = 2;
+  optional string base_url = 50;
+}
+
 message PaypalConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -3533,6 +3539,9 @@ message ConnectorSpecificConfig {
 
     // AUTHORIZEDOTNET = 5
     AuthorizedotnetConfig authorizedotnet = 72;
+
+    // PEACHPAYMENTS = 111
+    PeachpaymentsConfig peachpayments = 73;
 
     // PAYPAL = 62
     PaypalConfig paypal = 110;

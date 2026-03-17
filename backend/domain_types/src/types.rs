@@ -363,6 +363,7 @@ pub struct Connectors {
     pub zift: ConnectorParams,
     pub revolv3: ConnectorParams,
     pub truelayer: ConnectorParams,
+    pub peachpayments: ConnectorParams,
     pub finix: ConnectorParams,
 }
 
@@ -4088,6 +4089,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(_)),
             } => Ok(Self::Card),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_)),
+            } => Ok(Self::NetworkToken),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Token(_)),

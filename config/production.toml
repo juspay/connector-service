@@ -21,6 +21,7 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+peachpayments.base_url = "https://api.bankint.peachpayments.com/v/1"
 finix.base_url = "https://finix.live-payments-api.com"
 revolv3.base_url = "https://api.revolv3.com"
 ppro.base_url = "https://api.eu.ppro.com"
