@@ -2126,38 +2126,12 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
         }))?;
         Ok(payment_method_data::Card {
             card_number: RawCardNumber(
-                card.card_number
-                    .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "MISSING_CARD_NUMBER".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Missing card number".to_owned(),
-                        error_object: None,
-                    }))?,
+                //card number token is already stored in token_data , so we can update the value to internal transformation value.
+                format!("{{{{$card_number}}}}").into()
             ),
-            card_exp_month: card
-                .card_exp_month
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_MONTH".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Month".to_owned(),
-                    error_object: None,
-                }))?,
-            card_exp_year: card
-                .card_exp_year
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_YEAR".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Year".to_owned(),
-                    error_object: None,
-                }))?,
-            card_cvc: card
-                .card_cvc
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_CVC".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing CVC".to_owned(),
-                    error_object: None,
-                }))?,
+            card_exp_month: format!("{{{{$card_exp_month}}}}").into(),
+            card_exp_year: format!("{{{{$card_exp_year}}}}").into(),
+            card_cvc: format!("{{{{$card_cvc}}}}").into(),
             card_issuer: card.card_issuer,
             card_network: None,
             card_type: card.card_type,
