@@ -63,6 +63,7 @@ fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptur
 
 fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
+    "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
     "amount": {  // Amount Information
         "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)

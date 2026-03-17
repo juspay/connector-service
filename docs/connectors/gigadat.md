@@ -110,7 +110,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L49) · [Rust](../../examples/gigadat/rust/gigadat.rs#L49)
+**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L50) · [Rust](../../examples/gigadat/rust/gigadat.rs#L50)
 
 #### PaymentService.Refund
 
@@ -121,4 +121,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L57) · [Rust](../../examples/gigadat/rust/gigadat.rs#L55)
+**Examples:** [Python](../../examples/gigadat/python/gigadat.py) · [JavaScript](../../examples/gigadat/javascript/gigadat.js) · [Kotlin](../../examples/gigadat/kotlin/gigadat.kt#L58) · [Rust](../../examples/gigadat/rust/gigadat.rs#L56)

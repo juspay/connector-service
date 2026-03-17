@@ -29,7 +29,7 @@ from typing import Optional, Any
 
 from .generated import connector_service_ffi as _ffi
 from ._generated_flows import SERVICE_FLOWS
-from .http_client import execute, HttpRequest, create_client
+from .http_client import execute, HttpRequest, create_client, merge_http_config, DEFAULT_HTTP_CONFIG
 from .generated.sdk_config_pb2 import (
     ConnectorConfig,
     RequestConfig,
@@ -39,6 +39,7 @@ from .generated.sdk_config_pb2 import (
     HttpConfig,
     RequestError as RequestErrorProto,
     ResponseError as ResponseErrorProto,
+    FfiResult,
 )
 
 
@@ -73,132 +74,68 @@ class ResponseError(Exception):
 
 
 
-def _check_req_error(result_bytes: bytes, success_cls: Any) -> Any:
+def check_req(result_bytes: bytes) -> Any:
     """
-    Parse FFI req_transformer bytes as either a success proto or a RequestError.
-
-    FfiConnectorHttpRequest.method (field 2, string) has the same field number and
-    wire type as RequestError.error_message (field 2, optional string).  Parsing an
-    HTTP-request response as RequestError would therefore put the HTTP method ("POST")
-    into error_message and trigger a false positive.
-
-    Discriminate using field 1 instead:
-      - FfiConnectorHttpRequest.url  (field 1, string) — always non-empty on success
-      - RequestError.status          (field 1, enum)   — non-zero on error
-
-    Strategy: parse as FfiConnectorHttpRequest first.  If url is non-empty, this IS a
-    valid HTTP request — return it immediately.  Otherwise fall through and parse as
-    RequestError.
+    Parse FFI req_transformer bytes using FfiResult proto with enum-based type checking.
 
     Args:
         result_bytes: Raw bytes returned by the req_transformer FFI call.
-        success_cls: Protobuf message class for the expected success type
-                     (always FfiConnectorHttpRequest for req_transformer calls).
 
     Returns:
-        Decoded success proto on success.
+        FfiConnectorHttpRequest on success (HTTP_REQUEST type).
 
     Raises:
-        RequestError: If the bytes represent a transformer error.
+        RequestError: If the result type is REQUEST_ERROR.
+        ResponseError: If the result type is RESPONSE_ERROR.
+        ValueError: If the result type is unknown or invalid.
     """
-    # Fast path: if the bytes decode to a valid FfiConnectorHttpRequest (non-empty url),
-    # return immediately without any error check.
-    try:
-        success = success_cls()
-        success.ParseFromString(result_bytes)
-        if success.url:
-            return success
-    except Exception:
-        pass
+    result = FfiResult()
+    result.ParseFromString(result_bytes)
+    
+    # Use enum-based type checking
+    result_type = result.type
+    
+    if result_type == FfiResult.HTTP_REQUEST:
+        # Return the typed HTTP request directly
+        return result.http_request
+    elif result_type == FfiResult.REQUEST_ERROR:
+        raise RequestError(result.request_error)
+    elif result_type == FfiResult.RESPONSE_ERROR:
+        raise ResponseError(result.response_error)
+    else:
+        raise ValueError(f"Unknown result type: {result_type}")
 
-    # url was empty (or parsing failed) — treat as a RequestError.
-    error_proto = RequestErrorProto()
-    error_proto.ParseFromString(result_bytes)
-    raise RequestError(error_proto)
 
-
-def _check_res_error(result_bytes: bytes, success_cls: Any) -> Any:
+def check_res(result_bytes: bytes) -> Any:
     """
-    Parse FFI res_transformer bytes as either a success proto or a ResponseError.
-
-    Parse as ResponseError first; if parsing succeeds AND status is non-default,
-    treat it as an actual error and raise it. Otherwise, parse as success message.
+    Parse FFI res_transformer bytes using FfiResult proto with enum-based type checking.
 
     Args:
         result_bytes: Raw bytes returned by the res_transformer FFI call.
-        success_cls: Protobuf message class for the expected success type.
 
     Returns:
-        Decoded success proto on success.
+        FfiConnectorHttpResponse on success (HTTP_RESPONSE type).
 
     Raises:
-        ResponseError: If the bytes represent a transformer error.
+        ResponseError: If the result type is RESPONSE_ERROR.
+        RequestError: If the result type is REQUEST_ERROR.
+        ValueError: If the result type is unknown or invalid.
     """
-    # Discriminate error bytes from success bytes using status_code (field 4).
-    #
-    # Why not status or error_message?
-    #
-    # Most success response protos (e.g. PaymentServiceAuthorizeResponse) share field
-    # numbers with ResponseError in an incompatible way:
-    #   - Success field 1 (string)  → ResponseError.status (enum varint) → wire mismatch → status=0
-    #   - Success field 2 (string)  → ResponseError.error_message (string) → wire MATCH!
-    #     So a real connector_transaction_id like "pi_xxx" lands in error_message, causing
-    #     HasField("error_message") to return True for every successful response (false positive).
-    #
-    # status_code (field 4) is safe: in success protos field 4 is always a message type
-    # (e.g. ErrorInfo, wire-type 2), which mismatches status_code's uint32 (wire-type 0) →
-    # silently ignored → status_code=0 for all success bytes.
-    # For real errors, the Rust transformer sets status_code to the HTTP status code (4xx/5xx).
-    #
-    # Fallback: status != 0 catches connector-level errors (e.g. PAYMENT_FAILED enum) where
-    # field 1 happens to be a varint-compatible field in the success proto.
-    try:
-        error_proto = ResponseErrorProto()
-        error_proto.ParseFromString(result_bytes)
-
-        if error_proto.status_code >= 400 or error_proto.status != 0:
-            raise ResponseError(error_proto)
-    except ResponseError:
-        raise
-    except Exception:
-        pass
-
-    # Parse as success message
-    success = success_cls()
-    success.ParseFromString(result_bytes)
-
-    # Secondary check: the Rust res_transformer embeds connector errors inside the
-    # success proto (PaymentServiceAuthorize/Charge/etc. Response) rather than returning
-    # a ResponseError when a payment fails (e.g. SEPA+USD not supported, card declined).
-    # The HTTP status code from the connector is stored in the success proto's
-    # `status_code` field.  An HTTP 4xx/5xx here means the connector rejected the
-    # payment — surface it as ResponseError so callers can handle it uniformly.
-    #
-    # We also try to forward the embedded error message and code from the
-    # `error.connector_details` message field so the caller sees meaningful details.
-    try:
-        sc = getattr(success, "status_code", 0)
-        if sc >= 400:
-            synth = ResponseErrorProto()
-            synth.status_code = sc
-            try:
-                error_info = success.error  # ErrorInfo field (name is consistent across protos)
-                if error_info.HasField("connector_details"):
-                    cd = error_info.connector_details
-                    if cd.message:
-                        synth.error_message = cd.message
-                    if cd.code:
-                        synth.error_code = cd.code
-            except Exception:
-                pass
-            raise ResponseError(synth)
-    except ResponseError:
-        raise
-    except Exception:
-        pass
-
-    return success
-
+    result = FfiResult()
+    result.ParseFromString(result_bytes)
+    
+    # Use enum-based type checking
+    result_type = result.type
+    
+    if result_type == FfiResult.HTTP_RESPONSE:
+        # Return the typed HTTP response directly
+        return result.http_response
+    elif result_type == FfiResult.RESPONSE_ERROR:
+        raise ResponseError(result.response_error)
+    elif result_type == FfiResult.REQUEST_ERROR:
+        raise RequestError(result.request_error)
+    else:
+        raise ValueError(f"Unknown result type: {result_type}")
 
 class _ConnectorClientBase:
     """Base class for per-service connector clients. Do not instantiate directly."""
@@ -219,33 +156,26 @@ class _ConnectorClientBase:
         """
         self.config = config
         self.defaults = defaults or RequestConfig()
-        # Instance-level cache: create the primary asynchronous connection pool at startup
-        self.client = create_client(
-            self.defaults.http if self.defaults.HasField("http") else None
-        )
+        # Client default: proto defaults + optional client config (merged at init, stored)
+        client_http = self.defaults.http if self.defaults.HasField("http") else None
+        self._default_http = merge_http_config(DEFAULT_HTTP_CONFIG, client_http)
+        self.client = create_client(self._default_http)
 
     def _resolve_config(
         self, options: Optional[RequestConfig] = None
-    ) -> tuple[FfiOptions, Optional[HttpConfig]]:
+    ) -> tuple[FfiOptions, HttpConfig]:
         """
-        Merges request-level options with client defaults.
-        Environment comes from ConnectorConfig.options. Connector identity comes from
-        ConnectorConfig.connector_config. HTTP/vault from defaults + request override.
+        Per-request override falls back to client default (stored at init).
         """
-        environment = self.config.options.environment
-        connector_config = self.config.connector_config
-
-        # HTTP: request override > client defaults
-        http_config = (
-            options.http
-            if (options and options.HasField("http"))
-            else (self.defaults.http if self.defaults.HasField("http") else None)
-        )
+        environment = self.config.environment
+        override_http = options.http if (options and options.HasField("http")) else None
+        http_config = merge_http_config(self._default_http, override_http)
 
         # Resolve FFI Context
         ffi = FfiOptions(
             environment=environment,
-            connector_config=connector_config,
+            connector=self.config.connector,
+            auth=self.config.auth,
         )
 
         return ffi, http_config
@@ -288,7 +218,7 @@ class _ConnectorClientBase:
         # 2. Build connector HTTP request via FFI
         #    Parse result bytes as FfiConnectorHttpRequest; if that fails, parse as RequestError.
         result_bytes = req_transformer(request_bytes, options_bytes)
-        connector_req = _check_req_error(result_bytes, FfiConnectorHttpRequest)
+        connector_req = check_req(result_bytes)
 
         connector_request = HttpRequest(
             url=connector_req.url,
@@ -297,10 +227,13 @@ class _ConnectorClientBase:
             body=connector_req.body if connector_req.HasField("body") else None,
         )
 
-        # 3. Execute the HTTP request using the instance-owned AsyncClient
-        response = await execute(
-            connector_request, self.client, http_config=http_config
+        # 3. Execute (http_config is always complete; pass ms, convert to sec inside)
+        resolved_ms = (
+            http_config.total_timeout_ms,
+            http_config.connect_timeout_ms,
+            http_config.response_timeout_ms,
         )
+        response = await execute(connector_request, self.client, resolved_ms)
 
         # 4. Encode HTTP response for FFI
         res_proto = FfiConnectorHttpResponse(
@@ -313,7 +246,7 @@ class _ConnectorClientBase:
         # 5. Parse connector response via FFI
         #    Parse result bytes as response_cls; if that fails, parse as ResponseError.
         result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
-        return _check_res_error(result_bytes_res, response_cls)
+        return check_res(result_bytes_res)
 
 
     def _execute_direct(
@@ -352,7 +285,7 @@ class _ConnectorClientBase:
         result_bytes = transformer(request_bytes, options_bytes)
 
         # Parse result bytes as response_cls; if that fails, parse as ResponseError.
-        return _check_res_error(result_bytes, response_cls)
+        return check_res(result_bytes)
 
     async def close(self):
         """Close the underlying asynchronous connection pool."""

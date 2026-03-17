@@ -236,6 +236,7 @@
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -256,7 +257,7 @@
             "authorization": "Bearer probe_access_token",
             "content-type": "application/json",
             "merchant-id": "DefaultMerchantId",
-            "request-id": "probe_connector_txn_001",
+            "request-id": "probe_merchant_txn_001",
             "via": "HyperSwitch"
           },
           "body": null

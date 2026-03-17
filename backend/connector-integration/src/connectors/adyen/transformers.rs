@@ -1480,7 +1480,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | WalletData::WeChatPayQr(_)
             | WalletData::CashappQr(_)
             | WalletData::Mifinity(_)
-            | WalletData::BluecodeRedirect { .. } => Err(errors::ConnectorError::NotImplemented(
+            | WalletData::BluecodeRedirect { .. }
+            | WalletData::MbWay(_)
+            | WalletData::Satispay(_)
+            | WalletData::Wero(_) => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }

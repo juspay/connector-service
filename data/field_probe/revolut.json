@@ -631,7 +631,7 @@
           "headers": {
             "authorization": "Bearer probe_key",
             "content-type": "application/json",
-            "revolut-api-version": "2024-09-01",
+            "revolut-api-version": "2025-10-16",
             "via": "HyperSwitch"
           },
           "body": "{\"amount\":1000}"
@@ -677,6 +677,7 @@
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,

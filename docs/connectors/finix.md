@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L89) · [JavaScript](../../examples/finix/javascript/finix.js#L78) · [Kotlin](../../examples/finix/kotlin/finix.kt#L104) · [Rust](../../examples/finix/rust/finix.rs#L97)
+**Examples:** [Python](../../examples/finix/python/finix.py#L90) · [JavaScript](../../examples/finix/javascript/finix.js#L79) · [Kotlin](../../examples/finix/kotlin/finix.kt#L105) · [Rust](../../examples/finix/rust/finix.rs#L98)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L114) · [JavaScript](../../examples/finix/javascript/finix.js#L104) · [Kotlin](../../examples/finix/kotlin/finix.kt#L126) · [Rust](../../examples/finix/rust/finix.rs#L119)
+**Examples:** [Python](../../examples/finix/python/finix.py#L115) · [JavaScript](../../examples/finix/javascript/finix.js#L105) · [Kotlin](../../examples/finix/kotlin/finix.kt#L127) · [Rust](../../examples/finix/rust/finix.rs#L120)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -136,7 +136,7 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L133) · [JavaScript](../../examples/finix/javascript/finix.js#L123) · [Kotlin](../../examples/finix/kotlin/finix.kt#L142) · [Rust](../../examples/finix/rust/finix.rs#L134)
+**Examples:** [Python](../../examples/finix/python/finix.py#L134) · [JavaScript](../../examples/finix/javascript/finix.js#L124) · [Kotlin](../../examples/finix/kotlin/finix.kt#L143) · [Rust](../../examples/finix/rust/finix.rs#L135)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -150,37 +150,37 @@ Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L185) · [JavaScript](../../examples/finix/javascript/finix.js#L172) · [Kotlin](../../examples/finix/kotlin/finix.kt#L188) · [Rust](../../examples/finix/rust/finix.rs#L181)
+**Examples:** [Python](../../examples/finix/python/finix.py#L186) · [JavaScript](../../examples/finix/javascript/finix.js#L173) · [Kotlin](../../examples/finix/kotlin/finix.kt#L189) · [Rust](../../examples/finix/rust/finix.rs#L182)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L227) · [JavaScript](../../examples/finix/javascript/finix.js#L211) · [Kotlin](../../examples/finix/kotlin/finix.kt#L224) · [Rust](../../examples/finix/rust/finix.rs#L218)
+**Examples:** [Python](../../examples/finix/python/finix.py#L228) · [JavaScript](../../examples/finix/javascript/finix.js#L212) · [Kotlin](../../examples/finix/kotlin/finix.kt#L225) · [Rust](../../examples/finix/rust/finix.rs#L219)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L264) · [JavaScript](../../examples/finix/javascript/finix.js#L246) · [Kotlin](../../examples/finix/kotlin/finix.kt#L246) · [Rust](../../examples/finix/rust/finix.rs#L240)
+**Examples:** [Python](../../examples/finix/python/finix.py#L265) · [JavaScript](../../examples/finix/javascript/finix.js#L247) · [Kotlin](../../examples/finix/kotlin/finix.kt#L247) · [Rust](../../examples/finix/rust/finix.rs#L241)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L286) · [JavaScript](../../examples/finix/javascript/finix.js#L268) · [Kotlin](../../examples/finix/kotlin/finix.kt#L265) · [Rust](../../examples/finix/rust/finix.rs#L258)
+**Examples:** [Python](../../examples/finix/python/finix.py#L287) · [JavaScript](../../examples/finix/javascript/finix.js#L269) · [Kotlin](../../examples/finix/kotlin/finix.kt#L266) · [Rust](../../examples/finix/rust/finix.rs#L259)
 
 ### Create Customer
 
 Register a customer record in the connector system. Returns a connector_customer_id that can be reused for recurring payments and tokenized card storage.
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L308) · [JavaScript](../../examples/finix/javascript/finix.js#L290) · [Kotlin](../../examples/finix/kotlin/finix.kt#L284) · [Rust](../../examples/finix/rust/finix.rs#L276)
+**Examples:** [Python](../../examples/finix/python/finix.py#L309) · [JavaScript](../../examples/finix/javascript/finix.js#L291) · [Kotlin](../../examples/finix/kotlin/finix.kt#L285) · [Rust](../../examples/finix/rust/finix.rs#L277)
 
 ### Tokenize Payment Method
 
 Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L329) · [JavaScript](../../examples/finix/javascript/finix.js#L306) · [Kotlin](../../examples/finix/kotlin/finix.kt#L300) · [Rust](../../examples/finix/rust/finix.rs#L290)
+**Examples:** [Python](../../examples/finix/python/finix.py#L330) · [JavaScript](../../examples/finix/javascript/finix.js#L307) · [Kotlin](../../examples/finix/kotlin/finix.kt#L301) · [Rust](../../examples/finix/rust/finix.rs#L291)
 
 ## API Reference
 
@@ -413,7 +413,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L366) · [JavaScript](../../examples/finix/javascript/finix.js#L337) · [Kotlin](../../examples/finix/kotlin/finix.kt#L331) · [Rust](../../examples/finix/rust/finix.rs#L321)
+**Examples:** [Python](../../examples/finix/python/finix.py#L367) · [JavaScript](../../examples/finix/javascript/finix.js#L338) · [Kotlin](../../examples/finix/kotlin/finix.kt#L332) · [Rust](../../examples/finix/rust/finix.rs#L322)
 
 #### PaymentService.Capture
 
@@ -424,7 +424,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L375) · [JavaScript](../../examples/finix/javascript/finix.js#L346) · [Kotlin](../../examples/finix/kotlin/finix.kt#L343) · [Rust](../../examples/finix/rust/finix.rs#L332)
+**Examples:** [Python](../../examples/finix/python/finix.py#L376) · [JavaScript](../../examples/finix/javascript/finix.js#L347) · [Kotlin](../../examples/finix/kotlin/finix.kt#L344) · [Rust](../../examples/finix/rust/finix.rs#L333)
 
 #### PaymentService.Get
 
@@ -435,7 +435,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L384) · [JavaScript](../../examples/finix/javascript/finix.js#L355) · [Kotlin](../../examples/finix/kotlin/finix.kt#L366) · [Rust](../../examples/finix/rust/finix.rs#L349)
+**Examples:** [Python](../../examples/finix/python/finix.py#L385) · [JavaScript](../../examples/finix/javascript/finix.js#L356) · [Kotlin](../../examples/finix/kotlin/finix.kt#L367) · [Rust](../../examples/finix/rust/finix.rs#L350)
 
 #### PaymentService.Refund
 
@@ -446,7 +446,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L227) · [JavaScript](../../examples/finix/javascript/finix.js#L211) · [Kotlin](../../examples/finix/kotlin/finix.kt#L374) · [Rust](../../examples/finix/rust/finix.rs#L355)
+**Examples:** [Python](../../examples/finix/python/finix.py#L228) · [JavaScript](../../examples/finix/javascript/finix.js#L212) · [Kotlin](../../examples/finix/kotlin/finix.kt#L375) · [Rust](../../examples/finix/rust/finix.rs#L356)
 
 #### PaymentMethodService.Tokenize
 
@@ -457,7 +457,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L329) · [JavaScript](../../examples/finix/javascript/finix.js#L306) · [Kotlin](../../examples/finix/kotlin/finix.kt#L384) · [Rust](../../examples/finix/rust/finix.rs#L361)
+**Examples:** [Python](../../examples/finix/python/finix.py#L330) · [JavaScript](../../examples/finix/javascript/finix.js#L307) · [Kotlin](../../examples/finix/kotlin/finix.kt#L385) · [Rust](../../examples/finix/rust/finix.rs#L362)
 
 #### PaymentService.Void
 
@@ -468,7 +468,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L393) · [JavaScript](../../examples/finix/javascript/finix.js#L364) · [Kotlin](../../examples/finix/kotlin/finix.kt#L413) · [Rust](../../examples/finix/rust/finix.rs#L390)
+**Examples:** [Python](../../examples/finix/python/finix.py#L394) · [JavaScript](../../examples/finix/javascript/finix.js#L365) · [Kotlin](../../examples/finix/kotlin/finix.kt#L414) · [Rust](../../examples/finix/rust/finix.rs#L391)
 
 ### Customers
 
@@ -481,4 +481,4 @@ Create customer record in the payment processor system. Stores customer details 
 | **Request** | `CustomerServiceCreateRequest` |
 | **Response** | `CustomerServiceCreateResponse` |
 
-**Examples:** [Python](../../examples/finix/python/finix.py#L308) · [JavaScript](../../examples/finix/javascript/finix.js#L290) · [Kotlin](../../examples/finix/kotlin/finix.kt#L353) · [Rust](../../examples/finix/rust/finix.rs#L338)
+**Examples:** [Python](../../examples/finix/python/finix.py#L309) · [JavaScript](../../examples/finix/javascript/finix.js#L291) · [Kotlin](../../examples/finix/kotlin/finix.kt#L354) · [Rust](../../examples/finix/rust/finix.rs#L339)

@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L78) · [JavaScript](../../examples/shift4/javascript/shift4.js#L71) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L92) · [Rust](../../examples/shift4/rust/shift4.rs#L90)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L79) · [JavaScript](../../examples/shift4/javascript/shift4.js#L72) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L93) · [Rust](../../examples/shift4/rust/shift4.rs#L91)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,19 +122,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L103) · [JavaScript](../../examples/shift4/javascript/shift4.js#L97) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L114) · [Rust](../../examples/shift4/rust/shift4.rs#L112)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L104) · [JavaScript](../../examples/shift4/javascript/shift4.js#L98) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L115) · [Rust](../../examples/shift4/rust/shift4.rs#L113)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L122) · [JavaScript](../../examples/shift4/javascript/shift4.js#L116) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L130) · [Rust](../../examples/shift4/rust/shift4.rs#L127)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L123) · [JavaScript](../../examples/shift4/javascript/shift4.js#L117) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L131) · [Rust](../../examples/shift4/rust/shift4.rs#L128)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L159) · [JavaScript](../../examples/shift4/javascript/shift4.js#L151) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L152) · [Rust](../../examples/shift4/rust/shift4.rs#L149)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L160) · [JavaScript](../../examples/shift4/javascript/shift4.js#L152) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L153) · [Rust](../../examples/shift4/rust/shift4.rs#L150)
 
 ## API Reference
 
@@ -201,7 +201,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L181) · [JavaScript](../../examples/shift4/javascript/shift4.js#L172) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L170) · [Rust](../../examples/shift4/rust/shift4.rs#L166)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L182) · [JavaScript](../../examples/shift4/javascript/shift4.js#L173) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L171) · [Rust](../../examples/shift4/rust/shift4.rs#L167)
 
 #### PaymentService.Capture
 
@@ -212,7 +212,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L190) · [JavaScript](../../examples/shift4/javascript/shift4.js#L181) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L182) · [Rust](../../examples/shift4/rust/shift4.rs#L177)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L191) · [JavaScript](../../examples/shift4/javascript/shift4.js#L182) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L183) · [Rust](../../examples/shift4/rust/shift4.rs#L178)
 
 #### PaymentService.Get
 
@@ -223,7 +223,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L199) · [JavaScript](../../examples/shift4/javascript/shift4.js#L190) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L192) · [Rust](../../examples/shift4/rust/shift4.rs#L183)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L200) · [JavaScript](../../examples/shift4/javascript/shift4.js#L191) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L193) · [Rust](../../examples/shift4/rust/shift4.rs#L184)
 
 #### PaymentService.Refund
 
@@ -234,4 +234,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/shift4/python/shift4.py#L122) · [JavaScript](../../examples/shift4/javascript/shift4.js#L116) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L200) · [Rust](../../examples/shift4/rust/shift4.rs#L189)
+**Examples:** [Python](../../examples/shift4/python/shift4.py#L123) · [JavaScript](../../examples/shift4/javascript/shift4.js#L117) · [Kotlin](../../examples/shift4/kotlin/shift4.kt#L201) · [Rust](../../examples/shift4/rust/shift4.rs#L190)

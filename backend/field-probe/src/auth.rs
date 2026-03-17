@@ -195,6 +195,16 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             tran_key: k(),
             base_url: None,
         },
+        ConnectorEnum::Peachpayments => ConnectorSpecificConfig::Peachpayments {
+            api_key: k(),
+            tenant_id: s(),
+            base_url: None,
+        },
+        ConnectorEnum::Ppro => ConnectorSpecificConfig::Ppro {
+            api_key: k(),
+            merchant_id: m(),
+            base_url: None,
+        },
         ConnectorEnum::Powertranz => ConnectorSpecificConfig::Powertranz {
             power_tranz_id: id(),
             power_tranz_password: p(),

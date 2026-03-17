@@ -50,6 +50,7 @@ function _buildAuthorizeRequest(captureMethod) {
 
 function _buildGetRequest(connectorTransactionId) {
     return {
+        "merchantTransactionId": "probe_merchant_txn_001",  // Identification
         "connectorTransactionId": connectorTransactionId,
         "amount": {  // Amount Information
             "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)

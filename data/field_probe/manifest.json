@@ -853,6 +853,7 @@
         "paysafe": "PAYSAFE = 101",
         "paytm": "PAYTM = 94",
         "payu": "PAYU = 64",
+        "peachpayments": "PEACHPAYMENTS = 111",
         "phonepe": "PHONEPE = 92",
         "powertranz": "POWERTRANZ = 66",
         "rapyd": "RAPYD = 68",
@@ -928,6 +929,7 @@
         "paysafe": "PaysafeConfig",
         "paytm": "PaytmConfig",
         "payu": "PayuConfig",
+        "peachpayments": "PeachpaymentsConfig",
         "phonepe": "PhonepeConfig",
         "powertranz": "PowertranzConfig",
         "rapyd": "RapydConfig",
@@ -1333,6 +1335,16 @@
         "environment": "Environment"
       }
     },
+    "FfiResult": {
+      "comments": {},
+      "field_types": {
+        "http_request": "FfiConnectorHttpRequest",
+        "http_response": "FfiConnectorHttpResponse",
+        "request_error": "RequestError",
+        "response_error": "ResponseError",
+        "type": "Type"
+      }
+    },
     "FiservConfig": {
       "comments": {},
       "field_types": {}
@@ -1621,8 +1633,10 @@
     "MandateAmountData": {
       "comments": {
         "amount": "Amount",
+        "amount_type": "Amount type for variable mandates (\"exact\", \"max\", \"variable\")",
         "currency": "Currency code (ISO 4217)",
         "end_date": "Unix timestamp for end date",
+        "frequency": "Frequency for recurring mandates (\"daily\", \"weekly\", \"monthly\")",
         "start_date": "Unix timestamp for start date"
       },
       "field_types": {
@@ -1767,6 +1781,12 @@
     "MultisafepayConfig": {
       "comments": {},
       "field_types": {}
+    },
+    "NetworkError": {
+      "comments": {},
+      "field_types": {
+        "code": "NetworkErrorCode"
+      }
     },
     "NetworkErrorDetails": {
       "comments": {
@@ -2025,6 +2045,7 @@
         "lawson": "Lawson - Japanese convenience store payment",
         "local_bank_transfer": "Generic local bank transfer",
         "mandiri_va_bank_transfer": "Mandiri VA Bank transfer in Indonesia",
+        "mb_way": "MB WAY",
         "mifinity": "Mifinity",
         "mini_stop": "Ministop - Japanese convenience store payment",
         "multibanco_bank_transfer": "Multibanco - Portuguese payment method",
@@ -2043,6 +2064,7 @@
         "red_pagos": "RedPagos - Uruguayan payment network",
         "revolut_pay": "Revolut Pay",
         "samsung_pay": "Samsung",
+        "satispay": "Satispay",
         "seicomart": "Seicomart - Japanese convenience store payment",
         "sepa": "Sepa - Single Euro Payments Area direct debit",
         "sepa_bank_transfer": "SEPA credit transfer",
@@ -2052,7 +2074,8 @@
         "upi_collect": "UPI Collect",
         "upi_intent": "UPI Intent",
         "upi_qr": "UPI QR",
-        "we_chat_pay_qr": "WeChat Pay"
+        "we_chat_pay_qr": "WeChat Pay",
+        "wero": "Wero"
       },
       "field_types": {
         "ach": "Ach",
@@ -2106,6 +2129,7 @@
         "local_bank_redirect": "LocalBankRedirect",
         "local_bank_transfer": "LocalBankTransfer",
         "mandiri_va_bank_transfer": "MandiriVaBankTransfer",
+        "mb_way": "MBWay",
         "mifinity": "MifinityWallet",
         "mini_stop": "MiniStop",
         "multibanco_bank_transfer": "MultibancoBankTransfer",
@@ -2134,6 +2158,7 @@
         "red_pagos": "RedPagos",
         "revolut_pay": "RevolutPayWallet",
         "samsung_pay": "SamsungWallet",
+        "satispay": "Satispay",
         "seicomart": "Seicomart",
         "sepa": "Sepa",
         "sepa_bank_transfer": "SepaBankTransfer",
@@ -2145,7 +2170,8 @@
         "upi_collect": "UpiCollect",
         "upi_intent": "UpiIntent",
         "upi_qr": "UpiQr",
-        "we_chat_pay_qr": "WeChatPayQrWallet"
+        "we_chat_pay_qr": "WeChatPayQrWallet",
+        "wero": "Wero"
       }
     },
     "PaymentMethodAuthenticationServiceAuthenticateRequest": {
@@ -2505,6 +2531,7 @@
         "capture_method": "Capture Settings",
         "connector_feature_data": "Connector-specific metadata for the transaction",
         "connector_order_reference_id": "Connector Reference Id",
+        "merchant_transaction_id": "Identification",
         "metadata": "Additional metadata for the connector",
         "payment_experience": "Payment Experience",
         "setup_future_usage": "Behavioral Flags",
@@ -2652,6 +2679,7 @@
         "return_url": "URL to redirect after setup",
         "session_token": "Session token, if applicable",
         "setup_future_usage": "Indicates future usage intention",
+        "setup_mandate_details": "Mandate setup details",
         "shipping_cost": "Shipping cost, if an initial payment is part of setup",
         "state": "State data for access token storage and other connector-specific state",
         "webhook_url": "URL for webhook notifications"
@@ -2670,6 +2698,7 @@
         "payment_experience": "PaymentExperience",
         "payment_method": "PaymentMethod",
         "setup_future_usage": "FutureUsage",
+        "setup_mandate_details": "SetupMandateDetails",
         "state": "ConnectorState"
       }
     },
@@ -2863,6 +2892,10 @@
       "field_types": {
         "decrypted_data": "PazeDecryptedData"
       }
+    },
+    "PeachpaymentsConfig": {
+      "comments": {},
+      "field_types": {}
     },
     "PhonepeConfig": {
       "comments": {},

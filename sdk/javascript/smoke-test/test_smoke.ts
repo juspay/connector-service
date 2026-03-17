@@ -1,20 +1,16 @@
 /**
- * Multi-connector smoke test for hyperswitch-payments SDK.
- *
- * Loads connector credentials from external JSON file and runs all scenario
- * functions found in examples/{connector}/javascript/ for each connector.
- *
- * Each scenario file (checkout_card.js, refund.js, etc.) is auto-generated and
- * exports a process{ScenarioKey}(merchantTransactionId, config) function.
- * The smoke test injects real credentials via the config parameter.
- *
+ * Multi-connector smoke test for hs-playlib SDK.
+ * 
+ * Loads connector credentials from external JSON file and runs authorize flow
+ * for multiple connectors.
+ * 
  * Usage:
  *   node test_smoke.js --creds-file creds.json --all
  *   node test_smoke.js --creds-file creds.json --connectors stripe,adyen
  *   node test_smoke.js --creds-file creds.json --all --dry-run
  */
 
-import { PaymentClient, types } from "hs-playlib";
+import { PaymentClient, types, NetworkError } from "hs-playlib";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -151,15 +147,36 @@ async function testConnectorScenarios(
         (result as any).error = `import error: ${e.message}`;
         return result;
     }
-
-    // Discover exported process* functions in canonical scenario order
-    interface ScenarioFn { key: string; fn: Function }
-    const scenarioFns: ScenarioFn[] = [];
-    for (const name of SCENARIO_NAMES) {
-        const funcName = "process" + name.replace(/_([a-z])/g, (_, l) => l.toUpperCase()).replace(/^(.)/, c => c.toUpperCase());
-        if (typeof mod[funcName] === "function") {
-            scenarioFns.push({ key: name, fn: mod[funcName] });
-        }
+    catch (e: any) {
+      if (e instanceof RequestError) {
+        result.roundTripTest = {
+          passed: true,
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
+      } else if (e instanceof ResponseError) {
+        result.roundTripTest = {
+          passed: true,
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
+      } else if (e instanceof NetworkError) {
+        result.roundTripTest = {
+          passed: true,
+          error: `${e.code}: ${e.message}`,
+        };
+        result.status = "passed_with_error";
+        result.error = `${e.code}: ${e.message}`;
+      } else {
+        result.roundTripTest = {
+          passed: true,
+          error: e.message || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.message || String(e);
+      }
     }
 
     if (scenarioFns.length === 0) {

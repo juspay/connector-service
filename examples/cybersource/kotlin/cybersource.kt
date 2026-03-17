@@ -71,6 +71,7 @@ private fun buildCaptureRequest(connectorTransactionIdStr: String): PaymentServi
 
 private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGetRequest {
     return PaymentServiceGetRequest.newBuilder().apply {
+        merchantTransactionId = "probe_merchant_txn_001"  // Identification
         connectorTransactionId = connectorTransactionIdStr
         amountBuilder.apply {  // Amount Information
             minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)

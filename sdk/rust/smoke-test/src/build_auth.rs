@@ -850,6 +850,17 @@ pub fn build_connector_config(
                 )),
             })
         }
+        "peachpayments" => {
+            Ok(ConnectorSpecificConfig {
+                config: Some(connector_specific_config::Config::Peachpayments(
+                    PeachpaymentsConfig {
+            api_key: Some(Secret::new(get_val(creds, "api_key")?)),
+            tenant_id: Some(Secret::new(get_val(creds, "tenant_id")?)),
+                        ..Default::default()
+                    },
+                )),
+            })
+        }
         "paypal" => {
             Ok(ConnectorSpecificConfig {
                 config: Some(connector_specific_config::Config::Paypal(

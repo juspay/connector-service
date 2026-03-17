@@ -138,6 +138,7 @@
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -152,7 +153,7 @@
             "soapaction": "consultaOperaciones",
             "via": "HyperSwitch"
           },
-          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"http://webservices.apl02.redsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Monitor><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_connector_txn_001</Ds_Order></Monitor></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
+          "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:web=\"http://webservices.apl02.redsys.es\"><soapenv:Header/><soapenv:Body><web:consultaOperaciones><cadenaXML><![CDATA[<Messages><Version Ds_Version=\"0.0\"><Message><Monitor><Ds_MerchantCode>probe_merchant</Ds_MerchantCode><Ds_Terminal>probe_id</Ds_Terminal><Ds_Order>probe_merchant_txn_001</Ds_Order></Monitor></Message></Version><Signature>cHJvYmVfa2V5OnByb2JlX3NlY3JldA==</Signature><SignatureVersion>HMAC_SHA256_V1</SignatureVersion></Messages>]]></cadenaXML></web:consultaOperaciones></soapenv:Body></soapenv:Envelope>"
         }
       }
     },

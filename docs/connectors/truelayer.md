@@ -110,7 +110,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.js) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt#L54) · [Rust](../../examples/truelayer/rust/truelayer.rs#L51)
+**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.js) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt#L55) · [Rust](../../examples/truelayer/rust/truelayer.rs#L52)
 
 ### Authentication
 
@@ -123,4 +123,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.js) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt#L44) · [Rust](../../examples/truelayer/rust/truelayer.rs#L43)
+**Examples:** [Python](../../examples/truelayer/python/truelayer.py) · [JavaScript](../../examples/truelayer/javascript/truelayer.js) · [Kotlin](../../examples/truelayer/kotlin/truelayer.kt#L45) · [Rust](../../examples/truelayer/rust/truelayer.rs#L44)

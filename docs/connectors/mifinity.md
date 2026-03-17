@@ -109,4 +109,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/mifinity/python/mifinity.py) · [JavaScript](../../examples/mifinity/javascript/mifinity.js) · [Kotlin](../../examples/mifinity/kotlin/mifinity.kt#L35) · [Rust](../../examples/mifinity/rust/mifinity.rs#L36)
+**Examples:** [Python](../../examples/mifinity/python/mifinity.py) · [JavaScript](../../examples/mifinity/javascript/mifinity.js) · [Kotlin](../../examples/mifinity/kotlin/mifinity.kt#L36) · [Rust](../../examples/mifinity/rust/mifinity.rs#L37)

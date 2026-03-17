@@ -19,6 +19,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - - -
 
+## 2026.03.17.0
+
+### Features
+
+- **framework:** Add merchant_transaction_id in PaymentServiceGetRequest & PaymentServiceGetResponse ([#654](https://github.com/juspay/connector-service/pull/654)) ([`c43491b`](https://github.com/juspay/connector-service/commit/c43491baea60975cd2a0c5534de20ca513c9aa73))
+- Http client sanity runner ([#621](https://github.com/juspay/connector-service/pull/621)) ([`6565db7`](https://github.com/juspay/connector-service/commit/6565db7363334e62252cef28480379f3e6eb10d7))
+
+### Refactors
+
+- **codegen:** Organize templates into per-language subdirectories ([#652](https://github.com/juspay/connector-service/pull/652)) ([`ec40f8b`](https://github.com/juspay/connector-service/commit/ec40f8bbaf45799caf86913346e2c9cd4ea7c13f))
+
+### Miscellaneous Tasks
+
+- **error:** Ffi error handling ([#661](https://github.com/juspay/connector-service/pull/661)) ([`985c55f`](https://github.com/juspay/connector-service/commit/985c55fad84bcfd2b109918535cb81713ba7af89))
+- **uniffii:** Revert error handling ([#656](https://github.com/juspay/connector-service/pull/656)) ([`9774c5b`](https://github.com/juspay/connector-service/commit/9774c5b81eaa95214febda7bd8705bbb6d747317))
+
+**Full Changelog:** [`2026.03.16.0...2026.03.17.0`](https://github.com/juspay/connector-service/compare/2026.03.16.0...2026.03.17.0)
+
+- - -
+
+## 2026.03.16.0
+
+### Features
+
+- **docs:** Add automated connector docs ([#625](https://github.com/juspay/connector-service/pull/625)) ([`00b9804`](https://github.com/juspay/connector-service/commit/00b98047742438f29dee827484bc069bfad4fa1d))
+- **domain:** Unify ConnectorSpecificAuth → ConnectorSpecificConfig ([#627](https://github.com/juspay/connector-service/pull/627)) ([`a7a696c`](https://github.com/juspay/connector-service/commit/a7a696c3a3f546616f74a85584ab123ddf1cda15))
+
+### Refactors
+
+- **generate.py:** Refactor code generation to use Jinja2 templates ([#645](https://github.com/juspay/connector-service/pull/645)) ([`30cef9b`](https://github.com/juspay/connector-service/commit/30cef9baaf7acec58b0256a24386f3fc11a3048e))
+
+### Documentation
+
+- Add Unified Payment Protocol (UPP) specification RFC ([#646](https://github.com/juspay/connector-service/pull/646)) ([`9f140bd`](https://github.com/juspay/connector-service/commit/9f140bd54c174fce53ab4fc7374f9842e3459c1e))
+- Launch blog for review ([#642](https://github.com/juspay/connector-service/pull/642)) ([`29e2fb9`](https://github.com/juspay/connector-service/commit/29e2fb9c33315bcd180c5798efce37adc528bb87))
+- Update SDK javascript README ([#640](https://github.com/juspay/connector-service/pull/640)) ([`36ef23e`](https://github.com/juspay/connector-service/commit/36ef23e3369d06c8f61573875ad17bc1f1495429))
+- Update API reference documentation and navigation ([#633](https://github.com/juspay/connector-service/pull/633)) ([`f57de07`](https://github.com/juspay/connector-service/commit/f57de079efd841b47afbcc725e9ed90a485c5847))
+
+### Miscellaneous Tasks
+
+- Scenario Based Test framework for UCS ([#580](https://github.com/juspay/connector-service/pull/580)) ([`01c4768`](https://github.com/juspay/connector-service/commit/01c4768db0ef751306ba5b0f0fa0eef24529efd9))
+
+**Full Changelog:** [`2026.03.13.0...2026.03.16.0`](https://github.com/juspay/connector-service/compare/2026.03.13.0...2026.03.16.0)
+
+- - -
+
 ## 2026.03.13.0
 
 ### Features

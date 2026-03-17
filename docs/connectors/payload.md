@@ -113,7 +113,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L100) · [Rust](../../examples/payload/rust/payload.rs#L95)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L101) · [Rust](../../examples/payload/rust/payload.rs#L96)
 
 #### PaymentService.Get
 
@@ -124,7 +124,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L110) · [Rust](../../examples/payload/rust/payload.rs#L101)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L111) · [Rust](../../examples/payload/rust/payload.rs#L102)
 
 #### PaymentService.Refund
 
@@ -135,7 +135,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L154) · [Rust](../../examples/payload/rust/payload.rs#L139)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L155) · [Rust](../../examples/payload/rust/payload.rs#L140)
 
 #### PaymentService.Void
 
@@ -146,7 +146,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L164) · [Rust](../../examples/payload/rust/payload.rs#L145)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L165) · [Rust](../../examples/payload/rust/payload.rs#L146)
 
 ### Mandates
 
@@ -159,4 +159,4 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L118) · [Rust](../../examples/payload/rust/payload.rs#L107)
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L119) · [Rust](../../examples/payload/rust/payload.rs#L108)

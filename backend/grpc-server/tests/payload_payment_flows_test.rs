@@ -17,15 +17,16 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        mandate_reference::MandateIdType, payment_method,
-        payment_service_client::PaymentServiceClient,
+        mandate_reference::MandateIdType, mandate_type::MandateType as MandateTypeInner,
+        payment_method, payment_service_client::PaymentServiceClient,
         recurring_payment_service_client::RecurringPaymentServiceClient, AcceptanceType, Address,
         AuthenticationType, CaptureMethod, CardDetails, ConnectorMandateReferenceId, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, MandateReference, PaymentAddress, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest, PaymentStatus,
-        RecurringPaymentServiceChargeRequest, RefundStatus,
+        Currency, CustomerAcceptance, FutureUsage, MandateAmountData, MandateReference,
+        MandateType, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceSetupRecurringRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RecurringPaymentServiceChargeRequest,
+        RefundStatus, SetupMandateDetails,
     },
 };
 use rand::Rng;
@@ -166,6 +167,7 @@ fn create_payment_sync_request(transaction_id: &str, amount: i64) -> PaymentServ
         connector_transaction_id: transaction_id.to_string(),
         encoded_data: None,
         capture_method: None,
+        merchant_transaction_id: None,
         handle_response: None,
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: amount,
@@ -348,6 +350,20 @@ fn create_register_request_with_prefix(_prefix: &str) -> PaymentServiceSetupRecu
         setup_future_usage: Some(i32::from(FutureUsage::OffSession)),
         enrolled_for_3ds: false,
         metadata: None,
+        setup_mandate_details: Some(SetupMandateDetails {
+            update_mandate_id: None,
+            customer_acceptance: None,
+            mandate_type: Some(MandateType {
+                mandate_type: Some(MandateTypeInner::MultiUse(MandateAmountData {
+                    amount: 0,
+                    currency: i32::from(Currency::Usd),
+                    start_date: None,
+                    end_date: None,
+                    amount_type: Some("max".to_string()),
+                    frequency: Some("monthly".to_string()),
+                })),
+            }),
+        }),
         ..Default::default()
     }
 }
@@ -503,6 +519,7 @@ async fn test_authorize_capture_refund_rsync() {
             encoded_data: None,
             capture_method: None,
             handle_response: None,
+            merchant_transaction_id: None,
             amount,
             state: None,
             metadata: None,
