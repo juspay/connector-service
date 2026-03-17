@@ -41,7 +41,10 @@ pub trait CompositePreAuthNRequest {
         &self,
     ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest;
 
-    fn should_do_pre_authenticate(&self, connector: &ConnectorEnum) -> Result<bool, tonic::Status>;
+    fn should_do_pre_authenticate(
+        &self,
+        connector: &ConnectorEnum,
+    ) -> Result<bool, Box<tonic::Status>>;
 }
 
 impl CompositeAccessTokenRequest for CompositeAuthorizeRequest {
@@ -88,7 +91,7 @@ impl CompositePreAuthNRequest for CompositePreauthenticateRequest {
     fn should_do_pre_authenticate(
         &self,
         _connector: &ConnectorEnum,
-    ) -> Result<bool, tonic::Status> {
+    ) -> Result<bool, Box<tonic::Status>> {
         Ok(true)
     }
 }
@@ -100,7 +103,10 @@ impl CompositePreAuthNRequest for CompositeAuthenticateRequest {
         PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(self)
     }
 
-    fn should_do_pre_authenticate(&self, connector: &ConnectorEnum) -> Result<bool, tonic::Status> {
+    fn should_do_pre_authenticate(
+        &self,
+        connector: &ConnectorEnum,
+    ) -> Result<bool, Box<tonic::Status>> {
         let connector_data =
             ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
 
@@ -116,9 +122,9 @@ impl CompositePreAuthNRequest for CompositeAuthenticateRequest {
             .map(domain_types::payment_method_data::PaymentMethodData::foreign_try_from)
             .transpose()
             .map_err(|err| {
-                tonic::Status::invalid_argument(format!(
+                Box::new(tonic::Status::invalid_argument(format!(
                     "Failed to convert payment method data: {err:?}"
-                ))
+                )))
             })?;
 
         Ok(connector_data
@@ -365,7 +371,10 @@ where
     {
         let connector = connector_from_composite_request_metadata(metadata).map_err(|err| *err)?;
 
-        let pre_authenticate_response = if payload.should_do_pre_authenticate(&connector)? {
+        let pre_authenticate_response = if payload
+            .should_do_pre_authenticate(&connector)
+            .map_err(|err| *err)?
+        {
             let pre_authenticate_payload = payload.build_pre_authenticate_request();
 
             let mut pre_authenticate_request = tonic::Request::new(pre_authenticate_payload);
