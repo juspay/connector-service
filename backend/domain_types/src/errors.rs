@@ -1028,89 +1028,6 @@ impl ConnectorError {
         }
     }
 
-    /// Get error category for SDK classification
-    pub fn category(&self) -> ErrorCategory {
-        match self {
-            // Validation/Input errors
-            Self::ValidationFailed { .. }
-            | Self::MissingRequiredField { .. }
-            | Self::MissingRequiredFields { .. }
-            | Self::InvalidDataFormat { .. }
-            | Self::MismatchedPaymentData
-            | Self::IntegrityCheckFailed { .. }
-            | Self::CurrencyNotSupported { .. }
-            | Self::InvalidWallet
-            | Self::MissingPaymentMethodType
-            | Self::InvalidWalletToken { .. }
-            | Self::FileValidationFailed { .. }
-            | Self::MissingConnectorRedirectionPayload { .. }
-            | Self::InvalidDateFormat
-            | Self::DateFormattingFailed
-            | Self::MaxFieldLengthViolated { .. }
-            | Self::MandatePaymentDataMismatch { .. } => ErrorCategory::InvalidRequest,
-
-            // Configuration errors
-            Self::FailedToObtainAuthType
-            | Self::InvalidConnectorConfig { .. }
-            | Self::FailedToObtainCertificate
-            | Self::FailedToObtainCertificateKey
-            | Self::NoConnectorMetaData
-            | Self::NoConnectorWalletDetails
-            | Self::InvalidConnectorName => ErrorCategory::ConfigurationError,
-
-            // Not supported/implemented
-            Self::NotImplemented(_)
-            | Self::CaptureMethodNotSupported
-            | Self::WebhooksNotImplemented => ErrorCategory::NotImplemented,
-
-            Self::NotSupported { .. } | Self::FlowNotSupported { .. } => {
-                ErrorCategory::NotSupported
-            }
-
-            // Processing errors
-            Self::RequestEncodingFailed
-            | Self::RequestEncodingFailedWithReason(_)
-            | Self::ResponseDeserializationFailed
-            | Self::ResponseHandlingFailed
-            | Self::AmountConversionFailed
-            | Self::ParsingFailed
-            | Self::ProcessingStepFailed(_)
-            | Self::UnexpectedResponseError(_)
-            | Self::DecodingFailed(_)
-            | Self::FailedToObtainIntegrationUrl
-            | Self::RoutingRulesParsingError
-            | Self::FailedToObtainPreferredConnector
-            | Self::SourceVerificationFailed
-            | Self::GenericError { .. } => ErrorCategory::ProcessingError,
-
-            // Timeout
-            Self::RequestTimeoutReceived => ErrorCategory::Timeout,
-
-            // Connector-specific
-            Self::FailedAtConnector { .. } => ErrorCategory::ConnectorError,
-
-            // Missing IDs (could be processing or validation)
-            Self::MissingConnectorTransactionID
-            | Self::MissingConnectorRefundID
-            | Self::MissingConnectorMandateID
-            | Self::MissingConnectorMandateMetadata
-            | Self::MissingApplePayTokenData
-            | Self::MissingConnectorRelatedTransactionID { .. }
-            | Self::InSufficientBalanceInPaymentMethod => ErrorCategory::ProcessingError,
-
-            // Webhook errors
-            Self::WebhookBodyDecodingFailed
-            | Self::WebhookDecodingFailed
-            | Self::WebhookSignatureNotFound
-            | Self::WebhookSourceVerificationFailed
-            | Self::WebhookVerificationSecretNotFound
-            | Self::WebhookVerificationSecretInvalid
-            | Self::WebhookReferenceIdNotFound
-            | Self::WebhookEventTypeNotFound
-            | Self::WebhookResourceObjectNotFound
-            | Self::WebhookResponseEncodingFailed => ErrorCategory::WebhookError,
-        }
-    }
 
     /// Get machine-readable error code for documentation and SDK
     pub fn error_code(&self) -> &'static str {
@@ -1192,106 +1109,75 @@ impl ConnectorError {
 
     /// Get HTTP status code for this error
     pub fn http_status_code(&self) -> u16 {
-        match self.category() {
-            ErrorCategory::InvalidRequest => 400,
-            ErrorCategory::ConfigurationError => 401,
-            ErrorCategory::NotSupported | ErrorCategory::NotImplemented => 501,
-            ErrorCategory::Timeout => 504,
-            ErrorCategory::ProcessingError | ErrorCategory::ConnectorError => 500,
-            ErrorCategory::WebhookError => 400,
+        match self {
+            // 400 - Bad Request (validation/input errors)
+            Self::ValidationFailed { .. }
+            | Self::MissingRequiredField { .. }
+            | Self::MissingRequiredFields { .. }
+            | Self::InvalidDataFormat { .. }
+            | Self::MismatchedPaymentData
+            | Self::IntegrityCheckFailed { .. }
+            | Self::CurrencyNotSupported { .. }
+            | Self::InvalidWallet
+            | Self::MissingPaymentMethodType
+            | Self::InvalidWalletToken { .. }
+            | Self::FileValidationFailed { .. }
+            | Self::MissingConnectorRedirectionPayload { .. }
+            | Self::InvalidDateFormat
+            | Self::DateFormattingFailed
+            | Self::MaxFieldLengthViolated { .. }
+            | Self::MandatePaymentDataMismatch { .. }
+            | Self::WebhookBodyDecodingFailed
+            | Self::WebhookDecodingFailed
+            | Self::WebhookSignatureNotFound
+            | Self::WebhookSourceVerificationFailed
+            | Self::WebhookVerificationSecretNotFound
+            | Self::WebhookVerificationSecretInvalid
+            | Self::WebhookReferenceIdNotFound
+            | Self::WebhookEventTypeNotFound
+            | Self::WebhookResourceObjectNotFound
+            | Self::WebhookResponseEncodingFailed => 400,
+
+            // 401 - Unauthorized (auth/config errors)
+            Self::FailedToObtainAuthType
+            | Self::InvalidConnectorConfig { .. }
+            | Self::FailedToObtainCertificate
+            | Self::FailedToObtainCertificateKey
+            | Self::NoConnectorMetaData
+            | Self::NoConnectorWalletDetails
+            | Self::InvalidConnectorName => 401,
+
+            // 501 - Not Implemented
+            Self::NotImplemented(_)
+            | Self::NotSupported { .. }
+            | Self::FlowNotSupported { .. }
+            | Self::CaptureMethodNotSupported
+            | Self::WebhooksNotImplemented => 501,
+
+            // 504 - Gateway Timeout
+            Self::RequestTimeoutReceived => 504,
+
+            // 500 - Internal Server Error (processing errors)
+            _ => 500,
         }
     }
 
     /// Check if this error is retryable
+    ///
+    /// Currently all errors are non-retryable by default.
+    /// This will be fine-tuned based on production data and testing.
     pub fn is_retryable(&self) -> bool {
-        match self {
-            // Network/Timeout - retryable
-            Self::RequestTimeoutReceived => true,
-
-            // Processing errors - some retryable
-            Self::ResponseDeserializationFailed | Self::UnexpectedResponseError(_) => true,
-
-            // Webhook errors - some retryable
-            Self::WebhookBodyDecodingFailed => true,
-
-            // All validation/config/support errors - NOT retryable
-            _ => false,
-        }
+        // TODO: Implement retry logic based on production analysis
+        // Candidates for retry:
+        // - RequestTimeoutReceived (network timeout)
+        // - ResponseDeserializationFailed (transient PSP issue)
+        // - WebhookBodyDecodingFailed (PSP might retry)
+        false
     }
 
     /// Get documentation URL for this error
     pub fn documentation_url(&self) -> String {
         format!("https://docs.ucs.com/errors/{}", self.error_code())
-    }
-
-    /// Get detailed technical description of this error
-    pub fn description(&self) -> &'static str {
-        match self {
-            Self::ValidationFailed { .. } => "One or more required fields are missing or invalid. Review the field_errors for specific issues.",
-            Self::MissingRequiredField { .. } => "A required field was not provided in the request.",
-            Self::MissingRequiredFields { .. } => "Multiple required fields were not provided in the request.",
-            Self::InvalidDataFormat { .. } => "A field contains data in an invalid format.",
-            Self::MismatchedPaymentData => "Payment method data, type, or experience do not match expected combinations.",
-            Self::IntegrityCheckFailed { .. } => "Field integrity validation failed. Values don't match previously stored data.",
-            Self::CurrencyNotSupported { .. } => "The specified currency is not supported by this connector.",
-            Self::InvalidWallet => "An invalid or unsupported wallet type was specified.",
-            Self::InvalidWalletToken { .. } => "The wallet token could not be parsed or is invalid.",
-            Self::FileValidationFailed { .. } => "File validation failed due to size, format, or content issues.",
-            Self::MissingConnectorRedirectionPayload { .. } => "Required 3DS redirection data is missing.",
-            Self::InvalidDateFormat | Self::DateFormattingFailed => "Date/time value is in an invalid format or could not be formatted.",
-            Self::MaxFieldLengthViolated { .. } => "A field value exceeds the maximum length allowed by the connector.",
-            Self::MandatePaymentDataMismatch { .. } => "Field values don't match those used during mandate creation.",
-
-            Self::FailedToObtainAuthType => "Could not determine or obtain the authentication credentials for the connector.",
-            Self::InvalidConnectorConfig { .. } => "Connector configuration is invalid or incomplete.",
-            Self::FailedToObtainCertificate | Self::FailedToObtainCertificateKey => "Required certificate or key for connector authentication could not be obtained.",
-            Self::NoConnectorMetaData => "Connector metadata is missing from the request context.",
-            Self::NoConnectorWalletDetails => "Wallet configuration details are missing for this connector.",
-            Self::InvalidConnectorName => "The specified connector name is invalid or not recognized.",
-
-            Self::NotImplemented(_) => "This feature exists in UCS but has not been implemented for this connector yet.",
-            Self::NotSupported { .. } => "This feature or payment method is not supported by the connector.",
-            Self::FlowNotSupported { .. } => "This specific combination of features is not supported by the connector.",
-            Self::CaptureMethodNotSupported => "The requested capture method is not supported.",
-            Self::WebhooksNotImplemented => "Webhook processing is not implemented for this connector.",
-
-            Self::RequestEncodingFailed | Self::RequestEncodingFailedWithReason(_) => "Failed to encode the payment request into the connector's required format.",
-            Self::ResponseDeserializationFailed => "Failed to parse the connector's response. May indicate an API change or unexpected format.",
-            Self::ResponseHandlingFailed => "Failed to process the connector's response.",
-            Self::AmountConversionFailed => "Failed to convert the payment amount to the connector's required format.",
-            Self::ParsingFailed => "Failed to parse data during transformation.",
-            Self::ProcessingStepFailed(_) => "A required processing step failed during request/response handling.",
-            Self::UnexpectedResponseError(_) => "Received an unexpected response format from the connector.",
-            Self::DecodingFailed(_) => "Failed to decode base64, PEM, or other encoded data.",
-            Self::FailedToObtainIntegrationUrl => "Could not determine the connector's API endpoint URL.",
-            Self::RoutingRulesParsingError => "Failed to parse routing rules configuration.",
-            Self::FailedToObtainPreferredConnector => "Could not determine the preferred connector from configuration.",
-            Self::SourceVerificationFailed => "Failed to verify the source of incoming data.",
-            Self::GenericError { .. } => "A generic error occurred during processing.",
-
-            Self::RequestTimeoutReceived => "The request to the connector timed out before receiving a response.",
-            Self::FailedAtConnector { .. } => "The connector returned an error response.",
-
-            Self::MissingConnectorTransactionID => "Connector transaction ID is required but was not provided by the connector.",
-            Self::MissingConnectorRefundID => "Connector refund ID is required but was not provided by the connector.",
-            Self::MissingConnectorMandateID => "Connector mandate ID is required but was not found.",
-            Self::MissingConnectorMandateMetadata => "Connector mandate metadata is required but was not found.",
-            Self::MissingApplePayTokenData => "Apple Pay tokenization data is missing from the payment request.",
-            Self::MissingConnectorRelatedTransactionID { .. } => "A required connector-related transaction ID is missing.",
-            Self::InSufficientBalanceInPaymentMethod => "The payment method has insufficient balance to complete the transaction.",
-            Self::MissingPaymentMethodType => "Payment method type was not specified.",
-
-            Self::WebhookBodyDecodingFailed => "Failed to decode the webhook request body.",
-            Self::WebhookDecodingFailed => "Failed to decode webhook signature or headers.",
-            Self::WebhookSignatureNotFound => "Webhook signature header is missing from the request.",
-            Self::WebhookSourceVerificationFailed => "Failed to verify the webhook came from the connector.",
-            Self::WebhookVerificationSecretNotFound => "Webhook verification secret is not configured.",
-            Self::WebhookVerificationSecretInvalid => "Webhook verification secret is invalid or incorrect.",
-            Self::WebhookReferenceIdNotFound => "Webhook reference ID could not be extracted.",
-            Self::WebhookEventTypeNotFound => "Webhook event type could not be determined.",
-            Self::WebhookResourceObjectNotFound => "Webhook resource object is missing from the payload.",
-            Self::WebhookResponseEncodingFailed => "Failed to encode the webhook response.",
-        }
     }
 
     /// Get actionable guidance for developers
@@ -1388,18 +1274,6 @@ impl ConnectorError {
 }
 
 /// Error category for SDK classification
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ErrorCategory {
-    InvalidRequest,
-    ConfigurationError,
-    NotSupported,
-    NotImplemented,
-    ProcessingError,
-    Timeout,
-    ConnectorError,
-    WebhookError,
-}
-
 impl ErrorSwitch<ConnectorError> for common_utils::errors::ParsingError {
     fn switch(&self) -> ConnectorError {
         ConnectorError::ParsingFailed

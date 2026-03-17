@@ -162,17 +162,37 @@ message FfiConnectorHttpResponse {
 // Error returned by req_transformer FFI calls
 message RequestError {
   PaymentStatus status = 1;
-  optional string error_message = 2;
-  optional string error_code = 3;
-  optional uint32 status_code = 4;
+
+  // Core error info
+  optional string error_message = 2;     // Human-readable message (from thiserror)
+  optional string error_code = 3;        // Machine-readable code (e.g., "CE_MISSING_REQUIRED_FIELD")
+  optional uint32 status_code = 4;       // HTTP status code
+
+  // Enhanced error fields for better developer experience
+  optional bool retryable = 5;           // Can this error be retried?
+  optional string suggested_action = 6;  // What should the developer do?
+  optional string documentation_url = 7; // Link to error documentation
+
+  // Field-level validation errors
+  map<string, string> field_errors = 8;  // field_name -> error message
 }
 
 // Error returned by res_transformer FFI calls
 message ResponseError {
   PaymentStatus status = 1;
-  optional string error_message = 2;
-  optional string error_code = 3;
-  optional uint32 status_code = 4;
+
+  // Core error info
+  optional string error_message = 2;     // Human-readable message (from thiserror)
+  optional string error_code = 3;        // Machine-readable code (e.g., "CE_MISSING_REQUIRED_FIELD")
+  optional uint32 status_code = 4;       // HTTP status code
+
+  // Enhanced error fields for better developer experience
+  optional bool retryable = 5;           // Can this error be retried?
+  optional string suggested_action = 6;  // What should the developer do?
+  optional string documentation_url = 7; // Link to error documentation
+
+  // Field-level validation errors
+  map<string, string> field_errors = 8;  // field_name -> error message
 }
 
 // Result type for FFI operations with explicit type discrimination
