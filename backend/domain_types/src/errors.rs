@@ -1271,9 +1271,84 @@ impl ConnectorError {
             _ => None,
         }
     }
+
+    /// Get broad error category for SDK classification
+    /// Provides high-level grouping for error handling logic
+    pub fn category(&self) -> ErrorCategory {
+        match self {
+            // Validation/Input errors
+            Self::ValidationFailed { .. }
+            | Self::MissingRequiredField { .. }
+            | Self::MissingRequiredFields { .. }
+            | Self::InvalidDataFormat { .. }
+            | Self::MismatchedPaymentData
+            | Self::IntegrityCheckFailed { .. }
+            | Self::CurrencyNotSupported { .. }
+            | Self::InvalidWallet
+            | Self::MissingPaymentMethodType
+            | Self::InvalidWalletToken { .. }
+            | Self::FileValidationFailed { .. }
+            | Self::MissingConnectorRedirectionPayload { .. }
+            | Self::InvalidDateFormat
+            | Self::DateFormattingFailed
+            | Self::MaxFieldLengthViolated { .. }
+            | Self::MandatePaymentDataMismatch { .. } => ErrorCategory::ValidationError,
+
+            // Configuration errors
+            Self::FailedToObtainAuthType
+            | Self::InvalidConnectorConfig { .. }
+            | Self::FailedToObtainCertificate
+            | Self::FailedToObtainCertificateKey
+            | Self::NoConnectorMetaData
+            | Self::NoConnectorWalletDetails
+            | Self::InvalidConnectorName => ErrorCategory::ConfigurationError,
+
+            // Not supported/implemented
+            Self::NotImplemented(_)
+            | Self::CaptureMethodNotSupported
+            | Self::WebhooksNotImplemented => ErrorCategory::NotImplemented,
+
+            Self::NotSupported { .. } | Self::FlowNotSupported { .. } => {
+                ErrorCategory::NotSupported
+            }
+
+            // Timeout
+            Self::RequestTimeoutReceived => ErrorCategory::TimeoutError,
+
+            // Connector-specific errors
+            Self::FailedAtConnector { .. } => ErrorCategory::ConnectorError,
+
+            // Webhook errors
+            Self::WebhookBodyDecodingFailed
+            | Self::WebhookDecodingFailed
+            | Self::WebhookSignatureNotFound
+            | Self::WebhookSourceVerificationFailed
+            | Self::WebhookVerificationSecretNotFound
+            | Self::WebhookVerificationSecretInvalid
+            | Self::WebhookReferenceIdNotFound
+            | Self::WebhookEventTypeNotFound
+            | Self::WebhookResourceObjectNotFound
+            | Self::WebhookResponseEncodingFailed => ErrorCategory::WebhookError,
+
+            // Processing errors (everything else)
+            _ => ErrorCategory::ProcessingError,
+        }
+    }
 }
 
-/// Error category for SDK classification
+/// Broad error categories for SDK classification
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorCategory {
+    ValidationError,
+    ConfigurationError,
+    NotSupported,
+    NotImplemented,
+    ProcessingError,
+    TimeoutError,
+    ConnectorError,
+    WebhookError,
+}
+
 impl ErrorSwitch<ConnectorError> for common_utils::errors::ParsingError {
     fn switch(&self) -> ConnectorError {
         ConnectorError::ParsingFailed
