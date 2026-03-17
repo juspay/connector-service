@@ -159,6 +159,30 @@ message FfiConnectorHttpResponse {
   bytes body = 3;
 }
 
+// Error category for error classification
+enum ErrorCategory {
+  VALIDATION_ERROR = 0;      // Invalid/missing request data
+  CONFIGURATION_ERROR = 1;   // Auth/config issues
+  NOT_SUPPORTED = 2;         // Feature not available
+  PROCESSING_ERROR = 3;      // Internal error
+}
+
+// Error when transforming SDK request → connector HTTP request (FFI boundary)
+message IntegrationError {
+  optional string error_message = 1;
+  optional string error_code = 2;
+  optional ErrorCategory error_category = 3;
+  optional string suggested_action = 4;
+}
+
+// Error when parsing connector HTTP response → SDK response (FFI boundary)
+message ResponseTransformationError {
+  PaymentStatus payment_status = 1;
+  optional string error_message = 2;
+  optional string error_code = 3;
+  optional uint32 http_status_code = 4;
+}
+
 // Error returned by req_transformer FFI calls
 message RequestError {
   PaymentStatus status = 1;
