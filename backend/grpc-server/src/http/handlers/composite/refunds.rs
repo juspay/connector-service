@@ -3,7 +3,10 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Json,
 };
-use grpc_api_types::payments::{CompositeRefundGetRequest, CompositeRefundGetResponse};
+use grpc_api_types::payments::{
+    composite_refund_service_server::CompositeRefundService, CompositeRefundGetRequest,
+    CompositeRefundGetResponse,
+};
 use std::sync::Arc;
 
 use crate::http::handlers::macros::http_handler;
@@ -17,6 +20,6 @@ http_handler!(
     refund_get,
     CompositeRefundGetRequest,
     CompositeRefundGetResponse,
-    process_composite_refund_get,
+    get,
     composite_payments_service
 );
