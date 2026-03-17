@@ -105,8 +105,9 @@ where
                         "invalid payment_method in request payload: {err}"
                     ))
                 })?;
-            let connector_data =
-                ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+            let connector_data = ConnectorData::<
+                domain_types::payment_method_data::DefaultPCIHolder,
+            >::get_connector_by_name(connector);
             connector_data
                 .connector
                 .should_do_access_token(payment_method)
@@ -145,8 +146,7 @@ where
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<Option<CustomerServiceCreateResponse>, tonic::Status> {
-        let connector_data =
-            ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+        let connector_data = ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
         let connector_customer_id = payload
             .state
             .as_ref()

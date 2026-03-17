@@ -382,7 +382,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data.request.merchant_account_id.clone(),
             item.router_data.request.merchant_config_currency,
         ) {
-            info!("BRAINTREE: Picking merchant_account_id and merchant_config_currency from payments request");
+            info!(
+                "BRAINTREE: Picking merchant_account_id and merchant_config_currency from payments request"
+              );
             BraintreeMeta {
                 merchant_account_id: merchant_account_id.into(),
                 merchant_config_currency,
@@ -1868,21 +1870,21 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             Some(connector_meta) => {
                                 let meta_value: serde_json::Value = connector_meta.expose();
                                 meta_value
-                                        .get("apple_pay_combined")
-                                        .ok_or(ConnectorError::NoConnectorMetaData)
-                                        .attach_printable("Missing apple_pay_combined metadata")?
-                                        .get("manual")
-                                        .ok_or(ConnectorError::NoConnectorMetaData)
-                                        .attach_printable("Missing manual metadata")?
-                                        .get("payment_request_data")
-                                        .ok_or(ConnectorError::NoConnectorMetaData)
-                                        .attach_printable("Missing payment_request_data metadata")?
-                                        .clone()
-                                        .parse_value("PaymentRequestMetadata")
-                                        .change_context(ConnectorError::ParsingFailed)
-                                        .attach_printable(
-                                            "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
-                                        )?
+                                    .get("apple_pay_combined")
+                                    .ok_or(ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("Missing apple_pay_combined metadata")?
+                                    .get("manual")
+                                    .ok_or(ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("Missing manual metadata")?
+                                    .get("payment_request_data")
+                                    .ok_or(ConnectorError::NoConnectorMetaData)
+                                    .attach_printable("Missing payment_request_data metadata")?
+                                    .clone()
+                                    .parse_value("PaymentRequestMetadata")
+                                    .change_context(ConnectorError::ParsingFailed)
+                                    .attach_printable(
+                                        "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
+                                    )?
                             }
                             None => Err(ConnectorError::NoConnectorMetaData)
                                 .attach_printable("connector_feature_data is None")?,
@@ -2006,10 +2008,12 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         }))
                     }
                     _ => {
-                        return Err(ConnectorError::NotImplemented(format!(
-                            "SDK session token generation is not supported for payment method: {:?}",
-                            item.router_data.request.payment_method_type
-                        ))
+                        return Err(ConnectorError::NotImplemented(
+                            format!(
+                                "SDK session token generation is not supported for payment method: {:?}",
+                                item.router_data.request.payment_method_type
+                            )
+                        )
                         .into());
                     }
                 };
@@ -2553,7 +2557,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data.request.merchant_account_id.clone(),
             item.router_data.request.merchant_configured_currency,
         ) {
-            info!("BRAINTREE: Picking merchant_account_id and merchant_config_currency from repeatpayments request");
+            info!(
+                "BRAINTREE: Picking merchant_account_id and merchant_config_currency from repeatpayments request"
+            );
 
             BraintreeMeta {
                 merchant_account_id,

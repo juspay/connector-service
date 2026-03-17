@@ -735,8 +735,7 @@ mod crypto_tests {
             hex::decode("123250a72f4e961f31661dbcee0fec0f4714715dc5ae1b573f908a0a5381ddbb")
                 .expect("Wrong signature decoding");
         let secret = "".as_bytes();
-        let data =
-            r#"AJHFH9349JASFJHADJ9834115USD2020-11-13.13:22:34711000000021406655APPROVED12345product_id"#.as_bytes();
+        let data = r#"AJHFH9349JASFJHADJ9834115USD2020-11-13.13:22:34711000000021406655APPROVED12345product_id"#.as_bytes();
 
         let right_verified = super::Sha256
             .verify_signature(secret, &right_signature, data)

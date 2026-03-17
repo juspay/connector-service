@@ -587,7 +587,9 @@ fn has_type_args(ty: &Type) -> bool {
             .path
             .segments
             .last()
-            .map(|segment| matches!(&segment.arguments, PathArguments::AngleBracketed(args) if !args.args.is_empty()))
+            .map(|segment| {
+                matches!(&segment.arguments, PathArguments::AngleBracketed(args) if !args.args.is_empty())
+            })
             .unwrap_or(false),
         _ => false,
     }

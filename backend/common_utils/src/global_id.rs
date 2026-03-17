@@ -120,9 +120,7 @@ impl<'de> serde::Deserialize<'de> for CellId {
 #[derive(Debug, Error, PartialEq, Eq)]
 pub(crate) enum GlobalIdError {
     /// The format for the global id is invalid
-    #[error(
-        "The id format is invalid, expected format is {{cell_id:5}}_{{entity_prefix:3}}_{{uuid:32}}_{{random:24}}"
-    )]
+    #[error("The id format is invalid, expected format is {{cell_id:5}}_{{entity_prefix:3}}_{{uuid:32}}_{{random:24}}")]
     InvalidIdFormat,
 
     /// LengthIdError and AlphanumericIdError

@@ -558,9 +558,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
             Err(error_msg) => {
                 if let Some(event) = event_builder {
-                    event.set_connector_response(
-                        &serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}),
-                    )
+                    event.set_connector_response(&serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}))
                 };
                 tracing::error!(deserialization_error =? error_msg);
                 utils::handle_json_response_deserialization_failure(res, "cybersource")
@@ -1002,11 +1000,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         errors::ConnectorError,
     > {
         if matches!(res.status_code, 204) {
-            event_builder.map(|i| {
-                i.set_connector_response(
-                    &serde_json::json!({"mandate_status": common_enums::MandateStatus::Revoked.to_string()}),
-                )
-            });
+            event_builder.map(|i| i.set_connector_response(&serde_json::json!({"mandate_status": common_enums::MandateStatus::Revoked.to_string()})));
             Ok(RouterDataV2 {
                 response: Ok(MandateRevokeResponseData {
                     mandate_status: common_enums::MandateStatus::Revoked,

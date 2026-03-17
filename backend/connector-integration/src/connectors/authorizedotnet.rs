@@ -218,8 +218,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated => {
                 EventType::PaymentIntentSuccess // Combined auth+capture
             }
-            transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated => EventType::PaymentIntentCancelled,
-            transformers::AuthorizedotnetIncomingWebhookEventType::RefundCreated => EventType::RefundSuccess,
+            transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated => {
+                EventType::PaymentIntentCancelled
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::RefundCreated => {
+                EventType::RefundSuccess
+            }
             transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
             | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
                 EventType::MandateActive
@@ -229,8 +233,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     target: "authorizedotnet_webhook",
                     "Received unknown webhook event type from Authorize.Net - rejecting webhook"
                 );
-                return Err(error_stack::report!(ConnectorError::WebhookEventTypeNotFound)
-                    .attach_printable("Unknown webhook event type"));
+                return Err(
+                    error_stack::report!(ConnectorError::WebhookEventTypeNotFound)
+                        .attach_printable("Unknown webhook event type"),
+                )
             }
         })
     }

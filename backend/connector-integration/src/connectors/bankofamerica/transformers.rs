@@ -2118,14 +2118,15 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                         .processor_information
                         .as_ref()
                         .and_then(|processor_information| {
-                            info_response.consumer_authentication_information.as_ref().map(
-                                |consumer_auth_information| {
+                            info_response
+                                .consumer_authentication_information
+                                .as_ref()
+                                .map(|consumer_auth_information| {
                                     convert_to_additional_payment_method_connector_response(
                                         processor_information,
                                         consumer_auth_information,
                                     )
-                                },
-                            )
+                                })
                         })
                         .map(domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data),
                     common_enums::PaymentMethod::CardRedirect

@@ -618,7 +618,11 @@ fn create_regular_transaction_request<
                     let name_on_account = bank_account_holder_name
                         .clone()
                         .or_else(|| card_holder_name.clone())
-                        .or_else(|| item.router_data.resource_common_data.get_optional_billing_full_name())
+                        .or_else(|| {
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_billing_full_name()
+                        })
                         .ok_or_else(|| {
                             error_stack::report!(ConnectorError::MissingRequiredField {
                                 field_name: "bank_account_holder_name",
@@ -629,7 +633,9 @@ fn create_regular_transaction_request<
                     // Business accounts with checking should use BusinessChecking
                     let account_type = match (bank_type, bank_holder_type) {
                         (Some(common_enums::BankType::Savings), _) => AccountType::Savings,
-                        (_, Some(common_enums::BankHolderType::Business)) => AccountType::BusinessChecking,
+                        (_, Some(common_enums::BankHolderType::Business)) => {
+                            AccountType::BusinessChecking
+                        }
                         _ => AccountType::Checking,
                     };
 
@@ -645,10 +651,12 @@ fn create_regular_transaction_request<
                 BankDebitData::SepaBankDebit { .. }
                 | BankDebitData::SepaGuaranteedBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
-                | BankDebitData::BacsBankDebit { .. } => Err(error_stack::report!(ConnectorError::NotImplemented(
-                    "SEPA, SEPA Guaranteed, BECS, and BACS bank debits are not supported for authorizedotnet"
-                        .to_string(),
-                ))),
+                | BankDebitData::BacsBankDebit { .. } => {
+                    Err(error_stack::report!(ConnectorError::NotImplemented(
+                        "SEPA, SEPA Guaranteed, BECS, and BACS bank debits are not supported for authorizedotnet"
+                            .to_string(),
+                    )))
+                }
             }
         }
         _ => Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),

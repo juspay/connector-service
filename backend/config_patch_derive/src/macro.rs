@@ -19,7 +19,9 @@ pub(crate) fn derive_patch_impl(input: DeriveInput) -> syn::Result<proc_macro::T
     let fields = match data {
         Data::Struct(data) => match data.fields {
             Fields::Named(fields) => fields.named,
-            Fields::Unnamed(_) | Fields::Unit => return derive_replace_patch_impl(struct_name, vis, generics),
+            Fields::Unnamed(_) | Fields::Unit => {
+                return derive_replace_patch_impl(struct_name, vis, generics)
+            }
         },
         Data::Enum(_) => return derive_replace_patch_impl(struct_name, vis, generics),
         Data::Union(_) => {
