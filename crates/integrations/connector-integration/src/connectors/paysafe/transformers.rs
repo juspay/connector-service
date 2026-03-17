@@ -9,7 +9,7 @@ use domain_types::{
         RepeatPaymentData, ResponseId,
     },
     errors,
-    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
 };
@@ -273,10 +273,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         account_id,
                     )
                 }
+                PaymentMethodData::Wallet(WalletData::GooglePay(google_pay_data)) => {
+                    let google_pay_token = google_pay_data
+                        .tokenization_data
+                        .get_encrypted_google_pay_token()
+                        .change_context(errors::ConnectorError::MissingRequiredField {
+                            field_name: "google_pay.tokenization_data.token",
+                        })?;
+                    let account_id = account_id.get_no_three_ds_account_id(currency)?;
+                    (
+                        PaysafePaymentMethod::GooglePay {
+                            google_pay: PaysafeGooglePay {
+                                google_pay_payment_token: Secret::new(google_pay_token),
+                            },
+                        },
+                        PaysafePaymentType::GooglePay,
+                        account_id,
+                    )
+                }
                 _ => {
                     return Err(errors::ConnectorError::NotSupported {
                         message:
-                            "Only card and ACH payment methods are supported for PaymentMethodToken"
+                            "Only card, ACH, and GooglePay payment methods are supported for PaymentMethodToken"
                                 .to_string(),
                         connector: "Paysafe",
                     }
@@ -285,9 +303,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             };
 
         // For ACH payments, Paysafe requires settleWithAuth to be true
+        // For GooglePay, same behavior as Card based on capture_method
         let settle_with_auth = match payment_type {
             PaysafePaymentType::Ach => true,
-            PaysafePaymentType::Card => matches!(
+            PaysafePaymentType::Card | PaysafePaymentType::GooglePay => matches!(
                 router_data.request.capture_method,
                 Some(enums::CaptureMethod::Automatic) | None
             ),
