@@ -6463,9 +6463,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.228"
+version = "1.0.221"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
+checksum = "341877e04a22458705eb4e131a1508483c877dca2792b3781d4e5d8a6019ec43"
 dependencies = [
  "serde_core",
  "serde_derive",
@@ -6473,18 +6473,18 @@ dependencies = [
 
 [[package]]
 name = "serde_core"
-version = "1.0.228"
+version = "1.0.221"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41d385c7d4ca58e59fc732af25c3983b67ac852c1a25000afe1175de458b67ad"
+checksum = "0c459bc0a14c840cb403fc14b148620de1e0778c96ecd6e0c8c3cacb6d8d00fe"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.228"
+version = "1.0.221"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
+checksum = "d6185cf75117e20e62b1ff867b9518577271e58abe0037c40bb4794969355ab0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6932,7 +6932,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "superposition_core"
 version = "0.99.2"
-source = "git+https://github.com/juspay/superposition?branch=main#95468ee596eca5161e921a9b54422c416a6696c2"
+source = "git+https://github.com/juspay/superposition?branch=main#fa50848d67bf3b6c6cfeb516372d867dd7e81ea5"
 dependencies = [
  "bigdecimal",
  "blake3",
@@ -6952,7 +6952,7 @@ dependencies = [
 [[package]]
 name = "superposition_derives"
 version = "0.99.2"
-source = "git+https://github.com/juspay/superposition?branch=main#95468ee596eca5161e921a9b54422c416a6696c2"
+source = "git+https://github.com/juspay/superposition?branch=main#fa50848d67bf3b6c6cfeb516372d867dd7e81ea5"
 dependencies = [
  "proc-macro-crate",
  "quote",
@@ -6962,7 +6962,7 @@ dependencies = [
 [[package]]
 name = "superposition_types"
 version = "0.99.2"
-source = "git+https://github.com/juspay/superposition?branch=main#95468ee596eca5161e921a9b54422c416a6696c2"
+source = "git+https://github.com/juspay/superposition?branch=main#fa50848d67bf3b6c6cfeb516372d867dd7e81ea5"
 dependencies = [
  "bigdecimal",
  "chrono",
