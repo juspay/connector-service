@@ -24,6 +24,7 @@ mitm_proxy_enabled = false
 peachpayments.base_url = "https://api.bankint.peachpayments.com/v/1"
 finix.base_url = "https://finix.live-payments-api.com"
 revolv3.base_url = "https://api.revolv3.com"
+ppro.base_url = "https://api.eu.ppro.com"
 mollie.base_url = "https://api.mollie.com/v2"
 mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
 gigadat.base_url = "https://interac.express-connect.com/"

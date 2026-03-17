@@ -58,6 +58,8 @@ pub struct MandateAmountData {
     pub start_date: Option<PrimitiveDateTime>,
     pub end_date: Option<PrimitiveDateTime>,
     pub metadata: Option<SecretSerdeValue>,
+    pub amount_type: Option<String>, // Amount type for variable mandates (exact, max, variable)
+    pub frequency: Option<String>,   // Frequency for recurring mandates (daily, weekly, monthly)
 }
 
 impl MandateAmountData {
