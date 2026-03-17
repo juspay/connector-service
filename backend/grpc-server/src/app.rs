@@ -107,13 +107,6 @@ pub struct Service {
         crate::server::refunds::Refunds,
         crate::server::payments::PaymentMethodAuthentication,
     >,
-    pub composite_payment_method_authentication_service: composite_service::payments::Payments<
-        crate::server::payments::Payments,
-        crate::server::payments::MerchantAuthentication,
-        crate::server::payments::Customer,
-        crate::server::refunds::Refunds,
-        crate::server::payments::PaymentMethodAuthentication,
-    >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
@@ -157,19 +150,10 @@ impl Service {
             refunds_service.clone(),
             payment_method_authentication_service.clone(),
         );
-        let composite_payment_method_authentication_service =
-            composite_service::payments::Payments::new(
-                payments_service.clone(),
-                merchant_authentication_service.clone(),
-                customer_service.clone(),
-                refunds_service.clone(),
-                payment_method_authentication_service.clone(),
-            );
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             composite_payments_service,
-            composite_payment_method_authentication_service,
             payments_service,
             refunds_service,
             disputes_service: crate::server::disputes::Disputes,
@@ -214,7 +198,6 @@ impl Service {
         let config_override_layer = HttpRequestExtensionsLayer::new(base_config.clone());
         let app_state = crate::http::AppState::new(
             self.composite_payments_service,
-            self.composite_payment_method_authentication_service,
             self.payments_service,
             self.refunds_service,
             self.disputes_service,
@@ -295,12 +278,12 @@ impl Service {
             )
             .add_service(
                 composite_refund_service_server::CompositeRefundServiceServer::new(
-                    self.composite_payments_service,
+                    self.composite_payments_service.clone(),
                 ),
             )
             .add_service(
                 composite_payment_method_authentication_service_server::CompositePaymentMethodAuthenticationServiceServer::new(
-                    self.composite_payment_method_authentication_service,
+                    self.composite_payments_service,
                 ),
             )
             .add_service(customer_service_server::CustomerServiceServer::new(

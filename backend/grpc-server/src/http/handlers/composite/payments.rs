@@ -65,7 +65,7 @@ http_handler!(
     CompositePreauthenticateRequest,
     CompositePreauthenticateResponse,
     preauthenticate,
-    composite_payment_method_authentication_service
+    composite_payments_service
 );
 
 http_handler!(
@@ -73,5 +73,5 @@ http_handler!(
     CompositeAuthenticateRequest,
     CompositeAuthenticateResponse,
     authenticate,
-    composite_payment_method_authentication_service
+    composite_payments_service
 );
