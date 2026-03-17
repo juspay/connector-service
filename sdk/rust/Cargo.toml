@@ -1,0 +1,24 @@
+[package]
+name = "hyperswitch-payments-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Internal crates (path deps)
+ffi = { path = "../../backend/ffi", features = ["uniffi"] }
+grpc-api-types = { path = "../../backend/grpc-api-types" }
+external-services = { path = "../../backend/external-services", default-features = false }
+ucs_env = { path = "../../backend/ucs_env" }
+common_utils = { path = "../../backend/common_utils", package = "ucs_common_utils" }
+domain_types = { path = "../../backend/domain_types" }
+cards = { path = "../../backend/cards", package = "ucs_cards" }
+
+# Third-party
+serde = { workspace = true }
+thiserror = { workspace = true }
+bytes = { workspace = true }
+http = "0.2.12"
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+tokio = { version = "1", features = ["full"] }
+serde_json = { workspace = true }
+hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
