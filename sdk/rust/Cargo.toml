@@ -5,13 +5,13 @@ edition = "2021"
 
 [dependencies]
 # Internal crates (path deps)
-ffi = { path = "../../backend/ffi", features = ["uniffi"] }
-grpc-api-types = { path = "../../backend/grpc-api-types" }
-external-services = { path = "../../backend/external-services", default-features = false }
-ucs_env = { path = "../../backend/ucs_env" }
-common_utils = { path = "../../backend/common_utils", package = "ucs_common_utils" }
-domain_types = { path = "../../backend/domain_types" }
-cards = { path = "../../backend/cards", package = "ucs_cards" }
+ffi = { path = "../../crate/ffi", features = ["uniffi"] }
+grpc-api-types = { path = "../../crate/types-traits/grpc-api-types" }
+external-services = { path = "../../crate/external-services", default-features = false }
+ucs_env = { path = "../../crate/common/ucs_env" }
+common_utils = { path = "../../crate/common/common_utils", package = "ucs_common_utils" }
+domain_types = { path = "../../crate/types-traits/domain_types" }
+cards = { path = "../../crate/types-traits/cards", package = "ucs_cards" }
 
 # Third-party
 base64 = "0.22"

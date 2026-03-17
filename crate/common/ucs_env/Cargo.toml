@@ -6,17 +6,17 @@ edition = "2021"
 
 [dependencies]
 # First-party dependencies
-grpc-api-types = { path = "../grpc-api-types" }
-connector-integration = { path = "../connector-integration" }
-external-services = { path = "../external-services", default-features = false }
-domain_types = { path = "../domain_types" }
-interfaces = { path = "../interfaces" }
-cards = { path = "../cards", package = "ucs_cards" }
+grpc-api-types = { path = "../../types-traits/grpc-api-types" }
+connector-integration = { path = "../../integrations/connector-integration" }
+external-services = { path = "../../external-services", default-features = false }
+domain_types = { path = "../../types-traits/domain_types" }
+interfaces = { path = "../../types-traits/interfaces" }
+cards = { path = "../../types-traits/cards", package = "ucs_cards" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
-config_patch_derive = { path = "../config_patch_derive" }
+config_patch_derive = { path = "../../config_patch_derive" }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
-tracing-kafka = { path = "../tracing-kafka", optional = true }
+tracing-kafka = { path = "../../tracing-kafka", optional = true }
 
 # Third-party dependencies
 config = "0.14.0"
