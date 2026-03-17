@@ -2110,7 +2110,7 @@ impl PaymentService for Payments {
                         method: request_details.method.clone(),
                         uri: request_details.uri.clone(),
                         url: request_details.url.clone(),
-                    headers: request_details.headers,
+                        headers: request_details.headers,
                         query_params: request_details.query_params.clone(),
                         body: decoded_body,
                     };
