@@ -577,7 +577,7 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
 }
 
 fn get_connector_payment_method_type_info(
-    supported_payment_methods: &SupportedPaymentMethods,
+    supported_payment_method: &SupportedPaymentMethods,
     payment_method: PaymentMethod,
     payment_method_type: Option<PaymentMethodType>,
     connector: &'static str,

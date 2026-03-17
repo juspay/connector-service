@@ -364,6 +364,10 @@ macro_rules! implement_connector_operation {
             .switch()
             .into_grpc_status()?;
 
+            // Generate response
+            let final_response = $generate_response_fn(response_result)
+                .into_grpc_status()?;
+
             Ok(tonic::Response::new(final_response))
         }).await;
         result
