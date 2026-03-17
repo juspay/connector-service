@@ -912,7 +912,9 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::DuitNow
             | common_enums::PaymentMethodType::PromptPay
             | common_enums::PaymentMethodType::VietQr
-            | common_enums::PaymentMethodType::Mifinity => Err(ConnectorError::NotImplemented(
+            | common_enums::PaymentMethodType::Mifinity
+            | common_enums::PaymentMethodType::Satispay
+            | common_enums::PaymentMethodType::Wero => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -1196,7 +1198,10 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::TouchNGoRedirect(_)
         | WalletData::SwishQr(_)
         | WalletData::WeChatPayRedirect(_)
-        | WalletData::Mifinity(_) => Err(ConnectorError::NotImplemented(
+        | WalletData::Mifinity(_)
+        | WalletData::MbWay(_)
+        | WalletData::Satispay(_)
+        | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
             get_unimplemented_payment_method_error_message("stripe"),
         )),
     }
@@ -1668,7 +1673,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | WalletData::TouchNGoRedirect(_)
             | WalletData::SwishQr(_)
             | WalletData::WeChatPayRedirect(_)
-            | WalletData::Mifinity(_) => Err(ConnectorError::NotImplemented(
+            | WalletData::Mifinity(_)
+            | WalletData::MbWay(_)
+            | WalletData::Satispay(_)
+            | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),

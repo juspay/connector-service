@@ -12,14 +12,19 @@ use grpc_api_types::payments::{
     payment_service_server::PaymentService, CompositeAuthenticateRequest,
     CompositeAuthenticateResponse, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
     CompositeGetRequest, CompositeGetResponse, CompositePreauthenticateRequest,
-    CompositePreauthenticateResponse, ConnectorState, CustomerServiceCreateResponse,
+    CompositePreauthenticateResponse, ConnectorState, CustomerServiceCreateResponse, CompositeRefundGetRequest,
+    CompositeRefundGetResponse, CompositeRefundRequest, CompositeRefundResponse,
+    CompositeVoidRequest, CompositeVoidResponse, ConnectorState, refund_service_server::RefundService,
+    CompositeCaptureRequest, CompositeCaptureResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServiceAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceGetResponse,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
+    PaymentServiceCaptureResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
 };
 
 use crate::transformers::ForeignFrom;
@@ -65,6 +70,74 @@ impl CompositeAccessTokenRequest for CompositeAuthorizeRequest {
 }
 
 impl CompositeAccessTokenRequest for CompositeGetRequest {
+    fn payment_method(&self) -> Option<PaymentMethod> {
+        self.payment_method.clone()
+    }
+
+    fn state(&self) -> Option<&ConnectorState> {
+        self.state.as_ref()
+    }
+
+    fn build_access_token_request(
+        &self,
+        connector: &ConnectorEnum,
+    ) -> MerchantAuthenticationServiceCreateAccessTokenRequest {
+        MerchantAuthenticationServiceCreateAccessTokenRequest::foreign_from((self, connector))
+    }
+}
+
+impl CompositeAccessTokenRequest for CompositeRefundRequest {
+    fn payment_method(&self) -> Option<PaymentMethod> {
+        self.payment_method.clone()
+    }
+
+    fn state(&self) -> Option<&ConnectorState> {
+        self.state.as_ref()
+    }
+
+    fn build_access_token_request(
+        &self,
+        connector: &ConnectorEnum,
+    ) -> MerchantAuthenticationServiceCreateAccessTokenRequest {
+        MerchantAuthenticationServiceCreateAccessTokenRequest::foreign_from((self, connector))
+    }
+}
+
+impl CompositeAccessTokenRequest for CompositeRefundGetRequest {
+    fn payment_method(&self) -> Option<PaymentMethod> {
+        self.payment_method.clone()
+    }
+
+    fn state(&self) -> Option<&ConnectorState> {
+        self.state.as_ref()
+    }
+
+    fn build_access_token_request(
+        &self,
+        connector: &ConnectorEnum,
+    ) -> MerchantAuthenticationServiceCreateAccessTokenRequest {
+        MerchantAuthenticationServiceCreateAccessTokenRequest::foreign_from((self, connector))
+    }
+}
+
+impl CompositeAccessTokenRequest for CompositeVoidRequest {
+    fn payment_method(&self) -> Option<PaymentMethod> {
+        self.payment_method.clone()
+    }
+
+    fn state(&self) -> Option<&ConnectorState> {
+        self.state.as_ref()
+    }
+
+    fn build_access_token_request(
+        &self,
+        connector: &ConnectorEnum,
+    ) -> MerchantAuthenticationServiceCreateAccessTokenRequest {
+        MerchantAuthenticationServiceCreateAccessTokenRequest::foreign_from((self, connector))
+    }
+}
+
+impl CompositeAccessTokenRequest for CompositeCaptureRequest {
     fn payment_method(&self) -> Option<PaymentMethod> {
         self.payment_method.clone()
     }
@@ -134,34 +207,38 @@ impl CompositePreAuthNRequest for CompositeAuthenticateRequest {
 }
 
 #[derive(Clone)]
-pub struct Payments<P, M, C, A> {
+pub struct Payments<P, M, C, R, A> {
     payment_service: P,
     merchant_authentication_service: M,
     customer_service: C,
+    refund_service: R,
     payment_method_authentication_service: A,
 }
 
-impl<P, M, C, A> Payments<P, M, C, A> {
+impl<P, M, C, R, A> Payments<P, M, C, R, A> {
     pub fn new(
         payment_service: P,
         merchant_authentication_service: M,
         customer_service: C,
+        refund_service: R,
         payment_method_authentication_service: A,
     ) -> Self {
         Self {
             payment_service,
             merchant_authentication_service,
             customer_service,
+            refund_service,
             payment_method_authentication_service,
         }
     }
 }
 
-impl<P, M, C, A> Payments<P, M, C, A>
+impl<P, M, C, R, A> Payments<P, M, C, R, A>
 where
     P: PaymentService + Clone + Send + Sync + 'static,
     M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
     C: CustomerService + Clone + Send + Sync + 'static,
+    R: RefundService + Clone + Send + Sync + 'static,
     A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
     async fn create_access_token<R: CompositeAccessTokenRequest>(
@@ -362,6 +439,198 @@ where
         }))
     }
 
+    async fn refund(
+        &self,
+        payload: &CompositeRefundRequest,
+        access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<RefundResponse, tonic::Status> {
+        let refund_payload =
+            PaymentServiceRefundRequest::foreign_from((payload, access_token_response));
+
+        let mut refund_request = tonic::Request::new(refund_payload);
+        *refund_request.metadata_mut() = metadata.clone();
+        *refund_request.extensions_mut() = extensions.clone();
+
+        let refund_response = self
+            .payment_service
+            .refund(refund_request)
+            .await?
+            .into_inner();
+
+        Ok(refund_response)
+    }
+
+    async fn process_composite_refund(
+        &self,
+        request: tonic::Request<CompositeRefundRequest>,
+    ) -> Result<tonic::Response<CompositeRefundResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let connector =
+            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let access_token_response = self
+            .create_access_token(&connector, &payload, &metadata, &extensions)
+            .await?;
+        let refund_response = self
+            .refund(
+                &payload,
+                access_token_response.as_ref(),
+                &metadata,
+                &extensions,
+            )
+            .await?;
+
+        Ok(tonic::Response::new(CompositeRefundResponse {
+            access_token_response,
+            refund_response: Some(refund_response),
+        }))
+    }
+
+    async fn refund_get(
+        &self,
+        payload: &CompositeRefundGetRequest,
+        access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<RefundResponse, tonic::Status> {
+        let refund_get_payload =
+            RefundServiceGetRequest::foreign_from((payload, access_token_response));
+
+        let mut refund_get_request = tonic::Request::new(refund_get_payload);
+        *refund_get_request.metadata_mut() = metadata.clone();
+        *refund_get_request.extensions_mut() = extensions.clone();
+
+        let refund_get_response = self
+            .refund_service
+            .get(refund_get_request)
+            .await?
+            .into_inner();
+
+        Ok(refund_get_response)
+    }
+
+    async fn process_composite_refund_get(
+        &self,
+        request: tonic::Request<CompositeRefundGetRequest>,
+    ) -> Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let connector =
+            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let access_token_response = self
+            .create_access_token(&connector, &payload, &metadata, &extensions)
+            .await?;
+        let refund_get_response = self
+            .refund_get(
+                &payload,
+                access_token_response.as_ref(),
+                &metadata,
+                &extensions,
+            )
+            .await?;
+
+        Ok(tonic::Response::new(CompositeRefundGetResponse {
+            access_token_response,
+            refund_response: Some(refund_get_response),
+        }))
+    }
+
+    async fn void(
+        &self,
+        payload: &CompositeVoidRequest,
+        access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<PaymentServiceVoidResponse, tonic::Status> {
+        let void_payload =
+            PaymentServiceVoidRequest::foreign_from((payload, access_token_response));
+
+        let mut void_request = tonic::Request::new(void_payload);
+        *void_request.metadata_mut() = metadata.clone();
+        *void_request.extensions_mut() = extensions.clone();
+
+        let void_response = self.payment_service.void(void_request).await?.into_inner();
+
+        Ok(void_response)
+    }
+
+    async fn process_composite_void(
+        &self,
+        request: tonic::Request<CompositeVoidRequest>,
+    ) -> Result<tonic::Response<CompositeVoidResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let connector =
+            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let access_token_response = self
+            .create_access_token(&connector, &payload, &metadata, &extensions)
+            .await?;
+        let void_response = self
+            .void(
+                &payload,
+                access_token_response.as_ref(),
+                &metadata,
+                &extensions,
+            )
+            .await?;
+
+        Ok(tonic::Response::new(CompositeVoidResponse {
+            access_token_response,
+            void_response: Some(void_response),
+        }))
+    }
+
+    async fn capture(
+        &self,
+        payload: &CompositeCaptureRequest,
+        access_token_response: Option<&MerchantAuthenticationServiceCreateAccessTokenResponse>,
+        metadata: &tonic::metadata::MetadataMap,
+        extensions: &tonic::Extensions,
+    ) -> Result<PaymentServiceCaptureResponse, tonic::Status> {
+        let capture_payload =
+            PaymentServiceCaptureRequest::foreign_from((payload, access_token_response));
+
+        let mut capture_request = tonic::Request::new(capture_payload);
+        *capture_request.metadata_mut() = metadata.clone();
+        *capture_request.extensions_mut() = extensions.clone();
+
+        let capture_response = self
+            .payment_service
+            .capture(capture_request)
+            .await?
+            .into_inner();
+
+        Ok(capture_response)
+    }
+
+    async fn process_composite_capture(
+        &self,
+        request: tonic::Request<CompositeCaptureRequest>,
+    ) -> Result<tonic::Response<CompositeCaptureResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let connector =
+            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let access_token_response = self
+            .create_access_token(&connector, &payload, &metadata, &extensions)
+            .await?;
+        let capture_response = self
+            .capture(
+                &payload,
+                access_token_response.as_ref(),
+                &metadata,
+                &extensions,
+            )
+            .await?;
+
+        Ok(tonic::Response::new(CompositeCaptureResponse {
+            access_token_response,
+            capture_response: Some(capture_response),
+        }))
+    }
+
     async fn pre_authenticate<R: CompositePreAuthNRequest>(
         &self,
         payload: &R,
@@ -464,11 +733,12 @@ where
 }
 
 #[tonic::async_trait]
-impl<P, M, C, A> CompositePaymentService for Payments<P, M, C, A>
+impl<P, M, C, R, A> CompositePaymentService for Payments<P, M, C, R, A>
 where
     P: PaymentService + Clone + Send + Sync + 'static,
     M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
     C: CustomerService + Clone + Send + Sync + 'static,
+    R: RefundService + Clone + Send + Sync + 'static,
     A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
     async fn composite_authorize(
@@ -484,7 +754,45 @@ where
     ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
         self.process_composite_get(request).await
     }
+
+    async fn refund(
+        &self,
+        request: tonic::Request<CompositeRefundRequest>,
+    ) -> Result<tonic::Response<CompositeRefundResponse>, tonic::Status> {
+        self.process_composite_refund(request).await
+    }
+
+    async fn void(
+        &self,
+        request: tonic::Request<CompositeVoidRequest>,
+    ) -> Result<tonic::Response<CompositeVoidResponse>, tonic::Status> {
+        self.process_composite_void(request).await
+    }
+
+    async fn capture(
+        &self,
+        request: tonic::Request<CompositeCaptureRequest>,
+    ) -> Result<tonic::Response<CompositeCaptureResponse>, tonic::Status> {
+        self.process_composite_capture(request).await
+    }
 }
+
+#[tonic::async_trait]
+impl<P, M, C, R> CompositeRefundService for Payments<P, M, C, R>
+where
+    P: PaymentService + Clone + Send + Sync + 'static,
+    M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
+    C: CustomerService + Clone + Send + Sync + 'static,
+    R: RefundService + Clone + Send + Sync + 'static,
+{
+    async fn get(
+        &self,
+        request: tonic::Request<CompositeRefundGetRequest>,
+    ) -> Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status> {
+        self.process_composite_refund_get(request).await
+    }
+}
+
 
 #[tonic::async_trait]
 impl<P, M, C, A> CompositePaymentMethodAuthenticationService for Payments<P, M, C, A>

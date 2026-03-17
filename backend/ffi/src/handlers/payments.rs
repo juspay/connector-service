@@ -2,51 +2,36 @@ pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../config/d
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../config/production.toml");
 
 use crate::types::FfiRequestData;
-use domain_types::errors::ConnectorError;
+use domain_types::errors::{ApplicationErrorResponse, ConnectorError};
 use domain_types::payment_method_data::DefaultPCIHolder;
-use grpc_api_types::payments::Environment;
+use ucs_env::error::ErrorSwitch;
 
+use grpc_api_types::payments::{Environment, RequestError, ResponseError};
 fn get_config_for_req(
     environment: Option<Environment>,
-) -> Result<std::sync::Arc<ucs_env::configs::Config>, grpc_api_types::payments::RequestError> {
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, RequestError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {
         EMBEDDED_DEVELOPMENT_CONFIG
     };
-    crate::utils::load_config(config_str).map_err(|err| {
-        let message = match err {
-            ConnectorError::GenericError { error_message, .. } => error_message,
-            other => format!("{other}"),
-        };
-        grpc_api_types::payments::RequestError {
-            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-            error_message: Some(message),
-            error_code: None,
-            status_code: Some(500),
-        }
+    crate::utils::load_config(config_str).map_err(|e: ConnectorError| {
+        let app_error: ApplicationErrorResponse = e.switch();
+        app_error.switch()
     })
 }
 
 fn get_config_for_res(
     environment: Option<Environment>,
-) -> Result<std::sync::Arc<ucs_env::configs::Config>, grpc_api_types::payments::ResponseError> {
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, ResponseError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {
         EMBEDDED_DEVELOPMENT_CONFIG
     };
-    crate::utils::load_config(config_str).map_err(|err| {
-        let message = match err {
-            ConnectorError::GenericError { error_message, .. } => error_message,
-            other => format!("{other}"),
-        };
-        grpc_api_types::payments::ResponseError {
-            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-            error_message: Some(message),
-            error_code: None,
-            status_code: Some(500),
-        }
+    crate::utils::load_config(config_str).map_err(|e: ConnectorError| {
+        let app_error: ApplicationErrorResponse = e.switch();
+        app_error.switch()
     })
 }
 
@@ -113,15 +98,8 @@ include!("_generated_flow_registrations.rs");
 pub fn handle_event_handler(
     request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>,
     environment: Option<Environment>,
-) -> Result<grpc_api_types::payments::EventServiceHandleResponse, crate::errors::FfiPaymentError> {
-    let config = get_config_for_res(environment).map_err(|e| {
-        crate::errors::FfiPaymentError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
-            e.error_message,
-            e.error_code,
-            e.status_code,
-        )
-    })?;
+) -> Result<grpc_api_types::payments::EventServiceHandleResponse, ResponseError> {
+    let config = get_config_for_res(environment)?;
     crate::services::payments::handle_event_transformer(
         request.payload,
         &config,

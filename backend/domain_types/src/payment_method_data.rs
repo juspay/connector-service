@@ -299,6 +299,15 @@ impl NetworkTokenData {
         }
         Secret::new(year)
     }
+    pub fn get_token_expiry_year_2_digit(&self) -> Result<Secret<String>, ConnectorError> {
+        let binding = self.token_exp_year.clone();
+        let year = binding.peek();
+        Ok(Secret::new(
+            year.get(year.len() - 2..)
+                .ok_or(ConnectorError::RequestEncodingFailed)?
+                .to_string(),
+        ))
+    }
 
     pub fn get_network_token(&self) -> cards::NetworkToken {
         self.token_number.clone()
@@ -669,6 +678,9 @@ pub enum WalletData {
     SwishQr(SwishQrData),
     Mifinity(MifinityData),
     RevolutPay(RevolutPayData),
+    MbWay(MbWayData),
+    Satispay(SatispayData),
+    Wero(WeroData),
 }
 
 impl WalletData {
@@ -708,6 +720,15 @@ impl WalletData {
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct RevolutPayData {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct MbWayData {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct SatispayData {}
+
+#[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
+pub struct WeroData {}
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct MifinityData {

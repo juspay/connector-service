@@ -15,7 +15,7 @@ cards = { path = "../cards", package = "ucs_cards" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 config_patch_derive = { path = "../config_patch_derive" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
 
 # Third-party dependencies
@@ -40,7 +40,7 @@ tokio = { version = "1.48.0", features = [
     "signal",
 ] }
 tonic = { workspace = true }
-tonic-reflection = "0.13.0"
+tonic-reflection = "0.14.0"
 http = "1.2.0"
 log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = [
     "tracing",

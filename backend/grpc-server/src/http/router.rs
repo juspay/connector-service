@@ -17,6 +17,22 @@ pub fn create_router(state: AppState) -> Router {
             post(handlers::composite::payments::get),
         )
         .route(
+            "/composite/refunds/refund",
+            post(handlers::composite::payments::refund),
+        )
+        .route(
+            "/composite/refunds/get",
+            post(handlers::composite::refunds::refund_get),
+        )
+        .route(
+            "/composite/payments/void",
+            post(handlers::composite::payments::void),
+        )
+        .route(
+            "/composite/payments/capture",
+            post(handlers::composite::payments::capture),
+        )
+        .route(
             "/composite/payments/pre_authenticate",
             post(handlers::composite::payments::preauthenticate),
         )
