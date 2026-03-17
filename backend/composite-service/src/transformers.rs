@@ -1,11 +1,12 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
-    CompositeAuthorizeRequest, CompositeCaptureRequest, CompositeGetRequest, CompositeRefundGetRequest,
-    CompositeRefundRequest, CompositeVoidRequest,
-    ConnectorState, CustomerServiceCreateRequest, CustomerServiceCreateResponse,
+    CompositeAuthorizeRequest, CompositeCaptureRequest, CompositeGetRequest,
+    CompositeRefundGetRequest, CompositeRefundRequest, CompositeVoidRequest, ConnectorState,
+    CustomerServiceCreateRequest, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, RefundServiceGetRequest, PaymentServiceVoidRequest,
+    PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+    PaymentServiceVoidRequest, RefundServiceGetRequest,
 };
 
 use crate::utils::{
@@ -235,9 +236,14 @@ impl
 
         let access_token = get_access_token(access_token_from_req, access_token_response);
 
+        let connector_customer_id = item
+            .state
+            .as_ref()
+            .and_then(|state| state.connector_customer_id.clone());
+
         let resolved_state = Some(ConnectorState {
             access_token,
-            connector_customer_id: None,
+            connector_customer_id,
         });
 
         Self {
@@ -294,9 +300,14 @@ impl
 
         let access_token = get_access_token(access_token_from_req, access_token_response);
 
+        let connector_customer_id = item
+            .state
+            .as_ref()
+            .and_then(|state| state.connector_customer_id.clone());
+
         let resolved_state = Some(ConnectorState {
             access_token,
-            connector_customer_id: None,
+            connector_customer_id,
         });
 
         Self {

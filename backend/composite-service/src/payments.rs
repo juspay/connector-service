@@ -9,16 +9,15 @@ use grpc_api_types::payments::{
     customer_service_server::CustomerService,
     merchant_authentication_service_server::MerchantAuthenticationService,
     payment_service_server::PaymentService, refund_service_server::RefundService,
-    CompositeAuthorizeRequest, CompositeAuthorizeResponse, CompositeGetRequest,
-    CompositeCaptureRequest, CompositeCaptureResponse, CompositeGetResponse, CompositeRefundGetRequest, CompositeRefundGetResponse,
-    CompositeVoidRequest, CompositeVoidResponse,
-    CompositeRefundRequest, CompositeRefundResponse, ConnectorState, CustomerServiceCreateResponse,
+    CompositeAuthorizeRequest, CompositeAuthorizeResponse, CompositeCaptureRequest,
+    CompositeCaptureResponse, CompositeGetRequest, CompositeGetResponse, CompositeRefundGetRequest,
+    CompositeRefundGetResponse, CompositeRefundRequest, CompositeRefundResponse,
+    CompositeVoidRequest, CompositeVoidResponse, ConnectorState, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceGetResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse,
-    PaymentServiceRefundRequest, RefundResponse, RefundServiceGetRequest,
+    PaymentServiceCaptureResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
 };
 
 use crate::transformers::ForeignFrom;
@@ -439,7 +438,7 @@ where
         Ok(refund_get_response)
     }
 
-    pub async fn process_composite_refund_get(
+    async fn process_composite_refund_get(
         &self,
         request: tonic::Request<CompositeRefundGetRequest>,
     ) -> Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status> {
@@ -588,6 +587,20 @@ where
     ) -> Result<tonic::Response<CompositeRefundResponse>, tonic::Status> {
         self.process_composite_refund(request).await
     }
+
+    async fn void(
+        &self,
+        request: tonic::Request<CompositeVoidRequest>,
+    ) -> Result<tonic::Response<CompositeVoidResponse>, tonic::Status> {
+        self.process_composite_void(request).await
+    }
+
+    async fn capture(
+        &self,
+        request: tonic::Request<CompositeCaptureRequest>,
+    ) -> Result<tonic::Response<CompositeCaptureResponse>, tonic::Status> {
+        self.process_composite_capture(request).await
+    }
 }
 
 #[tonic::async_trait]
@@ -603,19 +616,5 @@ where
         request: tonic::Request<CompositeRefundGetRequest>,
     ) -> Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status> {
         self.process_composite_refund_get(request).await
-    }
-
-    async fn void(
-        &self,
-        request: tonic::Request<CompositeVoidRequest>,
-    ) -> Result<tonic::Response<CompositeVoidResponse>, tonic::Status> {
-        self.process_composite_void(request).await
-    }
-
-    async fn capture(
-        &self,
-        request: tonic::Request<CompositeCaptureRequest>,
-    ) -> Result<tonic::Response<CompositeCaptureResponse>, tonic::Status> {
-        self.process_composite_capture(request).await
     }
 }
