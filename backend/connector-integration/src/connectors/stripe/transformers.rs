@@ -5124,7 +5124,7 @@ fn get_payment_method_type_for_saved_payment_method_payment<
             .recurring_mandate_payment_data
             .clone()
         {
-           Some(recurring_payment_method_data) => {
+            Some(recurring_payment_method_data) => {
                 match recurring_payment_method_data.payment_method_type {
                     Some(payment_method_type) => {
                         StripePaymentMethodType::try_from(payment_method_type)
@@ -5135,6 +5135,11 @@ fn get_payment_method_type_for_saved_payment_method_payment<
                     .into()),
                 }
             }
+            None => Err(ConnectorError::MissingRequiredField {
+                field_name: "recurring_mandate_payment_data",
+            }
+            .into()),
+        }?;
         match stripe_payment_method_type {
             //Stripe converts Ideal, Bancontact & Sofort Bank redirect methods to Sepa direct debit and attaches to the customer for future usage
             StripePaymentMethodType::Ideal

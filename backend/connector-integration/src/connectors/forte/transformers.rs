@@ -200,7 +200,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let authorization_amount = item
                     .connector
                     .amount_converter
-                     .convert(
+                    .convert(
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
