@@ -1,5 +1,5 @@
-.PHONY: install-deps generate-bindings generate-proto generate-all \
-        generate-flows build-ts pack-archive install test-package dist clean
+.PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
+        generate-flows build-ts pack-archive install test-package test-composite dist clean
 
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -30,6 +30,14 @@ install-deps:
 	@cd $(SDK_ROOT) && \
 		(echo "  → Installing npm dependencies..." && npm install)
 	@echo "All required tools present."
+
+# ---------------------------------------------------------------------------
+# install-codegen-deps
+# Ensures jinja2 etc. are installed before generate-flows (used by CI and local).
+# Delegates to sdk/Makefile install-deps (idempotent, skips if present).
+# ---------------------------------------------------------------------------
+install-codegen-deps:
+	@$(MAKE) -C $(REPO_ROOT)/sdk install-deps
 
 # ---------------------------------------------------------------------------
 # generate-bindings
@@ -78,8 +86,9 @@ generate-all: generate-proto generate-bindings generate-flows
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
 # codegen script. Assumes descriptor is already generated.
+# Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows:
+generate-flows: install-codegen-deps
 	@echo "Generating JavaScript flow methods..."
 	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang javascript
 	@echo "JavaScript flow methods generated."
@@ -149,8 +158,29 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
 	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js --connectors $(CONNECTORS)
+	@echo "Running composite flow test..."
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.ts /tmp/test-hyperswitch-js/
+	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke_composite.ts
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."
+
+# ---------------------------------------------------------------------------
+# test-composite
+# Runs the composite flow smoke test (access token + authorize flow).
+# Tests the PayPal access token composite flow in an isolated environment.
+# ---------------------------------------------------------------------------
+test-composite: build-ffi-lib generate-all build-ts pack-archive
+	@echo "Testing composite flow in isolation..."
+	@rm -rf /tmp/test-hyperswitch-js-composite
+	@mkdir -p /tmp/test-hyperswitch-js-composite
+	@test -f $(JS_TARBALL) || (echo "Error: Tarball not found: $(JS_TARBALL)" && exit 1)
+	@cd /tmp/test-hyperswitch-js-composite && npm init -y --silent && \
+		npm install $(JS_TARBALL) typescript @types/node ts-node --silent
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.ts /tmp/test-hyperswitch-js-composite/
+	@cp $(SDK_ROOT)/smoke-test/tsconfig.json /tmp/test-hyperswitch-js-composite/
+	@cd /tmp/test-hyperswitch-js-composite && npx ts-node test_smoke_composite.ts
+	@rm -rf /tmp/test-hyperswitch-js-composite
+	@echo "Composite flow test passed."
 
 # ---------------------------------------------------------------------------
 # dist

@@ -18,7 +18,9 @@ members = [
   "backend/ucs_env",
   "backend/ucs_interface_common",
   "backend/ffi",
-  "backend/uniffi-bindgen"
+  "backend/uniffi-bindgen",
+  "backend/field-probe",
+  "backend/ucs-connector-tests"
 ]
 exclude = [
   "examples/example-rs",
@@ -31,6 +33,11 @@ exclude = [
 strip = true
 lto = "thin"
 codegen-units = 1
+
+# UniFFI bindgen needs metadata symbols (UNIFFI_META_*) in the cdylib to generate
+# Python/Kotlin bindings. Stripping removes them. Keep symbols for the ffi crate.
+[profile.release.package.ffi]
+strip = "none"
 
 # Fast release profile for local SDK builds (make test-package).
 # opt-level=1: basic optimisation (no vectorisation/heavy inlining) — ~3x faster
@@ -45,6 +52,9 @@ opt-level = 1
 lto = false
 codegen-units = 16
 incremental = true  # reuse codegen from unchanged crates on partial rebuilds
+
+[profile.release-fast.package.ffi]
+strip = "none"
 
 [workspace.dependencies]
 # Centralised versions — prevents duplicate compilation from version drift.

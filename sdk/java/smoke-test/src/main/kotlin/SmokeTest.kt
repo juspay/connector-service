@@ -18,14 +18,10 @@ import payments.PaymentAddress
 import payments.Currency
 import payments.CaptureMethod
 import payments.AuthenticationType
-import payments.FfiConnectorHttpRequest
-import payments.FfiOptions
-import payments.ConnectorConfig
 import payments.RequestConfig
-import payments.Connector
+import payments.ConnectorConfig
+import payments.SdkOptions
 import payments.Environment
-import uniffi.connector_service_ffi.UniffiException
-import uniffi.connector_service_ffi.authorizeReqTransformer
 import java.io.File
 
 // Test card configurations
@@ -207,27 +203,29 @@ fun testConnector(
             )
         }
         
-        // Get connector enum
-        val connectorEnum = Connector.valueOf(connectorKey.uppercase())
-        
         // Create connector config with auth
         val configBuilder = ConnectorConfig.newBuilder()
-            .setConnector(connectorEnum)
-            .setEnvironment(Environment.SANDBOX)
+            .setOptions(
+                SdkOptions.newBuilder()
+                    .setEnvironment(Environment.SANDBOX)
+                    .build()
+            )
         
         // Set auth fields from authConfig
         val connectorAuthKey = connectorKey.lowercase()
-        val authConfigBuilder = configBuilder.authBuilder
+        val connectorConfigBuilder = configBuilder.connectorConfigBuilder
         
         // Get the connector-specific auth builder (e.g., getStripeBuilder)
         val connectorAuthBuilderMethod = try {
-            authConfigBuilder.javaClass.getMethod("get${connectorAuthKey.replaceFirstChar { it.uppercase() }}Builder")
+            connectorConfigBuilder.javaClass.getMethod(
+                "get${connectorAuthKey.replaceFirstChar { it.uppercase() }}Builder"
+            )
         } catch (e: NoSuchMethodException) {
             null
         }
         
         if (connectorAuthBuilderMethod != null) {
-            val connectorAuthBuilder = connectorAuthBuilderMethod.invoke(authConfigBuilder)
+            val connectorAuthBuilder = connectorAuthBuilderMethod.invoke(connectorConfigBuilder) as Any
             
             // Set each auth field
             for ((key, value) in authConfig) {
@@ -240,7 +238,9 @@ fun testConnector(
                 
                 // Get the field builder method (e.g., getApiKeyBuilder)
                 val fieldBuilderMethod = try {
-                    connectorAuthBuilder?.javaClass?.getMethod("get${camelKey.replaceFirstChar { it.uppercase() }}Builder")
+                    connectorAuthBuilder.javaClass.getMethod(
+                        "get${camelKey.replaceFirstChar { it.uppercase() }}Builder"
+                    )
                 } catch (e: NoSuchMethodException) {
                     null
                 }
@@ -266,14 +266,6 @@ fun testConnector(
                     status = response.status.number,
                     type = "PaymentServiceAuthorizeResponse",
                     passed = true
-                )
-            )
-        } catch (e: UniffiException) {
-            result.copy(
-                status = "passed_with_error",
-                roundTripTest = RoundTripResult(
-                    passed = true,
-                    error = e.message ?: "Unknown UniFFI error"
                 )
             )
         } catch (e: Exception) {

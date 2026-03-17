@@ -1,5 +1,5 @@
 /**
- * Multi-connector smoke test for hyperswitch-payments SDK.
+ * Multi-connector smoke test for hs-playlib SDK.
  * 
  * Loads connector credentials from external JSON file and runs authorize flow
  * for multiple connectors.
@@ -10,7 +10,7 @@
  *   npx ts-node test_smoke.ts --creds-file creds.json --all --dry-run
  */
 
-import { PaymentClient, types } from "hs-playlib";
+import { PaymentClient, types, NetworkError } from "hs-playlib";
 import * as fs from "fs";
 // @ts-ignore - protobuf generated files might not have types yet
 
@@ -22,6 +22,8 @@ const {
   Connector,
   ConnectorConfig,
   Environment,
+  RequestError,
+  ResponseError
 } = types;
 
 
@@ -166,13 +168,13 @@ async function testConnector(
     // Build ConnectorAuth with the appropriate oneof field
     // The key should match the connector name (e.g., 'stripe', 'adyen', 'aci')
     const connectorAuthKey = connectorKey.toLowerCase();
-    const auth: any = {};
-    auth[connectorAuthKey] = authFields;
+    const connectorConfig: Record<string, unknown> = {
+      [connectorAuthKey]: authFields,
+    };
 
     const config = ConnectorConfig.create({
-      connector: connectorEnum,
-      environment: Environment.SANDBOX,
-      auth: auth
+      options: { environment: Environment.SANDBOX },
+      connectorConfig: connectorConfig as types.IConnectorSpecificConfig,
     });
 
     // Test 1: Low-level FFI via PaymentClient internals
@@ -202,21 +204,50 @@ async function testConnector(
         passed: true,
       };
       result.status = "passed";
-    } catch (e: any) {
-      result.roundTripTest = {
-        passed: true,
-        error: e.message || String(e),
-      };
-      result.status = "passed_with_error";
-      result.error = e.message || String(e);
     }
-  } catch (e: any) {
+    catch (e: any) {
+      if (e instanceof RequestError) {
+        result.roundTripTest = {
+          passed: true,
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
+      } else if (e instanceof ResponseError) {
+        result.roundTripTest = {
+          passed: true,
+          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
+      } else if (e instanceof NetworkError) {
+        result.roundTripTest = {
+          passed: true,
+          error: `${e.code}: ${e.message}`,
+        };
+        result.status = "passed_with_error";
+        result.error = `${e.code}: ${e.message}`;
+      } else {
+        result.roundTripTest = {
+          passed: true,
+          error: e.message || String(e),
+        };
+        result.status = "passed_with_error";
+        result.error = e.message || String(e);
+      }
+    }
+  }
+
+
+  catch (e: any) {
     result.status = "failed";
     result.error = e.message || String(e);
   }
 
   return result;
 }
+
+
 
 function parseArgs(): { credsFile: string; connectors?: string[]; all: boolean; dryRun: boolean; card: string } {
   const args = process.argv.slice(2);

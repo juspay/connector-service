@@ -3,7 +3,6 @@
 use common_utils::errors::ErrorSwitch;
 // use api_models::errors::types::{ Extra};
 use strum::Display;
-
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
@@ -883,8 +882,8 @@ pub enum ConnectorError {
     FailedToObtainCertificateKey,
     #[error("Failed to verify source of the response")]
     SourceVerificationFailed,
-    #[error("Failed to decode message")]
-    DecodingFailed,
+    #[error("Failed to decode message: {0:?}")]
+    DecodingFailed(Option<String>),
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
@@ -957,7 +956,7 @@ pub enum ConnectorError {
         message: String,
         connector: &'static str,
     },
-    #[error("Invalid Configuration")]
+    #[error("Invalid Configuration: {config}")]
     InvalidConnectorConfig { config: &'static str },
     #[error("Failed to convert amount to required type")]
     AmountConversionFailed,

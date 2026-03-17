@@ -31,7 +31,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -296,7 +296,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        _auth_type: &ConnectorSpecificAuth,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         Ok(vec![])
     }
@@ -427,7 +427,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let transaction_type = None;
-        let auth = transformers::RedsysAuthType::try_from(&req.connector_auth_type)?;
+        let auth = transformers::RedsysAuthType::try_from(&req.connector_config)?;
         let connector_transaction_id = req
             .resource_common_data
             .connector_request_reference_id
@@ -608,7 +608,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
         let transaction_type = Some("3".to_owned());
-        let auth = transformers::RedsysAuthType::try_from(&req.connector_auth_type)?;
+        let auth = transformers::RedsysAuthType::try_from(&req.connector_config)?;
         let connector_transaction_id = req.request.connector_transaction_id.clone();
         let body =
             transformers::construct_sync_request(connector_transaction_id, transaction_type, auth)?;

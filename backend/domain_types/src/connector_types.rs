@@ -38,7 +38,7 @@ use crate::{
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
-use grpc_api_types::payments::connector_auth::AuthType;
+use grpc_api_types::payments::connector_specific_config::Config as AuthType;
 use url::Url;
 
 // snake case for enum variants
@@ -163,7 +163,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Cybersource => Ok(Self::Cybersource),
-            grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
+            grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpay),
             grpc_api_types::payments::Connector::Worldpayxml => Ok(Self::Worldpayxml),
             grpc_api_types::payments::Connector::Multisafepay => Ok(Self::Multisafepay),
             grpc_api_types::payments::Connector::Payload => Ok(Self::Payload),
@@ -350,7 +350,7 @@ pub struct PaymentsSyncData {
     pub connector_transaction_id: ResponseId,
     pub encoded_data: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
-    pub connector_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub sync_type: SyncRequestType,
     pub mandate_id: Option<MandateIds>,
     pub payment_method_type: Option<PaymentMethodType>,
@@ -404,7 +404,7 @@ pub struct PaymentFlowData {
     pub return_url: Option<String>,
     pub address: payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
-    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
@@ -596,10 +596,14 @@ impl PaymentFlowData {
             .ok_or_else(missing_field_err("billing.address"))
     }
 
-    pub fn get_connector_meta(&self) -> Result<SecretSerdeValue, Error> {
-        self.connector_meta_data
+    pub fn get_connector_feature_data(&self) -> Result<SecretSerdeValue, Error> {
+        self.connector_feature_data
             .clone()
-            .ok_or_else(missing_field_err("connector_meta_data"))
+            .ok_or_else(missing_field_err("connector_feature_data"))
+    }
+
+    pub fn get_connector_meta(&self) -> Result<SecretSerdeValue, Error> {
+        self.get_connector_feature_data()
     }
 
     pub fn get_session_token(&self) -> Result<String, Error> {
@@ -983,7 +987,7 @@ pub struct PaymentVoidData {
     pub browser_info: Option<BrowserInformation>,
     pub amount: Option<MinorUnit>,
     pub currency: Option<Currency>,
-    pub connector_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub metadata: Option<SecretSerdeValue>,
     pub merchant_order_id: Option<String>,
 }
@@ -1101,7 +1105,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub request_extended_authorization: Option<bool>,
     pub enable_overcapture: Option<bool>,
     pub setup_mandate_details: Option<MandateData>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub connector_testing_data: Option<SecretSerdeValue>,
     pub payment_channel: Option<PaymentChannel>,
     pub enable_partial_authorization: Option<bool>,
@@ -1446,7 +1450,7 @@ pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub mandate_id: Option<MandateIds>,
     pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
     pub split_payments: Option<SplitPaymentsRequest>,
-    pub merchant_account_metadata: Option<common_utils::pii::SecretSerdeValue>,
+    pub connector_feature_data: Option<common_utils::pii::SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -1534,7 +1538,7 @@ pub struct PaymentsIncrementalAuthorizationData {
     pub currency: Currency,
     pub reason: Option<String>,
     pub connector_transaction_id: ResponseId,
-    pub connector_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone)]
@@ -1658,7 +1662,7 @@ pub struct RefundSyncData {
     pub browser_info: Option<BrowserInformation>,
     /// Charges associated with the payment
     pub split_refunds: Option<SplitRefundsRequest>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
 }
 
 impl RefundSyncData {
@@ -1687,7 +1691,7 @@ pub struct RefundFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
     pub access_token: Option<AccessTokenResponseData>,
-    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub test_mode: Option<bool>,
     pub payment_method: Option<PaymentMethod>,
 }
@@ -2231,7 +2235,7 @@ pub struct RefundsData {
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
     pub refund_amount: i64,
-    pub connector_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub refund_connector_metadata: Option<SecretSerdeValue>,
     pub minor_payment_amount: MinorUnit,
     pub minor_refund_amount: MinorUnit,
@@ -2242,7 +2246,6 @@ pub struct RefundsData {
     pub browser_info: Option<BrowserInformation>,
     /// Charges associated with the payment
     pub split_refunds: Option<SplitRefundsRequest>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
 }
 
 impl RefundsData {
@@ -2258,10 +2261,10 @@ impl RefundsData {
             .clone()
             .ok_or_else(missing_field_err("webhook_url"))
     }
-    pub fn get_connector_metadata(&self) -> Result<SecretSerdeValue, Error> {
-        self.connector_metadata
+    pub fn get_connector_feature_data(&self) -> Result<SecretSerdeValue, Error> {
+        self.connector_feature_data
             .clone()
-            .ok_or_else(missing_field_err("connector_metadata"))
+            .ok_or_else(missing_field_err("connector_feature_data"))
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
         self.browser_info
@@ -2295,7 +2298,7 @@ pub struct PaymentsCaptureData {
     pub currency: Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
-    pub connector_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub integrity_object: Option<CaptureIntegrityObject>,
     pub browser_info: Option<BrowserInformation>,
     pub capture_method: Option<common_enums::CaptureMethod>,
@@ -2429,7 +2432,7 @@ pub struct RepeatPaymentData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<Email>,
     pub payment_method_type: Option<PaymentMethodType>,
-    pub merchant_account_metadata: Option<SecretSerdeValue>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub off_session: Option<bool>,
     pub router_return_url: Option<String>,
     pub split_payments: Option<SplitPaymentsRequest>,
@@ -3620,10 +3623,10 @@ pub struct BillingDescriptor {
     /// A reference to be shown on billing description
     pub reference: Option<String>,
 }
-impl ForeignTryFrom<grpc_api_types::payments::connector_auth::AuthType> for ConnectorEnum {
+impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config> for ConnectorEnum {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
-        auth_type: grpc_api_types::payments::connector_auth::AuthType,
+        auth_type: grpc_api_types::payments::connector_specific_config::Config,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match auth_type {
             AuthType::Adyen(_) => Ok(Self::Adyen),

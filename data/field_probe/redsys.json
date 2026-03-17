@@ -1,0 +1,32 @@
+{
+  "connector": "redsys",
+  "flows": {
+    "capture": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      }
+    },
+    "get": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to encode connector request"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "error",
+        "required_fields": [
+          "currency"
+        ],
+        "error": "Integration error: Failed to encode connector request"
+      }
+    }
+  }
+}

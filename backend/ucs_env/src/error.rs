@@ -135,7 +135,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::MissingConnectorMandateMetadata
             | Self::IntegrityCheckFailed { .. }
             | Self::SourceVerificationFailed
-            | Self::DecodingFailed
+            | Self::DecodingFailed(..)
             | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),
@@ -331,6 +331,32 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             captured_amount: None,
             authorized_amount: None,
             connector_response: None,
+        }
+    }
+}
+
+/// Convert ApplicationErrorResponse to proto RequestError
+impl ErrorSwitch<grpc_api_types::payments::RequestError> for ApplicationErrorResponse {
+    fn switch(&self) -> grpc_api_types::payments::RequestError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::RequestError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(api_error.error_message.clone()),
+            error_code: Some(api_error.sub_code.clone()),
+            status_code: Some(api_error.error_identifier.into()),
+        }
+    }
+}
+
+/// Convert ApplicationErrorResponse to proto ResponseError
+impl ErrorSwitch<grpc_api_types::payments::ResponseError> for ApplicationErrorResponse {
+    fn switch(&self) -> grpc_api_types::payments::ResponseError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::ResponseError {
+            status: grpc_api_types::payments::PaymentStatus::Pending.into(),
+            error_message: Some(api_error.error_message.clone()),
+            error_code: Some(api_error.sub_code.clone()),
+            status_code: Some(api_error.error_identifier.into()),
         }
     }
 }

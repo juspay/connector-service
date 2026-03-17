@@ -31,7 +31,7 @@ use domain_types::{
         PaymentMethodDataTypes, RawCardNumber, SamsungPayWalletData, WalletData,
     },
     router_data::{
-        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificAuth, ErrorResponse,
+        AdditionalPaymentMethodConnectorResponse, ConnectorSpecificConfig, ErrorResponse,
         PazeDecryptedData,
     },
     router_data_v2::RouterDataV2,
@@ -1032,7 +1032,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .to_string();
 
         let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
+            &item.router_data.resource_common_data.connector_feature_data,
         )?;
 
         let (action_list, action_token_types, authorization_options) = if item
@@ -2449,21 +2449,28 @@ pub struct CybersourceAuthType {
     pub(super) api_key: Secret<String>,
     pub(super) merchant_account: Secret<String>,
     pub(super) api_secret: Secret<String>,
+    pub(super) disable_avs: Option<bool>,
+    pub(super) disable_cvn: Option<bool>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for CybersourceAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for CybersourceAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Cybersource {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Cybersource {
             api_key,
             merchant_account,
             api_secret,
+            disable_avs,
+            disable_cvn,
+            ..
         } = auth_type
         {
             Ok(Self {
                 api_key: api_key.to_owned(),
                 merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
+                disable_avs: *disable_avs,
+                disable_cvn: *disable_cvn,
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?
@@ -4618,9 +4625,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or("internet")
             .to_string();
 
-        let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item.router_data.request.merchant_account_metadata,
-        )?;
+        let connector_merchant_config =
+            CybersourceAuthType::try_from(&item.router_data.connector_config)?;
 
         let (action_list, action_token_types, authorization_options) = match item
             .router_data

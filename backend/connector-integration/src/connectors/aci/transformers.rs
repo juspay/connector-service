@@ -11,7 +11,7 @@ use domain_types::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -64,10 +64,13 @@ pub struct AciAuthType {
     pub entity_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for AciAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for AciAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Aci { api_key, entity_id } = item {
+    fn try_from(item: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Aci {
+            api_key, entity_id, ..
+        } = item
+        {
             Ok(Self {
                 api_key: api_key.to_owned(),
                 entity_id: entity_id.to_owned(),
@@ -1028,7 +1031,7 @@ fn get_transaction_details<
         T,
     >,
 ) -> Result<TransactionDetails, error_stack::Report<ConnectorError>> {
-    let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+    let auth = AciAuthType::try_from(&item.router_data.connector_config)?;
     let amount = item
         .connector
         .amount_converter
@@ -1110,7 +1113,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = AciAuthType::try_from(&item.router_data.connector_config)?;
         let aci_payment_request = Self {
             entity_id: auth.entity_id,
             payment_type: AciPaymentType::Reversal,
@@ -1144,7 +1147,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = AciAuthType::try_from(&item.router_data.connector_config)?;
 
         let (payment_brand, payment_details) = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
@@ -1414,7 +1417,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = AciAuthType::try_from(&item.router_data.connector_config)?;
         let amount = item
             .connector
             .amount_converter
@@ -1640,7 +1643,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(ConnectorError::AmountConversionFailed)?;
         let currency = item.router_data.request.currency;
         let payment_type = AciPaymentType::Refund;
-        let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = AciAuthType::try_from(&item.router_data.connector_config)?;
 
         Ok(Self {
             amount,
@@ -1916,7 +1919,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = AciAuthType::try_from(&item.router_data.connector_config)?;
         let amount = item
             .connector
             .amount_converter

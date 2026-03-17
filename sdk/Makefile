@@ -57,6 +57,10 @@ install-deps: ## Install Python dependencies (skipped in Nix shell)
 			(echo "  → Installing mypy-protobuf..." && \
 			 pip3 install mypy-protobuf --quiet 2>/dev/null || \
 			 pip3 install mypy-protobuf --user --quiet); \
+		python3 -c "import jinja2" 2>/dev/null || \
+			(echo "  → Installing jinja2..." && \
+			 pip3 install jinja2 --quiet 2>/dev/null || \
+			 pip3 install jinja2 --user --quiet); \
 	fi
 	@echo "All required tools present."
 

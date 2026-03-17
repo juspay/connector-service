@@ -4,10 +4,10 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        composite_payment_service_server, customer_service_server, dispute_service_server,
-        merchant_authentication_service_server, payment_method_authentication_service_server,
-        payment_method_service_server, payment_service_server, recurring_payment_service_server,
-        refund_service_server,
+        composite_payment_service_server, composite_refund_service_server, customer_service_server,
+        dispute_service_server, merchant_authentication_service_server,
+        payment_method_authentication_service_server, payment_method_service_server,
+        payment_service_server, recurring_payment_service_server, refund_service_server,
     },
 };
 use std::{future::Future, net, sync::Arc};
@@ -103,6 +103,7 @@ pub struct Service {
         crate::server::payments::Payments,
         crate::server::payments::MerchantAuthentication,
         crate::server::payments::Customer,
+        crate::server::refunds::Refunds,
     >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
@@ -137,17 +138,19 @@ impl Service {
             customer_service: customer_service.clone(),
             merchant_authentication_service: merchant_authentication_service.clone(),
         };
+        let refunds_service = crate::server::refunds::Refunds;
         let composite_payments_service = composite_service::payments::Payments::new(
             payments_service.clone(),
             merchant_authentication_service.clone(),
             customer_service.clone(),
+            refunds_service.clone(),
         );
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             composite_payments_service,
             payments_service,
-            refunds_service: crate::server::refunds::Refunds,
+            refunds_service,
             disputes_service: crate::server::disputes::Disputes,
             recurring_payment_service: crate::server::payments::RecurringPayments,
             event_service: crate::server::payments::Events,
@@ -266,7 +269,33 @@ impl Service {
             ))
             .add_service(
                 composite_payment_service_server::CompositePaymentServiceServer::new(
+                    self.composite_payments_service.clone(),
+                ),
+            )
+            .add_service(
+                composite_refund_service_server::CompositeRefundServiceServer::new(
                     self.composite_payments_service,
+                ),
+            )
+            .add_service(customer_service_server::CustomerServiceServer::new(
+                self.customer_service,
+            ))
+            .add_service(
+                merchant_authentication_service_server::MerchantAuthenticationServiceServer::new(
+                    self.merchant_authentication_service,
+                ),
+            )
+            .add_service(payment_method_service_server::PaymentMethodServiceServer::new(
+                self.payment_method_service,
+            ))
+            .add_service(
+                recurring_payment_service_server::RecurringPaymentServiceServer::new(
+                    self.recurring_payment_service,
+                ),
+            )
+            .add_service(
+                payment_method_authentication_service_server::PaymentMethodAuthenticationServiceServer::new(
+                    self.payment_method_authentication_service,
                 ),
             )
             .add_service(refund_service_server::RefundServiceServer::new(
@@ -275,27 +304,6 @@ impl Service {
             .add_service(dispute_service_server::DisputeServiceServer::new(
                 self.disputes_service,
             ))
-            .add_service(customer_service_server::CustomerServiceServer::new(
-                self.customer_service,
-            ))
-            .add_service(
-                recurring_payment_service_server::RecurringPaymentServiceServer::new(
-                    self.recurring_payment_service,
-                ),
-            )
-            .add_service(payment_method_service_server::PaymentMethodServiceServer::new(
-                self.payment_method_service,
-            ))
-            .add_service(
-                merchant_authentication_service_server::MerchantAuthenticationServiceServer::new(
-                    self.merchant_authentication_service,
-                ),
-            )
-            .add_service(
-                payment_method_authentication_service_server::PaymentMethodAuthenticationServiceServer::new(
-                    self.payment_method_authentication_service,
-                ),
-            )
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;
 

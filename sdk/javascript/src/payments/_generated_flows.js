@@ -3,6 +3,9 @@
 "use strict";
 
 const FLOWS = {
+  // accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
+  accept               : { request: "DisputeServiceAcceptRequest", response: "DisputeServiceAcceptResponse" },
+
   // authenticate: PaymentMethodAuthenticationService.Authenticate — Execute 3DS challenge or frictionless verification. Authenticates customer via bank challenge or behind-the-scenes verification for fraud prevention.
   authenticate         : { request: "PaymentMethodAuthenticationServiceAuthenticateRequest", response: "PaymentMethodAuthenticationServiceAuthenticateResponse" },
 
@@ -27,6 +30,9 @@ const FLOWS = {
   // create_session_token: MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.
   create_session_token : { request: "MerchantAuthenticationServiceCreateSessionTokenRequest", response: "MerchantAuthenticationServiceCreateSessionTokenResponse" },
 
+  // defend: DisputeService.Defend — Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation.
+  defend               : { request: "DisputeServiceDefendRequest", response: "DisputeServiceDefendResponse" },
+
   // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
   get                  : { request: "PaymentServiceGetRequest", response: "PaymentServiceGetResponse" },
 
@@ -44,6 +50,9 @@ const FLOWS = {
 
   // setup_recurring: PaymentService.SetupRecurring — Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
   setup_recurring      : { request: "PaymentServiceSetupRecurringRequest", response: "PaymentServiceSetupRecurringResponse" },
+
+  // submit_evidence: DisputeService.SubmitEvidence — Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims.
+  submit_evidence      : { request: "DisputeServiceSubmitEvidenceRequest", response: "DisputeServiceSubmitEvidenceResponse" },
 
   // tokenize: PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
   tokenize             : { request: "PaymentMethodServiceTokenizeRequest", response: "PaymentMethodServiceTokenizeResponse" },

@@ -1452,7 +1452,8 @@ message PaymentServiceAuthorizeResponse {
 
 // Request message for synchronizing payment status
 message PaymentServiceGetRequest {
-
+  // Identification
+  optional string merchant_transaction_id = 1;
   string connector_transaction_id = 2;
 
   optional string encoded_data = 3;
@@ -1491,6 +1492,7 @@ message PaymentServiceGetRequest {
 message PaymentServiceGetResponse {
   // Identification
   string connector_transaction_id = 1;
+  optional string merchant_transaction_id = 28;
 
   // Status Information
   PaymentStatus status = 2;
@@ -2791,342 +2793,440 @@ message CustomerServiceDeleteResponse {
 
 
 // ============================================================================
-// CONNECTOR AUTHENTICATION MESSAGES
+// CONNECTOR CONFIGURATION MESSAGES
 // ============================================================================
 
 // Single field auth types
-message StripeAuth {
+message StripeConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message BamboraAuth {
+message BamboraConfig {
   SecretString merchant_id = 1;
   SecretString api_key = 2;
+  optional string base_url = 50;
 }
 
-message CalidaAuth {
+message CalidaConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message CeleroAuth {
+message CeleroConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message NexinetsAuth {
+message NexinetsConfig {
   SecretString merchant_id = 1;
   SecretString api_key = 2;
+  optional string base_url = 50;
 }
 
-message NexixpayAuth {
+message NexixpayConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message RevolutAuth {
+message RevolutConfig {
   SecretString secret_api_key = 1;
   optional SecretString signing_secret = 2;
+  optional string base_url = 50;
 }
 
-message Revolv3Auth {
+message Revolv3Config {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message Shift4Auth {
+message Shift4Config {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message StaxAuth {
+message StaxConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message XenditAuth {
+message XenditConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message HelcimAuth {
+message HelcimConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message MifinityAuth {
+message MifinityConfig {
   SecretString key = 1;
+  optional string base_url = 50;
 }
 
-message MultisafepayAuth {
+message MultisafepayConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message ScreenstreamAuth {
+message ScreenstreamConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message AuthorizedotnetAuth {
+message AuthorizedotnetConfig {
   SecretString name = 1;
   SecretString transaction_key = 2;
+  optional string base_url = 50;
 }
 
 // Two field auth types
-message BraintreeAuth {
+message BraintreeConfig {
   SecretString public_key = 1;
   SecretString private_key = 2;
+  optional string base_url = 50;
+  optional SecretString merchant_account_id = 51;
+  optional string merchant_config_currency = 52;
 }
 
-message AirwallexAuth {
+message AirwallexConfig {
   SecretString api_key = 1;
   SecretString client_id = 2;
+  optional string base_url = 50;
 }
 
-message AuthipayAuth {
+message AuthipayConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
+  optional string base_url = 50;
 }
 
-message BillwerkAuth {
+message BillwerkConfig {
   SecretString api_key = 1;
   SecretString public_api_key = 2;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
 }
 
-message BluesnapAuth {
+message BluesnapConfig {
   SecretString username = 1;
   SecretString password = 2;
+  optional string base_url = 50;
 }
 
-message CashfreeAuth {
+message CashfreeConfig {
   SecretString app_id = 1;
   SecretString secret_key = 2;
+  optional string base_url = 50;
 }
 
-message CryptopayAuth {
+message CryptopayConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
+  optional string base_url = 50;
 }
 
-message DatatransAuth {
+message DatatransConfig {
   SecretString merchant_id = 1;
   SecretString password = 2;
+  optional string base_url = 50;
 }
 
-message FiservemeaAuth {
+message FiservemeaConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
+  optional string base_url = 50;
 }
 
-message GlobalpayAuth {
+message GlobalpayConfig {
   SecretString app_id = 1;
   SecretString app_key = 2;
+  optional string base_url = 50;
 }
 
-message HipayAuth {
+message HipayConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
+  optional string third_base_url = 52;
 }
 
-message JpmorganAuth {
+message JpmorganConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
+  optional string base_url = 50;
+  optional SecretString company_name = 51;
+  optional SecretString product_name = 52;
+  optional SecretString merchant_purchase_description = 53;
+  optional SecretString statement_descriptor = 54;
+  optional string secondary_base_url = 55;
 }
 
-message LoonioAuth {
+message PaysafeCardAccountId {
+  optional SecretString no_three_ds = 1;
+  optional SecretString three_ds = 2;
+}
+
+message PaysafeAchAccountId {
+  optional SecretString account_id = 1;
+}
+
+message PaysafePaymentMethodDetails {
+  map<string, PaysafeCardAccountId> card = 1;
+  map<string, PaysafeAchAccountId> ach = 2;
+}
+
+message LoonioConfig {
   SecretString merchant_id = 1;
   SecretString merchant_token = 2;
+  optional string base_url = 50;
 }
 
-message PaysafeAuth {
+message PaysafeConfig {
   SecretString username = 1;
   SecretString password = 2;
+  optional string base_url = 50;
+  // Card and ACH account IDs per currency
+  optional PaysafePaymentMethodDetails account_id = 51;
 }
 
-message PayuAuth {
+message PayuConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
+  optional string base_url = 50;
 }
 
-message PowertranzAuth {
+message PowertranzConfig {
   SecretString power_tranz_id = 1;
   SecretString power_tranz_password = 2;
+  optional string base_url = 50;
 }
 
-message RapydAuth {
+message RapydConfig {
   SecretString access_key = 1;
   SecretString secret_key = 2;
+  optional string base_url = 50;
 }
 
-message WorldpayAuth {
+message WorldpayConfig {
   SecretString username = 1;
   SecretString password = 2;
   SecretString entity_id = 3;
+  optional string base_url = 50;
+  optional SecretString merchant_name = 51;
 }
 
 // Three field auth types
-message AdyenAuth {
+message AdyenConfig {
   SecretString api_key = 1;
   SecretString merchant_account = 2;
   optional SecretString review_key = 3;
+  optional string base_url = 50;
+  optional string dispute_base_url = 51;
 }
 
-message BankOfAmericaAuth {
+message BankOfAmericaConfig {
   SecretString api_key = 1;
   SecretString merchant_account = 2;
   SecretString api_secret = 3;
+  optional string base_url = 50;
 }
 
-message BarclaycardAuth {
+message BarclaycardConfig {
   SecretString api_key = 1;
   SecretString merchant_account = 2;
   SecretString api_secret = 3;
+  optional string base_url = 50;
 }
 
-message CybersourceAuth {
+message CybersourceConfig {
   SecretString api_key = 1;
   SecretString merchant_account = 2;
   SecretString api_secret = 3;
+  optional string base_url = 50;
+  optional bool disable_avs = 51;
+  optional bool disable_cvn = 52;
 }
 
-message DlocalAuth {
+message DlocalConfig {
   SecretString x_login = 1;
   SecretString x_trans_key = 2;
   SecretString secret = 3;
+  optional string base_url = 50;
 }
 
-message ElavonAuth {
+message ElavonConfig {
   SecretString ssl_merchant_id = 1;
   SecretString ssl_user_id = 2;
   SecretString ssl_pin = 3;
+  optional string base_url = 50;
 }
 
-message FiservAuth {
+message FiservConfig {
   SecretString api_key = 1;
   SecretString merchant_account = 2;
   SecretString api_secret = 3;
+  optional string base_url = 50;
+  optional SecretString terminal_id = 51;
 }
 
-message GetnetAuth {
+message GetnetConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
   SecretString seller_id = 3;
+  optional string base_url = 50;
 }
 
-message HyperpgAuth {
+message HyperpgConfig {
   SecretString username = 1;
   SecretString password = 2;
   SecretString merchant_id = 3;
+  optional string base_url = 50;
 }
 
-message IatapayAuth {
+message IatapayConfig {
   SecretString client_id = 1;
   SecretString merchant_id = 2;
   SecretString client_secret = 3;
+  optional string base_url = 50;
 }
 
-message NuveiAuth {
+message NuveiConfig {
   SecretString merchant_id = 1;
   SecretString merchant_site_id = 2;
   SecretString merchant_secret = 3;
+  optional string base_url = 50;
 }
 
-message NovalnetAuth {
+message NovalnetConfig {
   SecretString product_activation_key = 1;
   SecretString payment_access_key = 2;
   SecretString tariff_id = 3;
+  optional string base_url = 50;
 }
 
-message NoonAuth {
+message NoonConfig {
   SecretString api_key = 1;
   SecretString application_identifier = 2;
   SecretString business_identifier = 3;
+  optional string base_url = 50;
 }
 
-message RedsysAuth {
+message RedsysConfig {
   SecretString merchant_id = 1;
   SecretString terminal_id = 2;
   SecretString sha256_pwd = 3;
+  optional string base_url = 50;
 }
 
-message SilverflowAuth {
+message SilverflowConfig {
   SecretString api_key = 1;
   SecretString api_secret = 2;
   SecretString merchant_acceptor_key = 3;
+  optional string base_url = 50;
 }
 
-message TrustpayAuth {
+message TrustpayConfig {
   SecretString api_key = 1;
   SecretString project_id = 2;
   SecretString secret_key = 3;
+  optional string base_url = 50;
+  optional string base_url_bank_redirects = 51;
 }
 
-message TrustpaymentsAuth {
+message TrustpaymentsConfig {
   SecretString username = 1;
   SecretString password = 2;
   SecretString site_reference = 3;
+  optional string base_url = 50;
 }
 
-message TsysAuth {
+message TsysConfig {
   SecretString device_id = 1;
   SecretString transaction_key = 2;
   SecretString developer_id = 3;
+  optional string base_url = 50;
 }
 
-message WellsfargoAuth {
+message WellsfargoConfig {
   SecretString api_key = 1;
   SecretString merchant_account = 2;
   SecretString api_secret = 3;
+  optional string base_url = 50;
 }
 
-message WorldpayvantivAuth {
+message WorldpayvantivConfig {
   SecretString user = 1;
   SecretString password = 2;
   SecretString merchant_id = 3;
+  optional string base_url = 50;
+  optional string report_group = 51;
+  optional string merchant_config_currency = 52;
+  optional string secondary_base_url = 53;
 }
 
-message WorldpayxmlAuth {
+message WorldpayxmlConfig {
   SecretString api_username = 1;
   SecretString api_password = 2;
   SecretString merchant_code = 3;
+  optional string base_url = 50;
 }
 
-message ZiftAuth {
+message ZiftConfig {
   SecretString user_name = 1;
   SecretString password = 2;
   SecretString account_id = 3;
+  optional string base_url = 50;
 }
 
-message GigadatAuth {
+message GigadatConfig {
   SecretString campaign_id = 1;
   SecretString access_token = 2;
   SecretString security_token = 3;
+  optional string base_url = 50;
 }
 
-message PhonepeAuth {
+message PhonepeConfig {
   SecretString merchant_id = 1;
   SecretString salt_key = 2;
   SecretString salt_index = 3;
+  optional string base_url = 50;
 }
 
 // Four field auth types
-message ForteAuth {
+message ForteConfig {
   SecretString api_access_id = 1;
   SecretString organization_id = 2;
   SecretString location_id = 3;
   SecretString api_secret_key = 4;
+  optional string base_url = 50;
 }
 
-message VoltAuth {
+message VoltConfig {
   SecretString username = 1;
   SecretString password = 2;
   SecretString client_id = 3;
   SecretString client_secret = 4;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
 }
 
-message PayboxAuth {
+message PayboxConfig {
   SecretString site = 1;
   SecretString rank = 2;
   SecretString key = 3;
   SecretString merchant_id = 4;
+  optional string base_url = 50;
 }
 
-message PaytmAuth {
+message PaytmConfig {
   SecretString merchant_id = 1;
   SecretString merchant_key = 2;
   SecretString website = 3;
   optional SecretString client_id = 4;
+  optional string base_url = 50;
 }
 
 message CashtocodeCurrencyAuthData {
@@ -3139,23 +3239,28 @@ message CashtocodeCurrencyAuthData {
 }
 
 // Complex auth types with optional fields
-message CashtocodeAuth {
+message CashtocodeConfig {
   map<string, CashtocodeCurrencyAuthData> auth_key_map = 1;
+  optional string base_url = 50;
 }
 
-message MollieAuth {
+message MollieConfig {
   SecretString api_key = 1;
   optional SecretString profile_token = 2;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
 }
 
-message NmiAuth {
+message NmiConfig {
   SecretString api_key = 1;
   optional SecretString public_key = 2;
+  optional string base_url = 50;
 }
 
-message PaymeAuth {
+message PaymeConfig {
   SecretString seller_payme_id = 1;
   optional SecretString payme_client_key = 2;
+  optional string base_url = 50;
 }
 
 message PayloadCurrencyAuthData {
@@ -3163,259 +3268,267 @@ message PayloadCurrencyAuthData {
   optional SecretString processing_account_id = 2;
 }
 
-message PayloadAuth {
+message PayloadConfig {
   map<string, PayloadCurrencyAuthData> auth_key_map = 1;
+  optional string base_url = 50;
 }
 
-message EbanxAuth {
+message EbanxConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message FiuuAuth {
+message FiuuConfig {
   SecretString merchant_id = 1;
   SecretString verify_key = 2;
   SecretString secret_key = 3;
+  optional string base_url = 50;
+  optional string secondary_base_url = 51;
 }
 
-message GlobepayAuth {
+message GlobepayConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message CoinbaseAuth {
+message CoinbaseConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message CoingateAuth {
+message CoingateConfig {
   SecretString api_key = 1;
+  optional string base_url = 50;
 }
 
-message PaypalAuth {
+message PaypalConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
   optional SecretString payer_id = 3;
+  optional string base_url = 50;
 }
 
-// ConnectorAuth message with oneof containing all auth types.
+// ConnectorSpecificConfig message with oneof containing all connector configurations.
 // Comment above each field (e.g. "// PAYPAL = 62") is the Connector enum value from this file;
-message ConnectorAuth {
-  oneof auth_type {
+message ConnectorSpecificConfig {
+  oneof config {
     // ADYEN = 3
-    AdyenAuth adyen = 1;
+    AdyenConfig adyen = 1;
 
     // AIRWALLEX = 4
-    AirwallexAuth airwallex = 2;
+    AirwallexConfig airwallex = 2;
 
     // BAMBORA = 6
-    BamboraAuth bambora = 3;
+    BamboraConfig bambora = 3;
 
     // BANKOFAMERICA = 8
-    BankOfAmericaAuth bankofamerica = 4;
+    BankOfAmericaConfig bankofamerica = 4;
 
     // BILLWERK = 9
-    BillwerkAuth billwerk = 5;
+    BillwerkConfig billwerk = 5;
 
     // BLUESNAP = 11
-    BluesnapAuth bluesnap = 6;
+    BluesnapConfig bluesnap = 6;
 
     // BRAINTREE = 13
-    BraintreeAuth braintree = 7;
+    BraintreeConfig braintree = 7;
 
     // CASHTOCODE = 14
-    CashtocodeAuth cashtocode = 8;
+    CashtocodeConfig cashtocode = 8;
 
     // CRYPTOPAY = 19
-    CryptopayAuth cryptopay = 9;
+    CryptopayConfig cryptopay = 9;
 
     // CYBERSOURCE = 22
-    CybersourceAuth cybersource = 10;
+    CybersourceConfig cybersource = 10;
 
     // DATATRANS = 23
-    DatatransAuth datatrans = 11;
+    DatatransConfig datatrans = 11;
 
     // DLOCAL = 26
-    DlocalAuth dlocal = 12;
+    DlocalConfig dlocal = 12;
 
     // ELAVON = 28
-    ElavonAuth elavon = 13;
+    ElavonConfig elavon = 13;
 
     // FISERV = 29
-    FiservAuth fiserv = 14;
+    FiservConfig fiserv = 14;
 
     // FISERVEMEA = 30
-    FiservemeaAuth fiservemea = 15;
+    FiservemeaConfig fiservemea = 15;
 
     // FORTE = 32
-    ForteAuth forte = 16;
+    ForteConfig forte = 16;
 
     // GETNET = 33
-    GetnetAuth getnet = 17;
+    GetnetConfig getnet = 17;
 
     // GLOBALPAY = 34
-    GlobalpayAuth globalpay = 18;
+    GlobalpayConfig globalpay = 18;
 
     // HIPAY = 38
-    HipayAuth hipay = 19;
+    HipayConfig hipay = 19;
 
     // HELCIM = 39
-    HelcimAuth helcim = 20;
+    HelcimConfig helcim = 20;
 
     // IATAPAY = 41
-    IatapayAuth iatapay = 21;
+    IatapayConfig iatapay = 21;
 
     // JPMORGAN = 43
-    JpmorganAuth jpmorgan = 22;
+    JpmorganConfig jpmorgan = 22;
 
     // MIFINITY = 46
-    MifinityAuth mifinity = 23;
+    MifinityConfig mifinity = 23;
 
     // MOLLIE = 47
-    MollieAuth mollie = 24;
+    MollieConfig mollie = 24;
 
     // MULTISAFEPAY = 49
-    MultisafepayAuth multisafepay = 25;
+    MultisafepayConfig multisafepay = 25;
 
     // NEXINETS = 51
-    NexinetsAuth nexinets = 26;
+    NexinetsConfig nexinets = 26;
 
     // NEXIXPAY = 52
-    NexixpayAuth nexixpay = 27;
+    NexixpayConfig nexixpay = 27;
 
     // NMI = 53
-    NmiAuth nmi = 28;
+    NmiConfig nmi = 28;
 
     // NOON = 55
-    NoonAuth noon = 29;
+    NoonConfig noon = 29;
 
     // NOVALNET = 56
-    NovalnetAuth novalnet = 30;
+    NovalnetConfig novalnet = 30;
 
     // NUVEI = 57
-    NuveiAuth nuvei = 31;
+    NuveiConfig nuvei = 31;
 
     // PAYBOX = 59
-    PayboxAuth paybox = 32;
+    PayboxConfig paybox = 32;
 
     // PAYME = 60
-    PaymeAuth payme = 33;
+    PaymeConfig payme = 33;
 
     // PAYU = 64
-    PayuAuth payu = 34;
+    PayuConfig payu = 34;
 
     // POWERTRANZ = 66
-    PowertranzAuth powertranz = 35;
+    PowertranzConfig powertranz = 35;
 
     // RAPYD = 68
-    RapydAuth rapyd = 36;
+    RapydConfig rapyd = 36;
 
     // REDSYS = 71
-    RedsysAuth redsys = 37;
+    RedsysConfig redsys = 37;
 
     // SHIFT4 = 72
-    Shift4Auth shift4 = 38;
+    Shift4Config shift4 = 38;
 
     // STAX = 74
-    StaxAuth stax = 39;
+    StaxConfig stax = 39;
 
     // STRIPE = 75
-    StripeAuth stripe = 40;
+    StripeConfig stripe = 40;
 
     // TRUSTPAY = 78
-    TrustpayAuth trustpay = 41;
+    TrustpayConfig trustpay = 41;
 
     // TSYS = 79
-    TsysAuth tsys = 42;
+    TsysConfig tsys = 42;
 
     // VOLT = 80
-    VoltAuth volt = 43;
+    VoltConfig volt = 43;
 
     // WELLSFARGO = 81
-    WellsfargoAuth wellsfargo = 44;
+    WellsfargoConfig wellsfargo = 44;
 
     // WORLDPAY = 84
-    WorldpayAuth worldpay = 45;
+    WorldpayConfig worldpay = 45;
 
     // WORLDPAYVANTIV = 85
-    WorldpayvantivAuth worldpayvantiv = 46;
+    WorldpayvantivConfig worldpayvantiv = 46;
 
     // XENDIT = 89
-    XenditAuth xendit = 47;
+    XenditConfig xendit = 47;
 
     // PHONEPE = 92
-    PhonepeAuth phonepe = 48;
+    PhonepeConfig phonepe = 48;
 
     // CASHFREE = 93
-    CashfreeAuth cashfree = 49;
+    CashfreeConfig cashfree = 49;
 
     // PAYTM = 94
-    PaytmAuth paytm = 50;
+    PaytmConfig paytm = 50;
 
     // CALIDA = 95
-    CalidaAuth calida = 51;
+    CalidaConfig calida = 51;
 
     // PAYLOAD = 96
-    PayloadAuth payload = 52;
+    PayloadConfig payload = 52;
 
     // AUTHIPAY = 97
-    AuthipayAuth authipay = 53;
+    AuthipayConfig authipay = 53;
 
     // SILVERFLOW = 98
-    SilverflowAuth silverflow = 54;
+    SilverflowConfig silverflow = 54;
 
     // CELERO = 99
-    CeleroAuth celero = 55;
+    CeleroConfig celero = 55;
 
     // TRUSTPAYMENTS = 100
-    TrustpaymentsAuth trustpayments = 56;
+    TrustpaymentsConfig trustpayments = 56;
 
     // PAYSAFE = 101
-    PaysafeAuth paysafe = 57;
+    PaysafeConfig paysafe = 57;
 
     // BARCLAYCARD = 102
-    BarclaycardAuth barclaycard = 58;
+    BarclaycardConfig barclaycard = 58;
 
     // WORLDPAYXML = 103
-    WorldpayxmlAuth worldpayxml = 59;
+    WorldpayxmlConfig worldpayxml = 59;
 
     // REVOLUT = 104
-    RevolutAuth revolut = 60;
+    RevolutConfig revolut = 60;
 
     // LOONIO = 105
-    LoonioAuth loonio = 61;
+    LoonioConfig loonio = 61;
 
     // GIGADAT = 106
-    GigadatAuth gigadat = 62;
+    GigadatConfig gigadat = 62;
 
     // HYPERPG = 107
-    HyperpgAuth hyperpg = 63;
+    HyperpgConfig hyperpg = 63;
 
     // ZIFT = 108
-    ZiftAuth zift = 64;
+    ZiftConfig zift = 64;
 
     // SCREENSTREAM (not in enum, added at end)
-    ScreenstreamAuth screenstream = 65;
+    ScreenstreamConfig screenstream = 65;
 
     // EBANX = 27
-    EbanxAuth ebanx = 66;
+    EbanxConfig ebanx = 66;
 
     // FIUU = 31
-    FiuuAuth fiuu = 67;
+    FiuuConfig fiuu = 67;
 
     // GLOBEPAY = 35
-    GlobepayAuth globepay = 68;
+    GlobepayConfig globepay = 68;
 
     // COINBASE = 17
-    CoinbaseAuth coinbase = 69;
+    CoinbaseConfig coinbase = 69;
 
     // COINGATE = 18
-    CoingateAuth coingate = 70;
+    CoingateConfig coingate = 70;
 
     // REVOLV3 = 109
-    Revolv3Auth revolv3 = 71;
+    Revolv3Config revolv3 = 71;
 
     // AUTHORIZEDOTNET = 5
-    AuthorizedotnetAuth authorizedotnet = 72;
+    AuthorizedotnetConfig authorizedotnet = 72;
 
     // PAYPAL = 62
-    PaypalAuth paypal = 110;
+    PaypalConfig paypal = 110;
   }
 }

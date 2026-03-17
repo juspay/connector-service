@@ -66,7 +66,7 @@ The `IncrementalAuthorization` RPC increases the authorized amount on an existin
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
     "merchant_authorization_id": "incr_auth_001",
     "connector_transaction_id": "pi_3Oxxx...",
@@ -77,7 +77,7 @@ grpcurl -H "x-connector: stripe" \
     "reason": "Room service charges added"
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/IncrementalAuthorization
+  types.PaymentService/IncrementalAuthorization
 ```
 
 ### Response

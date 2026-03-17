@@ -60,6 +60,9 @@ jobs:
       - name: Run Composite Request Schema Checks
         run: cargo test -p composite-service --test composite_request_schema_check
 
+      - name: Run UCS Connector Schema Compatibility Check
+        run: cargo test -p ucs-connector-tests --lib harness::scenario_api::tests::all_supported_scenarios_match_proto_schema_for_all_connectors -- --exact
+
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -186,6 +189,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install Python codegen dependencies
+        run: make -C sdk install-deps
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

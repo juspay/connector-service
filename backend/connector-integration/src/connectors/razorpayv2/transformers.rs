@@ -15,7 +15,7 @@ use domain_types::{
     errors,
     payment_address::Address,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -52,14 +52,15 @@ impl RazorpayV2AuthType {
     }
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for RazorpayV2AuthType {
+impl TryFrom<&ConnectorSpecificConfig> for RazorpayV2AuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::RazorpayV2 {
+            ConnectorSpecificConfig::RazorpayV2 {
                 api_key,
                 api_secret,
+                ..
             } => match api_secret {
                 None => Ok(Self::AuthToken(api_key.to_owned())),
                 Some(secret) => Ok(Self::ApiKeySecret {
