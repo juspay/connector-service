@@ -80,20 +80,34 @@ impl ApplicationErrorResponse {
     }
 
     pub fn missing_required_field(field_name: &'static str) -> Self {
+        let mut field_errors = std::collections::HashMap::new();
+        field_errors.insert(field_name.to_string(), "This field is required".to_string());
+
         Self::BadRequest(ApiError {
             sub_code: "MISSING_REQUIRED_FIELD".to_owned(),
             error_identifier: 400,
             error_message: format!("Missing required param: {field_name}"),
             error_object: None,
+            category: "ValidationError".to_string(),
+            field_errors,
+            suggested_action: Some(format!("Add the '{}' field to your request", field_name)),
+            documentation_url: "https://docs.ucs.com/errors/MISSING_REQUIRED_FIELD".to_string(),
         })
     }
 
     pub fn empty_field_error(field_name: &str) -> Self {
+        let mut field_errors = std::collections::HashMap::new();
+        field_errors.insert(field_name.to_string(), "This field cannot be empty".to_string());
+
         Self::BadRequest(ApiError {
             sub_code: format!("INVALID_{}", field_name.to_uppercase()),
             error_identifier: 400,
             error_message: format!("{} cannot be empty", field_name),
             error_object: None,
+            category: "ValidationError".to_string(),
+            field_errors,
+            suggested_action: Some(format!("Provide a valid value for '{}'", field_name)),
+            documentation_url: format!("https://docs.ucs.com/errors/INVALID_{}", field_name.to_uppercase()),
         })
     }
 }
@@ -104,6 +118,53 @@ pub struct ApiError {
     pub error_identifier: u16,
     pub error_message: String,
     pub error_object: Option<serde_json::Value>,
+
+    // Enhanced error fields for SDK/gRPC
+    pub category: String,
+    pub field_errors: std::collections::HashMap<String, String>,
+    pub suggested_action: Option<String>,
+    pub documentation_url: String,
+}
+
+impl ApiError {
+    /// Create a simple ApiError with default values for enhanced fields
+    pub fn new(
+        sub_code: impl Into<String>,
+        error_identifier: u16,
+        error_message: impl Into<String>,
+    ) -> Self {
+        let sub_code_str = sub_code.into();
+        Self {
+            sub_code: sub_code_str.clone(),
+            error_identifier,
+            error_message: error_message.into(),
+            error_object: None,
+            category: "ProcessingError".to_string(),
+            field_errors: std::collections::HashMap::new(),
+            suggested_action: None,
+            documentation_url: format!("https://docs.ucs.com/errors/{}", sub_code_str),
+        }
+    }
+
+    /// Create ApiError with custom error_object
+    pub fn with_error_object(
+        sub_code: impl Into<String>,
+        error_identifier: u16,
+        error_message: impl Into<String>,
+        error_object: Option<serde_json::Value>,
+    ) -> Self {
+        let sub_code_str = sub_code.into();
+        Self {
+            sub_code: sub_code_str.clone(),
+            error_identifier,
+            error_message: error_message.into(),
+            error_object,
+            category: "ValidationError".to_string(),
+            field_errors: std::collections::HashMap::new(),
+            suggested_action: None,
+            documentation_url: format!("https://docs.ucs.com/errors/{}", sub_code_str),
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

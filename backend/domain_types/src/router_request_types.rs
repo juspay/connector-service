@@ -179,16 +179,16 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
             }))
         }).transpose()?;
         let trans_status = trans_status.map(|trans_status|{
-            payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError{
-                sub_code: "INVALID_TRANSACTION_STATUS".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid transaction status format. Expected one of the valid 3DS transaction status values".to_string(),
-                error_object: Some(serde_json::json!({
+            payments::TransactionStatus::try_from(trans_status).change_context(errors::ApplicationErrorResponse::BadRequest(errors::ApiError::with_error_object(
+                "INVALID_TRANSACTION_STATUS",
+                400,
+                "Invalid transaction status format. Expected one of the valid 3DS transaction status values",
+                Some(serde_json::json!({
                     "field": "transaction_status",
                     "provided_value": trans_status,
                     "expected_values": [
                         "Y (Success)",
-                        "N (Failure)", 
+                        "N (Failure)",
                         "U (Verification Not Performed)",
                         "A (Not Verified)",
                         "R (Rejected)",
@@ -199,7 +199,7 @@ impl TryFrom<payments::AuthenticationData> for AuthenticationData {
                     "validation_rule": "Must be one of the valid 3DS transaction status codes (Y, N, U, A, R, C, D, I)",
                     "description": "Transaction status represents the result of 3D Secure authentication/verification process"
                 })),
-            }))}).transpose()?.map(common_enums::TransactionStatus::foreign_from);
+            )))}).transpose()?.map(common_enums::TransactionStatus::foreign_from);
 
         Ok(Self {
             ucaf_collection_indicator,
@@ -241,15 +241,15 @@ impl TryFrom<payments::CartesBancairesParams> for CartesBancairesParams {
             .ok()
             .map(common_enums::CavvAlgorithm::foreign_from)
             .ok_or_else(|| {
-                errors::ApplicationErrorResponse::BadRequest(errors::ApiError {
-                    sub_code: "INVALID_CAVV_ALGORITHM".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid CAVV algorithm value".to_string(),
-                    error_object: Some(serde_json::json!({
+                errors::ApplicationErrorResponse::BadRequest(errors::ApiError::with_error_object(
+                    "INVALID_CAVV_ALGORITHM",
+                    400,
+                    "Invalid CAVV algorithm value",
+                    Some(serde_json::json!({
                         "field": "cavv_algorithm",
                         "provided_value": value.cavv_algorithm,
                     })),
-                })
+                ))
             })?;
         Ok(Self {
             cavv_algorithm,

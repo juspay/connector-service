@@ -101,12 +101,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
                 ))?
                 .expose(),
         )
-        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "INVALID_PAZE_CONSUMER_EMAIL".to_owned(),
-            error_identifier: 400,
-            error_message: "Invalid Paze consumer email in payment_method".to_owned(),
-            error_object: None,
-        }))?;
+        .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAZE_CONSUMER_EMAIL".to_owned(), 400, "Invalid Paze consumer email in payment_method".to_owned())))?;
 
         let mobile_number = consumer
             .mobile_number
@@ -130,12 +125,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PazeDecryptedData>
 
         let grpc_payment_card_network =
             grpc_api_types::payments::CardNetwork::try_from(value.payment_card_network)
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAZE_PAYMENT_CARD_NETWORK".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid Paze payment card network in payment_method".to_owned(),
-                    error_object: None,
-                }))?;
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAZE_PAYMENT_CARD_NETWORK".to_owned(), 400, "Invalid Paze payment card network in payment_method".to_owned())))?;
 
         let payment_card_network = CardNetwork::foreign_try_from(grpc_payment_card_network)?;
 
@@ -501,12 +491,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for CardNetwork {
             grpc_api_types::payments::CardNetwork::Accel => Ok(Self::Accel),
             grpc_api_types::payments::CardNetwork::Nyce => Ok(Self::Nyce),
             grpc_api_types::payments::CardNetwork::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_CARD_NETWORK".to_owned(),
-                    error_identifier: 401,
-                    error_message: "Card network must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_CARD_NETWORK".to_owned(), 401, "Card network must be specified".to_owned()))
                 .into())
             }
         }
@@ -523,12 +508,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Tokenization> for common_enums::To
             grpc_api_types::payments::Tokenization::SkipPsp => Ok(Self::SkipPsp),
             grpc_api_types::payments::Tokenization::TokenizeAtPsp => Ok(Self::TokenizeAtPsp),
             grpc_api_types::payments::Tokenization::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_TOKENIZATION_STRATEGY".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Tokenization strategy must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_TOKENIZATION_STRATEGY".to_owned(), 400, "Tokenization strategy must be specified".to_owned()))
                 .into())
             }
         }
@@ -678,12 +658,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
             }
             grpc_api_types::payments::PaymentExperience::CollectOtp => Ok(Self::CollectOtp),
             grpc_api_types::payments::PaymentExperience::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_PAYMENT_EXPERIENCE".to_owned(),
-                    error_identifier: 401,
-                    error_message: "Payment experience must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_PAYMENT_EXPERIENCE".to_owned(), 401, "Payment experience must be specified".to_owned()))
                 .into())
             }
         }
@@ -698,12 +673,7 @@ fn convert_upi_source(
         .map(|source| {
             grpc_api_types::payments::UpiSource::try_from(source)
                 .map_err(|_| {
-                    error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_UPI_SOURCE".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Invalid UPI source value".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_UPI_SOURCE".to_owned(), 400, "Invalid UPI source value".to_owned())))
                 })
                 .and_then(payment_method_data::UpiSource::foreign_try_from)
         })
@@ -792,12 +762,7 @@ impl<
                             payment_method_data::CardRedirectData::CardRedirect {}
                         }
                         grpc_api_types::payments::card_redirect::CardRedirectType::Unspecified => {
-                            return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Card redirect type cannot be unspecified".to_owned(),
-                                error_object: None,
-                            })))
+                            return Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(), 400, "Card redirect type cannot be unspecified".to_owned()))))
                         }
                     };
                     Ok(Self::CardRedirect(card_redirect_data))
@@ -889,12 +854,7 @@ impl<
                         date_of_birth: Secret::<time::Date>::foreign_try_from(
                             mifinity_data
                                 .date_of_birth
-                                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                                    sub_code: "MISSING_DATE_OF_BIRTH".to_owned(),
-                                    error_identifier: 400,
-                                    error_message: "Missing Date of Birth".to_owned(),
-                                    error_object: None,
-                                }))?
+                                .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_DATE_OF_BIRTH".to_owned(), 400, "Missing Date of Birth".to_owned())))?
                                 .expose(),
                         )?,
                         language_preference: mifinity_data.language_preference,
@@ -902,12 +862,7 @@ impl<
                 ))),
                 grpc_api_types::payments::payment_method::PaymentMethod::ApplePay(apple_wallet) => {
                     let payment_data = apple_wallet.payment_data.ok_or_else(|| {
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_APPLE_PAY_PAYMENT_DATA".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Apple Pay payment data is required".to_owned(),
-                            error_object: None,
-                        })
+                        ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_APPLE_PAY_PAYMENT_DATA".to_owned(), 400, "Apple Pay payment data is required".to_owned()))
                     })?;
 
                     let applepay_payment_data = match payment_data.payment_data {
@@ -934,21 +889,11 @@ impl<
                                         }
                                     ))
                                 },
-                                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "MISSING_APPLE_PAY_DATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Apple Pay payment data is required".to_owned(),
-                                        error_object: None,
-                                    })))
+                                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_APPLE_PAY_DATA".to_owned(), 400, "Apple Pay payment data is required".to_owned()))))
                             }?;
 
                     let payment_method = apple_wallet.payment_method.ok_or_else(|| {
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_APPLE_PAY_PAYMENT_METHOD".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Apple Pay payment method is required".to_owned(),
-                            error_object: None,
-                        })
+                        ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_APPLE_PAY_PAYMENT_METHOD".to_owned(), 400, "Apple Pay payment method is required".to_owned()))
                     })?;
 
                     let wallet_data = payment_method_data::ApplePayWalletData {
@@ -968,21 +913,11 @@ impl<
                     google_wallet,
                 ) => {
                     let info = google_wallet.info.ok_or_else(|| {
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_GOOGLE_PAY_INFO".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Google Pay payment method info is required".to_owned(),
-                            error_object: None,
-                        })
+                        ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_GOOGLE_PAY_INFO".to_owned(), 400, "Google Pay payment method info is required".to_owned()))
                     })?;
 
                     let tokenization_data = google_wallet.tokenization_data.ok_or_else(|| {
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_GOOGLE_PAY_TOKENIZATION_DATA".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Google Pay tokenization data is required".to_owned(),
-                            error_object: None,
-                        })
+                        ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_GOOGLE_PAY_TOKENIZATION_DATA".to_owned(), 400, "Google Pay tokenization data is required".to_owned()))
                     })?;
 
                     // Handle the new oneof tokenization_data structure
@@ -1012,12 +947,7 @@ impl<
                                         }
                                     ))
                                 },
-                                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "MISSING_GOOGLE_PAY_TOKENIZATION_DATA".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Google Pay tokenization data variant is required".to_owned(),
-                                        error_object: None,
-                                    })))
+                                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_GOOGLE_PAY_TOKENIZATION_DATA".to_owned(), 400, "Google Pay tokenization data variant is required".to_owned()))))
                             }?;
 
                     let wallet_data = payment_method_data::GooglePayWalletData {
@@ -1064,12 +994,7 @@ impl<
                         token: paypal_sdk_wallet
                             .token
                             .ok_or_else(|| {
-                                ApplicationErrorResponse::BadRequest(ApiError {
-                                    sub_code: "MISSING_PAYPAL_SDK_TOKEN".to_owned(),
-                                    error_identifier: 400,
-                                    error_message: "PayPal SDK token is required".to_owned(),
-                                    error_object: None,
-                                })
+                                ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_PAYPAL_SDK_TOKEN".to_owned(), 400, "PayPal SDK token is required".to_owned()))
                             })?
                             .expose(),
                     },
@@ -1082,12 +1007,7 @@ impl<
                             email: match paypal_redirect.email {
                                 Some(ref email_str) => Some(
                                     Email::try_from(email_str.clone().expose()).change_context(
-                                        ApplicationErrorResponse::BadRequest(ApiError {
-                                            sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "Invalid email".to_owned(),
-                                            error_object: None,
-                                        }),
+                                        ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())),
                                     )?,
                                 ),
                                 None => None,
@@ -1124,12 +1044,7 @@ impl<
                 let credential = samsung_pay
                     .payment_credential
                     .ok_or_else(|| {
-                        ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_SAMSUNG_PAY_CREDENTIAL".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Samsung Pay payment credential is required".to_owned(),
-                            error_object: None,
-                        })
+                        ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_SAMSUNG_PAY_CREDENTIAL".to_owned(), 400, "Samsung Pay payment credential is required".to_owned()))
                     })?;
 
                 let domain_credential =
@@ -1303,12 +1218,7 @@ impl<
                         email: match interac.email {
                             Some(ref email_str) => Some(
                                 Email::try_from(email_str.clone().expose()).change_context(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid email for Interac".to_owned(),
-                                        error_object: None,
-                                    }),
+                                    ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email for Interac".to_owned())),
                                 )?,
                             ),
                             None => None,
@@ -1340,12 +1250,7 @@ impl<
                         email: match online_banking_finland.email {
                                 Some(ref email_str) => Some(
                                     Email::try_from(email_str.clone().expose()).change_context(
-                                        ApplicationErrorResponse::BadRequest(ApiError {
-                                            sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                                            error_identifier: 400,
-                                            error_message: "Invalid email".to_owned(),
-                                            error_object: None,
-                                        }),
+                                        ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())),
                                     )?,
                                 ),
                                 None => None,
@@ -1394,20 +1299,10 @@ impl<
                         card_holder_name: ach.card_holder_name,
                         bank_account_holder_name: ach.bank_account_holder_name,
                         account_number: ach.account_number.ok_or(
-                            ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_ACH_ACCOUNT_NUMBER".to_owned(),
-                                error_identifier: 400,
-                                error_message: "ACH account number is required".to_owned(),
-                                error_object: None,
-                            }),
+                            ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_ACH_ACCOUNT_NUMBER".to_owned(), 400, "ACH account number is required".to_owned())),
                         )?,
                         routing_number: ach.routing_number.ok_or(
-                            ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_ACH_ROUTING_NUMBER".to_owned(),
-                                error_identifier: 400,
-                                error_message: "ACH routing number is required".to_owned(),
-                                error_object: None,
-                            }),
+                            ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_ACH_ROUTING_NUMBER".to_owned(), 400, "ACH routing number is required".to_owned())),
                         )?,
                     }),
                 ),
@@ -1415,32 +1310,17 @@ impl<
                     Self::BankDebit(payment_method_data::BankDebitData::SepaBankDebit {
                         iban: sepa
                             .iban
-                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_SEPA_IBAN".to_owned(),
-                                error_identifier: 400,
-                                error_message: "SEPA IBAN is required".to_owned(),
-                                error_object: None,
-                            }))?,
+                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_SEPA_IBAN".to_owned(), 400, "SEPA IBAN is required".to_owned())))?,
                         bank_account_holder_name: sepa.bank_account_holder_name,
                     }),
                 ),
                 grpc_api_types::payments::payment_method::PaymentMethod::Bacs(bacs) => Ok(
                     Self::BankDebit(payment_method_data::BankDebitData::BacsBankDebit {
                         account_number: bacs.account_number.ok_or(
-                            ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_BACS_ACCOUNT_NUMBER".to_owned(),
-                                error_identifier: 400,
-                                error_message: "BACS account number is required".to_owned(),
-                                error_object: None,
-                            }),
+                            ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_BACS_ACCOUNT_NUMBER".to_owned(), 400, "BACS account number is required".to_owned())),
                         )?,
                         sort_code: bacs.sort_code.ok_or(ApplicationErrorResponse::BadRequest(
-                            ApiError {
-                                sub_code: "MISSING_BACS_SORT_CODE".to_owned(),
-                                error_identifier: 400,
-                                error_message: "BACS sort code is required".to_owned(),
-                                error_object: None,
-                            },
+                            ApiError::new("MISSING_BACS_SORT_CODE".to_owned(), 400, "BACS sort code is required".to_owned()),
                         ))?,
                         bank_account_holder_name: bacs.bank_account_holder_name,
                     }),
@@ -1448,20 +1328,10 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::Becs(becs) => Ok(
                     Self::BankDebit(payment_method_data::BankDebitData::BecsBankDebit {
                         account_number: becs.account_number.ok_or(
-                            ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_BECS_ACCOUNT_NUMBER".to_owned(),
-                                error_identifier: 400,
-                                error_message: "BECS account number is required".to_owned(),
-                                error_object: None,
-                            }),
+                            ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_BECS_ACCOUNT_NUMBER".to_owned(), 400, "BECS account number is required".to_owned())),
                         )?,
                         bsb_number: becs.bsb_number.ok_or(ApplicationErrorResponse::BadRequest(
-                            ApiError {
-                                sub_code: "MISSING_BECS_BSB_NUMBER".to_owned(),
-                                error_identifier: 400,
-                                error_message: "BECS BSB number is required".to_owned(),
-                                error_object: None,
-                            },
+                            ApiError::new("MISSING_BECS_BSB_NUMBER".to_owned(), 400, "BECS BSB number is required".to_owned()),
                         ))?,
                         bank_account_holder_name: becs.bank_account_holder_name,
                     }),
@@ -1470,12 +1340,7 @@ impl<
                     Self::BankDebit(payment_method_data::BankDebitData::SepaGuaranteedBankDebit {
                         iban: sepa_guaranteed_bank_debit
                             .iban
-                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_SEPA_guaranteed_IBAN".to_owned(),
-                                error_identifier: 400,
-                                error_message: "SEPA guaranteed IBAN is required".to_owned(),
-                                error_object: None,
-                            }))?,
+                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_SEPA_guaranteed_IBAN".to_owned(), 400, "SEPA guaranteed IBAN is required".to_owned())))?,
                         bank_account_holder_name: sepa_guaranteed_bank_debit.bank_account_holder_name,
                     }),
                 ),
@@ -1496,28 +1361,13 @@ impl<
                     card_details_for_nti,
                 ) => {
                     let card_number = card_details_for_nti.card_number
-                        .ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_CARD_NUMBER".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Missing card number for network transaction ID".to_owned(),
-                            error_object: None,
-                        }))?;
+                        .ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CARD_NUMBER".to_owned(), 400, "Missing card number for network transaction ID".to_owned())))?;
 
                     Ok(Self::CardDetailsForNetworkTransactionId(
                         payment_method_data::CardDetailsForNetworkTransactionId {
                             card_number,
-                            card_exp_month: card_details_for_nti.card_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_CARD_EXP_MONTH".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Missing card expiration month".to_owned(),
-                                error_object: None,
-                            }))?,
-                            card_exp_year: card_details_for_nti.card_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_CARD_EXP_YEAR".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Missing card expiration year".to_owned(),
-                                error_object: None,
-                            }))?,
+                            card_exp_month: card_details_for_nti.card_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CARD_EXP_MONTH".to_owned(), 400, "Missing card expiration month".to_owned())))?,
+                            card_exp_year: card_details_for_nti.card_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CARD_EXP_YEAR".to_owned(), 400, "Missing card expiration year".to_owned())))?,
                             card_issuer: card_details_for_nti.card_issuer,
                             card_network: card_details_for_nti
                                 .card_network
@@ -1535,27 +1385,12 @@ impl<
                     network_token_data,
                 ) => {
                     let token_number = network_token_data.token_number
-                        .ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_NETWORK_TOKEN".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Missing network token".to_owned(),
-                            error_object: None,
-                        }))?;
+                        .ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_NETWORK_TOKEN".to_owned(), 400, "Missing network token".to_owned())))?;
 
                     Ok(Self::NetworkToken(payment_method_data::NetworkTokenData {
                         token_number,
-                        token_exp_month: network_token_data.token_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_TOKEN_EXP_MONTH".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Missing token expiration month".to_owned(),
-                            error_object: None,
-                        }))?,
-                        token_exp_year: network_token_data.token_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "MISSING_TOKEN_EXP_YEAR".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Missing token expiration year".to_owned(),
-                            error_object: None,
-                        }))?,
+                        token_exp_month: network_token_data.token_exp_month.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_TOKEN_EXP_MONTH".to_owned(), 400, "Missing token expiration month".to_owned())))?,
+                        token_exp_year: network_token_data.token_exp_year.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_TOKEN_EXP_YEAR".to_owned(), 400, "Missing token expiration year".to_owned())))?,
                         token_cryptogram: network_token_data.token_cryptogram,
                         card_issuer: network_token_data.card_issuer,
                         card_network: network_token_data
@@ -1675,18 +1510,8 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::Givex(givex_data) => {
                     Ok(Self::GiftCard(Box::new(
                         payment_method_data::GiftCardData::Givex(payment_method_data::GiftCardDetails {
-                            number: givex_data.number.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_GIVEX_NUMBER".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Missing Givex gift card number".to_owned(),
-                                error_object: None,
-                            }))?,
-                            cvc: givex_data.cvc.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "MISSING_GIVEX_CVC".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Missing Givex gift card CVC".to_owned(),
-                                error_object: None,
-                            }))?,
+                            number: givex_data.number.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_GIVEX_NUMBER".to_owned(), 400, "Missing Givex gift card number".to_owned())))?,
+                            cvc: givex_data.cvc.ok_or_else(|| ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_GIVEX_CVC".to_owned(), 400, "Missing Givex gift card CVC".to_owned())))?,
                         }),
                     )))
                 }
@@ -1763,19 +1588,9 @@ impl<
                     ))))
                 }
 
-                _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                    error_identifier: 400,
-                    error_message: "This payment method type is not yet supported".to_owned(),
-                    error_object: None,
-                }))),
+                _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("UNSUPPORTED_PAYMENT_METHOD".to_owned(), 400, "This payment method type is not yet supported".to_owned())))),
             },
-            None => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data is required".to_owned(),
-                error_object: None,
-            })
+            None => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data is required".to_owned()))
             .into()),
         }
     }
@@ -1791,12 +1606,7 @@ impl ForeignTryFrom<grpc_api_types::payments::BankType> for common_enums::BankTy
             grpc_api_types::payments::BankType::Checking => Ok(common_enums::BankType::Checking),
             grpc_api_types::payments::BankType::Savings => Ok(common_enums::BankType::Savings),
             grpc_api_types::payments::BankType::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_BANK_TYPE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid bank type".to_owned(),
-                    error_object: None,
-                }))?
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_BANK_TYPE".to_owned(), 400, "Invalid bank type".to_owned())))?
             }
         }
     }
@@ -1816,12 +1626,7 @@ impl ForeignTryFrom<grpc_api_types::payments::BankHolderType> for common_enums::
                 Ok(common_enums::BankHolderType::Business)
             }
             grpc_api_types::payments::BankHolderType::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_BANK_HOLDER_TYPE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid bank holder type".to_owned(),
-                    error_object: None,
-                }))?
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_BANK_HOLDER_TYPE".to_owned(), 400, "Invalid bank holder type".to_owned())))?
             }
         }
     }
@@ -1891,12 +1696,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
                 Ok(Some(PaymentMethodType::InstantBankTransferPoland))
             }
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
-                error_identifier: 400,
-                error_message: "This payment method type is not yet supported".to_owned(),
-                error_object: None,
-            })
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_TYPE".to_owned(), 400, "This payment method type is not yet supported".to_owned()))
             .into()),
         }
     }
@@ -1934,12 +1734,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                             Ok(Some(PaymentMethodType::CardRedirect))
                         }
                         grpc_api_types::payments::card_redirect::CardRedirectType::Unspecified => {
-                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                                sub_code: "UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(),
-                                error_identifier: 400,
-                                error_message: "Card redirect type cannot be unspecified".to_owned(),
-                                error_object: None,
-                            })))
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_CARD_REDIRECT_TYPE".to_owned(), 400, "Card redirect type cannot be unspecified".to_owned()))))
                         }
                     }
                 }
@@ -2126,12 +1921,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::DanamonVaBankTransfer(_) => Ok(Some(PaymentMethodType::DanamonVa)),
                 grpc_api_types::payments::payment_method::PaymentMethod::MandiriVaBankTransfer(_) => Ok(Some(PaymentMethodType::MandiriVa)),
             },
-            None => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data is required".to_owned(),
-                error_object: None,
-            })
+            None => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data is required".to_owned()))
             .into()),
         }
     }
@@ -2156,37 +1946,17 @@ impl CardConversionHelper<Self> for DefaultPCIHolder {
         };
         Ok(payment_method_data::Card {
             card_number: RawCardNumber::<Self>(card.card_number.ok_or(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_CARD_NUMBER".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing card number".to_owned(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CARD_NUMBER".to_owned(), 400, "Missing card number".to_owned())),
             )?),
             card_exp_month: card
                 .card_exp_month
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_MONTH".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Month".to_owned(),
-                    error_object: None,
-                }))?,
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_EXP_MONTH".to_owned(), 400, "Missing Card Expiry Month".to_owned())))?,
             card_exp_year: card
                 .card_exp_year
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_YEAR".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Year".to_owned(),
-                    error_object: None,
-                }))?,
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_EXP_YEAR".to_owned(), 400, "Missing Card Expiry Year".to_owned())))?,
             card_cvc: card
                 .card_cvc
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_CVC".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing CVC".to_owned(),
-                    error_object: None,
-                }))?,
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CVC".to_owned(), 400, "Missing CVC".to_owned())))?,
             card_issuer: card.card_issuer,
             card_network,
             card_type: card.card_type,
@@ -2208,38 +1978,18 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
         Ok(payment_method_data::Card {
             card_number: RawCardNumber(
                 card.card_number
-                    .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "MISSING_CARD_NUMBER".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Missing card number".to_owned(),
-                        error_object: None,
-                    }))
+                    .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CARD_NUMBER".to_owned(), 400, "Missing card number".to_owned())))
                     .map(|cn| cn.get_card_no())?,
             ),
             card_exp_month: card
                 .card_exp_month
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_MONTH".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Month".to_owned(),
-                    error_object: None,
-                }))?,
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_EXP_MONTH".to_owned(), 400, "Missing Card Expiry Month".to_owned())))?,
             card_exp_year: card
                 .card_exp_year
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_EXP_YEAR".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing Card Expiry Year".to_owned(),
-                    error_object: None,
-                }))?,
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_EXP_YEAR".to_owned(), 400, "Missing Card Expiry Year".to_owned())))?,
             card_cvc: card
                 .card_cvc
-                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_CVC".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing CVC".to_owned(),
-                    error_object: None,
-                }))?,
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CVC".to_owned(), 400, "Missing CVC".to_owned())))?,
             card_issuer: card.card_issuer,
             card_network: None,
             card_type: card.card_type,
@@ -2456,25 +2206,14 @@ impl<
         let amount = match value.amount {
             Some(amount) => amount,
             None => {
-                return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_AMOUNT".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Amount is required".to_owned(),
-                    error_object: None,
-                })));
+                return Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required".to_owned()))));
             }
         };
         let email: Option<Email> = match value.customer.clone().and_then(|customer| customer.email)
         {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
@@ -2562,20 +2301,10 @@ impl<
             capture_method: Some(CaptureMethod::foreign_try_from(value.capture_method())?),
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
                 value.payment_method.clone().ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
+                    ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data is required".to_owned()))
                 })?,
             )
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data construction failed".to_owned(),
-                error_object: None,
-            }))?,
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data construction failed".to_owned())))?,
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             confirm: true,
@@ -2588,12 +2317,7 @@ impl<
                 .transpose()?,
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 value.payment_method.clone().ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
+                    ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data is required".to_owned()))
                 })?,
             )?,
             minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
@@ -2619,12 +2343,7 @@ impl<
                 .and_then(|customer| customer.connector_customer_id)
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CUSTOMER_ID".to_owned(), 400, "Failed to parse Customer Id".to_owned())))?,
             request_incremental_authorization: value.request_incremental_authorization,
             metadata: value
                 .metadata
@@ -2694,12 +2413,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for Address {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email = match value.email.clone() {
             Some(email) => Some(Email::from_str(&email.expose()).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL".to_owned(), 400, "Invalid email".to_owned())),
             )?),
             None => None,
         };
@@ -2721,12 +2435,7 @@ impl ForeignTryFrom<common_enums::Currency> for grpc_api_types::payments::Curren
         currency: common_enums::Currency,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let grpc_currency = Self::from_str_name(&currency.to_string()).ok_or_else(|| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CURRENCY".to_owned(),
-                error_identifier: 400,
-                error_message: "Failed to parse Currency".to_owned(),
-                error_object: None,
-            })
+            ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CURRENCY".to_owned(), 400, "Failed to parse Currency".to_owned()))
         })?;
         Ok(grpc_currency)
     }
@@ -2737,12 +2446,7 @@ impl ForeignTryFrom<CountryAlpha2> for grpc_api_types::payments::CountryAlpha2 {
 
     fn foreign_try_from(country: CountryAlpha2) -> Result<Self, error_stack::Report<Self::Error>> {
         let grpc_country = Self::from_str_name(&country.to_string()).ok_or_else(|| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CURRENCY".to_owned(),
-                error_identifier: 400,
-                error_message: "Failed to parse Currency".to_owned(),
-                error_object: None,
-            })
+            ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CURRENCY".to_owned(), 400, "Failed to parse Currency".to_owned()))
         })?;
         Ok(grpc_country)
     }
@@ -3048,12 +2752,7 @@ impl ForeignTryFrom<grpc_api_types::payments::OrderDetailsWithAmount> for OrderD
         Ok(Self {
             product_name: item.product_name,
             quantity: u16::try_from(item.quantity).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_QUANTITY".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Quantity value is out of range for u16".to_owned(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_QUANTITY".to_owned(), 400, "Quantity value is out of range for u16".to_owned())),
             )?,
             amount: common_utils::types::MinorUnit::new(item.amount),
             tax_rate: item.tax_rate,
@@ -3180,12 +2879,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                 )?
             }
             None => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_ADDRESS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Address is required".to_owned(),
-                    error_object: None,
-                }))?
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_ADDRESS".to_owned(), 400, "Address is required".to_owned())))?
             }
         };
 
@@ -3244,12 +2938,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
                 .and_then(|customer| customer.connector_customer_id)
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CUSTOMER_ID".to_owned(), 400, "Failed to parse Customer Id".to_owned())))?,
             connector_customer: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id),
@@ -3984,12 +3673,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     connector_response,
                 }
             }
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response from connector".to_owned())))?,
         },
         Err(err) => {
             let status = match err.get_attempt_status_for_grpc(
@@ -4383,12 +4067,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_)),
             } => Ok(Self::BankDebit),
-            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                error_identifier: 400,
-                error_message: "Unsupported payment method".to_owned(),
-                error_object: None,
-            }))),
+            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("UNSUPPORTED_PAYMENT_METHOD".to_owned(), 400, "Unsupported payment method".to_owned())))),
         }
     }
 }
@@ -4418,12 +4097,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         let capture_method = Some(CaptureMethod::foreign_try_from(value.capture_method())?);
         let amount = value
             .amount
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required".to_owned(),
-                error_object: None,
-            }))?;
+            .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required".to_owned())))?;
         let currency = common_enums::Currency::foreign_try_from(amount.currency())?;
         // Create ResponseId from resource_id
         let connector_transaction_id =
@@ -4685,12 +4359,7 @@ pub fn generate_payment_void_response(
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
-                ApiError {
-                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
-                    error_identifier: 500,
-                    error_message: "Invalid response type received from connector".to_owned(),
-                    error_object: None,
-                }
+                ApiError::new("INVALID_RESPONSE_TYPE".to_owned(), 500, "Invalid response type received from connector".to_owned())
             ))),
         },
         Err(e) => {
@@ -4790,12 +4459,7 @@ pub fn generate_payment_void_post_capture_response(
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
-                ApiError {
-                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
-                    error_identifier: 500,
-                    error_message: "Invalid response type received from connector".to_owned(),
-                    error_object: None,
-                }
+                ApiError::new("INVALID_RESPONSE_TYPE".to_owned(), 500, "Invalid response type received from connector".to_owned())
             ))),
         },
         Err(e) => {
@@ -5027,12 +4691,7 @@ pub fn generate_payment_sync_response(
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
-                ApiError {
-                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
-                    error_identifier: 500,
-                    error_message: "Invalid response type received from connector".to_owned(),
-                    error_object: None,
-                }
+                ApiError::new("INVALID_RESPONSE_TYPE".to_owned(), 500, "Invalid response type received from connector".to_owned())
             ))),
         },
         Err(e) => {
@@ -5312,13 +4971,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::Benefit => Ok(Self::CardRedirect),
             grpc_api_types::payments::PaymentMethodType::MomoAtm => Ok(Self::CardRedirect),
 
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(),
-                error_identifier: 400,
-                error_message: "This payment method type cannot be mapped to a high-level category"
-                    .to_owned(),
-                error_object: None,
-            })
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(), 400, "This payment method type cannot be mapped to a high-level category"
+                    .to_owned()))
             .into()),
         }
     }
@@ -5417,12 +5071,7 @@ impl ForeignTryFrom<router_response_types::RedirectForm>
             | router_response_types::RedirectForm::Payme
             | router_response_types::RedirectForm::Nmi { .. }
             | router_response_types::RedirectForm::WorldpayDDCForm { .. } => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_REDIRECT_FORM_TYPE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "RedirectForm type not supported in gRPC API".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSUPPORTED_REDIRECT_FORM_TYPE".to_owned(), 400, "RedirectForm type not supported in gRPC API".to_owned()))
                 .into())
             }
         }
@@ -5987,21 +5636,11 @@ impl ForeignTryFrom<PaymentServiceIncrementalAuthorizationRequest>
             .connector_feature_data
             .map(|metadata| serde_json::from_str(&metadata.expose()))
             .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Failed to parse connector metadata".to_owned(),
-                error_object: None,
-            }))?;
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CONNECTOR_METADATA".to_owned(), 400, "Failed to parse connector metadata".to_owned())))?;
 
         let amount = value
             .amount
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required".to_owned(),
-                error_object: None,
-            }))?;
+            .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required".to_owned())))?;
 
         Ok(Self {
             minor_amount: common_utils::types::MinorUnit::new(amount.minor_amount),
@@ -6192,12 +5831,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let refund_amount = value
             .refund_amount
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Refund amount is required".to_owned(),
-                error_object: None,
-            }))?;
+            .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Refund amount is required".to_owned())))?;
 
         let minor_refund_amount = common_utils::types::MinorUnit::new(refund_amount.minor_amount);
 
@@ -6496,12 +6130,7 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateSdkSessionTokenRequest>
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
 
         let payment_method_type =
@@ -6511,13 +6140,7 @@ impl ForeignTryFrom<MerchantAuthenticationServiceCreateSdkSessionTokenRequest>
         {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
@@ -6571,12 +6194,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
 
         Ok(Self {
@@ -6706,12 +6324,7 @@ impl
                 .connector_feature_data
                 .map(|metadata| serde_json::from_str(&metadata.expose()))
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ACCOUNT_METADATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse merchant account metadata".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_MERCHANT_ACCOUNT_METADATA".to_owned(), 400, "Failed to parse merchant account metadata".to_owned())))?,
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
@@ -6797,12 +6410,7 @@ pub fn generate_payment_incremental_authorization_response(
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
-                ApiError {
-                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
-                    error_identifier: 500,
-                    error_message: "Invalid response type received from connector".to_owned(),
-                    error_object: None,
-                }
+                ApiError::new("INVALID_RESPONSE_TYPE".to_owned(), 500, "Invalid response type received from connector".to_owned())
             ))),
         },
         Err(e) => Ok(PaymentServiceIncrementalAuthorizationResponse {
@@ -6915,12 +6523,7 @@ pub fn generate_payment_capture_response(
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
-                ApiError {
-                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
-                    error_identifier: 500,
-                    error_message: "Invalid response type received from connector".to_owned(),
-                    error_object: None,
-                }
+                ApiError::new("INVALID_RESPONSE_TYPE".to_owned(), 500, "Invalid response type received from connector".to_owned())
             ))),
         },
         Err(e) => {
@@ -6984,12 +6587,7 @@ impl
         let address = match value.address {
             Some(address) => PaymentAddress::foreign_try_from(address)?,
             None => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_ADDRESS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Address is required".to_owned(),
-                    error_object: None,
-                }))?
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_ADDRESS".to_owned(), 400, "Address is required".to_owned())))?
             }
         };
 
@@ -7043,12 +6641,7 @@ impl
                 .clone()
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CUSTOMER_ID".to_owned(), 400, "Failed to parse Customer Id".to_owned())))?,
             connector_customer: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id),
@@ -7102,12 +6695,7 @@ impl
         let address = match value.address {
             Some(address) => PaymentAddress::foreign_try_from(address)?,
             None => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_ADDRESS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Address is required".to_owned(),
-                    error_object: None,
-                }))?
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_ADDRESS".to_owned(), 400, "Address is required".to_owned())))?
             }
         };
 
@@ -7148,12 +6736,7 @@ impl
                 .and_then(|customer| customer.id)
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CUSTOMER_ID".to_owned(), 400, "Failed to parse Customer Id".to_owned())))?,
             connector_customer: value
                 .customer
                 .and_then(|customer| customer.connector_customer_id),
@@ -7210,24 +6793,13 @@ impl<
         {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
         };
         let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
-            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
-                error_identifier: 400,
-                error_message: "Customer acceptance is missing".to_owned(),
-                error_object: None,
-            }))
+            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_CUSTOMER_ACCEPTANCE".to_owned(), 400, "Customer acceptance is missing".to_owned())))
         })?;
 
         let amount = match value.amount {
@@ -7235,12 +6807,7 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
 
         let setup_future_usage = value.setup_future_usage();
@@ -7277,12 +6844,7 @@ impl<
             currency: amount.currency,
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
                 value.payment_method.ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
+                    ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data is required".to_owned()))
                 })?,
             )?,
             amount: Some(0),
@@ -7322,12 +6884,7 @@ impl<
                 .clone()
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CUSTOMER_ID".to_owned(), 400, "Failed to parse Customer Id".to_owned())))?,
             billing_descriptor,
             merchant_order_id: value.merchant_order_id,
             payment_channel,
@@ -7358,12 +6915,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentChannel> for common_enums::
                 Ok(common_enums::PaymentChannel::TelephoneOrder)
             }
             grpc_payment_types::PaymentChannel::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_PAYMENT_CHANNEL".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment channel type must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_PAYMENT_CHANNEL".to_owned(), 400, "Payment channel type must be specified".to_owned()))
                 .into())
             }
         }
@@ -7535,12 +7087,7 @@ impl ForeignTryFrom<&grpc_api_types::payments::TaxStatus> for common_enums::TaxS
             grpc_api_types::payments::TaxStatus::Exempt => Ok(Self::Exempt),
             grpc_api_types::payments::TaxStatus::Taxable => Ok(Self::Taxable),
             grpc_api_types::payments::TaxStatus::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_TAX_STATUS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Tax status must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_TAX_STATUS".to_owned(), 400, "Tax status must be specified".to_owned()))
                 .into())
             }
         }
@@ -7557,23 +7104,12 @@ impl ForeignTryFrom<&grpc_api_types::payments::Customer> for CustomerInfo {
             .clone()
             .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
             .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                error_identifier: 400,
-                error_message: "Failed to parse Customer Id".to_owned(),
-                error_object: None,
-            }))?;
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CUSTOMER_ID".to_owned(), 400, "Failed to parse Customer Id".to_owned())))?;
 
         let customer_email: Option<Email> = match value.email {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
@@ -7610,12 +7146,7 @@ impl ForeignTryFrom<grpc_api_types::payments::AcceptanceType> for mandates::Acce
             grpc_payment_types::AcceptanceType::Offline => Ok(Self::Offline),
             grpc_payment_types::AcceptanceType::Online => Ok(Self::Online),
             grpc_payment_types::AcceptanceType::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_ACCEPTANCE_TYPE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Acceptance type must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_ACCEPTANCE_TYPE".to_owned(), 400, "Acceptance type must be specified".to_owned()))
                 .into())
             }
         }
@@ -7714,12 +7245,7 @@ impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::Fut
             grpc_api_types::payments::FutureUsage::OffSession => Ok(Self::OffSession),
             grpc_api_types::payments::FutureUsage::OnSession => Ok(Self::OnSession),
             grpc_api_types::payments::FutureUsage::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_FUTURE_USAGE".to_owned(),
-                    error_identifier: 401,
-                    error_message: "Future usage must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_FUTURE_USAGE".to_owned(), 401, "Future usage must be specified".to_owned()))
                 .into())
             }
         }
@@ -7745,12 +7271,7 @@ impl ForeignTryFrom<grpc_api_types::payments::MitCategory> for common_enums::Mit
                 Ok(common_enums::MitCategory::Resubmission)
             }
             grpc_api_types::payments::MitCategory::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_MIT_CATEGORY".to_owned(),
-                    error_identifier: 401,
-                    error_message: "Mit category must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_MIT_CATEGORY".to_owned(), 401, "Mit category must be specified".to_owned()))
                 .into())
             }
         }
@@ -7874,12 +7395,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                                     })
                                 },
                                 _ => Err(Box::new(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))),
+                                    ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response from connector".to_owned())))),
                             }
                         }
                     ).transpose().map_err(|e| *e)?,
@@ -7900,12 +7416,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     captured_amount: minor_captured_amount,
                 }
             }
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response from connector".to_owned())))?,
         },
         Err(err) => {
             let status = match err.get_attempt_status_for_grpc(
@@ -8113,12 +7624,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCreateOrderRequest>
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
         let webhook_url = value.webhook_url.clone();
         let payment_method_type = <Option<common_enums::PaymentMethodType>>::foreign_try_from(
@@ -8433,12 +7939,7 @@ impl ForeignTryFrom<String> for Secret<time::Date> {
         )
         .map_err(|err| {
             tracing::error!("Failed to parse date string: {}", err);
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_DATE_FORMAT".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid date format".to_owned(),
-                error_object: None,
-            })
+            ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_DATE_FORMAT".to_owned(), 400, "Invalid date format".to_owned()))
         })?;
         Ok(Self::new(date))
     }
@@ -8481,12 +7982,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for SessionTokenRequestData 
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
         Ok(Self {
             amount: amount.amount,
@@ -8625,12 +8121,7 @@ impl
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for session token creation".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for session token creation".to_owned())))),
         }?;
 
         Ok(Self {
@@ -8775,12 +8266,7 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for payment method tokenization".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for payment method tokenization".to_owned())))),
         }?;
         let currency = money.currency;
 
@@ -8789,12 +8275,7 @@ impl<
             currency,
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
                 value.payment_method.ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
+                    ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data is required".to_owned()))
                 })?,
             )?,
             browser_info: None,
@@ -8860,12 +8341,7 @@ impl
                 .and_then(|customer| customer.id)
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_CUSTOMER_ID".to_owned(), 400, "Failed to parse Customer Id".to_owned())))?,
             connector_customer: value.customer.unwrap().id,
             description: None,
             return_url: value.return_url,
@@ -9127,12 +8603,7 @@ impl<
         let email: Option<Email> = match value.email {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
@@ -9160,31 +8631,16 @@ impl<
                     token_exp_month: nti.token_exp_month,
                     token_exp_year: nti.token_exp_year,
                 }),
-                None => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MANDATE_REFERENCE_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Mandate reference id is required".to_owned(),
-                    error_object: None,
-                }))?,
+                None => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_MANDATE_REFERENCE_ID".to_owned(), 400, "Mandate reference id is required".to_owned())))?,
             },
-            None => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_MANDATE_REFERENCE".to_owned(),
-                error_identifier: 400,
-                error_message: "Mandate reference is required for repeat payments".to_owned(),
-                error_object: None,
-            }))?,
+            None => Err(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_MANDATE_REFERENCE".to_owned(), 400, "Mandate reference is required for repeat payments".to_owned())))?,
         };
 
         let payment_method_data = value
             .payment_method
             .map(PaymentMethodData::<T>::foreign_try_from)
             .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data construction failed".to_owned(),
-                error_object: None,
-            }))?
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data construction failed".to_owned())))?
             .unwrap_or(PaymentMethodData::MandatePayment);
 
         let billing_descriptor =
@@ -9210,12 +8666,7 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
 
         Ok(Self {
@@ -9378,12 +8829,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                     incremental_authorization_allowed,
                 },
             ),
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response from connector".to_owned())))?,
         },
         Err(err) => {
             let status = match err.get_attempt_status_for_grpc(
@@ -9444,12 +8890,7 @@ impl ForeignTryFrom<&grpc_api_types::payments::AccessToken> for AccessTokenRespo
         let access_token = token
             .token
             .clone()
-            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_ACCESS_TOKEN".to_owned(),
-                error_identifier: 400,
-                error_message: "Access Token is missing".to_owned(),
-                error_object: None,
-            }))?;
+            .ok_or(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_ACCESS_TOKEN".to_owned(), 400, "Access Token is missing".to_owned())))?;
         Ok(Self {
             access_token,
             token_type: token.token_type.clone(),
@@ -9547,12 +8988,7 @@ pub fn generate_payment_sdk_session_token_response(
                     })
                 }
                 _ => Err(report!(ApplicationErrorResponse::InternalServerError(
-                    ApiError {
-                        sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
-                        error_identifier: 500,
-                        error_message: "Invalid response type received from connector".to_owned(),
-                        error_object: None,
-                    }
+                    ApiError::new("INVALID_RESPONSE_TYPE".to_owned(), 500, "Invalid response type received from connector".to_owned())
                 ))),
             }
         }
@@ -9838,12 +9274,7 @@ impl ForeignTryFrom<grpc_api_types::payments::BankNames> for common_enums::BankN
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
             grpc_api_types::payments::BankNames::Unspecified => {
-                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_BANK_NAME".to_owned(),
-                    error_identifier: 401,
-                    error_message: "Bank name must be specified".to_owned(),
-                    error_object: None,
-                })))
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("UNSPECIFIED_BANK_NAME".to_owned(), 401, "Bank name must be specified".to_owned()))))
             }
             grpc_api_types::payments::BankNames::AmericanExpress => Ok(Self::AmericanExpress),
             grpc_api_types::payments::BankNames::AffinBank => Ok(Self::AffinBank),
@@ -10069,12 +9500,7 @@ impl<
         let email: Option<Email> = match value.customer.and_then(|c| c.email) {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
@@ -10085,12 +9511,7 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
         let return_url = value.return_url;
         let enrolled_for_3ds = value.enrolled_for_3ds;
@@ -10103,12 +9524,7 @@ impl<
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data construction failed".to_owned())))?,
             amount: amount.amount,
             currency: Some(amount.currency),
             email,
@@ -10119,24 +9535,14 @@ impl<
                 .continue_redirection_url
                 .map(|url_str| {
                     url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
-                        ApiError {
-                            sub_code: "INVALID_URL".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid continue redirection URL".to_owned(),
-                            error_object: None,
-                        },
+                        ApiError::new("INVALID_URL".to_owned(), 400, "Invalid continue redirection URL".to_owned()),
                     ))
                 })
                 .transpose()?,
             router_return_url: return_url
                 .map(|url_str| {
                     url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
-                        ApiError {
-                            sub_code: "INVALID_URL".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid router return URL".to_owned(),
-                            error_object: None,
-                        },
+                        ApiError::new("INVALID_URL".to_owned(), 400, "Invalid router return URL".to_owned()),
                     ))
                 })
                 .transpose()?,
@@ -10182,12 +9588,7 @@ impl<
         let email: Option<Email> = match value.customer.and_then(|c| c.email) {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
@@ -10198,12 +9599,7 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
         let return_url = value.return_url;
 
@@ -10229,12 +9625,7 @@ impl<
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data construction failed".to_owned())))?,
             amount: amount.amount,
             email,
             currency: Some(amount.currency),
@@ -10244,12 +9635,7 @@ impl<
             router_return_url: return_url
                 .map(|url_str| {
                     url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
-                        ApiError {
-                            sub_code: "INVALID_URL".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid router return URL".to_owned(),
-                            error_object: None,
-                        },
+                        ApiError::new("INVALID_URL".to_owned(), 400, "Invalid router return URL".to_owned()),
                     ))
                 })
                 .transpose()?,
@@ -10257,12 +9643,7 @@ impl<
                 .continue_redirection_url
                 .map(|url_str| {
                     url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
-                        ApiError {
-                            sub_code: "INVALID_URL".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid continue redirection URL".to_owned(),
-                            error_object: None,
-                        },
+                        ApiError::new("INVALID_URL".to_owned(), 400, "Invalid continue redirection URL".to_owned()),
                     ))
                 })
                 .transpose()?,
@@ -10312,12 +9693,7 @@ impl<
         let email: Option<Email> = match value.customer.and_then(|c| c.email) {
             Some(ref email_str) => {
                 Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_EMAIL_FORMAT".to_owned(), 400, "Invalid email".to_owned())))
                 })?)
             }
             None => None,
@@ -10328,12 +9704,7 @@ impl<
                 amount: common_utils::types::MinorUnit::new(amount.minor_amount),
                 currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
+            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError::new("MISSING_AMOUNT".to_owned(), 400, "Amount is required for repeat payments".to_owned())))),
         }?;
         let return_url = value.return_url;
 
@@ -10358,12 +9729,7 @@ impl<
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
                 .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_PAYMENT_METHOD_DATA".to_owned(), 400, "Payment method data construction failed".to_owned())))?,
             amount: amount.amount,
             currency: Some(amount.currency),
             email,
@@ -10373,12 +9739,7 @@ impl<
             router_return_url: return_url
                 .map(|url_str| {
                     url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
-                        ApiError {
-                            sub_code: "INVALID_URL".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid router return URL".to_owned(),
-                            error_object: None,
-                        },
+                        ApiError::new("INVALID_URL".to_owned(), 400, "Invalid router return URL".to_owned()),
                     ))
                 })
                 .transpose()?,
@@ -10386,12 +9747,7 @@ impl<
                 .continue_redirection_url
                 .map(|url_str| {
                     url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
-                        ApiError {
-                            sub_code: "INVALID_URL".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid continue redirection URL".to_owned(),
-                            error_object: None,
-                        },
+                        ApiError::new("INVALID_URL".to_owned(), 400, "Invalid continue redirection URL".to_owned()),
                     ))
                 })
                 .transpose()?,
@@ -10426,12 +9782,7 @@ impl
         let address = match value.address {
             Some(address) => PaymentAddress::foreign_try_from(address)?,
             None => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_ADDRESS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Address is required".to_owned(),
-                    error_object: None,
-                }))?
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_ADDRESS".to_owned(), 400, "Address is required".to_owned())))?
             }
         };
 
@@ -10504,12 +9855,7 @@ impl
         let address = match &value.address {
             Some(address_value) => PaymentAddress::foreign_try_from((*address_value).clone())?,
             None => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_ADDRESS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Address is required".to_owned(),
-                    error_object: None,
-                }))?
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_ADDRESS".to_owned(), 400, "Address is required".to_owned())))?
             }
         };
 
@@ -10593,12 +9939,7 @@ impl
         let address = match &value.address {
             Some(address_value) => PaymentAddress::foreign_try_from((*address_value).clone())?,
             None => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_ADDRESS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Address is required".to_owned(),
-                    error_object: None,
-                }))?
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_ADDRESS".to_owned(), 400, "Address is required".to_owned())))?
             }
         };
 
@@ -10894,12 +10235,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             })
                         }
-                        _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_RESPONSE".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid response from connector".to_owned(),
-                            error_object: None,
-                        }))?,
+                        _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response from connector".to_owned())))?,
                     })
                     .transpose()?,
                 connector_feature_data: None,
@@ -10914,12 +10250,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 authentication_data: authentication_data.map(ForeignFrom::foreign_from),
             },
             _ => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_RESPONSE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid response type for pre authenticate".to_owned(),
-                    error_object: None,
-                })
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response type for pre authenticate".to_owned()))
                 .into())
             }
         },
@@ -11071,12 +10402,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             })
                         }
-                        _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_RESPONSE".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Invalid response from connector".to_owned(),
-                            error_object: None,
-                        }))?,
+                        _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response from connector".to_owned())))?,
                     })
                     .transpose()?,
                 connector_feature_data: None,
@@ -11090,12 +10416,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 state: None,
             },
             _ => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_RESPONSE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid response type for authenticate".to_owned(),
-                    error_object: None,
-                })
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response type for authenticate".to_owned()))
                 .into())
             }
         },
@@ -11182,12 +10503,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 state: None,
             },
             _ => {
-                return Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_RESPONSE".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid response type for post authenticate".to_owned(),
-                    error_object: None,
-                })
+                return Err(ApplicationErrorResponse::BadRequest(ApiError::new("INVALID_RESPONSE".to_owned(), 400, "Invalid response type for post authenticate".to_owned()))
                 .into())
             }
         },

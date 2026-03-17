@@ -90,159 +90,51 @@ pub enum ConfigurationError {
 
 impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
     fn switch(&self) -> ApplicationErrorResponse {
-        match self {
-            Self::FailedToObtainIntegrationUrl
-            | Self::FailedToObtainPreferredConnector
-            | Self::FailedToObtainAuthType
-            | Self::FailedToObtainCertificate
-            | Self::FailedToObtainCertificateKey
-            | Self::RequestEncodingFailed
-            | Self::RequestEncodingFailedWithReason(_)
-            | Self::ParsingFailed
-            | Self::ResponseDeserializationFailed
-            | Self::ResponseHandlingFailed
-            | Self::WebhookResponseEncodingFailed
-            | Self::ProcessingStepFailed(_)
-            | Self::UnexpectedResponseError(_)
-            | Self::RoutingRulesParsingError
-            | Self::FailedAtConnector { .. }
-            | Self::AmountConversionFailed
-            | Self::GenericError { .. }
-            | Self::MandatePaymentDataMismatch { .. } => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
-                    error_identifier: 500,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-            Self::InvalidConnectorName
-            | Self::InvalidWallet
-            | Self::MissingRequiredField { .. }
-            | Self::MissingRequiredFields { .. }
-            | Self::InvalidDateFormat
-            | Self::NotSupported { .. }
-            | Self::FlowNotSupported { .. }
-            | Self::DateFormattingFailed
-            | Self::InvalidDataFormat { .. }
-            | Self::MismatchedPaymentData
-            | Self::InvalidWalletToken { .. }
-            | Self::FileValidationFailed { .. }
-            | Self::MissingConnectorRedirectionPayload { .. }
-            | Self::MissingPaymentMethodType
-            | Self::CurrencyNotSupported { .. }
-            | Self::NoConnectorWalletDetails
-            | Self::MissingConnectorMandateMetadata
-            | Self::IntegrityCheckFailed { .. }
-            | Self::SourceVerificationFailed
-            | Self::DecodingFailed(..)
-            | Self::InvalidConnectorConfig { .. } => {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "BAD_REQUEST".to_string(),
-                    error_identifier: 400,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-            Self::NoConnectorMetaData
-            | Self::MaxFieldLengthViolated { .. }
-            | Self::MissingConnectorMandateID
-            | Self::MissingConnectorTransactionID
-            | Self::MissingConnectorRefundID
-            | Self::MissingConnectorRelatedTransactionID { .. }
-            | Self::InSufficientBalanceInPaymentMethod => {
-                ApplicationErrorResponse::Unprocessable(ApiError {
-                    sub_code: "UNPROCESSABLE_ENTITY".to_string(),
-                    error_identifier: 422,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-            Self::NotImplemented(_)
-            | Self::CaptureMethodNotSupported
-            | Self::WebhooksNotImplemented => ApplicationErrorResponse::NotImplemented(ApiError {
-                sub_code: "NOT_IMPLEMENTED".to_string(),
-                error_identifier: 501,
-                error_message: self.to_string(),
-                error_object: None,
-            }),
-            Self::MissingApplePayTokenData
-            | Self::WebhookBodyDecodingFailed
-            | Self::WebhookDecodingFailed
-            | Self::WebhookSourceVerificationFailed
-            | Self::WebhookVerificationSecretInvalid => {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_WEBHOOK_DATA".to_string(),
-                    error_identifier: 400,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-            Self::RequestTimeoutReceived => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "REQUEST_TIMEOUT".to_string(),
-                    error_identifier: 504,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-            Self::WebhookEventTypeNotFound
-            | Self::WebhookSignatureNotFound
-            | Self::WebhookReferenceIdNotFound
-            | Self::WebhookResourceObjectNotFound
-            | Self::WebhookVerificationSecretNotFound => {
-                ApplicationErrorResponse::NotFound(ApiError {
-                    sub_code: "WEBHOOK_DETAILS_NOT_FOUND".to_string(),
-                    error_identifier: 404,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+        // Create ApiError with all rich fields from ConnectorError methods
+        let api_error = ApiError {
+            sub_code: self.error_code().to_string(),
+            error_identifier: self.http_status_code(),
+            error_message: self.to_string(),
+            error_object: None,
+            category: format!("{:?}", self.category()),
+            field_errors: self.get_field_errors(),
+            suggested_action: self.suggested_action(),
+            documentation_url: self.documentation_url(),
+            retryable: self.is_retryable(),
+        };
+
+        // Wrap in appropriate HTTP status variant based on status code
+        match self.http_status_code() {
+            400 => ApplicationErrorResponse::BadRequest(api_error),
+            401 => ApplicationErrorResponse::Unauthorized(api_error),
+            404 => ApplicationErrorResponse::NotFound(api_error),
+            422 => ApplicationErrorResponse::Unprocessable(api_error),
+            501 => ApplicationErrorResponse::NotImplemented(api_error),
+            504 | 500 => ApplicationErrorResponse::InternalServerError(api_error),
+            _ => ApplicationErrorResponse::InternalServerError(api_error),
         }
     }
 }
 
 impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
     fn switch(&self) -> ApplicationErrorResponse {
-        match self {
-            Self::HeaderMapConstructionFailed
-            | Self::InvalidProxyConfiguration
-            | Self::ClientConstructionFailed
-            | Self::CertificateDecodeFailed
-            | Self::BodySerializationFailed
-            | Self::UnexpectedState
-            | Self::UrlEncodingFailed
-            | Self::RequestNotSent(_)
-            | Self::ResponseDecodingFailed
-            | Self::InternalServerErrorReceived
-            | Self::BadGatewayReceived
-            | Self::ServiceUnavailableReceived
-            | Self::UrlParsingFailed
-            | Self::UnexpectedServerResponse => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
-                    error_identifier: 500,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+        let (sub_code, status_code) = match self {
             Self::RequestTimeoutReceived | Self::GatewayTimeoutReceived => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "REQUEST_TIMEOUT".to_string(),
-                    error_identifier: 504,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
+                ("REQUEST_TIMEOUT", 504)
             }
-            Self::ConnectionClosedIncompleteMessage => {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
-                    error_identifier: 500,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
-        }
+            _ => ("INTERNAL_SERVER_ERROR", 500),
+        };
+
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: sub_code.to_string(),
+            error_identifier: status_code,
+            error_message: self.to_string(),
+            error_object: None,
+            category: "ProcessingError".to_string(),
+            field_errors: std::collections::HashMap::new(),
+            suggested_action: Some("Retry the request or contact support if the issue persists".to_string()),
+            documentation_url: format!("https://docs.ucs.com/errors/{}", sub_code),
+        })
     }
 }
 
@@ -339,24 +231,60 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
 impl ErrorSwitch<grpc_api_types::payments::RequestError> for ApplicationErrorResponse {
     fn switch(&self) -> grpc_api_types::payments::RequestError {
         let api_error = self.get_api_error();
-        grpc_api_types::payments::RequestError {
+
+        // Parse category string to enum
+        let category_enum = match api_error.category.as_str() {
+            "ValidationError" => grpc_api_types::sdk_config::ErrorCategory::ValidationError,
+            "ConfigurationError" => grpc_api_types::sdk_config::ErrorCategory::ConfigurationError,
+            "NotSupported" => grpc_api_types::sdk_config::ErrorCategory::NotSupported,
+            "NotImplemented" => grpc_api_types::sdk_config::ErrorCategory::NotImplemented,
+            "ProcessingError" => grpc_api_types::sdk_config::ErrorCategory::ProcessingError,
+            "TimeoutError" => grpc_api_types::sdk_config::ErrorCategory::TimeoutError,
+            "ConnectorError" => grpc_api_types::sdk_config::ErrorCategory::ConnectorError,
+            "WebhookError" => grpc_api_types::sdk_config::ErrorCategory::WebhookError,
+            _ => grpc_api_types::sdk_config::ErrorCategory::ProcessingError,
+        };
+
+        grpc_api_types::sdk_config::RequestError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
             error_code: Some(api_error.sub_code.clone()),
-            status_code: Some(api_error.error_identifier.into()),
+            category: Some(category_enum as i32),
+            status_code: Some(api_error.error_identifier as u32),
+            field_errors: api_error.field_errors.clone(),
+            suggested_action: api_error.suggested_action.clone(),
+            documentation_url: Some(api_error.documentation_url.clone()),
         }
     }
 }
 
 /// Convert ApplicationErrorResponse to proto ResponseError
-impl ErrorSwitch<grpc_api_types::payments::ResponseError> for ApplicationErrorResponse {
-    fn switch(&self) -> grpc_api_types::payments::ResponseError {
+impl ErrorSwitch<grpc_api_types::sdk_config::ResponseError> for ApplicationErrorResponse {
+    fn switch(&self) -> grpc_api_types::sdk_config::ResponseError {
         let api_error = self.get_api_error();
-        grpc_api_types::payments::ResponseError {
+
+        // Parse category string to enum
+        let category_enum = match api_error.category.as_str() {
+            "ValidationError" => grpc_api_types::sdk_config::ErrorCategory::ValidationError,
+            "ConfigurationError" => grpc_api_types::sdk_config::ErrorCategory::ConfigurationError,
+            "NotSupported" => grpc_api_types::sdk_config::ErrorCategory::NotSupported,
+            "NotImplemented" => grpc_api_types::sdk_config::ErrorCategory::NotImplemented,
+            "ProcessingError" => grpc_api_types::sdk_config::ErrorCategory::ProcessingError,
+            "TimeoutError" => grpc_api_types::sdk_config::ErrorCategory::TimeoutError,
+            "ConnectorError" => grpc_api_types::sdk_config::ErrorCategory::ConnectorError,
+            "WebhookError" => grpc_api_types::sdk_config::ErrorCategory::WebhookError,
+            _ => grpc_api_types::sdk_config::ErrorCategory::ProcessingError,
+        };
+
+        grpc_api_types::sdk_config::ResponseError {
             status: grpc_api_types::payments::PaymentStatus::Pending.into(),
             error_message: Some(api_error.error_message.clone()),
             error_code: Some(api_error.sub_code.clone()),
-            status_code: Some(api_error.error_identifier.into()),
+            category: Some(category_enum as i32),
+            status_code: Some(api_error.error_identifier as u32),
+            field_errors: api_error.field_errors.clone(),
+            suggested_action: api_error.suggested_action.clone(),
+            documentation_url: Some(api_error.documentation_url.clone()),
         }
     }
 }

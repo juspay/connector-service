@@ -206,20 +206,18 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Truelayer => Ok(Self::Truelayer),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Connector must be specified".to_owned(),
-                    error_object: None,
-                })
+                Err(ApplicationErrorResponse::BadRequest(ApiError::new(
+                    "UNSPECIFIED_CONNECTOR",
+                    400,
+                    "Connector must be specified",
+                ))
                 .into())
             }
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CONNECTOR".to_owned(),
-                error_identifier: 400,
-                error_message: format!("Connector {connector:?} is not supported"),
-                error_object: None,
-            })
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError::new(
+                "INVALID_CONNECTOR",
+                400,
+                format!("Connector {connector:?} is not supported"),
+            ))
             .into()),
         }
     }
@@ -3695,45 +3693,40 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Hyperpg(_) => Ok(Self::Hyperpg),
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Screenstream(_) => Err(error_stack::Report::new(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                    error_identifier: 400,
-                    error_message: "Connector is not supported".to_string(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new(
+                    "UNSUPPORTED_CONNECTOR",
+                    400,
+                    "Connector is not supported",
+                )),
             )),
             AuthType::Ebanx(_) => Err(error_stack::Report::new(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                    error_identifier: 400,
-                    error_message: "Connector is not supported".to_string(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new(
+                    "UNSUPPORTED_CONNECTOR",
+                    400,
+                    "Connector is not supported",
+                )),
             )),
             AuthType::Fiuu(_) => Ok(Self::Fiuu),
             AuthType::Globepay(_) => Err(error_stack::Report::new(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                    error_identifier: 400,
-                    error_message: "Connector is not supported".to_string(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new(
+                    "UNSUPPORTED_CONNECTOR",
+                    400,
+                    "Connector is not supported",
+                )),
             )),
             AuthType::Coinbase(_) => Err(error_stack::Report::new(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                    error_identifier: 400,
-                    error_message: "Connector is not supported".to_string(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new(
+                    "UNSUPPORTED_CONNECTOR",
+                    400,
+                    "Connector is not supported",
+                )),
             )),
             AuthType::Coingate(_) => Err(error_stack::Report::new(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
-                    error_identifier: 400,
-                    error_message: "Connector is not supported".to_string(),
-                    error_object: None,
-                }),
+                ApplicationErrorResponse::BadRequest(ApiError::new(
+                    "UNSUPPORTED_CONNECTOR",
+                    400,
+                    "Connector is not supported",
+                )),
             )),
             AuthType::Revolv3(_) => Ok(Self::Revolv3),
             AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
