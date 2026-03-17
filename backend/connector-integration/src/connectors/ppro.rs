@@ -534,10 +534,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
-        let connector_webhook_secrets = match connector_webhook_secret {
-            Some(secrets) => secrets,
-            None => return Ok(false),
-        };
+        let connector_webhook_secrets = connector_webhook_secret
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Connector webhook secret not configured")?;
 
         let signature = request
             .headers

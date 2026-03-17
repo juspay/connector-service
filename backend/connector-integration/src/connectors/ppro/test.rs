@@ -447,18 +447,16 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_webhook_source_no_secret_returns_false() -> Result<(), Box<dyn std::error::Error>>
-    {
+    fn test_verify_webhook_source_no_secret_returns_error() {
         let connector = connectors::ppro::Ppro::<DefaultPCIHolder>::new();
         let body = charge_webhook("PAYMENT_CHARGE_CAPTURE_SUCCEEDED", "CAPTURED");
         let request = make_request(&body);
 
-        let result = connector.verify_webhook_source(request, None, None)?;
-        ensure!(
-            !result,
-            "no connector_webhook_secret should return Ok(false)"
+        let result = connector.verify_webhook_source(request, None, None);
+        assert!(
+            result.is_err(),
+            "missing connector_webhook_secret should return Err(WebhookSourceVerificationFailed)"
         );
-        Ok(())
     }
 
     #[test]
