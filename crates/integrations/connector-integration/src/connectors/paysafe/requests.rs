@@ -92,6 +92,13 @@ pub struct PaysafeSetupMandateRequest<T: PaymentMethodDataTypes> {
 pub enum PaysafePaymentMethod<T: PaymentMethodDataTypes> {
     Card { card: PaysafeCard<T> },
     Ach { ach: PaysafeAch },
+    GooglePay { google_pay: PaysafeGooglePay },
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PaysafeGooglePay {
+    pub google_pay_payment_token: Secret<String>,
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
@@ -125,6 +132,7 @@ pub struct PaysafeCardExpiry {
 pub enum PaysafePaymentType {
     Card,
     Ach,
+    GooglePay,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
