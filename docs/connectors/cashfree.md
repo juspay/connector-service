@@ -113,7 +113,21 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 | Payment Method | Supported |
 |----------------|:---------:|
+| Card | x |
+| Google Pay | x |
+| Apple Pay | x |
+| SEPA | x |
+| BACS | x |
+| ACH | x |
+| BECS | x |
+| iDEAL | x |
+| PayPal | x |
+| BLIK | x |
+| Klarna | x |
+| Afterpay | x |
 | UPI | ✓ |
+| Affirm | x |
+| Samsung Pay | x |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -127,4 +141,4 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/cashfree/python/cashfree.py) · [JavaScript](../../examples/cashfree/javascript/cashfree.js) · [Kotlin](../../examples/cashfree/kotlin/cashfree.kt#L49) · [Rust](../../examples/cashfree/rust/cashfree.rs#L50)
+**Examples:** [Python](../../examples/cashfree/python/cashfree.py) · [JavaScript](../../examples/cashfree/javascript/cashfree.js) · [Kotlin](../../examples/cashfree/kotlin/cashfree.kt#L50) · [Rust](../../examples/cashfree/rust/cashfree.rs#L51)

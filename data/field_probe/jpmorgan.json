@@ -8,8 +8,46 @@
     },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Stuck on field: company_name — Missing required field: company_name"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "ach": {
+              "account_number": "000123456789",
+              "routing_number": "110000000",
+              "bank_account_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "merchant-id": "DefaultMerchantId",
+            "request-id": "probe_txn_001",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"captureMethod\":\"NOW\",\"amount\":1000,\"currency\":\"USD\",\"merchant\":{\"merchantSoftware\":{\"companyName\":\"ProbeCompany\",\"productName\":\"ProbeProduct\"},\"softMerchant\":{\"merchantPurchaseDescription\":\"Probe Purchase\"}},\"paymentMethodType\":{\"ach\":{\"accountNumber\":\"000123456789\",\"financialInstitutionRoutingNumber\":\"110000000\",\"accountType\":\"CHECKING\"}},\"accountHolder\":{\"firstName\":\"\",\"lastName\":\"\"},\"statementDescriptor\":\"PROBE\"}"
+        }
       },
       "Affirm": {
         "status": "not_implemented",
@@ -20,6 +58,10 @@
         "error": "This step has not been implemented for: Payment method not supported"
       },
       "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "ApplePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported"
       },
@@ -36,10 +78,54 @@
         "error": "This step has not been implemented for: Payment method not supported"
       },
       "Card": {
-        "status": "error",
-        "error": "Stuck on field: company_name — Missing required field: company_name"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "card": {
+              "card_number": "4111111111111111",
+              "card_exp_month": "03",
+              "card_exp_year": "2030",
+              "card_cvc": "737",
+              "card_holder_name": "John Doe"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-mock.payments.jpmorgan.com/api/v2/payments",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "merchant-id": "DefaultMerchantId",
+            "request-id": "probe_txn_001",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"captureMethod\":\"NOW\",\"amount\":1000,\"currency\":\"USD\",\"merchant\":{\"merchantSoftware\":{\"companyName\":\"ProbeCompany\",\"productName\":\"ProbeProduct\"},\"softMerchant\":{\"merchantPurchaseDescription\":\"Probe Purchase\"}},\"paymentMethodType\":{\"card\":{\"accountNumber\":\"4111111111111111\",\"expiry\":{\"month\":3,\"year\":2030}}},\"accountHolder\":{\"firstName\":\"NA\",\"lastName\":\"NA\"},\"statementDescriptor\":\"Statement Descriptor\"}"
+        }
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported"
       },
@@ -194,8 +280,36 @@
     },
     "refund": {
       "default": {
-        "status": "error",
-        "error": "Stuck on field: company_name — Missing required field: company_name"
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "probe_connector_txn_001",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request",
+          "state": {
+            "access_token": {
+              "token": "probe_access_token",
+              "expires_in_seconds": 3600,
+              "token_type": "Bearer"
+            }
+          }
+        },
+        "sample": {
+          "url": "https://api-mock.payments.jpmorgan.com/api/v2/refunds",
+          "method": "Post",
+          "headers": {
+            "authorization": "Bearer probe_access_token",
+            "content-type": "application/json",
+            "merchant-id": "DefaultMerchantId",
+            "request-id": "probe_refund_001",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"merchant\":{\"merchantSoftware\":{\"companyName\":\"ProbeCompany\",\"productName\":\"ProbeProduct\"}},\"amount\":1000,\"currency\":\"USD\"}"
+        }
       }
     },
     "reverse": {

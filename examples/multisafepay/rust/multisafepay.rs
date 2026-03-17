@@ -113,8 +113,8 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
                     },
                     "tokenization_data": {
                         "encrypted_data": {  // Encrypted Google Pay payment data
-                            "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
                             "token_type": "PAYMENT_GATEWAY",  // The type of the token
+                            "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}",  // Token generated for the wallet
                         },
                     },
                 },

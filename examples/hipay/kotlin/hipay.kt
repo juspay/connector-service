@@ -17,7 +17,6 @@ import payments.PaymentServiceGetRequest
 import payments.PaymentMethodServiceTokenizeRequest
 import payments.AuthenticationType
 import payments.CaptureMethod
-import payments.CountryAlpha2
 import payments.Currency
 import payments.ConnectorConfig
 import payments.SdkOptions
@@ -46,6 +45,7 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
     }.build()
 }
 
@@ -214,26 +214,8 @@ fun processTokenize(txnId: String, config: ConnectorConfig = _defaultConfig): Ma
                 cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
             }
         }
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            connectorCustomerId = "cust_probe_123"  // Customer ID in the connector system
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
         addressBuilder.apply {  // Address Information
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
             }
         }
     }.build())
@@ -298,26 +280,8 @@ fun tokenize(txnId: String) {
                 cardHolderNameBuilder.value = "John Doe"  // Cardholder Information
             }
         }
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-            emailBuilder.value = "test@example.com"  // Customer's email address
-            id = "cust_probe_123"  // Internal customer ID
-            connectorCustomerId = "cust_probe_123"  // Customer ID in the connector system
-            phoneNumber = "4155552671"  // Customer's phone number
-            phoneCountryCode = "+1"  // Customer's phone country code
-        }
         addressBuilder.apply {  // Address Information
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
-                lastNameBuilder.value = "Doe"
-                line1Builder.value = "123 Main St"  // Address Details
-                cityBuilder.value = "Seattle"
-                stateBuilder.value = "WA"
-                zipCodeBuilder.value = "98101"
-                countryAlpha2Code = CountryAlpha2.US
-                emailBuilder.value = "test@example.com"  // Contact Information
-                phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
             }
         }
     }.build()

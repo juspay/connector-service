@@ -35,7 +35,8 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
-        merchantOrderId = "probe_session_id"
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
+        merchantOrderId = "probe_order_001"
     }.build()
 }
 

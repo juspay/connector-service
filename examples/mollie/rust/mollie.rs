@@ -45,6 +45,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "description": "Probe payment",
     })).unwrap_or_default()
 }

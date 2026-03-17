@@ -19,10 +19,9 @@
 
 use grpc_api_types::payments::{
     self as proto, mandate_reference::MandateIdType, payment_method::PaymentMethod as PmVariant,
-    AcceptanceType, Address, CaptureMethod, ConnectorMandateReferenceId,
-    CustomerAcceptance, CustomerServiceCreateRequest,
-    DisputeServiceAcceptRequest, DisputeServiceDefendRequest, DisputeServiceSubmitEvidenceRequest,
-    EvidenceDocument, EvidenceType, MandateReference,
+    AcceptanceType, Address, CaptureMethod, ConnectorMandateReferenceId, CustomerAcceptance,
+    CustomerServiceCreateRequest, DisputeServiceAcceptRequest, DisputeServiceDefendRequest,
+    DisputeServiceSubmitEvidenceRequest, EvidenceDocument, EvidenceType, MandateReference,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenRequest, PaymentAddress, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
@@ -35,22 +34,17 @@ use grpc_api_types::payments::{
 };
 use hyperswitch_masking::Secret;
 
-use crate::sample_data::*;
+use crate::sample_data::{card_payment_method, usd_money};
 
 pub(crate) fn base_authorize_request_with_meta(
     pm: PaymentMethod,
     connector_meta: Option<String>,
 ) -> PaymentServiceAuthorizeRequest {
-    // Intentionally minimal: only fields that are unconditionally required.
-    //
-    // `address` is included as an empty wrapper (all sub-fields None) because the shared
-    // domain-layer conversion in types.rs checks req.address.is_some() and returns a
-    // non-parseable "Address is required" BadRequest before any connector transformer runs.
-    // Leaf sub-fields (billing_address.city, etc.) are NOT pre-populated so the probe can
-    // discover exactly which ones each connector truly needs.
-    //
-    // `customer` and `browser_info` are stripped entirely — connectors that need them will
-    // return parseable MissingRequiredField errors that the patch loop handles leaf-by-leaf.
+    // Base request with fields that are commonly required by most connectors.
+    // `address` is included as an empty wrapper because the domain-layer checks
+    // req.address.is_some() before transformers run.
+    // Leaf sub-fields are NOT pre-populated so the probe can discover exactly
+    // which ones each connector truly needs.
     PaymentServiceAuthorizeRequest {
         amount: Some(usd_money(1000)),
         payment_method: Some(pm),
@@ -58,6 +52,7 @@ pub(crate) fn base_authorize_request_with_meta(
         auth_type: proto::AuthenticationType::NoThreeDs as i32,
         merchant_transaction_id: Some("probe_txn_001".to_string()),
         connector_feature_data: connector_meta.map(Secret::new),
+        return_url: Some("https://example.com/return".to_string()),
         address: Some(PaymentAddress {
             billing_address: Some(Address::default()),
             shipping_address: None,
@@ -72,7 +67,6 @@ pub(crate) fn base_authorize_request_with_state(
     connector_meta: Option<String>,
     state: proto::ConnectorState,
 ) -> PaymentServiceAuthorizeRequest {
-    // Same rationale as base_authorize_request_with_meta.
     PaymentServiceAuthorizeRequest {
         amount: Some(usd_money(1000)),
         payment_method: Some(pm),
@@ -80,6 +74,7 @@ pub(crate) fn base_authorize_request_with_state(
         auth_type: proto::AuthenticationType::NoThreeDs as i32,
         merchant_transaction_id: Some("probe_txn_001".to_string()),
         connector_feature_data: connector_meta.map(Secret::new),
+        return_url: Some("https://example.com/return".to_string()),
         address: Some(PaymentAddress {
             billing_address: Some(Address::default()),
             shipping_address: None,
@@ -145,9 +140,8 @@ pub(crate) fn base_setup_recurring_request() -> PaymentServiceSetupRecurringRequ
     PaymentServiceSetupRecurringRequest {
         amount: Some(usd_money(0)),
         payment_method: Some(card_payment_method()),
-        customer: Some(full_customer()),
         address: Some(PaymentAddress {
-            billing_address: Some(full_address()),
+            billing_address: Some(Address::default()),
             shipping_address: None,
         }),
         auth_type: proto::AuthenticationType::NoThreeDs as i32,
@@ -159,7 +153,7 @@ pub(crate) fn base_setup_recurring_request() -> PaymentServiceSetupRecurringRequ
             accepted_at: 0,
             online_mandate_details: None,
         }),
-        browser_info: Some(full_browser_info()),
+        // browser_info intentionally omitted - let patching discover required fields
         ..Default::default()
     }
 }
@@ -193,14 +187,13 @@ pub(crate) fn base_recurring_charge_request() -> RecurringPaymentServiceChargeRe
 }
 
 pub(crate) fn base_create_customer_request() -> CustomerServiceCreateRequest {
+    // create_customer is explicitly about registering a customer — pre-populate
+    // all standard customer fields so connectors get a complete customer record.
     CustomerServiceCreateRequest {
+        merchant_customer_id: Some("cust_probe_123".to_string()),
         customer_name: Some("John Doe".to_string()),
         email: Some(Secret::new("test@example.com".to_string())),
         phone_number: Some("4155552671".to_string()),
-        address: Some(PaymentAddress {
-            billing_address: Some(full_address()),
-            shipping_address: None,
-        }),
         ..Default::default()
     }
 }
@@ -209,29 +202,31 @@ pub(crate) fn base_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
     PaymentMethodServiceTokenizeRequest {
         amount: Some(usd_money(1000)),
         payment_method: Some(card_payment_method()),
-        customer: Some(full_customer()),
         address: Some(PaymentAddress {
-            billing_address: Some(full_address()),
+            billing_address: Some(Address::default()),
             shipping_address: None,
         }),
         ..Default::default()
     }
 }
 
-pub(crate) fn base_create_access_token_request() -> MerchantAuthenticationServiceCreateAccessTokenRequest {
+pub(crate) fn base_create_access_token_request(
+) -> MerchantAuthenticationServiceCreateAccessTokenRequest {
     MerchantAuthenticationServiceCreateAccessTokenRequest {
         ..Default::default()
     }
 }
 
-pub(crate) fn base_create_session_token_request() -> MerchantAuthenticationServiceCreateSessionTokenRequest {
+pub(crate) fn base_create_session_token_request(
+) -> MerchantAuthenticationServiceCreateSessionTokenRequest {
     MerchantAuthenticationServiceCreateSessionTokenRequest {
         amount: Some(usd_money(1000)),
         ..Default::default()
     }
 }
 
-pub(crate) fn base_pre_authenticate_request() -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
+pub(crate) fn base_pre_authenticate_request(
+) -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
     PaymentMethodAuthenticationServicePreAuthenticateRequest {
         payment_method: Some(card_payment_method()),
         amount: Some(usd_money(1000)),
@@ -259,7 +254,8 @@ pub(crate) fn base_authenticate_request() -> PaymentMethodAuthenticationServiceA
     }
 }
 
-pub(crate) fn base_post_authenticate_request() -> PaymentMethodAuthenticationServicePostAuthenticateRequest {
+pub(crate) fn base_post_authenticate_request(
+) -> PaymentMethodAuthenticationServicePostAuthenticateRequest {
     PaymentMethodAuthenticationServicePostAuthenticateRequest {
         payment_method: Some(card_payment_method()),
         amount: Some(usd_money(1000)),

@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -28,7 +60,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://transact.vantivprelive.com/vap/communicator/online",
@@ -38,6 +71,38 @@
           },
           "body": ""
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by worldpayvantiv"
       }
     },
     "capture": {

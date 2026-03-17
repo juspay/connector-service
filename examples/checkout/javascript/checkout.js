@@ -39,7 +39,8 @@ function _buildAuthorizeRequest(captureMethod) {
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     };
 }
 
@@ -116,53 +117,6 @@ async function processCheckoutAutocapture(merchantTransactionId, config = _defau
     return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
 }
 
-// Wallet Payment (Google Pay / Apple Pay)
-// Wallet payments pass an encrypted token from the browser/device SDK. Pass the token blob directly — do not decrypt client-side.
-async function processCheckoutWallet(merchantTransactionId, config = _defaultConfig) {
-    const paymentClient = new PaymentClient(config);
-
-    // Step 1: Authorize — reserve funds on the payment method
-    const authorizeResponse = await paymentClient.authorize({
-        "merchantTransactionId": "probe_txn_001",  // Identification
-        "amount": {  // The amount for the payment
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Payment method to be used
-            "googlePay": {  // Google Pay
-                "type": "CARD",  // Type of payment method
-                "description": "Visa 1111",  // User-facing description of the payment method
-                "info": {
-                    "cardNetwork": "VISA",  // Card network name
-                    "cardDetails": "1111"  // Card details (usually last 4 digits)
-                },
-                "tokenizationData": {
-                    "encryptedData": {  // Encrypted Google Pay payment data
-                        "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
-                        "tokenType": "PAYMENT_GATEWAY"  // The type of the token
-                    }
-                }
-            }
-        },
-        "captureMethod": "AUTOMATIC",  // Method for capturing the payment
-        "address": {  // Address Information
-            "billingAddress": {
-            }
-        },
-        "authType": "NO_THREE_DS"  // Authentication Details
-    });
-
-    if (authorizeResponse.status === 'FAILED') {
-        throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
-    }
-    if (authorizeResponse.status === 'PENDING') {
-        // Awaiting async confirmation — handle via webhook
-        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
-    }
-
-    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
-}
-
 // Bank Transfer (SEPA / ACH / BACS)
 // Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`.
 async function processCheckoutBank(merchantTransactionId, config = _defaultConfig) {
@@ -187,7 +141,8 @@ async function processCheckoutBank(merchantTransactionId, config = _defaultConfi
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     });
 
     if (authorizeResponse.status === 'FAILED') {
@@ -258,26 +213,8 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Type of authentication to be used
@@ -288,19 +225,6 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
         "customerAcceptance": {  // Details of customer acceptance
             "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
             "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        },
-        "browserInfo": {  // Information about the customer's browser
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
         }
     });
 
@@ -445,26 +369,8 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Type of authentication to be used
@@ -475,19 +381,6 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
         "customerAcceptance": {  // Details of customer acceptance
             "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
             "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        },
-        "browserInfo": {  // Information about the customer's browser
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
         }
     });
 
@@ -508,7 +401,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, get, recurringCharge, setupRecurring, voidPayment };
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, get, recurringCharge, setupRecurring, voidPayment };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_card';

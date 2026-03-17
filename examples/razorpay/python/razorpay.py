@@ -45,11 +45,11 @@ def _build_authorize_request(capture_method: str):
             },
             "address": {  # Address Information
                 "billing_address": {
-                    "phone_number": {"value": "4155552671"},
-                    "phone_country_code": "+1"
+                    "phone_number": {"value": "4155552671"}
                 }
             },
             "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
             "merchant_order_id": "probe_order_001"
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),

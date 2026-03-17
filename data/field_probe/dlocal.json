@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Dlocal"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Dlocal"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Dlocal"
@@ -81,6 +85,10 @@
         }
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Dlocal"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Dlocal"
       },

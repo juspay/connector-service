@@ -49,7 +49,8 @@ function _buildAuthorizeRequest(captureMethod) {
                 "countryAlpha2Code": "US"
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     };
 }
 

@@ -39,7 +39,8 @@ function _buildAuthorizeRequest(captureMethod) {
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     };
 }
 
@@ -138,8 +139,8 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
                 },
                 "tokenizationData": {
                     "encryptedData": {  // Encrypted Google Pay payment data
-                        "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
-                        "tokenType": "PAYMENT_GATEWAY"  // The type of the token
+                        "tokenType": "PAYMENT_GATEWAY",  // The type of the token
+                        "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  // Token generated for the wallet
                     }
                 }
             }
@@ -149,7 +150,8 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     });
 
     if (authorizeResponse.status === 'FAILED') {
@@ -186,7 +188,8 @@ async function processCheckoutBank(merchantTransactionId, config = _defaultConfi
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     });
 
     if (authorizeResponse.status === 'FAILED') {
@@ -257,26 +260,8 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Type of authentication to be used
@@ -287,19 +272,6 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
         "customerAcceptance": {  // Details of customer acceptance
             "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
             "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        },
-        "browserInfo": {  // Information about the customer's browser
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
         }
     });
 
@@ -377,23 +349,10 @@ async function processCreateCustomer(merchantTransactionId, config = _defaultCon
 
     // Step 1: Create Customer — register customer record in the connector
     const createResponse = await customerClient.create({
+        "merchantCustomerId": "cust_probe_123",  // Identification
         "customerName": "John Doe",  // Name of the customer
         "email": {"value": "test@example.com"},  // Email address of the customer
-        "phoneNumber": "4155552671",  // Phone number of the customer
-        "address": {  // Address Information
-            "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
-            }
-        }
+        "phoneNumber": "4155552671"  // Phone number of the customer
     });
 
     return { customerId: createResponse.connectorCustomerId };
@@ -419,26 +378,8 @@ async function processTokenize(merchantTransactionId, config = _defaultConfig) {
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         }
     });
@@ -520,26 +461,8 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Type of authentication to be used
@@ -550,19 +473,6 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
         "customerAcceptance": {  // Details of customer acceptance
             "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
             "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        },
-        "browserInfo": {  // Information about the customer's browser
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
         }
     });
 

@@ -96,6 +96,20 @@ let config = ConnectorConfig {
 
 Complete, runnable examples for common integration patterns. Each example shows the full flow with status handling. Copy-paste into your app and replace placeholder values.
 
+### Card Payment (Authorize + Capture)
+
+Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/zift/python/zift.py#L87) · [JavaScript](../../examples/zift/javascript/zift.js#L78) · [Kotlin](../../examples/zift/kotlin/zift.kt#L103) · [Rust](../../examples/zift/rust/zift.rs#L97)
+
 ### Card Payment (Automatic Capture)
 
 Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
@@ -108,21 +122,36 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L52) · [JavaScript](../../examples/zift/javascript/zift.js#L49) · [Kotlin](../../examples/zift/kotlin/zift.kt#L72) · [Rust](../../examples/zift/rust/zift.rs#L68)
+**Examples:** [Python](../../examples/zift/python/zift.py#L112) · [JavaScript](../../examples/zift/javascript/zift.js#L104) · [Kotlin](../../examples/zift/kotlin/zift.kt#L125) · [Rust](../../examples/zift/rust/zift.rs#L119)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L71) · [JavaScript](../../examples/zift/javascript/zift.js#L68) · [Kotlin](../../examples/zift/kotlin/zift.kt#L88) · [Rust](../../examples/zift/rust/zift.rs#L83)
+**Examples:** [Python](../../examples/zift/python/zift.py#L131) · [JavaScript](../../examples/zift/javascript/zift.js#L123) · [Kotlin](../../examples/zift/kotlin/zift.kt#L141) · [Rust](../../examples/zift/rust/zift.rs#L134)
+
+### Void a Payment
+
+Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+
+**Examples:** [Python](../../examples/zift/python/zift.py#L168) · [JavaScript](../../examples/zift/javascript/zift.js#L158) · [Kotlin](../../examples/zift/kotlin/zift.kt#L163) · [Rust](../../examples/zift/rust/zift.rs#L156)
+
+### Get Payment Status
+
+Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+
+**Examples:** [Python](../../examples/zift/python/zift.py#L190) · [JavaScript](../../examples/zift/javascript/zift.js#L180) · [Kotlin](../../examples/zift/kotlin/zift.kt#L182) · [Rust](../../examples/zift/rust/zift.rs#L174)
 
 ## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
+| [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
+| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
+| [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
 ### Payments
 
@@ -171,7 +200,29 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L108) · [JavaScript](../../examples/zift/javascript/zift.js#L102) · [Kotlin](../../examples/zift/kotlin/zift.kt#L109) · [Rust](../../examples/zift/rust/zift.rs#L104)
+**Examples:** [Python](../../examples/zift/python/zift.py#L212) · [JavaScript](../../examples/zift/javascript/zift.js#L201) · [Kotlin](../../examples/zift/kotlin/zift.kt#L200) · [Rust](../../examples/zift/rust/zift.rs#L191)
+
+#### PaymentService.Capture
+
+Finalize an authorized payment transaction. Transfers reserved funds from customer to merchant account, completing the payment lifecycle.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceCaptureRequest` |
+| **Response** | `PaymentServiceCaptureResponse` |
+
+**Examples:** [Python](../../examples/zift/python/zift.py#L221) · [JavaScript](../../examples/zift/javascript/zift.js#L210) · [Kotlin](../../examples/zift/kotlin/zift.kt#L212) · [Rust](../../examples/zift/rust/zift.rs#L202)
+
+#### PaymentService.Get
+
+Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceGetRequest` |
+| **Response** | `PaymentServiceGetResponse` |
+
+**Examples:** [Python](../../examples/zift/python/zift.py#L230) · [JavaScript](../../examples/zift/javascript/zift.js#L219) · [Kotlin](../../examples/zift/kotlin/zift.kt#L222) · [Rust](../../examples/zift/rust/zift.rs#L208)
 
 #### PaymentService.Refund
 
@@ -182,7 +233,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L71) · [JavaScript](../../examples/zift/javascript/zift.js#L68) · [Kotlin](../../examples/zift/kotlin/zift.kt#L121) · [Rust](../../examples/zift/rust/zift.rs#L115)
+**Examples:** [Python](../../examples/zift/python/zift.py#L131) · [JavaScript](../../examples/zift/javascript/zift.js#L123) · [Kotlin](../../examples/zift/kotlin/zift.kt#L230) · [Rust](../../examples/zift/rust/zift.rs#L214)
 
 #### PaymentService.SetupRecurring
 
@@ -193,4 +244,15 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/zift/python/zift.py#L117) · [JavaScript](../../examples/zift/javascript/zift.js#L111) · [Kotlin](../../examples/zift/kotlin/zift.kt#L131) · [Rust](../../examples/zift/rust/zift.rs#L121)
+**Examples:** [Python](../../examples/zift/python/zift.py#L239) · [JavaScript](../../examples/zift/javascript/zift.js#L228) · [Kotlin](../../examples/zift/kotlin/zift.kt#L240) · [Rust](../../examples/zift/rust/zift.rs#L220)
+
+#### PaymentService.Void
+
+Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
+
+| | Message |
+|---|---------|
+| **Request** | `PaymentServiceVoidRequest` |
+| **Response** | `PaymentServiceVoidResponse` |
+
+**Examples:** [Python](../../examples/zift/python/zift.py#L287) · [JavaScript](../../examples/zift/javascript/zift.js#L269) · [Kotlin](../../examples/zift/kotlin/zift.kt#L280) · [Rust](../../examples/zift/rust/zift.rs#L260)

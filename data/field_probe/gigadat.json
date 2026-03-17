@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
@@ -40,6 +44,10 @@
         "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only Interac bank redirect is supported for Gigadat"
       },

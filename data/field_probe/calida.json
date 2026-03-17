@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method"
@@ -40,6 +44,10 @@
         "error": "This step has not been implemented for: Payment method"
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method"
       },

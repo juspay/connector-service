@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
-use domain_types::{connector_types::ConnectorEnum, router_data::ConnectorSpecificConfig};
+use domain_types::{
+    connector_types::ConnectorEnum,
+    router_data::{ConnectorSpecificConfig, PaysafeAchAccountId, PaysafeCardAccountId, PaysafePaymentMethodDetails},
+};
 use hyperswitch_masking::Secret;
 
 pub(crate) fn load_config() -> Arc<ucs_env::configs::Config> {
@@ -149,10 +152,10 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             client_secret: s(),
             base_url: None,
             secondary_base_url: None,
-            company_name: None,
-            product_name: None,
-            merchant_purchase_description: None,
-            statement_descriptor: None,
+            company_name: Some(Secret::new("ProbeCompany".to_string())),
+            product_name: Some(Secret::new("ProbeProduct".to_string())),
+            merchant_purchase_description: Some(Secret::new("Probe Purchase".to_string())),
+            statement_descriptor: Some(Secret::new("PROBE".to_string())),
         },
         ConnectorEnum::Loonio => ConnectorSpecificConfig::Loonio {
             merchant_id: m(),
@@ -163,7 +166,21 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             username: u(),
             password: p(),
             base_url: None,
-            account_id: None,
+            account_id: Some(PaysafePaymentMethodDetails {
+                card: Some(HashMap::from([(
+                    common_enums::enums::Currency::USD,
+                    PaysafeCardAccountId {
+                        no_three_ds: Some(Secret::new("probe_acct_no3ds".to_string())),
+                        three_ds: Some(Secret::new("probe_acct_3ds".to_string())),
+                    },
+                )])),
+                ach: Some(HashMap::from([(
+                    common_enums::enums::Currency::USD,
+                    PaysafeAchAccountId {
+                        account_id: Some(Secret::new("probe_ach_acct".to_string())),
+                    },
+                )])),
+            }),
         },
         ConnectorEnum::Payu => ConnectorSpecificConfig::Payu {
             api_key: k(),
@@ -229,7 +246,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             password: p(),
             entity_id: id(),
             base_url: None,
-            merchant_name: None,
+            merchant_name: Some(Secret::new("Probe Merchant".to_string())),
         },
         ConnectorEnum::Adyen => ConnectorSpecificConfig::Adyen {
             api_key: k(),
@@ -241,7 +258,8 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
         ConnectorEnum::Bankofamerica => ConnectorSpecificConfig::BankOfAmerica {
             api_key: k(),
             merchant_account: m(),
-            api_secret: s(),
+            // Must be valid base64 — used for HMAC-SHA256 signing
+            api_secret: Secret::new("cHJvYmVfc2VjcmV0".to_string()),
             base_url: None,
         },
         ConnectorEnum::Bamboraapac => ConnectorSpecificConfig::Bamboraapac {
@@ -349,7 +367,10 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
         ConnectorEnum::Redsys => ConnectorSpecificConfig::Redsys {
             merchant_id: m(),
             terminal_id: id(),
-            sha256_pwd: s(),
+            // Must be valid base64 decoding to 24 bytes (3-key 3DES key) —
+            // used in des_encrypt() for HMAC signing. "probe_secret" contains '_'
+            // which is invalid in standard base64 and causes RequestEncodingFailed.
+            sha256_pwd: Secret::new("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".to_string()),
             base_url: None,
         },
         ConnectorEnum::Silverflow => ConnectorSpecificConfig::Silverflow {
@@ -445,7 +466,13 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             base_url: None,
         },
         ConnectorEnum::Payload => ConnectorSpecificConfig::Payload {
-            auth_key_map: HashMap::new(),
+            auth_key_map: HashMap::from([(
+                common_enums::enums::Currency::USD,
+                Secret::new(serde_json::json!({
+                    "api_key": "probe_key",
+                    "processing_account_id": null
+                })),
+            )]),
             base_url: None,
         },
         ConnectorEnum::Revolv3 => ConnectorSpecificConfig::Revolv3 {

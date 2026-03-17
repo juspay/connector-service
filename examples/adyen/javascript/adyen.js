@@ -142,8 +142,8 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
                 },
                 "tokenizationData": {
                     "encryptedData": {  // Encrypted Google Pay payment data
-                        "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
-                        "tokenType": "PAYMENT_GATEWAY"  // The type of the token
+                        "tokenType": "PAYMENT_GATEWAY",  // The type of the token
+                        "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  // Token generated for the wallet
                     }
                 }
             }
@@ -278,25 +278,10 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
             }
         },
         "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
+            "id": "cust_probe_123"  // Internal customer ID
         },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Type of authentication to be used
@@ -472,25 +457,10 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
             }
         },
         "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
+            "id": "cust_probe_123"  // Internal customer ID
         },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         },
         "authType": "NO_THREE_DS",  // Type of authentication to be used

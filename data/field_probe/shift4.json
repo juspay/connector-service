@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "BankRedirect type Blik { blik_code: Some(\"777124\") } is not supported by Shift4 is not supported by Shift4"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -27,11 +59,11 @@
           "capture_method": "AUTOMATIC",
           "address": {
             "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe"
+              "first_name": "John"
             }
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://api.shift4.com/charges",
@@ -41,8 +73,16 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":1000,\"currency\":\"USD\",\"captured\":true,\"card\":{\"number\":\"4111111111111111\",\"expMonth\":\"03\",\"expYear\":\"2030\",\"cardholderName\":\"John Doe\"}}"
+          "body": "{\"amount\":1000,\"currency\":\"USD\",\"captured\":true,\"card\":{\"number\":\"4111111111111111\",\"expMonth\":\"03\",\"expYear\":\"2030\",\"cardholderName\":\"John\"}}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
       },
       "Ideal": {
         "status": "supported",
@@ -72,6 +112,26 @@
           },
           "body": "{\"amount\":1000,\"currency\":\"USD\",\"captured\":true,\"paymentMethod\":{\"type\":\"ideal\",\"billing\":{\"name\":null,\"email\":null,\"address\":{\"line1\":null,\"line2\":null,\"city\":null,\"state\":null,\"zip\":null,\"country\":null}}},\"flow\":{\"returnUrl\":\"https://example.com/return\"}}"
         }
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Shift4"
       }
     },
     "capture": {

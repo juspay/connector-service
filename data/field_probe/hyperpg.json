@@ -11,6 +11,22 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: This payment method is not implemented"
       },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "PayLater payment method is not supported is not supported by hyperpg"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "PayLater payment method is not supported is not supported by hyperpg"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Wallet payment method is not supported is not supported by hyperpg"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Wallet payment method is not supported is not supported by hyperpg"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: This payment method is not implemented"
@@ -44,7 +60,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://sandbox.hyperpg.in/txns",
@@ -55,12 +72,32 @@
             "via": "HyperSwitch",
             "x-merchantid": "probe_merchant"
           },
-          "body": "{\"merchant_id\":\"probe_merchant\",\"payment_method_type\":\"CARD\",\"card_number\":\"4111111111111111\",\"card_security_code\":\"737\",\"card_exp_month\":\"03\",\"card_exp_year\":\"2030\",\"name_on_card\":\"John Doe\",\"format\":\"json\",\"redirect_after_payment\":true,\"order\":{\"order_id\":\"probe_txn_001\",\"amount\":10.0,\"currency\":\"USD\",\"return_url\":null}}"
+          "body": "{\"merchant_id\":\"probe_merchant\",\"payment_method_type\":\"CARD\",\"card_number\":\"4111111111111111\",\"card_security_code\":\"737\",\"card_exp_month\":\"03\",\"card_exp_year\":\"2030\",\"name_on_card\":\"John Doe\",\"format\":\"json\",\"redirect_after_payment\":true,\"order\":{\"order_id\":\"probe_txn_001\",\"amount\":10.0,\"currency\":\"USD\",\"return_url\":\"https://example.com/return\"}}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Wallet payment method is not supported is not supported by hyperpg"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Wallet payment method is not supported is not supported by hyperpg"
       },
       "Ideal": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: This payment method is not implemented"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "PayLater payment method is not supported is not supported by hyperpg"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Wallet payment method is not supported is not supported by hyperpg"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Wallet payment method is not supported is not supported by hyperpg"
       },
       "Sepa": {
         "status": "not_implemented",

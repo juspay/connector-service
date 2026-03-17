@@ -6,6 +6,76 @@
         "status": "not_implemented"
       }
     },
+    "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Card": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "The given currency method is not configured with the given connector"
+      }
+    },
     "capture": {
       "default": {
         "status": "not_implemented"

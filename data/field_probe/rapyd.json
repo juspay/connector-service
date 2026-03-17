@@ -30,14 +30,14 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "<base64_encoded_apple_pay_payment_token>"
+                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
                 "network": "Visa",
                 "type": "debit"
               },
-              "transaction_identifier": "<apple_pay_transaction_identifier>"
+              "transaction_identifier": "probe_txn_id"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -60,6 +60,10 @@
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":{\"type\":\"apple_pay\",\"details\":\"eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9\"}},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
         }
+      },
+      "ApplePayDecrypted": {
+        "status": "error",
+        "error": "Stuck on field: Apple pay encrypted data — Missing required field: Apple pay encrypted data"
       },
       "Bacs": {
         "status": "not_implemented",
@@ -129,8 +133,8 @@
               },
               "tokenization_data": {
                 "encrypted_data": {
-                  "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",
-                  "token_type": "PAYMENT_GATEWAY"
+                  "token_type": "PAYMENT_GATEWAY",
+                  "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
                 }
               }
             }
@@ -155,6 +159,10 @@
           },
           "body": "{\"amount\":\"10.00\",\"currency\":\"USD\",\"payment_method\":{\"type\":\"by_visa_card\",\"fields\":null,\"address\":null,\"digital_wallet\":{\"type\":\"google_pay\",\"details\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"}},\"payment_method_options\":null,\"merchant_reference_id\":\"probe_txn_001\",\"capture\":null,\"description\":null,\"complete_payment_url\":\"https://example.com/return\",\"error_payment_url\":\"https://example.com/return\"}"
         }
+      },
+      "GooglePayDecrypted": {
+        "status": "error",
+        "error": "Stuck on field: gpay wallet_token — Missing required field: gpay wallet_token"
       },
       "Ideal": {
         "status": "not_implemented",

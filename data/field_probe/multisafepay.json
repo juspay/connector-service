@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through multisafepay"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through multisafepay"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through multisafepay"
@@ -91,8 +95,56 @@
               },
               "tokenization_data": {
                 "encrypted_data": {
-                  "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",
-                  "token_type": "PAYMENT_GATEWAY"
+                  "token_type": "PAYMENT_GATEWAY",
+                  "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
+                }
+              }
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "customer": {
+            "email": "test@example.com"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "description": "Probe payment"
+        },
+        "sample": {
+          "url": "https://testapi.multisafepay.com/v1/json/orders?api_key=probe_key",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"type\":\"direct\",\"order_id\":\"probe_txn_001\",\"gateway\":\"GOOGLEPAY\",\"currency\":\"USD\",\"amount\":1000,\"description\":\"Probe payment\",\"payment_options\":{\"redirect_url\":\"https://example.com/return\",\"cancel_url\":\"https://example.com/return\"},\"customer\":{\"reference\":\"probe_txn_001\",\"email\":\"test@example.com\"},\"delivery\":{},\"days_active\":30,\"seconds_active\":259200}"
+        }
+      },
+      "GooglePayDecrypted": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "google_pay": {
+              "type": "CARD",
+              "description": "Visa 1111",
+              "info": {
+                "card_network": "VISA",
+                "card_details": "1111"
+              },
+              "tokenization_data": {
+                "decrypted_data": {
+                  "card_exp_month": "03",
+                  "card_exp_year": "2030",
+                  "application_primary_account_number": "4111111111111111",
+                  "cryptogram": "AAAAAA==",
+                  "eci_indicator": "05"
                 }
               }
             }

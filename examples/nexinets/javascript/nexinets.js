@@ -39,7 +39,8 @@ function _buildAuthorizeRequest(captureMethod) {
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     };
 }
 
@@ -87,14 +88,14 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
         "paymentMethod": {  // Payment method to be used
             "applePay": {  // Apple Pay
                 "paymentData": {
-                    "encryptedData": "<base64_encoded_apple_pay_payment_token>"  // Encrypted Apple Pay payment data as string
+                    "encryptedData": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  // Encrypted Apple Pay payment data as string
                 },
                 "paymentMethod": {
                     "displayName": "Visa 1111",
                     "network": "Visa",
                     "type": "debit"
                 },
-                "transactionIdentifier": "<apple_pay_transaction_identifier>"  // Transaction identifier
+                "transactionIdentifier": "probe_txn_id"  // Transaction identifier
             }
         },
         "captureMethod": "AUTOMATIC",  // Method for capturing the payment
@@ -102,7 +103,8 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     });
 
     if (authorizeResponse.status === 'FAILED') {

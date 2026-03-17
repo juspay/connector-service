@@ -21,14 +21,14 @@ service definitions from `backend/grpc-api-types/proto/services.proto`.
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Bambora](connectors/bambora.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
-| [Bankofamerica](connectors/bankofamerica.md) | x | ? | ? | ? | ? |
+| [Bankofamerica](connectors/bankofamerica.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Barclaycard](connectors/barclaycard.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Billwerk](connectors/billwerk.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Bluesnap](connectors/bluesnap.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Braintree](connectors/braintree.md) | ✓ | ✓ | ✓ | ? | ✓ |
 | [Calida](connectors/calida.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
 | [Cashfree](connectors/cashfree.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [CashtoCode](connectors/cashtocode.md) | ? | ⚠ | ⚠ | ⚠ | ⚠ |
+| [CashtoCode](connectors/cashtocode.md) | x | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Celero](connectors/celero.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Checkout.com](connectors/checkout.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [CryptoPay](connectors/cryptopay.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
@@ -48,33 +48,33 @@ service definitions from `backend/grpc-api-types/proto/services.proto`.
 | [Hipay](connectors/hipay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Hyperpg](connectors/hyperpg.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
 | [Iatapay](connectors/iatapay.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
-| [Jpmorgan](connectors/jpmorgan.md) | x | ✓ | ✓ | ? | ✓ |
+| [Jpmorgan](connectors/jpmorgan.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Loonio](connectors/loonio.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
 | [MiFinity](connectors/mifinity.md) | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
 | [Mollie](connectors/mollie.md) | ✓ | ? | ✓ | ✓ | ✓ |
 | [Multisafepay](connectors/multisafepay.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
 | [Nexinets](connectors/nexinets.md) | ✓ | ? | ✓ | ✓ | ? |
-| [Nexixpay](connectors/nexixpay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Nexixpay](connectors/nexixpay.md) | x | ✓ | ✓ | ✓ | ✓ |
 | [Nmi](connectors/nmi.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Noon](connectors/noon.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Novalnet](connectors/novalnet.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Nuvei](connectors/nuvei.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Paybox](connectors/paybox.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Payload](connectors/payload.md) | x | ? | ? | ? | ? |
+| [Payload](connectors/payload.md) | x | ✓ | ✓ | ✓ | ✓ |
 | [Payme](connectors/payme.md) | x | ✓ | ✓ | ✓ | ✓ |
 | [Paypal](connectors/paypal.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Paysafe](connectors/paysafe.md) | x | ✓ | ✓ | ✓ | ✓ |
+| [Paysafe](connectors/paysafe.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Paytm](connectors/paytm.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ |
 | [PayU](connectors/payu.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ |
 | [PhonePe](connectors/phonepe.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ |
-| [PlacetoPay](connectors/placetopay.md) | ✓ | ? | ? | ? | ? |
+| [PlacetoPay](connectors/placetopay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Powertranz](connectors/powertranz.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Rapyd](connectors/rapyd.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Razorpay](connectors/razorpay.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
 | [Razorpay V2](connectors/razorpayv2.md) | ✓ | ⚠ | ✓ | ✓ | ⚠ |
-| [Redsys](connectors/redsys.md) | ? | ? | ? | ? | ? |
+| [Redsys](connectors/redsys.md) | x | ✓ | ✓ | ✓ | ✓ |
 | [Revolut](connectors/revolut.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
-| [Revolv3](connectors/revolv3.md) | ✓ | ✓ | ? | ✓ | ✓ |
+| [Revolv3](connectors/revolv3.md) | ✓ | ✓ | x | ✓ | ✓ |
 | [Shift4](connectors/shift4.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
 | [Silverflow](connectors/silverflow.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Stax](connectors/stax.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -85,11 +85,11 @@ service definitions from `backend/grpc-api-types/proto/services.proto`.
 | [Tsys](connectors/tsys.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Volt](connectors/volt.md) | ⚠ | ⚠ | ✓ | ✓ | ⚠ |
 | [Wellsfargo](connectors/wellsfargo.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Worldpay](connectors/worldpay.md) | x | ✓ | ✓ | ✓ | ✓ |
+| [Worldpay](connectors/worldpay.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Xendit](connectors/xendit.md) | ✓ | ✓ | ✓ | ✓ | ⚠ |
-| [Zift](connectors/zift.md) | ✓ | ? | ? | ✓ | ? |
+| [Zift](connectors/zift.md) | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ## Flow Details
 
@@ -106,66 +106,66 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 |-----------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | [ACI](connectors/aci.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ✓ | ⚠ |
 | [Adyen](connectors/adyen.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ |
-| [Airwallex](connectors/airwallex.md) | ✓ | ? | ? | ? | ? | ? | ? | ✓ | ? | ✓ | ? | ? | ? | ? | ? |
+| [Airwallex](connectors/airwallex.md) | ✓ | x | x | x | x | x | x | ✓ | x | ✓ | x | x | x | x | x |
 | [Authipay](connectors/authipay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Authorize.net](connectors/authorizedotnet.md) | ✓ | ? | ? | ⚠ | ⚠ | ✓ | ⚠ | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Bambora](connectors/bambora.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Authorize.net](connectors/authorizedotnet.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Bambora](connectors/bambora.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Bankofamerica](connectors/bankofamerica.md) | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Bankofamerica](connectors/bankofamerica.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Barclaycard](connectors/barclaycard.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Billwerk](connectors/billwerk.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Bluesnap](connectors/bluesnap.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Braintree](connectors/braintree.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Calida](connectors/calida.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Cashfree](connectors/cashfree.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
-| [CashtoCode](connectors/cashtocode.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Cashfree](connectors/cashfree.md) | x | x | x | x | x | x | x | x | x | x | x | x | ✓ | x | x |
+| [CashtoCode](connectors/cashtocode.md) | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Celero](connectors/celero.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Checkout.com](connectors/checkout.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Checkout.com](connectors/checkout.md) | ✓ | ? | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [CryptoPay](connectors/cryptopay.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [CyberSource](connectors/cybersource.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? |
 | [Datatrans](connectors/datatrans.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [dLocal](connectors/dlocal.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Elavon](connectors/elavon.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Elavon](connectors/elavon.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Finix](connectors/finix.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Fiserv](connectors/fiserv.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Fiservemea](connectors/fiservemea.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Fiuu](connectors/fiuu.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Fiuu](connectors/fiuu.md) | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Forte](connectors/forte.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Getnet](connectors/getnet.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Getnet](connectors/getnet.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Gigadat](connectors/gigadat.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Globalpay](connectors/globalpay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Helcim](connectors/helcim.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Hipay](connectors/hipay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Hyperpg](connectors/hyperpg.md) | ✓ | ? | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ? | ? | ⚠ | ? | ? |
+| [Hyperpg](connectors/hyperpg.md) | ✓ | x | x | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | x | ⚠ | x | x | ⚠ | x | x |
 | [Iatapay](connectors/iatapay.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
-| [Jpmorgan](connectors/jpmorgan.md) | ? | ⚠ | ⚠ | ⚠ | ⚠ | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Jpmorgan](connectors/jpmorgan.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Loonio](connectors/loonio.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [MiFinity](connectors/mifinity.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Mollie](connectors/mollie.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Mollie](connectors/mollie.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Multisafepay](connectors/multisafepay.md) | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Nexinets](connectors/nexinets.md) | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Nexixpay](connectors/nexixpay.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Nexixpay](connectors/nexixpay.md) | ? | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Nmi](connectors/nmi.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Noon](connectors/noon.md) | ✓ | ✓ | ? | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Novalnet](connectors/novalnet.md) | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Nuvei](connectors/nuvei.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Paybox](connectors/paybox.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Payload](connectors/payload.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Payme](connectors/payme.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Nuvei](connectors/nuvei.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
+| [Paybox](connectors/paybox.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
+| [Payload](connectors/payload.md) | ? | ⚠ | ⚠ | x | x | x | x | x | x | x | x | x | x | x | x |
+| [Payme](connectors/payme.md) | ? | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Paypal](connectors/paypal.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Paysafe](connectors/paysafe.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Paytm](connectors/paytm.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
-| [PayU](connectors/payu.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
-| [PhonePe](connectors/phonepe.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ✓ | ? | ? |
+| [Paysafe](connectors/paysafe.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| [Paytm](connectors/paytm.md) | x | x | x | x | x | x | x | x | x | x | x | x | ✓ | x | x |
+| [PayU](connectors/payu.md) | x | x | x | x | x | x | x | x | x | x | x | x | ✓ | x | x |
+| [PhonePe](connectors/phonepe.md) | x | x | x | x | x | x | x | x | x | x | x | x | ✓ | x | x |
 | [PlacetoPay](connectors/placetopay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Powertranz](connectors/powertranz.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Powertranz](connectors/powertranz.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Rapyd](connectors/rapyd.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ |
 | [Razorpay](connectors/razorpay.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ✓ | ⚠ | ⚠ |
 | [Razorpay V2](connectors/razorpayv2.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| [Redsys](connectors/redsys.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Redsys](connectors/redsys.md) | x | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Revolut](connectors/revolut.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | [Revolv3](connectors/revolv3.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Shift4](connectors/shift4.md) | ✓ | ? | ? | ? | ? | ? | ? | ✓ | ? | ? | ? | ? | ? | ? | ? |
+| [Shift4](connectors/shift4.md) | ✓ | x | x | x | x | x | x | ✓ | x | x | x | x | x | x | x |
 | [Silverflow](connectors/silverflow.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Stax](connectors/stax.md) | ✓ | ⚠ | ⚠ | ✓ | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Stripe](connectors/stripe.md) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ⚠ | ✓ | ✓ | ✓ | ⚠ | ✓ | ⚠ |
@@ -174,10 +174,10 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | [Trustpayments](connectors/trustpayments.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Tsys](connectors/tsys.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Volt](connectors/volt.md) | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
-| [Wellsfargo](connectors/wellsfargo.md) | ✓ | ⚠ | ⚠ | ? | ? | ? | ? | ? | ⚠ | ? | ? | ? | ? | ? | ⚠ |
-| [Worldpay](connectors/worldpay.md) | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
-| [Worldpayxml](connectors/worldpayxml.md) | ✓ | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? | ? |
+| [Wellsfargo](connectors/wellsfargo.md) | ✓ | ⚠ | ⚠ | x | x | x | x | x | ⚠ | x | x | x | x | x | ⚠ |
+| [Worldpay](connectors/worldpay.md) | ✓ | ✓ | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
+| [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
+| [Worldpayxml](connectors/worldpayxml.md) | ✓ | x | x | x | x | x | x | x | x | x | x | x | x | x | x |
 | [Xendit](connectors/xendit.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 | [Zift](connectors/zift.md) | ✓ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ | ⚠ |
 
@@ -190,13 +190,13 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | Connector | Supported | Notes |
 |-----------|:---------:|-------|
 | [ACI](connectors/aci.md) | ✓ |  |
-| [Adyen](connectors/adyen.md) | ? | Failed to encode connector request |
+| [Adyen](connectors/adyen.md) | ? | Failed to deserialize connector response |
 | [Airwallex](connectors/airwallex.md) | ✓ |  |
 | [Authipay](connectors/authipay.md) | ✓ |  |
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ✓ |  |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
@@ -235,21 +235,21 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
 | [Paybox](connectors/paybox.md) | ✓ |  |
-| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ✓ |  |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
 | [Paytm](connectors/paytm.md) | ✓ |  |
 | [PayU](connectors/payu.md) | ✓ |  |
 | [PhonePe](connectors/phonepe.md) | ✓ |  |
-| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
+| [PlacetoPay](connectors/placetopay.md) | ✓ |  |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
 | [Razorpay](connectors/razorpay.md) | ✓ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ✓ |  |
-| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
+| [Redsys](connectors/redsys.md) | ✓ |  |
 | [Revolut](connectors/revolut.md) | ✓ |  |
-| [Revolv3](connectors/revolv3.md) | ? |  |
+| [Revolv3](connectors/revolv3.md) | x |  |
 | [Shift4](connectors/shift4.md) | ✓ |  |
 | [Silverflow](connectors/silverflow.md) | ✓ |  |
 | [Stax](connectors/stax.md) | ✓ |  |
@@ -264,7 +264,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ |  |
 | [Xendit](connectors/xendit.md) | ✓ |  |
-| [Zift](connectors/zift.md) | ? | Failed to encode connector request |
+| [Zift](connectors/zift.md) | ✓ |  |
 
 #### PaymentService.Void
 
@@ -279,7 +279,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ⚠ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ✓ |  |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
@@ -318,19 +318,19 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
 | [Paybox](connectors/paybox.md) | ✓ |  |
-| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ✓ |  |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
 | [Paytm](connectors/paytm.md) | ⚠ |  |
 | [PayU](connectors/payu.md) | ⚠ |  |
 | [PhonePe](connectors/phonepe.md) | ⚠ |  |
-| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
+| [PlacetoPay](connectors/placetopay.md) | ✓ |  |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
 | [Razorpay](connectors/razorpay.md) | ⚠ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
-| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
+| [Redsys](connectors/redsys.md) | ✓ |  |
 | [Revolut](connectors/revolut.md) | ⚠ |  |
 | [Revolv3](connectors/revolv3.md) | ✓ |  |
 | [Shift4](connectors/shift4.md) | ⚠ |  |
@@ -347,7 +347,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ |  |
 | [Xendit](connectors/xendit.md) | ⚠ |  |
-| [Zift](connectors/zift.md) | ? | Failed to encode connector request |
+| [Zift](connectors/zift.md) | ✓ |  |
 
 #### PaymentService.Reverse
 
@@ -445,7 +445,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ✓ |  |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
@@ -484,19 +484,19 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
 | [Paybox](connectors/paybox.md) | ✓ |  |
-| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ✓ |  |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
 | [Paytm](connectors/paytm.md) | ⚠ |  |
 | [PayU](connectors/payu.md) | ⚠ |  |
 | [PhonePe](connectors/phonepe.md) | ⚠ |  |
-| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
+| [PlacetoPay](connectors/placetopay.md) | ✓ |  |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
 | [Razorpay](connectors/razorpay.md) | ✓ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
-| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
+| [Redsys](connectors/redsys.md) | ✓ |  |
 | [Revolut](connectors/revolut.md) | ✓ |  |
 | [Revolv3](connectors/revolv3.md) | ✓ |  |
 | [Shift4](connectors/shift4.md) | ✓ |  |
@@ -513,7 +513,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ✓ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ✓ |  |
 | [Xendit](connectors/xendit.md) | ✓ |  |
-| [Zift](connectors/zift.md) | ? | Failed to encode connector request |
+| [Zift](connectors/zift.md) | ✓ |  |
 
 #### PaymentService.CreateOrder
 
@@ -611,7 +611,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ✓ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ✓ |  |
 | [Barclaycard](connectors/barclaycard.md) | ✓ |  |
 | [Billwerk](connectors/billwerk.md) | ✓ |  |
 | [Bluesnap](connectors/bluesnap.md) | ✓ |  |
@@ -638,7 +638,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | [Hipay](connectors/hipay.md) | ✓ |  |
 | [Hyperpg](connectors/hyperpg.md) | ✓ |  |
 | [Iatapay](connectors/iatapay.md) | ✓ |  |
-| [Jpmorgan](connectors/jpmorgan.md) | ? | Stuck on field: company_name — Missing required field: co... |
+| [Jpmorgan](connectors/jpmorgan.md) | ✓ |  |
 | [Loonio](connectors/loonio.md) | ⚠ |  |
 | [MiFinity](connectors/mifinity.md) | ⚠ |  |
 | [Mollie](connectors/mollie.md) | ✓ |  |
@@ -650,19 +650,19 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ✓ |  |
 | [Paybox](connectors/paybox.md) | ✓ |  |
-| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ✓ |  |
 | [Payme](connectors/payme.md) | ✓ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ✓ |  |
 | [Paytm](connectors/paytm.md) | ⚠ |  |
 | [PayU](connectors/payu.md) | ⚠ |  |
 | [PhonePe](connectors/phonepe.md) | ⚠ |  |
-| [PlacetoPay](connectors/placetopay.md) | ? | Failed to encode connector request |
+| [PlacetoPay](connectors/placetopay.md) | ✓ |  |
 | [Powertranz](connectors/powertranz.md) | ✓ |  |
 | [Rapyd](connectors/rapyd.md) | ✓ |  |
 | [Razorpay](connectors/razorpay.md) | ✓ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ✓ |  |
-| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
+| [Redsys](connectors/redsys.md) | ✓ |  |
 | [Revolut](connectors/revolut.md) | ✓ |  |
 | [Revolv3](connectors/revolv3.md) | ✓ |  |
 | [Shift4](connectors/shift4.md) | ✓ |  |
@@ -694,7 +694,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | [Authorize.net](connectors/authorizedotnet.md) | ✓ |  |
 | [Bambora](connectors/bambora.md) | ⚠ |  |
 | [Bamboraapac](connectors/bamboraapac.md) | ✓ |  |
-| [Bankofamerica](connectors/bankofamerica.md) | ? | Invalid Configuration: connector_account_details.api_secret |
+| [Bankofamerica](connectors/bankofamerica.md) | ✓ |  |
 | [Barclaycard](connectors/barclaycard.md) | ⚠ |  |
 | [Billwerk](connectors/billwerk.md) | ⚠ |  |
 | [Bluesnap](connectors/bluesnap.md) | ⚠ |  |
@@ -733,7 +733,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ⚠ |  |
 | [Paybox](connectors/paybox.md) | ⚠ |  |
-| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ? | Stuck on field: billing.address.zip — Missing required fi... |
 | [Payme](connectors/payme.md) | ⚠ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ⚠ |  |
@@ -818,7 +818,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | [Novalnet](connectors/novalnet.md) | ✓ |  |
 | [Nuvei](connectors/nuvei.md) | ⚠ |  |
 | [Paybox](connectors/paybox.md) | ⚠ |  |
-| [Payload](connectors/payload.md) | ? | Failed to obtain authentication type |
+| [Payload](connectors/payload.md) | ✓ |  |
 | [Payme](connectors/payme.md) | ⚠ |  |
 | [Paypal](connectors/paypal.md) | ✓ |  |
 | [Paysafe](connectors/paysafe.md) | ? | Stuck on field: mandate_metadata — Missing required field... |
@@ -843,7 +843,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | [Tsys](connectors/tsys.md) | ⚠ |  |
 | [Volt](connectors/volt.md) | ⚠ |  |
 | [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
-| [Worldpay](connectors/worldpay.md) | ? | Invalid Configuration: connector_config.merchant_name |
+| [Worldpay](connectors/worldpay.md) | ✓ |  |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
 | [Xendit](connectors/xendit.md) | ⚠ |  |
@@ -991,7 +991,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | [Payload](connectors/payload.md) | ⚠ |  |
 | [Payme](connectors/payme.md) | ⚠ |  |
 | [Paypal](connectors/paypal.md) | ⚠ |  |
-| [Paysafe](connectors/paysafe.md) | ? | Invalid Configuration: account_id |
+| [Paysafe](connectors/paysafe.md) | ✓ |  |
 | [Paytm](connectors/paytm.md) | ⚠ |  |
 | [PayU](connectors/payu.md) | ⚠ |  |
 | [PhonePe](connectors/phonepe.md) | ⚠ |  |
@@ -1253,7 +1253,7 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 | [Rapyd](connectors/rapyd.md) | ⚠ |  |
 | [Razorpay](connectors/razorpay.md) | ⚠ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
-| [Redsys](connectors/redsys.md) | ? | Failed to encode connector request |
+| [Redsys](connectors/redsys.md) | ✓ |  |
 | [Revolut](connectors/revolut.md) | ⚠ |  |
 | [Revolv3](connectors/revolv3.md) | ⚠ |  |
 | [Shift4](connectors/shift4.md) | ⚠ |  |
@@ -1266,7 +1266,7 @@ Initiate 3DS flow before payment authorization. Collects device data and prepare
 | [Tsys](connectors/tsys.md) | ⚠ |  |
 | [Volt](connectors/volt.md) | ⚠ |  |
 | [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
-| [Worldpay](connectors/worldpay.md) | ? | Stuck on field: connector_feature_data.link_data — Missin... |
+| [Worldpay](connectors/worldpay.md) | ? | Failed to deserialize connector response |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
 | [Xendit](connectors/xendit.md) | ⚠ |  |
@@ -1336,7 +1336,7 @@ Execute 3DS challenge or frictionless verification. Authenticates customer via b
 | [Rapyd](connectors/rapyd.md) | ⚠ |  |
 | [Razorpay](connectors/razorpay.md) | ⚠ |  |
 | [Razorpay V2](connectors/razorpayv2.md) | ⚠ |  |
-| [Redsys](connectors/redsys.md) | ? | Stuck on field: continue_redirection_url — Missing requir... |
+| [Redsys](connectors/redsys.md) | ? | Stuck on field: authentication_data.threeds_server_transa... |
 | [Revolut](connectors/revolut.md) | ⚠ |  |
 | [Revolv3](connectors/revolv3.md) | ⚠ |  |
 | [Shift4](connectors/shift4.md) | ⚠ |  |
@@ -1409,7 +1409,7 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | [Paybox](connectors/paybox.md) | ⚠ |  |
 | [Payload](connectors/payload.md) | ⚠ |  |
 | [Payme](connectors/payme.md) | ⚠ |  |
-| [Paypal](connectors/paypal.md) | ✓ |  |
+| [Paypal](connectors/paypal.md) | ? | Stuck on field: reference_id — Missing required field: re... |
 | [Paysafe](connectors/paysafe.md) | ⚠ |  |
 | [Paytm](connectors/paytm.md) | ⚠ |  |
 | [PayU](connectors/payu.md) | ⚠ |  |
@@ -1432,7 +1432,7 @@ Validate authentication results with the issuing bank. Processes bank's authenti
 | [Tsys](connectors/tsys.md) | ⚠ |  |
 | [Volt](connectors/volt.md) | ⚠ |  |
 | [Wellsfargo](connectors/wellsfargo.md) | ⚠ |  |
-| [Worldpay](connectors/worldpay.md) | ? | Stuck on field: connector_feature_data.link_data — Missin... |
+| [Worldpay](connectors/worldpay.md) | ? | Failed to deserialize connector response |
 | [Worldpayvantiv](connectors/worldpayvantiv.md) | ⚠ |  |
 | [Worldpayxml](connectors/worldpayxml.md) | ⚠ |  |
 | [Xendit](connectors/xendit.md) | ⚠ |  |

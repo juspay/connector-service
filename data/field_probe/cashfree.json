@@ -7,6 +7,70 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Card": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported for Cashfree V3 is not supported by Cashfree"
+      },
       "UpiCollect": {
         "status": "supported",
         "proto_request": {
@@ -25,7 +89,8 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "merchant_order_id": "probe_session_id"
+          "return_url": "https://example.com/return",
+          "merchant_order_id": "probe_order_001"
         },
         "sample": {
           "url": "https://sandbox.cashfree.com/pg/orders/sessions",
@@ -37,7 +102,7 @@
             "x-client-id": "probe_id",
             "x-client-secret": "probe_key"
           },
-          "body": "{\"payment_session_id\":\"probe_session_id\",\"payment_method\":{\"upi\":{\"channel\":\"collect\",\"upi_id\":\"test@upi\"}},\"payment_surcharge\":null}"
+          "body": "{\"payment_session_id\":\"probe_order_001\",\"payment_method\":{\"upi\":{\"channel\":\"collect\",\"upi_id\":\"test@upi\"}},\"payment_surcharge\":null}"
         }
       }
     },

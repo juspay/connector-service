@@ -44,7 +44,8 @@ def _build_authorize_request(capture_method: str):
                 "billing_address": {
                 }
             },
-            "auth_type": "NO_THREE_DS"  # Authentication Details
+            "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
@@ -97,14 +98,14 @@ async def process_checkout_wallet(merchant_transaction_id: str, config: sdk_conf
             "payment_method": {  # Payment method to be used
                 "apple_pay": {  # Apple Pay
                     "payment_data": {
-                        "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
+                        "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string
                     },
                     "payment_method": {
                         "display_name": "Visa 1111",
                         "network": "Visa",
                         "type": "debit"
                     },
-                    "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
+                    "transaction_identifier": "probe_txn_id"  # Transaction identifier
                 }
             },
             "capture_method": "AUTOMATIC",  # Method for capturing the payment
@@ -112,7 +113,8 @@ async def process_checkout_wallet(merchant_transaction_id: str, config: sdk_conf
                 "billing_address": {
                 }
             },
-            "auth_type": "NO_THREE_DS"  # Authentication Details
+            "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     ))

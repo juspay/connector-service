@@ -39,7 +39,8 @@ function _buildAuthorizeRequest(captureMethod) {
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     };
 }
 
@@ -138,8 +139,8 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
                 },
                 "tokenizationData": {
                     "encryptedData": {  // Encrypted Google Pay payment data
-                        "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
-                        "tokenType": "PAYMENT_GATEWAY"  // The type of the token
+                        "tokenType": "PAYMENT_GATEWAY",  // The type of the token
+                        "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  // Token generated for the wallet
                     }
                 }
             }
@@ -149,7 +150,8 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
             "billingAddress": {
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     });
 
     if (authorizeResponse.status === 'FAILED') {
@@ -189,7 +191,8 @@ async function processCheckoutBank(merchantTransactionId, config = _defaultConfi
                 "zipCode": {"value": "98101"}
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     });
 
     if (authorizeResponse.status === 'FAILED') {

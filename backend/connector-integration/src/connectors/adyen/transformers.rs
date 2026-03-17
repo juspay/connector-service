@@ -3357,7 +3357,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .encoded_data
             .clone()
             .get_required_value("encoded_data")
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::MissingRequiredField {
+                field_name: "encoded_data: AdyenRedirectRequestTypes",
+            })?;
         let adyen_redirection_type =
             serde_urlencoded::from_str::<AdyenRedirectRequestTypes>(encoded_data.as_str())
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;

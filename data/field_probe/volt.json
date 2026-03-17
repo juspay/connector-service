@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Volt"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Volt"
@@ -40,6 +44,10 @@
         "error": "This step has not been implemented for: Selected payment method through Volt"
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Volt"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Volt"
       },

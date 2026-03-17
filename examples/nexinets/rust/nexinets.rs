@@ -45,6 +45,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default()
 }
 
@@ -101,7 +102,7 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
             "payment_method": {
                 "apple_pay": {  // Apple Pay
                     "payment_data": {
-                        "encrypted_data": "<base64_encoded_apple_pay_payment_token>",  // Encrypted Apple Pay payment data as string
+                        "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9",  // Encrypted Apple Pay payment data as string
                     },
                     "payment_method": {
                         "payment_method": {
@@ -110,7 +111,7 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
                             "type": "debit",
                         }
                     },
-                    "transaction_identifier": "<apple_pay_transaction_identifier>",  // Transaction identifier
+                    "transaction_identifier": "probe_txn_id",  // Transaction identifier
                 },
             }
         },
@@ -120,6 +121,7 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
             },
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
+        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     match authorize_response.status() {

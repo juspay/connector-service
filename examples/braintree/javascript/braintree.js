@@ -40,6 +40,7 @@ function _buildAuthorizeRequest(captureMethod) {
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
         "paymentMethodToken": {"value": "probe_pm_token"}  // Payment Method Token
     };
 }
@@ -181,26 +182,8 @@ async function processTokenize(merchantTransactionId, config = _defaultConfig) {
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
             }
         }
     });

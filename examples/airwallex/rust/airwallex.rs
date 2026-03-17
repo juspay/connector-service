@@ -45,6 +45,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "merchant_order_id": "probe_order_001",
     "state": {  // State Information
         "access_token": {  // Access token obtained from connector

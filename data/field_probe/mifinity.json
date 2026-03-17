@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Mifinity"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Mifinity"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Mifinity"
@@ -40,6 +44,10 @@
         "error": "This step has not been implemented for: Selected payment method through Mifinity"
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Mifinity"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Mifinity"
       },

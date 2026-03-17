@@ -875,7 +875,7 @@ impl PaymentFlowData {
     pub fn get_reference_id(&self) -> Result<String, Error> {
         self.reference_id
             .to_owned()
-            .ok_or_else(missing_field_err("reference_id"))
+            .ok_or_else(missing_field_err("merchant_order_id"))
     }
 
     pub fn get_optional_billing_full_name(&self) -> Option<Secret<String>> {

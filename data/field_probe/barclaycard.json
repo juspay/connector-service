@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only card payments are supported"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only card payments are supported"
@@ -67,7 +71,8 @@
               "country_alpha2_code": "US"
             }
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/",
@@ -86,6 +91,10 @@
         }
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only card payments are supported"
       },

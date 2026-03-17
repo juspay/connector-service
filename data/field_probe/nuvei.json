@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -27,13 +59,13 @@
           "capture_method": "AUTOMATIC",
           "address": {
             "billing_address": {
-              "first_name": "John",
               "last_name": "Doe",
               "country_alpha2_code": "US",
               "email": "test@example.com"
             }
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "session_token": "probe_session_token",
           "browser_info": {
             "color_depth": 24,
@@ -56,8 +88,40 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"sessionToken\":\"probe_session_token\",\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_txn_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"clientUniqueId\":\"probe_txn_001\",\"paymentOption\":{\"card\":{\"cardNumber\":\"4111111111111111\",\"cardHolderName\":\"John Doe\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"CVV\":\"737\"}},\"transactionType\":\"Sale\",\"deviceDetails\":{\"ipAddress\":\"1.2.3.4\"},\"billingAddress\":{\"email\":\"test@example.com\",\"country\":\"US\",\"firstName\":\"John\",\"lastName\":\"Doe\"},\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
+          "body": "{\"sessionToken\":\"probe_session_token\",\"merchantId\":\"probe_merchant\",\"merchantSiteId\":\"probe_id\",\"clientRequestId\":\"probe_txn_001\",\"amount\":\"10.00\",\"currency\":\"USD\",\"clientUniqueId\":\"probe_txn_001\",\"paymentOption\":{\"card\":{\"cardNumber\":\"4111111111111111\",\"cardHolderName\":\"Doe\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"CVV\":\"737\"}},\"transactionType\":\"Sale\",\"deviceDetails\":{\"ipAddress\":\"1.2.3.4\"},\"billingAddress\":{\"email\":\"test@example.com\",\"country\":\"US\",\"lastName\":\"Doe\"},\"urlDetails\":{\"successUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\",\"pendingUrl\":\"https://example.com/return\"},\"timeStamp\":\"00000000000000\",\"checksum\":\"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3\"}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by nuvei"
       }
     },
     "capture": {

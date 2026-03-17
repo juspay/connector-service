@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -25,16 +57,13 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe"
-          },
           "address": {
             "billing_address": {
-              "first_name": "John",
               "last_name": "Doe"
             }
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://api.na.bambora.com/v1/payments",
@@ -44,8 +73,40 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"order_number\":\"probe_txn_001\",\"amount\":10.0,\"payment_method\":\"card\",\"card\":{\"name\":\"John Doe\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"737\",\"complete\":true},\"billing\":{\"name\":\"John\"}}"
+          "body": "{\"order_number\":\"probe_txn_001\",\"amount\":10.0,\"payment_method\":\"card\",\"card\":{\"name\":\"Doe\",\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"30\",\"cvd\":\"737\",\"complete\":true},\"billing\":{\"name\":\"Doe\"}}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by bambora"
       }
     },
     "capture": {

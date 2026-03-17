@@ -46,6 +46,7 @@ def _build_authorize_request(capture_method: str):
                 }
             },
             "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
             "payment_method_token": {"value": "probe_pm_token"}  # Payment Method Token
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
@@ -195,26 +196,8 @@ async def process_tokenize(merchant_transaction_id: str, config: sdk_config_pb2.
                     "card_holder_name": {"value": "John Doe"}  # Cardholder Information
                 }
             },
-            "customer": {  # Customer Information
-                "name": "John Doe",  # Customer's full name
-                "email": {"value": "test@example.com"},  # Customer's email address
-                "id": "cust_probe_123",  # Internal customer ID
-                "connector_customer_id": "cust_probe_123",  # Customer ID in the connector system
-                "phone_number": "4155552671",  # Customer's phone number
-                "phone_country_code": "+1"  # Customer's phone country code
-            },
             "address": {  # Address Information
                 "billing_address": {
-                    "first_name": {"value": "John"},  # Personal Information
-                    "last_name": {"value": "Doe"},
-                    "line1": {"value": "123 Main St"},  # Address Details
-                    "city": {"value": "Seattle"},
-                    "state": {"value": "WA"},
-                    "zip_code": {"value": "98101"},
-                    "country_alpha2_code": "US",
-                    "email": {"value": "test@example.com"},  # Contact Information
-                    "phone_number": {"value": "4155552671"},
-                    "phone_country_code": "+1"
                 }
             }
         },

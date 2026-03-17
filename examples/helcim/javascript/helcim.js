@@ -43,6 +43,7 @@ function _buildAuthorizeRequest(captureMethod) {
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
         "browserInfo": {
             "ipAddress": "1.2.3.4"  // Device Information
         }

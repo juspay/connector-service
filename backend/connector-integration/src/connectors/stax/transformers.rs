@@ -815,11 +815,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        if item.router_data.request.email.is_none() && item.router_data.request.name.is_none() {
+        if item.router_data.request.email.is_none() {
             Err(errors::ConnectorError::MissingRequiredField {
-                field_name: "email or name",
+                field_name: "email",
             })?
-        } else {
+        } 
+        else if item.router_data.request.name.is_none() {
+            Err(errors::ConnectorError::MissingRequiredField {
+                field_name: "name",
+            })?
+        } 
+        else {
             Ok(Self {
                 email: item
                     .router_data

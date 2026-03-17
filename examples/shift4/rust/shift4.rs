@@ -43,10 +43,10 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
     "address": {  // Address Information
         "billing_address": {
             "first_name": "John",  // Personal Information
-            "last_name": "Doe",
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default()
 }
 

@@ -35,16 +35,13 @@ function _buildAuthorizeRequest(captureMethod) {
             }
         },
         "captureMethod": captureMethod,  // Method for capturing the payment
-        "customer": {  // Customer Information
-            "name": "John Doe"  // Customer's full name
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
                 "lastName": {"value": "Doe"}
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     };
 }
 

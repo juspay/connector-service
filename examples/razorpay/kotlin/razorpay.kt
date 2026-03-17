@@ -44,10 +44,10 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         addressBuilder.apply {  // Address Information
             billingAddressBuilder.apply {
                 phoneNumberBuilder.value = "4155552671"
-                phoneCountryCode = "+1"
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
         merchantOrderId = "probe_order_001"
     }.build()
 }

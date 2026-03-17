@@ -40,11 +40,11 @@ function _buildAuthorizeRequest(captureMethod) {
         },
         "address": {  // Address Information
             "billingAddress": {
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
+                "phoneNumber": {"value": "4155552671"}
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
         "merchantOrderId": "probe_order_001"
     };
 }

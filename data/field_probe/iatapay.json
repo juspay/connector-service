@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported by Iatapay"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported by Iatapay"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported by Iatapay"
@@ -40,6 +44,10 @@
         "error": "This step has not been implemented for: Payment method not supported by Iatapay"
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported by Iatapay"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported by Iatapay"
       },

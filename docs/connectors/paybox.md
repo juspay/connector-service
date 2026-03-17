@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L89) · [JavaScript](../../examples/paybox/javascript/paybox.js#L80) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L102) · [Rust](../../examples/paybox/rust/paybox.rs#L99)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L90) · [JavaScript](../../examples/paybox/javascript/paybox.js#L81) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L103) · [Rust](../../examples/paybox/rust/paybox.rs#L100)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L114) · [JavaScript](../../examples/paybox/javascript/paybox.js#L106) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L124) · [Rust](../../examples/paybox/rust/paybox.rs#L121)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L115) · [JavaScript](../../examples/paybox/javascript/paybox.js#L107) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L125) · [Rust](../../examples/paybox/rust/paybox.rs#L122)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L133) · [JavaScript](../../examples/paybox/javascript/paybox.js#L125) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L140) · [Rust](../../examples/paybox/rust/paybox.rs#L136)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L134) · [JavaScript](../../examples/paybox/javascript/paybox.js#L126) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L141) · [Rust](../../examples/paybox/rust/paybox.rs#L137)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L170) · [JavaScript](../../examples/paybox/javascript/paybox.js#L160) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L162) · [Rust](../../examples/paybox/rust/paybox.rs#L158)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L171) · [JavaScript](../../examples/paybox/javascript/paybox.js#L161) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L163) · [Rust](../../examples/paybox/rust/paybox.rs#L159)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L192) · [JavaScript](../../examples/paybox/javascript/paybox.js#L182) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L181) · [Rust](../../examples/paybox/rust/paybox.rs#L176)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L193) · [JavaScript](../../examples/paybox/javascript/paybox.js#L183) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L182) · [Rust](../../examples/paybox/rust/paybox.rs#L177)
 
 ## API Reference
 
@@ -168,6 +168,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
+| Google Pay | x |
+| Apple Pay | x |
+| SEPA | x |
+| BACS | x |
+| ACH | x |
+| BECS | x |
+| iDEAL | x |
+| PayPal | x |
+| BLIK | x |
+| Klarna | x |
+| Afterpay | x |
+| UPI | x |
+| Affirm | x |
+| Samsung Pay | x |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -185,7 +199,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L214) · [JavaScript](../../examples/paybox/javascript/paybox.js#L203) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L199) · [Rust](../../examples/paybox/rust/paybox.rs#L193)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L215) · [JavaScript](../../examples/paybox/javascript/paybox.js#L204) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L200) · [Rust](../../examples/paybox/rust/paybox.rs#L194)
 
 #### PaymentService.Capture
 
@@ -196,7 +210,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L223) · [JavaScript](../../examples/paybox/javascript/paybox.js#L212) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L211) · [Rust](../../examples/paybox/rust/paybox.rs#L204)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L224) · [JavaScript](../../examples/paybox/javascript/paybox.js#L213) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L212) · [Rust](../../examples/paybox/rust/paybox.rs#L205)
 
 #### PaymentService.Get
 
@@ -207,7 +221,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L232) · [JavaScript](../../examples/paybox/javascript/paybox.js#L221) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L221) · [Rust](../../examples/paybox/rust/paybox.rs#L210)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L233) · [JavaScript](../../examples/paybox/javascript/paybox.js#L222) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L222) · [Rust](../../examples/paybox/rust/paybox.rs#L211)
 
 #### PaymentService.Refund
 
@@ -218,7 +232,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L133) · [JavaScript](../../examples/paybox/javascript/paybox.js#L125) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L229) · [Rust](../../examples/paybox/rust/paybox.rs#L216)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L134) · [JavaScript](../../examples/paybox/javascript/paybox.js#L126) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L230) · [Rust](../../examples/paybox/rust/paybox.rs#L217)
 
 #### PaymentService.Void
 
@@ -229,4 +243,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/paybox/python/paybox.py#L241) · [JavaScript](../../examples/paybox/javascript/paybox.js#L230) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L239) · [Rust](../../examples/paybox/rust/paybox.rs#L222)
+**Examples:** [Python](../../examples/paybox/python/paybox.py#L242) · [JavaScript](../../examples/paybox/javascript/paybox.js#L231) · [Kotlin](../../examples/paybox/kotlin/paybox.kt#L240) · [Rust](../../examples/paybox/rust/paybox.rs#L223)

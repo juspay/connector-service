@@ -161,7 +161,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
+| Google Pay | x |
+| Apple Pay | x |
+| SEPA | x |
+| BACS | x |
+| ACH | x |
+| BECS | x |
 | iDEAL | ✓ |
+| PayPal | x |
+| BLIK | x |
+| Klarna | x |
+| Afterpay | x |
+| UPI | x |
+| Affirm | x |
+| Samsung Pay | x |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 

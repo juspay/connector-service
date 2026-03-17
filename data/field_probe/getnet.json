@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -29,6 +61,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -48,6 +81,38 @@
           },
           "body": "{\"request_id\":\"probe_txn_001\",\"idempotency_key\":\"probe_txn_001\",\"order_id\":\"probe_txn_001\",\"data\":{\"customer_id\":\"cus_default\",\"amount\":1000,\"currency\":\"USD\",\"payment\":{\"payment_id\":\"probe_txn_001\",\"payment_method\":\"CREDIT\",\"transaction_type\":\"FULL\",\"number_installments\":1,\"card\":{\"number\":\"4111111111111111\",\"expiration_month\":\"03\",\"expiration_year\":\"30\",\"cardholder_name\":\"John Doe\",\"security_code\":\"737\"}}}}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by Getnet"
       }
     },
     "capture": {

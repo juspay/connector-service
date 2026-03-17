@@ -63,14 +63,14 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "<base64_encoded_apple_pay_payment_token>"
+                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
                 "network": "Visa",
                 "type": "debit"
               },
-              "transaction_identifier": "<apple_pay_transaction_identifier>"
+              "transaction_identifier": "probe_txn_id"
             }
           },
           "capture_method": "AUTOMATIC",
@@ -94,6 +94,10 @@
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":null,\"last_name\":null,\"email\":\"test@example.com\",\"mobile\":null,\"billing\":{\"house_no\":null,\"street\":null,\"city\":null,\"zip\":null,\"country_code\":null},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"APPLEPAY\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":{\"wallet_data\":\"{\\\"version\\\":\\\"EC_v1\\\",\\\"data\\\":\\\"probe\\\",\\\"signature\\\":\\\"probe\\\"}\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":null,\"error_return_url\":null,\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en\"}}"
         }
+      },
+      "ApplePayDecrypted": {
+        "status": "error",
+        "error": "Stuck on field: Apple pay encrypted data — Missing required field: Apple pay encrypted data"
       },
       "Bacs": {
         "status": "not_implemented",
@@ -166,8 +170,8 @@
               },
               "tokenization_data": {
                 "encrypted_data": {
-                  "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",
-                  "token_type": "PAYMENT_GATEWAY"
+                  "token_type": "PAYMENT_GATEWAY",
+                  "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
                 }
               }
             }
@@ -193,6 +197,10 @@
           },
           "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":null,\"last_name\":null,\"email\":\"test@example.com\",\"mobile\":null,\"billing\":{\"house_no\":null,\"street\":null,\"city\":null,\"zip\":null,\"country_code\":null},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"GOOGLEPAY\",\"amount\":\"1000\",\"currency\":\"USD\",\"order_no\":\"probe_txn_001\",\"payment_data\":{\"wallet_data\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":null,\"error_return_url\":null,\"enforce_3d\":null,\"create_token\":null},\"custom\":{\"lang\":\"en\"}}"
         }
+      },
+      "GooglePayDecrypted": {
+        "status": "error",
+        "error": "Stuck on field: gpay wallet_token — Missing required field: gpay wallet_token"
       },
       "Ideal": {
         "status": "not_implemented",
@@ -456,25 +464,11 @@
             }
           },
           "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "connector_customer_id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
+            "email": "test@example.com"
           },
           "address": {
             "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
+              "first_name": "John"
             }
           },
           "auth_type": "NO_THREE_DS",
@@ -486,19 +480,6 @@
           "customer_acceptance": {
             "acceptance_type": "OFFLINE",
             "accepted_at": 0
-          },
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
           }
         },
         "sample": {
@@ -509,7 +490,7 @@
             "via": "HyperSwitch",
             "x-nn-access-key": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA=="
           },
-          "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"test@example.com\",\"mobile\":\"4155552671\",\"billing\":{\"house_no\":\"123 Main St\",\"street\":null,\"city\":\"Seattle\",\"zip\":\"98101\",\"country_code\":\"US\"},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"CREDITCARD\",\"amount\":0,\"currency\":\"USD\",\"order_no\":\"probe_mandate_001\",\"payment_data\":{\"card_number\":\"4111111111111111\",\"card_expiry_month\":\"03\",\"card_expiry_year\":\"2030\",\"card_cvc\":\"737\",\"card_holder\":\"John Doe\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":\"https://example.com/mandate-return\",\"error_return_url\":\"https://example.com/mandate-return\",\"enforce_3d\":null,\"create_token\":1},\"custom\":{\"lang\":\"en-US\"}}"
+          "body": "{\"merchant\":{\"signature\":\"probe_key\",\"tariff\":\"probe_id\"},\"customer\":{\"first_name\":\"John\",\"last_name\":null,\"email\":\"test@example.com\",\"mobile\":null,\"billing\":{\"house_no\":null,\"street\":null,\"city\":null,\"zip\":null,\"country_code\":null},\"no_nc\":1,\"birth_date\":null},\"transaction\":{\"test_mode\":0,\"payment_type\":\"CREDITCARD\",\"amount\":0,\"currency\":\"USD\",\"order_no\":\"probe_mandate_001\",\"payment_data\":{\"card_number\":\"4111111111111111\",\"card_expiry_month\":\"03\",\"card_expiry_year\":\"2030\",\"card_cvc\":\"737\",\"card_holder\":\"John\"},\"hook_url\":\"https://example.com/webhook\",\"return_url\":\"https://example.com/mandate-return\",\"error_return_url\":\"https://example.com/mandate-return\",\"enforce_3d\":null,\"create_token\":1},\"custom\":{\"lang\":\"en\"}}"
         }
       }
     },

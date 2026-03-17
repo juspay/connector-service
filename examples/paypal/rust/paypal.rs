@@ -45,6 +45,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "state": {  // State Information
         "access_token": {  // Access token obtained from connector
             "token": "probe_access_token",  // The token string.
@@ -205,26 +206,8 @@ pub async fn process_recurring(client: &ConnectorClient, merchant_transaction_id
                 },
             }
         },
-        "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": "test@example.com",  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-            "phone_number": "4155552671",  // Customer's phone number
-            "phone_country_code": "+1",  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billing_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
             },
         },
         "auth_type": "NO_THREE_DS",  // Type of authentication to be used
@@ -235,19 +218,6 @@ pub async fn process_recurring(client: &ConnectorClient, merchant_transaction_id
         "customer_acceptance": {  // Details of customer acceptance
             "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
             "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        },
-        "browser_info": {  // Information about the customer's browser
-            "color_depth": 24,  // Display Information
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,  // Browser Settings
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",  // Browser Headers
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4",  // Device Information
         },
         "state": {  // State data for access token storage and other connector-specific state
             "access_token": {  // Access token obtained from connector
@@ -355,40 +325,6 @@ pub async fn get(client: &ConnectorClient, merchant_transaction_id: &str) -> Res
     return Ok(format!("status: {:?}", response.status()));
 }
 
-// Flow: PaymentMethodAuthenticationService.PostAuthenticate
-pub async fn post_authenticate(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.post_authenticate(serde_json::from_value::<PaymentMethodAuthenticationServicePostAuthenticateRequest>(serde_json::json!({
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  // Payment Method
-        "payment_method": {
-            "card": {  // Generic card payment
-                "card_number": "4111111111111111",  // Card Identification
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information
-            },
-        }
-    },
-    "address": {  // Address Information
-        "billing_address": {
-        },
-    },
-    "connector_order_reference_id": "probe_order_ref_001",
-    "state": {  // State Information
-        "access_token": {  // Access token obtained from connector
-            "token": "probe_access_token",  // The token string.
-            "expires_in_seconds": 3600,  // Expiration timestamp (seconds since epoch)
-            "token_type": "Bearer",  // Token type (e.g., "Bearer", "Basic").
-        },
-    },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
-}
-
 // Flow: RecurringPaymentService.Charge
 pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
@@ -446,26 +382,8 @@ pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: 
             },
         }
     },
-    "customer": {
-        "name": "John Doe",  // Customer's full name
-        "email": "test@example.com",  // Customer's email address
-        "id": "cust_probe_123",  // Internal customer ID
-        "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-        "phone_number": "4155552671",  // Customer's phone number
-        "phone_country_code": "+1",  // Customer's phone country code
-    },
     "address": {  // Address Information
         "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
         },
     },
     "auth_type": "NO_THREE_DS",  // Type of authentication to be used
@@ -476,19 +394,6 @@ pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: 
     "customer_acceptance": {  // Details of customer acceptance
         "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
         "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "browser_info": {  // Information about the customer's browser
-        "color_depth": 24,  // Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information
     },
     "state": {  // State data for access token storage and other connector-specific state
         "access_token": {  // Access token obtained from connector
@@ -526,12 +431,11 @@ async fn main() {
         "capture" => capture(&client, "order_001").await,
         "create_access_token" => create_access_token(&client, "order_001").await,
         "get" => get(&client, "order_001").await,
-        "post_authenticate" => post_authenticate(&client, "order_001").await,
         "recurring_charge" => recurring_charge(&client, "order_001").await,
         "refund" => refund(&client, "order_001").await,
         "setup_recurring" => setup_recurring(&client, "order_001").await,
         "void" => void(&client, "order_001").await,
-        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_card, process_checkout_autocapture, process_refund, process_recurring, process_void_payment, process_get_payment, authorize, capture, create_access_token, get, post_authenticate, recurring_charge, refund, setup_recurring, void", flow); return; }
+        _ => { eprintln!("Unknown flow: {}. Available: process_checkout_card, process_checkout_autocapture, process_refund, process_recurring, process_void_payment, process_get_payment, authorize, capture, create_access_token, get, recurring_charge, refund, setup_recurring, void", flow); return; }
     };
     match result {
         Ok(msg) => println!("✓ {msg}"),

@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -28,7 +60,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://preprod-ppps.paybox.com/PPPS.php",
@@ -39,6 +72,38 @@
           },
           "body": "VERSION=00104&TYPE=00003&SITE=probe_site&RANG=probe_rank&CLE=probe_key&NUMQUESTION=000000000&MONTANT=1000&DEVISE=USD&REFERENCE=probe_txn_001&DATEQ=00000000000000&PORTEUR=4111111111111111&DATEVAL=0330&CVV=737&ACTIVITE=024"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Only card payments are supported is not supported by Paybox"
       }
     },
     "capture": {

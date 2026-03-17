@@ -41,6 +41,7 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
     }.build()
 }
 
@@ -104,14 +105,14 @@ fun processCheckoutWallet(txnId: String, config: ConnectorConfig = _defaultConfi
         paymentMethodBuilder.apply {  // Payment method to be used
             applePayBuilder.apply {  // Apple Pay
                 paymentDataBuilder.apply {
-                    encryptedData = "<base64_encoded_apple_pay_payment_token>"  // Encrypted Apple Pay payment data as string
+                    encryptedData = "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  // Encrypted Apple Pay payment data as string
                 }
                 paymentMethodBuilder.apply {
                     displayName = "Visa 1111"
                     network = "Visa"
                     type = "debit"
                 }
-                transactionIdentifier = "<apple_pay_transaction_identifier>"  // Transaction identifier
+                transactionIdentifier = "probe_txn_id"  // Transaction identifier
             }
         }
         captureMethod = CaptureMethod.AUTOMATIC  // Method for capturing the payment
@@ -120,6 +121,7 @@ fun processCheckoutWallet(txnId: String, config: ConnectorConfig = _defaultConfi
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
     }.build())
 
     when (authorizeResponse.status.name) {

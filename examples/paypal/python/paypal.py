@@ -11,7 +11,6 @@ from google.protobuf.json_format import ParseDict
 from payments import PaymentClient
 from payments import RecurringPaymentClient
 from payments import MerchantAuthenticationClient
-from payments import PaymentMethodAuthenticationClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
 _default_config = sdk_config_pb2.ConnectorConfig(
@@ -48,6 +47,7 @@ def _build_authorize_request(capture_method: str):
                 }
             },
             "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
             "state": {  # State Information
                 "access_token": {  # Access token obtained from connector
                     "token": {"value": "probe_access_token"},  # The token string.
@@ -226,26 +226,8 @@ async def process_recurring(merchant_transaction_id: str, config: sdk_config_pb2
                     "card_holder_name": {"value": "John Doe"}  # Cardholder Information
                 }
             },
-            "customer": {
-                "name": "John Doe",  # Customer's full name
-                "email": {"value": "test@example.com"},  # Customer's email address
-                "id": "cust_probe_123",  # Internal customer ID
-                "connector_customer_id": "cust_probe_123",  # Customer ID in the connector system
-                "phone_number": "4155552671",  # Customer's phone number
-                "phone_country_code": "+1"  # Customer's phone country code
-            },
             "address": {  # Address Information
                 "billing_address": {
-                    "first_name": {"value": "John"},  # Personal Information
-                    "last_name": {"value": "Doe"},
-                    "line1": {"value": "123 Main St"},  # Address Details
-                    "city": {"value": "Seattle"},
-                    "state": {"value": "WA"},
-                    "zip_code": {"value": "98101"},
-                    "country_alpha2_code": "US",
-                    "email": {"value": "test@example.com"},  # Contact Information
-                    "phone_number": {"value": "4155552671"},
-                    "phone_country_code": "+1"
                 }
             },
             "auth_type": "NO_THREE_DS",  # Type of authentication to be used
@@ -256,19 +238,6 @@ async def process_recurring(merchant_transaction_id: str, config: sdk_config_pb2
             "customer_acceptance": {  # Details of customer acceptance
                 "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
                 "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-            },
-            "browser_info": {  # Information about the customer's browser
-                "color_depth": 24,  # Display Information
-                "screen_height": 900,
-                "screen_width": 1440,
-                "java_enabled": False,  # Browser Settings
-                "java_script_enabled": True,
-                "language": "en-US",
-                "time_zone_offset_minutes": -480,
-                "accept_header": "application/json",  # Browser Headers
-                "user_agent": "Mozilla/5.0 (probe-bot)",
-                "accept_language": "en-US,en;q=0.9",
-                "ip_address": "1.2.3.4"  # Device Information
             },
             "state": {  # State data for access token storage and other connector-specific state
                 "access_token": {  # Access token obtained from connector
@@ -401,45 +370,6 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
-async def post_authenticate(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
-    """Flow: PaymentMethodAuthenticationService.PostAuthenticate"""
-    paymentmethodauthentication_client = PaymentMethodAuthenticationClient(config)
-
-    # Step 1: Post-Authenticate — validate authentication result with the issuing bank
-    post_authenticate_response = await paymentmethodauthentication_client.post_authenticate(ParseDict(
-        {
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "payment_method": {  # Payment Method
-                "card": {  # Generic card payment
-                    "card_number": {"value": "4111111111111111"},  # Card Identification
-                    "card_exp_month": {"value": "03"},
-                    "card_exp_year": {"value": "2030"},
-                    "card_cvc": {"value": "737"},
-                    "card_holder_name": {"value": "John Doe"}  # Cardholder Information
-                }
-            },
-            "address": {  # Address Information
-                "billing_address": {
-                }
-            },
-            "connector_order_reference_id": "probe_order_ref_001",
-            "state": {  # State Information
-                "access_token": {  # Access token obtained from connector
-                    "token": {"value": "probe_access_token"},  # The token string.
-                    "expires_in_seconds": 3600,  # Expiration timestamp (seconds since epoch)
-                    "token_type": "Bearer"  # Token type (e.g., "Bearer", "Basic").
-                }
-            }
-        },
-        payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateRequest(),
-    ))
-
-    return {"status": post_response.status}
-
-
 async def recurring_charge(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: RecurringPaymentService.Charge"""
     recurringpayment_client = RecurringPaymentClient(config)
@@ -501,26 +431,8 @@ async def setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.C
                     "card_holder_name": {"value": "John Doe"}  # Cardholder Information
                 }
             },
-            "customer": {
-                "name": "John Doe",  # Customer's full name
-                "email": {"value": "test@example.com"},  # Customer's email address
-                "id": "cust_probe_123",  # Internal customer ID
-                "connector_customer_id": "cust_probe_123",  # Customer ID in the connector system
-                "phone_number": "4155552671",  # Customer's phone number
-                "phone_country_code": "+1"  # Customer's phone country code
-            },
             "address": {  # Address Information
                 "billing_address": {
-                    "first_name": {"value": "John"},  # Personal Information
-                    "last_name": {"value": "Doe"},
-                    "line1": {"value": "123 Main St"},  # Address Details
-                    "city": {"value": "Seattle"},
-                    "state": {"value": "WA"},
-                    "zip_code": {"value": "98101"},
-                    "country_alpha2_code": "US",
-                    "email": {"value": "test@example.com"},  # Contact Information
-                    "phone_number": {"value": "4155552671"},
-                    "phone_country_code": "+1"
                 }
             },
             "auth_type": "NO_THREE_DS",  # Type of authentication to be used
@@ -531,19 +443,6 @@ async def setup_recurring(merchant_transaction_id: str, config: sdk_config_pb2.C
             "customer_acceptance": {  # Details of customer acceptance
                 "acceptance_type": "OFFLINE",  # Type of acceptance (e.g., online, offline).
                 "accepted_at": 0  # Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-            },
-            "browser_info": {  # Information about the customer's browser
-                "color_depth": 24,  # Display Information
-                "screen_height": 900,
-                "screen_width": 1440,
-                "java_enabled": False,  # Browser Settings
-                "java_script_enabled": True,
-                "language": "en-US",
-                "time_zone_offset_minutes": -480,
-                "accept_header": "application/json",  # Browser Headers
-                "user_agent": "Mozilla/5.0 (probe-bot)",
-                "accept_language": "en-US,en;q=0.9",
-                "ip_address": "1.2.3.4"  # Device Information
             },
             "state": {  # State data for access token storage and other connector-specific state
                 "access_token": {  # Access token obtained from connector

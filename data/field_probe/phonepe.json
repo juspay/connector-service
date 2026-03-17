@@ -7,6 +7,70 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Card": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method not supported is not supported by Phonepe"
+      },
       "UpiCollect": {
         "status": "supported",
         "proto_request": {
@@ -25,6 +89,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "webhook_url": "https://example.com/webhook"
         },
         "sample": {

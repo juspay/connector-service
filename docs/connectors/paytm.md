@@ -115,7 +115,21 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 
 | Payment Method | Supported |
 |----------------|:---------:|
+| Card | x |
+| Google Pay | x |
+| Apple Pay | x |
+| SEPA | x |
+| BACS | x |
+| ACH | x |
+| BECS | x |
+| iDEAL | x |
+| PayPal | x |
+| BLIK | x |
+| Klarna | x |
+| Afterpay | x |
 | UPI | ✓ |
+| Affirm | x |
+| Samsung Pay | x |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -129,7 +143,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L62) · [Rust](../../examples/paytm/rust/paytm.rs#L60)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L63) · [Rust](../../examples/paytm/rust/paytm.rs#L61)
 
 #### PaymentService.Get
 
@@ -140,7 +154,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L87) · [Rust](../../examples/paytm/rust/paytm.rs#L82)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L88) · [Rust](../../examples/paytm/rust/paytm.rs#L83)
 
 ### Authentication
 
@@ -153,4 +167,4 @@ Create session token for payment processing. Maintains session state across mult
 | **Request** | `MerchantAuthenticationServiceCreateSessionTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateSessionTokenResponse` |
 
-**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L74) · [Rust](../../examples/paytm/rust/paytm.rs#L71)
+**Examples:** [Python](../../examples/paytm/python/paytm.py) · [JavaScript](../../examples/paytm/javascript/paytm.js) · [Kotlin](../../examples/paytm/kotlin/paytm.kt#L75) · [Rust](../../examples/paytm/rust/paytm.rs#L72)

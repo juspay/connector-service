@@ -12,8 +12,16 @@ pub(crate) fn authorize_pm_variants() -> Vec<(&'static str, fn() -> PaymentMetho
         ("Bacs", bacs_payment_method as fn() -> PaymentMethod),
         ("Ach", ach_payment_method as fn() -> PaymentMethod),
         ("Becs", becs_payment_method as fn() -> PaymentMethod),
-        ("GooglePay", google_pay_method as fn() -> PaymentMethod),
-        ("ApplePay", apple_pay_method as fn() -> PaymentMethod),
+        ("GooglePay", google_pay_encrypted_method as fn() -> PaymentMethod),
+        (
+            "GooglePayDecrypted",
+            google_pay_decrypted_method as fn() -> PaymentMethod,
+        ),
+        ("ApplePay", apple_pay_encrypted_method as fn() -> PaymentMethod),
+        (
+            "ApplePayDecrypted",
+            apple_pay_method as fn() -> PaymentMethod,
+        ),
         ("Ideal", ideal_payment_method as fn() -> PaymentMethod),
         (
             "PaypalRedirect",
@@ -150,7 +158,7 @@ pub(crate) fn doc_payment_method_override(pm_name: &str) -> Option<serde_json::V
     // proto_req["payment_method"] should already be the variant, not
     // {"payment_method": {"apple_pay": {...}}}.
     match pm_name {
-        "ApplePay" => Some(serde_json::json!({
+        "ApplePay" | "ApplePayDecrypted" => Some(serde_json::json!({
             // payment_data is inlined — no "payment_data" oneof wrapper
             "apple_pay": {
                 "payment_data": {
@@ -164,7 +172,7 @@ pub(crate) fn doc_payment_method_override(pm_name: &str) -> Option<serde_json::V
                 "transaction_identifier": "<apple_pay_transaction_identifier>"
             }
         })),
-        "GooglePay" => Some(serde_json::json!({
+        "GooglePay" | "GooglePayDecrypted" => Some(serde_json::json!({
             // tokenization_data is inlined — no "tokenization_data" oneof wrapper.
             // "token" is the full JSON string returned by the Google Pay API.
             "google_pay": {

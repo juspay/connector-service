@@ -41,7 +41,8 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
-    "merchant_order_id": "probe_session_id",
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
+    "merchant_order_id": "probe_order_001",
     })).unwrap_or_default()
 }
 

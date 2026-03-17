@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only card payments are supported for Datatrans"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Datatrans"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only card payments are supported for Datatrans"
@@ -56,7 +60,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://api.sandbox.datatrans.com/v1/transactions/authorize",
@@ -70,6 +75,10 @@
         }
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Datatrans"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Only card payments are supported for Datatrans"
       },

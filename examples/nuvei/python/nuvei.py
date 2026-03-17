@@ -43,13 +43,13 @@ def _build_authorize_request(capture_method: str):
             "capture_method": capture_method,  # Method for capturing the payment
             "address": {  # Address Information
                 "billing_address": {
-                    "first_name": {"value": "John"},  # Personal Information
                     "last_name": {"value": "Doe"},
                     "country_alpha2_code": "US",
                     "email": {"value": "test@example.com"}  # Contact Information
                 }
             },
             "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
             "session_token": "probe_session_token",  # Session and Token Information
             "browser_info": {
                 "color_depth": 24,  # Display Information

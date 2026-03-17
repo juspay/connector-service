@@ -45,6 +45,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default()
 }
 
@@ -152,6 +153,7 @@ pub async fn process_checkout_bank(client: &ConnectorClient, merchant_transactio
             },
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
+        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     match authorize_response.status() {
@@ -207,25 +209,10 @@ pub async fn process_recurring(client: &ConnectorClient, merchant_transaction_id
             }
         },
         "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": "test@example.com",  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
             "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-            "phone_number": "4155552671",  // Customer's phone number
-            "phone_country_code": "+1",  // Customer's phone country code
         },
         "address": {  // Address Information
             "billing_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
             },
         },
         "auth_type": "NO_THREE_DS",  // Type of authentication to be used
@@ -236,19 +223,6 @@ pub async fn process_recurring(client: &ConnectorClient, merchant_transaction_id
         "customer_acceptance": {  // Details of customer acceptance
             "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
             "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        },
-        "browser_info": {  // Information about the customer's browser
-            "color_depth": 24,  // Display Information
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,  // Browser Settings
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",  // Browser Headers
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4",  // Device Information
         },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
@@ -316,23 +290,10 @@ pub async fn process_get_payment(client: &ConnectorClient, merchant_transaction_
 pub async fn process_create_customer(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Create Customer — register customer record in the connector
     let create_response = client.create_customer(serde_json::from_value::<CustomerServiceCreateRequest>(serde_json::json!({
+        "merchant_customer_id": "cust_probe_123",  // Identification
         "customer_name": "John Doe",  // Name of the customer
         "email": "test@example.com",  // Email address of the customer
         "phone_number": "4155552671",  // Phone number of the customer
-        "address": {  // Address Information
-            "billing_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
-            },
-        },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     Ok(format!("Customer: {}", create_response.connector_customer_id))
@@ -358,23 +319,10 @@ pub async fn capture(client: &ConnectorClient, merchant_transaction_id: &str) ->
 // Flow: CustomerService.Create
 pub async fn create_customer(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.create_customer(serde_json::from_value::<CustomerServiceCreateRequest>(serde_json::json!({
+    "merchant_customer_id": "cust_probe_123",  // Identification
     "customer_name": "John Doe",  // Name of the customer
     "email": "test@example.com",  // Email address of the customer
     "phone_number": "4155552671",  // Phone number of the customer
-    "address": {  // Address Information
-        "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
-        },
-    },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
     return Ok(format!("customer_id: {}", response.connector_customer_id));
 }
@@ -436,25 +384,10 @@ pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: 
         }
     },
     "customer": {
-        "name": "John Doe",  // Customer's full name
-        "email": "test@example.com",  // Customer's email address
-        "id": "cust_probe_123",  // Internal customer ID
         "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-        "phone_number": "4155552671",  // Customer's phone number
-        "phone_country_code": "+1",  // Customer's phone country code
     },
     "address": {  // Address Information
         "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
         },
     },
     "auth_type": "NO_THREE_DS",  // Type of authentication to be used
@@ -465,19 +398,6 @@ pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: 
     "customer_acceptance": {  // Details of customer acceptance
         "acceptance_type": "OFFLINE",  // Type of acceptance (e.g., online, offline).
         "accepted_at": 0,  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-    },
-    "browser_info": {  // Information about the customer's browser
-        "color_depth": 24,  // Display Information
-        "screen_height": 900,
-        "screen_width": 1440,
-        "java_enabled": false,  // Browser Settings
-        "java_script_enabled": true,
-        "language": "en-US",
-        "time_zone_offset_minutes": -480,
-        "accept_header": "application/json",  // Browser Headers
-        "user_agent": "Mozilla/5.0 (probe-bot)",
-        "accept_language": "en-US,en;q=0.9",
-        "ip_address": "1.2.3.4",  // Device Information
     },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
     if response.status() == PaymentStatus::Failure {

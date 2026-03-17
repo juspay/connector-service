@@ -40,8 +40,63 @@ function _buildAuthorizeRequest(captureMethod) {
                 "firstName": {"value": "John"}  // Personal Information
             }
         },
-        "authType": "NO_THREE_DS"  // Authentication Details
+        "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return"  // URLs for Redirection and Webhooks
     };
+}
+
+function _buildCaptureRequest(connectorTransactionId) {
+    return {
+        "merchantCaptureId": "probe_capture_001",  // Identification
+        "connectorTransactionId": connectorTransactionId,
+        "amountToCapture": {  // Capture Details
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    };
+}
+
+function _buildGetRequest(connectorTransactionId) {
+    return {
+        "connectorTransactionId": connectorTransactionId,
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    };
+}
+
+function _buildVoidRequest(connectorTransactionId) {
+    return {
+        "merchantVoidId": "probe_void_001",  // Identification
+        "connectorTransactionId": connectorTransactionId
+    };
+}
+
+// Card Payment (Authorize + Capture)
+// Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+async function processCheckoutCard(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    // Step 1: Authorize — reserve funds on the payment method
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('MANUAL'));
+
+    if (authorizeResponse.status === 'FAILED') {
+        throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
+    }
+    if (authorizeResponse.status === 'PENDING') {
+        // Awaiting async confirmation — handle via webhook
+        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
+    }
+
+    // Step 2: Capture — settle the reserved funds
+    const captureResponse = await paymentClient.capture(_buildCaptureRequest(authorizeResponse.connectorTransactionId));
+
+    if (captureResponse.status === 'FAILED') {
+        throw new Error(`Capture failed: ${captureResponse.error?.message}`);
+    }
+
+    return { status: captureResponse.status, transactionId: authorizeResponse.connectorTransactionId };
 }
 
 // Card Payment (Automatic Capture)
@@ -98,6 +153,50 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
     return { status: refundResponse.status };
 }
 
+// Void a Payment
+// Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+async function processVoidPayment(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    // Step 1: Authorize — reserve funds on the payment method
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('MANUAL'));
+
+    if (authorizeResponse.status === 'FAILED') {
+        throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
+    }
+    if (authorizeResponse.status === 'PENDING') {
+        // Awaiting async confirmation — handle via webhook
+        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
+    }
+
+    // Step 2: Void — release reserved funds (cancel authorization)
+    const voidResponse = await paymentClient.void(_buildVoidRequest(authorizeResponse.connectorTransactionId));
+
+    return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+}
+
+// Get Payment Status
+// Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+async function processGetPayment(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    // Step 1: Authorize — reserve funds on the payment method
+    const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('MANUAL'));
+
+    if (authorizeResponse.status === 'FAILED') {
+        throw new Error(`Payment failed: ${authorizeResponse.error?.message}`);
+    }
+    if (authorizeResponse.status === 'PENDING') {
+        // Awaiting async confirmation — handle via webhook
+        return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
+    }
+
+    // Step 2: Get — retrieve current payment status from the connector
+    const getResponse = await paymentClient.get(_buildGetRequest(authorizeResponse.connectorTransactionId));
+
+    return { status: getResponse.status, transactionId: getResponse.connectorTransactionId };
+}
+
 // Flow: PaymentService.Authorize (Card)
 async function authorize(merchantTransactionId, config = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -105,6 +204,24 @@ async function authorize(merchantTransactionId, config = _defaultConfig) {
     const authorizeResponse = await paymentClient.authorize(_buildAuthorizeRequest('AUTOMATIC'));
 
     return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+}
+
+// Flow: PaymentService.Capture
+async function capture(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const captureResponse = await paymentClient.capture(_buildCaptureRequest('12345'));
+
+    return { status: captureResponse.status };
+}
+
+// Flow: PaymentService.Get
+async function get(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const getResponse = await paymentClient.get(_buildGetRequest('12345'));
+
+    return { status: getResponse.status };
 }
 
 // Flow: PaymentService.SetupRecurring
@@ -125,26 +242,9 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
                 "cardHolderName": {"value": "John Doe"}  // Cardholder Information
             }
         },
-        "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": {"value": "test@example.com"},  // Customer's email address
-            "id": "cust_probe_123",  // Internal customer ID
-            "connectorCustomerId": "cust_probe_123",  // Customer ID in the connector system
-            "phoneNumber": "4155552671",  // Customer's phone number
-            "phoneCountryCode": "+1"  // Customer's phone country code
-        },
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
-                "lastName": {"value": "Doe"},
-                "line1": {"value": "123 Main St"},  // Address Details
-                "city": {"value": "Seattle"},
-                "state": {"value": "WA"},
-                "zipCode": {"value": "98101"},
-                "countryAlpha2Code": "US",
-                "email": {"value": "test@example.com"},  // Contact Information
-                "phoneNumber": {"value": "4155552671"},
-                "phoneCountryCode": "+1"
+                "firstName": {"value": "John"}  // Personal Information
             }
         },
         "authType": "NO_THREE_DS",  // Type of authentication to be used
@@ -155,19 +255,6 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
         "customerAcceptance": {  // Details of customer acceptance
             "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
             "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        },
-        "browserInfo": {  // Information about the customer's browser
-            "colorDepth": 24,  // Display Information
-            "screenHeight": 900,
-            "screenWidth": 1440,
-            "javaEnabled": false,  // Browser Settings
-            "javaScriptEnabled": true,
-            "language": "en-US",
-            "timeZoneOffsetMinutes": -480,
-            "acceptHeader": "application/json",  // Browser Headers
-            "userAgent": "Mozilla/5.0 (probe-bot)",
-            "acceptLanguage": "en-US,en;q=0.9",
-            "ipAddress": "1.2.3.4"  // Device Information
         }
     });
 
@@ -178,11 +265,20 @@ async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
     return { status: setupResponse.status, mandateId: setupResponse.connectorTransactionId };
 }
 
+// Flow: PaymentService.Void
+async function voidPayment(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
 
-module.exports = { processCheckoutAutocapture, processRefund, authorize, setupRecurring };
+    const voidResponse = await paymentClient.void(_buildVoidRequest('12345'));
+
+    return { status: voidResponse.status };
+}
+
+
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processRefund, processVoidPayment, processGetPayment, authorize, capture, get, setupRecurring, voidPayment };
 
 if (require.main === module) {
-    const scenario = process.argv[2] || 'checkout_autocapture';
+    const scenario = process.argv[2] || 'checkout_card';
     const key = 'process' + scenario.replace(/_([a-z])/g, (_, l) => l.toUpperCase()).replace(/^(.)/, c => c.toUpperCase());
     const fn = module.exports[key];
     if (!fn) {

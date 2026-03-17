@@ -30,21 +30,22 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "<base64_encoded_apple_pay_payment_token>"
+                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
                 "network": "Visa",
                 "type": "debit"
               },
-              "transaction_identifier": "<apple_pay_transaction_identifier>"
+              "transaction_identifier": "probe_txn_id"
             }
           },
           "capture_method": "AUTOMATIC",
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://apitest.payengine.de/v1/orders/debit",
@@ -54,8 +55,12 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"applepay\",\"payment\":{\"applePayToken\":{\"paymentData\":{\"version\":\"EC_v1\",\"data\":\"probe\",\"signature\":\"probe\"},\"paymentMethod\":{\"displayName\":\"Visa 1111\",\"network\":\"Visa\",\"type\":\"debit\"},\"transactionIdentifier\":\"probe_txn_id\"}},\"async\":{\"successUrl\":null,\"cancelUrl\":null,\"failureUrl\":null},\"merchantOrderId\":null}"
+          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"applepay\",\"payment\":{\"applePayToken\":{\"paymentData\":{\"version\":\"EC_v1\",\"data\":\"probe\",\"signature\":\"probe\"},\"paymentMethod\":{\"displayName\":\"Visa 1111\",\"network\":\"Visa\",\"type\":\"debit\"},\"transactionIdentifier\":\"probe_txn_id\"}},\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":null}"
         }
+      },
+      "ApplePayDecrypted": {
+        "status": "error",
+        "error": "Stuck on field: Apple pay encrypted data — Missing required field: Apple pay encrypted data"
       },
       "Bacs": {
         "status": "not_implemented",
@@ -90,7 +95,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://apitest.payengine.de/v1/orders/debit",
@@ -100,10 +106,14 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"creditcard\",\"payment\":{\"cardNumber\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"verification\":\"737\",\"cofContract\":null},\"async\":{\"successUrl\":null,\"cancelUrl\":null,\"failureUrl\":null},\"merchantOrderId\":\"probe_txn_001\"}"
+          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"creditcard\",\"payment\":{\"cardNumber\":\"4111111111111111\",\"expiryMonth\":\"03\",\"expiryYear\":\"2030\",\"verification\":\"737\",\"cofContract\":null},\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":\"probe_txn_001\"}"
         }
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through nexinets"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through nexinets"
       },
@@ -122,7 +132,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://apitest.payengine.de/v1/orders/debit",
@@ -132,7 +143,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"ideal\",\"payment\":{\"bic\":null},\"async\":{\"successUrl\":null,\"cancelUrl\":null,\"failureUrl\":null},\"merchantOrderId\":null}"
+          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"ideal\",\"payment\":{\"bic\":null},\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":null}"
         }
       },
       "Klarna": {
@@ -156,7 +167,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://apitest.payengine.de/v1/orders/debit",
@@ -166,7 +178,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"paypal\",\"payment\":null,\"async\":{\"successUrl\":null,\"cancelUrl\":null,\"failureUrl\":null},\"merchantOrderId\":null}"
+          "body": "{\"initialAmount\":1000,\"currency\":\"USD\",\"channel\":\"ECOM\",\"product\":\"paypal\",\"payment\":null,\"async\":{\"successUrl\":\"https://example.com/return\",\"cancelUrl\":\"https://example.com/return\",\"failureUrl\":\"https://example.com/return\"},\"merchantOrderId\":null}"
         }
       },
       "SamsungPay": {

@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported"
@@ -57,6 +61,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "state": {
             "access_token": {
               "token": "probe_access_token",
@@ -81,6 +86,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Payment method not supported"
       },
+      "GooglePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method not supported"
+      },
       "Ideal": {
         "status": "supported",
         "proto_request": {
@@ -97,6 +106,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "state": {
             "access_token": {
               "token": "probe_access_token",

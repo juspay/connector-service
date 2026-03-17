@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L85) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L76) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L98) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L95)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L86) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L77) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L99) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L96)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L110) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L102) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L120) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L117)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L111) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L103) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L121) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L118)
 
 ### Wallet Payment (Google Pay / Apple Pay)
 
@@ -136,7 +136,7 @@ Wallet payments pass an encrypted token from the browser/device SDK. Pass the to
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L129) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L121) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L136) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L132)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L130) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L122) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L137) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L133)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -150,25 +150,25 @@ Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L179) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L168) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L180) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L177)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L181) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L170) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L182) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L179)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L222) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L208) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L217) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L215)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L225) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L211) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L220) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L218)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L259) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L243) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L239) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L237)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L262) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L246) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L242) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L240)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L281) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L265) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L258) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L255)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L284) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L268) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L261) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L258)
 
 ## API Reference
 
@@ -240,8 +240,8 @@ Authorize a payment amount on a payment method. This reserves funds without capt
         },
         "tokenization_data": {
             "encrypted_data": {  # Encrypted Google Pay payment data
-                "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
-                "token_type": "PAYMENT_GATEWAY"  # The type of the token
+                "token_type": "PAYMENT_GATEWAY",  # The type of the token
+                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet
             }
         }
     }
@@ -254,14 +254,14 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 "payment_method": {
     "apple_pay": {  # Apple Pay
         "payment_data": {
-            "encrypted_data": "<base64_encoded_apple_pay_payment_token>"  # Encrypted Apple Pay payment data as string
+            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string
         },
         "payment_method": {
             "display_name": "Visa 1111",
             "network": "Visa",
             "type": "debit"
         },
-        "transaction_identifier": "<apple_pay_transaction_identifier>"  # Transaction identifier
+        "transaction_identifier": "probe_txn_id"  # Transaction identifier
     }
 }
 ```
@@ -278,7 +278,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L303) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L286) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L276) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L272)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L306) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L289) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L279) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L275)
 
 #### PaymentService.Capture
 
@@ -289,7 +289,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L312) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L295) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L288) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L283)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L315) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L298) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L291) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L286)
 
 #### PaymentService.Get
 
@@ -300,7 +300,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L321) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L304) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L298) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L289)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L324) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L307) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L301) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L292)
 
 #### PaymentService.Refund
 
@@ -311,7 +311,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L222) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L208) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L306) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L295)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L225) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L211) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L309) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L298)
 
 #### PaymentService.Void
 
@@ -322,4 +322,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L330) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L313) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L316) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L301)
+**Examples:** [Python](../../examples/bluesnap/python/bluesnap.py#L333) · [JavaScript](../../examples/bluesnap/javascript/bluesnap.js#L316) · [Kotlin](../../examples/bluesnap/kotlin/bluesnap.kt#L319) · [Rust](../../examples/bluesnap/rust/bluesnap.rs#L304)

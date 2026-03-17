@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -29,6 +61,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "description": "Probe payment"
         },
         "sample": {
@@ -39,8 +72,40 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":\"10.00\"},\"description\":\"Probe payment\",\"redirectUrl\":\"\",\"webhookUrl\":\"\",\"metadata\":{\"orderId\":\"probe_txn_001\"},\"method\":\"creditcard\",\"cardToken\":null,\"billingAddress\":null,\"shippingAddress\":null,\"sequenceType\":\"oneoff\",\"captureMode\":\"automatic\",\"locale\":null,\"cancelUrl\":null,\"customerId\":null}"
+          "body": "{\"amount\":{\"currency\":\"USD\",\"value\":\"10.00\"},\"description\":\"Probe payment\",\"redirectUrl\":\"https://example.com/return\",\"webhookUrl\":\"\",\"metadata\":{\"orderId\":\"probe_txn_001\"},\"method\":\"creditcard\",\"cardToken\":null,\"billingAddress\":null,\"shippingAddress\":null,\"sequenceType\":\"oneoff\",\"captureMode\":\"automatic\",\"locale\":null,\"cancelUrl\":null,\"customerId\":null}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method  is not supported by mollie"
       }
     },
     "capture": {

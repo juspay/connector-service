@@ -8,32 +8,36 @@
     },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Affirm": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Afterpay": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "ApplePay": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Bacs": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Becs": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Blik": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Card": {
         "status": "supported",
@@ -56,7 +60,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://api.demo.convergepay.com/VirtualMerchantDemo/processxml.do",
@@ -69,32 +74,36 @@
         }
       },
       "GooglePay": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Ideal": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Klarna": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "SamsungPay": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Sepa": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "UpiCollect": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       }
     },
     "capture": {

@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through CryptoPay"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through CryptoPay"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through CryptoPay"
@@ -40,6 +44,10 @@
         "error": "This step has not been implemented for: Selected payment method through CryptoPay"
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through CryptoPay"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through CryptoPay"
       },

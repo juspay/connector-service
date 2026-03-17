@@ -7,6 +7,70 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Card": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
       "UpiCollect": {
         "status": "supported",
         "proto_request": {

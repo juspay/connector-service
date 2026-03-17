@@ -33,26 +33,27 @@ use std::path::Path;
 
 use rayon::prelude::*;
 
-mod flow_metadata;
 mod auth;
 mod config;
 mod error_parsing;
-mod flow_runners;
+mod flow_metadata;
+mod flow_registry;
 mod json_utils;
 mod normalizer;
 mod orchestrator;
-mod patching;
 mod probe_engine;
 mod registry;
 mod requests;
 mod sample_data;
+mod status;
 mod types;
+mod patcher;
 
-use flow_metadata::{parse_message_schemas, parse_services_proto};
 use config::get_config;
+use flow_metadata::{parse_message_schemas, parse_services_proto};
 use orchestrator::probe_connector;
 use registry::all_connectors;
-use types::{CompactConnectorResult, CompactFlowResult, ProbeManifest};
+use types::{CompactConnectorResult, CompactFlowResult, ErrorStats, ProbeManifest};
 
 fn main() {
     // Load config first (initializes PROBE_CONFIG)
@@ -115,6 +116,9 @@ fn main() {
     let mut connector_names: Vec<String> = Vec::new();
     let mut total_supported = 0;
     let mut total_not_supported = 0;
+    let mut error_stats = ErrorStats::default();
+    // (connector, flow, pm, full_error) for "Stuck on field:" errors
+    let mut stuck_entries: Vec<(String, String, String, String)> = Vec::new();
 
     for result in results {
         let connector_name = result.connector.clone();
@@ -133,6 +137,34 @@ fn main() {
                     not_supported_count += 1;
                 } else {
                     supported_count += 1;
+                }
+                // Collect stuck-field entries
+                if let Some(ref error) = flow_result.error {
+                    if error.starts_with("Stuck on field:") {
+                        stuck_entries.push((
+                            connector_name.clone(),
+                            flow_name.clone(),
+                            entry_name.clone(),
+                            error.clone(),
+                        ));
+                    }
+                }
+                // Collect error statistics
+                if let Some(ref error) = flow_result.error {
+                    if error.contains("MissingRequiredField") {
+                        error_stats.missing_field += 1;
+                    } else if error.contains("NotSupported") {
+                        error_stats.not_supported += 1;
+                    } else if error.contains("NotImplemented") || error.contains("not implemented")
+                    {
+                        error_stats.not_implemented += 1;
+                    } else if error.contains("InvalidConnectorConfig")
+                        || error.contains("account_id")
+                    {
+                        error_stats.invalid_config += 1;
+                    } else {
+                        error_stats.other += 1;
+                    }
                 }
                 if let Some(compact) = Option::<CompactFlowResult>::from(flow_result) {
                     compact_flow_data.insert(entry_name, compact);
@@ -190,4 +222,14 @@ fn main() {
         total_supported,
         total_not_supported
     );
+
+    if stuck_entries.is_empty() {
+        eprintln!("\nNo stuck fields — all connectors resolved successfully.");
+    } else {
+        stuck_entries.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+        eprintln!("\nStuck fields ({} total):", stuck_entries.len());
+        for (connector, flow, pm, error) in &stuck_entries {
+            eprintln!("  {connector} / {flow} / {pm}: {error}");
+        }
+    }
 }

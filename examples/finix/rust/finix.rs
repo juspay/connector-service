@@ -45,6 +45,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "payment_method_token": "probe_pm_token",  // Payment Method Token
     })).unwrap_or_default()
 }
@@ -149,8 +150,8 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
                     },
                     "tokenization_data": {
                         "encrypted_data": {  // Encrypted Google Pay payment data
-                            "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
                             "token_type": "PAYMENT_GATEWAY",  // The type of the token
+                            "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}",  // Token generated for the wallet
                         },
                     },
                 },
@@ -162,6 +163,7 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
             },
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
+        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
         "payment_method_token": "probe_pm_token",  // Payment Method Token
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
@@ -198,6 +200,7 @@ pub async fn process_checkout_bank(client: &ConnectorClient, merchant_transactio
             },
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
+        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
         "payment_method_token": "probe_pm_token",  // Payment Method Token
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
@@ -273,23 +276,10 @@ pub async fn process_get_payment(client: &ConnectorClient, merchant_transaction_
 pub async fn process_create_customer(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Create Customer — register customer record in the connector
     let create_response = client.create_customer(serde_json::from_value::<CustomerServiceCreateRequest>(serde_json::json!({
+        "merchant_customer_id": "cust_probe_123",  // Identification
         "customer_name": "John Doe",  // Name of the customer
         "email": "test@example.com",  // Email address of the customer
         "phone_number": "4155552671",  // Phone number of the customer
-        "address": {  // Address Information
-            "billing_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
-            },
-        },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     Ok(format!("Customer: {}", create_response.connector_customer_id))
@@ -316,25 +306,10 @@ pub async fn process_tokenize(client: &ConnectorClient, merchant_transaction_id:
             }
         },
         "customer": {  // Customer Information
-            "name": "John Doe",  // Customer's full name
-            "email": "test@example.com",  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
-            "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-            "phone_number": "4155552671",  // Customer's phone number
-            "phone_country_code": "+1",  // Customer's phone country code
         },
         "address": {  // Address Information
             "billing_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
             },
         },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
@@ -362,23 +337,10 @@ pub async fn capture(client: &ConnectorClient, merchant_transaction_id: &str) ->
 // Flow: CustomerService.Create
 pub async fn create_customer(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.create_customer(serde_json::from_value::<CustomerServiceCreateRequest>(serde_json::json!({
+    "merchant_customer_id": "cust_probe_123",  // Identification
     "customer_name": "John Doe",  // Name of the customer
     "email": "test@example.com",  // Email address of the customer
     "phone_number": "4155552671",  // Phone number of the customer
-    "address": {  // Address Information
-        "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
-        },
-    },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
     return Ok(format!("customer_id: {}", response.connector_customer_id));
 }
@@ -414,25 +376,10 @@ pub async fn tokenize(client: &ConnectorClient, merchant_transaction_id: &str) -
         }
     },
     "customer": {  // Customer Information
-        "name": "John Doe",  // Customer's full name
-        "email": "test@example.com",  // Customer's email address
         "id": "cust_probe_123",  // Internal customer ID
-        "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-        "phone_number": "4155552671",  // Customer's phone number
-        "phone_country_code": "+1",  // Customer's phone country code
     },
     "address": {  // Address Information
         "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
         },
     },
     })).unwrap_or_default(), &HashMap::new(), None).await?;

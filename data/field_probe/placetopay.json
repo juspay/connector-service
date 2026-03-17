@@ -23,6 +23,10 @@
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Placetopay"
       },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
       "Bacs": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Placetopay"
@@ -57,6 +61,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "browser_info": {
             "color_depth": 24,
             "screen_height": 900,
@@ -83,6 +88,10 @@
         }
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Placetopay"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Placetopay"
       },
@@ -113,8 +122,24 @@
     },
     "capture": {
       "default": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "supported",
+        "proto_request": {
+          "merchant_capture_id": "probe_capture_001",
+          "connector_transaction_id": "12345",
+          "amount_to_capture": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://test.placetopay.com/rest/gateway/transaction",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"auth\":{\"login\":\"probe_user\",\"tranKey\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"nonce\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"seed\":\"2020-01-01T00:00:00+00:00\"},\"internalReference\":12345,\"action\":\"checkout\"}"
+        }
       }
     },
     "create_access_token": {
@@ -154,8 +179,23 @@
     },
     "get": {
       "default": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "supported",
+        "proto_request": {
+          "connector_transaction_id": "12345",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "sample": {
+          "url": "https://test.placetopay.com/rest/gateway/query",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"auth\":{\"login\":\"probe_user\",\"tranKey\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"nonce\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"seed\":\"2020-01-01T00:00:00+00:00\"},\"internalReference\":12345}"
+        }
       }
     },
     "post_authenticate": {
@@ -175,8 +215,26 @@
     },
     "refund": {
       "default": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "supported",
+        "proto_request": {
+          "merchant_refund_id": "probe_refund_001",
+          "connector_transaction_id": "12345",
+          "payment_amount": 1000,
+          "refund_amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "reason": "customer_request"
+        },
+        "sample": {
+          "url": "https://test.placetopay.com/rest/gateway/transaction",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"auth\":{\"login\":\"probe_user\",\"tranKey\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"nonce\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"seed\":\"2020-01-01T00:00:00+00:00\"},\"internalReference\":12345,\"action\":\"reverse\",\"authorization\":null}"
+        }
       }
     },
     "reverse": {
@@ -196,8 +254,20 @@
     },
     "void": {
       "default": {
-        "status": "error",
-        "error": "Failed to encode connector request"
+        "status": "supported",
+        "proto_request": {
+          "merchant_void_id": "probe_void_001",
+          "connector_transaction_id": "12345"
+        },
+        "sample": {
+          "url": "https://test.placetopay.com/rest/gateway/transaction",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"auth\":{\"login\":\"probe_user\",\"tranKey\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"nonce\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\",\"seed\":\"2020-01-01T00:00:00+00:00\"},\"internalReference\":12345,\"action\":\"void\"}"
+        }
       }
     }
   }

@@ -8859,7 +8859,7 @@ impl
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: value.customer.unwrap().id,
+            connector_customer: value.customer.and_then(|c| c.id),
             description: None,
             return_url: value.return_url,
             connector_feature_data: None,

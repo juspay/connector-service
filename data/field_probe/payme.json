@@ -7,9 +7,73 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
       "Card": {
         "status": "error",
-        "error": "Stuck on field: customer_name — Missing required field: customer_name"
+        "error": "Stuck on field: customer.name — Missing required field: customer.name"
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by payme"
       }
     },
     "capture": {

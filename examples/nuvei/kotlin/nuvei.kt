@@ -43,13 +43,13 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
         addressBuilder.apply {  // Address Information
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
                 lastNameBuilder.value = "Doe"
                 countryAlpha2Code = CountryAlpha2.US
                 emailBuilder.value = "test@example.com"  // Contact Information
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
         sessionToken = "probe_session_token"  // Session and Token Information
         browserInfoBuilder.apply {
             colorDepth = 24  // Display Information

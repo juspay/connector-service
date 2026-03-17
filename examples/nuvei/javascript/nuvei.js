@@ -37,13 +37,13 @@ function _buildAuthorizeRequest(captureMethod) {
         "captureMethod": captureMethod,  // Method for capturing the payment
         "address": {  // Address Information
             "billingAddress": {
-                "firstName": {"value": "John"},  // Personal Information
                 "lastName": {"value": "Doe"},
                 "countryAlpha2Code": "US",
                 "email": {"value": "test@example.com"}  // Contact Information
             }
         },
         "authType": "NO_THREE_DS",  // Authentication Details
+        "returnUrl": "https://example.com/return",  // URLs for Redirection and Webhooks
         "sessionToken": "probe_session_token",  // Session and Token Information
         "browserInfo": {
             "colorDepth": 24,  // Display Information

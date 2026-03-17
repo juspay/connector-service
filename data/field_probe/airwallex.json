@@ -7,6 +7,34 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
       "Blik": {
         "status": "supported",
         "proto_request": {
@@ -23,11 +51,11 @@
           "capture_method": "AUTOMATIC",
           "address": {
             "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe"
+              "first_name": "John"
             }
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "merchant_order_id": "probe_order_001",
           "state": {
             "access_token": {
@@ -45,7 +73,7 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"blik\":{\"shopper_name\":\"John Doe\"},\"type\":\"blik\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":null,\"device_data\":null}"
+          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"blik\":{\"shopper_name\":\"John\"},\"type\":\"blik\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
         }
       },
       "Card": {
@@ -70,6 +98,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "merchant_order_id": "probe_order_001",
           "state": {
             "access_token": {
@@ -87,8 +116,16 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvc\":\"737\",\"name\":\"John Doe\"},\"type\":\"card\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":null,\"device_data\":null}"
+          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"card\":{\"number\":\"4111111111111111\",\"expiry_month\":\"03\",\"expiry_year\":\"2030\",\"cvc\":\"737\",\"name\":\"John Doe\"},\"type\":\"card\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
       },
       "Ideal": {
         "status": "supported",
@@ -106,6 +143,7 @@
             "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
           "merchant_order_id": "probe_order_001",
           "state": {
             "access_token": {
@@ -123,8 +161,28 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"ideal\":{},\"type\":\"ideal\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":null,\"device_data\":null}"
+          "body": "{\"request_id\":\"confirm_probe_txn_001\",\"payment_method\":{\"ideal\":{},\"type\":\"ideal\"},\"payment_method_options\":{\"card\":{\"auto_capture\":true}},\"return_url\":\"https://example.com/return\",\"device_data\":null}"
         }
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment Method is not supported by Airwallex"
       }
     },
     "capture": {

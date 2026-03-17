@@ -38,16 +38,13 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         captureMethod = CaptureMethod.valueOf(captureMethodStr)  // Method for capturing the payment
-        customerBuilder.apply {  // Customer Information
-            name = "John Doe"  // Customer's full name
-        }
         addressBuilder.apply {  // Address Information
             billingAddressBuilder.apply {
-                firstNameBuilder.value = "John"  // Personal Information
                 lastNameBuilder.value = "Doe"
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
     }.build()
 }
 

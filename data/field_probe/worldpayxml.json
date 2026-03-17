@@ -7,6 +7,38 @@
       }
     },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -28,7 +60,8 @@
           "address": {
             "billing_address": {}
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://secure-test.worldpay.com/jsp/merchant/xml/paymentService.jsp",
@@ -40,6 +73,38 @@
           },
           "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE paymentService PUBLIC \"-//Worldpay//DTD Worldpay PaymentService v1//EN\" \"http://dtd.worldpay.com/paymentService_v1.dtd\">\n<paymentService version=\"1.4\" merchantCode=\"probe_merchant_code\"><submit><order orderCode=\"probe_txn_001\" captureDelay=\"0\"><description>Payment</description><amount value=\"1000\" currencyCode=\"USD\" exponent=\"2\"/><paymentDetails action=\"SALE\"><CARD-SSL><cardNumber>4111111111111111</cardNumber><expiryDate><date month=\"03\" year=\"2030\"/></expiryDate><cardHolderName>John Doe</cardHolderName><cvc>737</cvc></CARD-SSL></paymentDetails><shopper/><billingAddress><address/></billingAddress></order></submit></paymentService>"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Selected payment method is not supported by worldpayxml"
       }
     },
     "capture": {

@@ -44,7 +44,8 @@ def _build_authorize_request(capture_method: str):
                 "billing_address": {
                 }
             },
-            "auth_type": "NO_THREE_DS"  # Authentication Details
+            "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )

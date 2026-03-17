@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L115) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L105) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L137) · [Rust](../../examples/airwallex/rust/airwallex.rs#L131)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L116) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L106) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L138) · [Rust](../../examples/airwallex/rust/airwallex.rs#L132)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L140) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L131) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L159) · [Rust](../../examples/airwallex/rust/airwallex.rs#L153)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L141) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L132) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L160) · [Rust](../../examples/airwallex/rust/airwallex.rs#L154)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L159) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L150) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L175) · [Rust](../../examples/airwallex/rust/airwallex.rs#L168)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L160) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L151) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L176) · [Rust](../../examples/airwallex/rust/airwallex.rs#L169)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L203) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L192) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L197) · [Rust](../../examples/airwallex/rust/airwallex.rs#L190)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L204) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L193) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L198) · [Rust](../../examples/airwallex/rust/airwallex.rs#L191)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L225) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L214) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L216) · [Rust](../../examples/airwallex/rust/airwallex.rs#L208)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L226) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L215) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L217) · [Rust](../../examples/airwallex/rust/airwallex.rs#L209)
 
 ## API Reference
 
@@ -170,8 +170,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
+| Google Pay | x |
+| Apple Pay | x |
+| SEPA | x |
+| BACS | x |
+| ACH | x |
+| BECS | x |
 | iDEAL | ✓ |
+| PayPal | x |
 | BLIK | ✓ |
+| Klarna | x |
+| Afterpay | x |
+| UPI | x |
+| Affirm | x |
+| Samsung Pay | x |
 
 **Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
@@ -208,7 +220,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L247) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L235) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L234) · [Rust](../../examples/airwallex/rust/airwallex.rs#L225)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L248) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L236) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L235) · [Rust](../../examples/airwallex/rust/airwallex.rs#L226)
 
 #### PaymentService.Capture
 
@@ -219,7 +231,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L256) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L244) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L246) · [Rust](../../examples/airwallex/rust/airwallex.rs#L236)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L257) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L245) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L247) · [Rust](../../examples/airwallex/rust/airwallex.rs#L237)
 
 #### PaymentService.CreateOrder
 
@@ -230,7 +242,7 @@ Initialize an order in the payment processor system. Sets up payment context bef
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L280) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L263) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L266) · [Rust](../../examples/airwallex/rust/airwallex.rs#L250)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L281) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L264) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L267) · [Rust](../../examples/airwallex/rust/airwallex.rs#L251)
 
 #### PaymentService.Get
 
@@ -241,7 +253,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L306) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L284) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L287) · [Rust](../../examples/airwallex/rust/airwallex.rs#L269)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L307) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L285) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L288) · [Rust](../../examples/airwallex/rust/airwallex.rs#L270)
 
 #### PaymentService.Refund
 
@@ -252,7 +264,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L159) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L150) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L295) · [Rust](../../examples/airwallex/rust/airwallex.rs#L275)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L160) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L151) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L296) · [Rust](../../examples/airwallex/rust/airwallex.rs#L276)
 
 #### PaymentService.Void
 
@@ -263,7 +275,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L315) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L293) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L305) · [Rust](../../examples/airwallex/rust/airwallex.rs#L281)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L316) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L294) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L306) · [Rust](../../examples/airwallex/rust/airwallex.rs#L282)
 
 ### Authentication
 
@@ -276,4 +288,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L265) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L253) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L256) · [Rust](../../examples/airwallex/rust/airwallex.rs#L242)
+**Examples:** [Python](../../examples/airwallex/python/airwallex.py#L266) · [JavaScript](../../examples/airwallex/javascript/airwallex.js#L254) · [Kotlin](../../examples/airwallex/kotlin/airwallex.kt#L257) · [Rust](../../examples/airwallex/rust/airwallex.rs#L243)

@@ -1,6 +1,26 @@
-use std::collections::BTreeMap;
-use serde::{Deserialize, Serialize};
 use crate::flow_metadata::{FlowMetadata, MessageSchema};
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+
+/// Statistics for error types across all connectors
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub(crate) struct ErrorStats {
+    pub(crate) missing_field: usize,
+    pub(crate) not_implemented: usize,
+    pub(crate) not_supported: usize,
+    pub(crate) invalid_config: usize,
+    pub(crate) other: usize,
+}
+
+impl ErrorStats {
+    pub(crate) fn total(&self) -> usize {
+        self.missing_field
+            + self.not_implemented
+            + self.not_supported
+            + self.invalid_config
+            + self.other
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub(crate) struct SamplePayload {
@@ -61,10 +81,8 @@ pub(crate) struct CompactFlowResult {
 
 impl From<FlowResult> for Option<CompactFlowResult> {
     fn from(result: FlowResult) -> Self {
-        // Skip not_supported entries entirely
-        if result.status == "not_supported" {
-            return None;
-        }
+        // Include not_supported entries so documentation generators can show x (not supported)
+        // instead of ? (unknown) for payment methods that were probed but not supported
         Some(CompactFlowResult {
             status: result.status,
             proto_request: result.proto_request,

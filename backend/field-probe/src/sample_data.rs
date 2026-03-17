@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use grpc_api_types::payments::{
-    self as proto, payment_method::PaymentMethod as PmVariant,
-    Address, BrowserInformation, CardDetails, Customer, Money, PaymentMethod,
+    self as proto, payment_method::PaymentMethod as PmVariant, BrowserInformation, CardDetails,
+    Money, PaymentMethod,
 };
 use hyperswitch_masking::Secret;
 
@@ -13,22 +13,6 @@ pub(crate) fn usd_money(minor: i64) -> Money {
     }
 }
 
-pub(crate) fn full_address() -> Address {
-    Address {
-        first_name: Some(Secret::new("John".to_string())),
-        last_name: Some(Secret::new("Doe".to_string())),
-        line1: Some(Secret::new("123 Main St".to_string())),
-        line2: None,
-        line3: None,
-        city: Some(Secret::new("Seattle".to_string())),
-        state: Some(Secret::new("WA".to_string())),
-        zip_code: Some(Secret::new("98101".to_string())),
-        country_alpha2_code: Some(proto::CountryAlpha2::Us as i32),
-        email: Some(Secret::new("test@example.com".to_string())),
-        phone_number: Some(Secret::new("4155552671".to_string())),
-        phone_country_code: Some("+1".to_string()),
-    }
-}
 
 pub(crate) fn full_browser_info() -> BrowserInformation {
     BrowserInformation {
@@ -50,16 +34,6 @@ pub(crate) fn full_browser_info() -> BrowserInformation {
     }
 }
 
-pub(crate) fn full_customer() -> Customer {
-    Customer {
-        name: Some("John Doe".to_string()),
-        email: Some(Secret::new("test@example.com".to_string())),
-        id: Some("cust_probe_123".to_string()),
-        connector_customer_id: Some("cust_probe_123".to_string()),
-        phone_number: Some("4155552671".to_string()),
-        phone_country_code: Some("+1".to_string()),
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Payment method builders
@@ -125,7 +99,7 @@ pub(crate) fn google_pay_decrypted_method() -> PaymentMethod {
     PaymentMethod {
         payment_method: Some(PmVariant::GooglePay(proto::GoogleWallet {
             r#type: "CARD".to_string(),
-            description: "Visa •••• 1111".to_string(),
+            description: "Visa 1111".to_string(),
             info: Some(proto::google_wallet::PaymentMethodInfo {
                 card_network: "VISA".to_string(),
                 card_details: "1111".to_string(),
@@ -155,7 +129,7 @@ pub(crate) fn google_pay_encrypted_method() -> PaymentMethod {
     PaymentMethod {
         payment_method: Some(PmVariant::GooglePay(proto::GoogleWallet {
             r#type: "CARD".to_string(),
-            description: "Visa •••• 1111".to_string(),
+            description: "Visa 1111".to_string(),
             info: Some(proto::google_wallet::PaymentMethodInfo {
                 card_network: "VISA".to_string(),
                 card_details: "1111".to_string(),

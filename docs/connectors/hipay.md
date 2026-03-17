@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L86) · [JavaScript](../../examples/hipay/javascript/hipay.js#L76) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L101) · [Rust](../../examples/hipay/rust/hipay.rs#L95)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L87) · [JavaScript](../../examples/hipay/javascript/hipay.js#L77) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L101) · [Rust](../../examples/hipay/rust/hipay.rs#L96)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,31 +122,31 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L111) · [JavaScript](../../examples/hipay/javascript/hipay.js#L102) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L123) · [Rust](../../examples/hipay/rust/hipay.rs#L117)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L112) · [JavaScript](../../examples/hipay/javascript/hipay.js#L103) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L123) · [Rust](../../examples/hipay/rust/hipay.rs#L118)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L130) · [JavaScript](../../examples/hipay/javascript/hipay.js#L121) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L139) · [Rust](../../examples/hipay/rust/hipay.rs#L132)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L131) · [JavaScript](../../examples/hipay/javascript/hipay.js#L122) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L139) · [Rust](../../examples/hipay/rust/hipay.rs#L133)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L167) · [JavaScript](../../examples/hipay/javascript/hipay.js#L156) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L161) · [Rust](../../examples/hipay/rust/hipay.rs#L154)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L168) · [JavaScript](../../examples/hipay/javascript/hipay.js#L157) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L161) · [Rust](../../examples/hipay/rust/hipay.rs#L155)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L189) · [JavaScript](../../examples/hipay/javascript/hipay.js#L178) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L180) · [Rust](../../examples/hipay/rust/hipay.rs#L172)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L190) · [JavaScript](../../examples/hipay/javascript/hipay.js#L179) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L180) · [Rust](../../examples/hipay/rust/hipay.rs#L173)
 
 ### Tokenize Payment Method
 
 Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L211) · [JavaScript](../../examples/hipay/javascript/hipay.js#L200) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L199) · [Rust](../../examples/hipay/rust/hipay.rs#L190)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L212) · [JavaScript](../../examples/hipay/javascript/hipay.js#L201) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L199) · [Rust](../../examples/hipay/rust/hipay.rs#L191)
 
 ## API Reference
 
@@ -206,7 +206,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L263) · [JavaScript](../../examples/hipay/javascript/hipay.js#L246) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L245) · [Rust](../../examples/hipay/rust/hipay.rs#L236)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L246) · [JavaScript](../../examples/hipay/javascript/hipay.js#L229) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L227) · [Rust](../../examples/hipay/rust/hipay.rs#L219)
 
 #### PaymentService.Capture
 
@@ -217,7 +217,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L272) · [JavaScript](../../examples/hipay/javascript/hipay.js#L255) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L257) · [Rust](../../examples/hipay/rust/hipay.rs#L247)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L255) · [JavaScript](../../examples/hipay/javascript/hipay.js#L238) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L239) · [Rust](../../examples/hipay/rust/hipay.rs#L230)
 
 #### PaymentService.Get
 
@@ -228,7 +228,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L281) · [JavaScript](../../examples/hipay/javascript/hipay.js#L264) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L267) · [Rust](../../examples/hipay/rust/hipay.rs#L253)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L264) · [JavaScript](../../examples/hipay/javascript/hipay.js#L247) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L249) · [Rust](../../examples/hipay/rust/hipay.rs#L236)
 
 #### PaymentService.Refund
 
@@ -239,7 +239,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L130) · [JavaScript](../../examples/hipay/javascript/hipay.js#L121) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L275) · [Rust](../../examples/hipay/rust/hipay.rs#L259)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L131) · [JavaScript](../../examples/hipay/javascript/hipay.js#L122) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L257) · [Rust](../../examples/hipay/rust/hipay.rs#L242)
 
 #### PaymentMethodService.Tokenize
 
@@ -250,7 +250,7 @@ Tokenize payment method for secure storage. Replaces raw card details with secur
 | **Request** | `PaymentMethodServiceTokenizeRequest` |
 | **Response** | `PaymentMethodServiceTokenizeResponse` |
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L211) · [JavaScript](../../examples/hipay/javascript/hipay.js#L200) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L285) · [Rust](../../examples/hipay/rust/hipay.rs#L265)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L212) · [JavaScript](../../examples/hipay/javascript/hipay.js#L201) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L267) · [Rust](../../examples/hipay/rust/hipay.rs#L248)
 
 #### PaymentService.Void
 
@@ -261,4 +261,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/hipay/python/hipay.py#L290) · [JavaScript](../../examples/hipay/javascript/hipay.js#L273) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L329) · [Rust](../../examples/hipay/rust/hipay.rs#L309)
+**Examples:** [Python](../../examples/hipay/python/hipay.py#L273) · [JavaScript](../../examples/hipay/javascript/hipay.js#L256) · [Kotlin](../../examples/hipay/kotlin/hipay.kt#L293) · [Rust](../../examples/hipay/rust/hipay.rs#L274)

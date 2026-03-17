@@ -152,8 +152,8 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
                     },
                     "tokenization_data": {
                         "encrypted_data": {  // Encrypted Google Pay payment data
-                            "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
                             "token_type": "PAYMENT_GATEWAY",  // The type of the token
+                            "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}",  // Token generated for the wallet
                         },
                     },
                 },
@@ -271,25 +271,10 @@ pub async fn process_recurring(client: &ConnectorClient, merchant_transaction_id
             }
         },
         "customer": {
-            "name": "John Doe",  // Customer's full name
-            "email": "test@example.com",  // Customer's email address
             "id": "cust_probe_123",  // Internal customer ID
-            "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-            "phone_number": "4155552671",  // Customer's phone number
-            "phone_country_code": "+1",  // Customer's phone country code
         },
         "address": {  // Address Information
             "billing_address": {
-                "first_name": "John",  // Personal Information
-                "last_name": "Doe",
-                "line1": "123 Main St",  // Address Details
-                "city": "Seattle",
-                "state": "WA",
-                "zip_code": "98101",
-                "country_alpha2_code": "US",
-                "email": "test@example.com",  // Contact Information
-                "phone_number": "4155552671",
-                "phone_country_code": "+1",
             },
         },
         "auth_type": "NO_THREE_DS",  // Type of authentication to be used
@@ -457,25 +442,10 @@ pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: 
         }
     },
     "customer": {
-        "name": "John Doe",  // Customer's full name
-        "email": "test@example.com",  // Customer's email address
         "id": "cust_probe_123",  // Internal customer ID
-        "connector_customer_id": "cust_probe_123",  // Customer ID in the connector system
-        "phone_number": "4155552671",  // Customer's phone number
-        "phone_country_code": "+1",  // Customer's phone country code
     },
     "address": {  // Address Information
         "billing_address": {
-            "first_name": "John",  // Personal Information
-            "last_name": "Doe",
-            "line1": "123 Main St",  // Address Details
-            "city": "Seattle",
-            "state": "WA",
-            "zip_code": "98101",
-            "country_alpha2_code": "US",
-            "email": "test@example.com",  // Contact Information
-            "phone_number": "4155552671",
-            "phone_country_code": "+1",
         },
     },
     "auth_type": "NO_THREE_DS",  // Type of authentication to be used

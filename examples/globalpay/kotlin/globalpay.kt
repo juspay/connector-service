@@ -45,6 +45,7 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
                 tokenBuilder.value = "probe_access_token"  // The token string.

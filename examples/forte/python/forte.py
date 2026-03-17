@@ -45,7 +45,8 @@ def _build_authorize_request(capture_method: str):
                     "first_name": {"value": "John"}  # Personal Information
                 }
             },
-            "auth_type": "NO_THREE_DS"  # Authentication Details
+            "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
@@ -117,7 +118,8 @@ async def process_checkout_bank(merchant_transaction_id: str, config: sdk_config
                     "first_name": {"value": "John"}  # Personal Information
                 }
             },
-            "auth_type": "NO_THREE_DS"  # Authentication Details
+            "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return"  # URLs for Redirection and Webhooks
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     ))

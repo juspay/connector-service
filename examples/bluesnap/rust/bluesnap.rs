@@ -45,6 +45,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
         },
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
+    "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default()
 }
 
@@ -148,8 +149,8 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
                     },
                     "tokenization_data": {
                         "encrypted_data": {  // Encrypted Google Pay payment data
-                            "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  // Token generated for the wallet
                             "token_type": "PAYMENT_GATEWAY",  // The type of the token
+                            "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}",  // Token generated for the wallet
                         },
                     },
                 },
@@ -161,6 +162,7 @@ pub async fn process_checkout_wallet(client: &ConnectorClient, merchant_transact
             },
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
+        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     match authorize_response.status() {
@@ -199,6 +201,7 @@ pub async fn process_checkout_bank(client: &ConnectorClient, merchant_transactio
             },
         },
         "auth_type": "NO_THREE_DS",  // Authentication Details
+        "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     })).unwrap_or_default(), &HashMap::new(), None).await?;
 
     match authorize_response.status() {

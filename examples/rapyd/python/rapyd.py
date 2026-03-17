@@ -152,8 +152,8 @@ async def process_checkout_wallet(merchant_transaction_id: str, config: sdk_conf
                     },
                     "tokenization_data": {
                         "encrypted_data": {  # Encrypted Google Pay payment data
-                            "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",  # Token generated for the wallet
-                            "token_type": "PAYMENT_GATEWAY"  # The type of the token
+                            "token_type": "PAYMENT_GATEWAY",  # The type of the token
+                            "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet
                         }
                     }
                 }

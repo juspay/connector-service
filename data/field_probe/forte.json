@@ -28,7 +28,8 @@
               "first_name": "John"
             }
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://sandbox.forte.net/api/v3/organizations/org_probe_org_id/locations/loc_probe_loc_id/transactions",
@@ -51,6 +52,10 @@
         "error": "This step has not been implemented for: Selected payment method through Forte"
       },
       "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Forte"
+      },
+      "ApplePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Forte"
       },
@@ -89,7 +94,8 @@
               "first_name": "John"
             }
           },
-          "auth_type": "NO_THREE_DS"
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://sandbox.forte.net/api/v3/organizations/org_probe_org_id/locations/loc_probe_loc_id/transactions",
@@ -104,6 +110,10 @@
         }
       },
       "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through Forte"
+      },
+      "GooglePayDecrypted": {
         "status": "not_implemented",
         "error": "This step has not been implemented for: Selected payment method through Forte"
       },

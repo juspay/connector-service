@@ -43,6 +43,7 @@ private fun buildAuthorizeRequest(captureMethodStr: String): PaymentServiceAutho
             }
         }
         authType = AuthenticationType.NO_THREE_DS  // Authentication Details
+        returnUrl = "https://example.com/return"  // URLs for Redirection and Webhooks
         browserInfoBuilder.apply {
             ipAddress = "1.2.3.4"  // Device Information
         }

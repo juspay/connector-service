@@ -45,6 +45,7 @@ def _build_authorize_request(capture_method: str):
                 }
             },
             "auth_type": "NO_THREE_DS",  # Authentication Details
+            "return_url": "https://example.com/return",  # URLs for Redirection and Webhooks
             "browser_info": {
                 "color_depth": 24,  # Display Information
                 "screen_height": 900,
@@ -62,6 +63,65 @@ def _build_authorize_request(capture_method: str):
         },
         payment_pb2.PaymentServiceAuthorizeRequest(),
     )
+
+def _build_capture_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_capture_id": "probe_capture_001",  # Identification
+            "connector_transaction_id": connector_transaction_id,
+            "amount_to_capture": {  # Capture Details
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            }
+        },
+        payment_pb2.PaymentServiceCaptureRequest(),
+    )
+
+def _build_get_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "connector_transaction_id": connector_transaction_id,
+            "amount": {  # Amount Information
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            }
+        },
+        payment_pb2.PaymentServiceGetRequest(),
+    )
+
+def _build_void_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_void_id": "probe_void_001",  # Identification
+            "connector_transaction_id": connector_transaction_id
+        },
+        payment_pb2.PaymentServiceVoidRequest(),
+    )
+async def process_checkout_card(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Card Payment (Authorize + Capture)
+
+    Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+    """
+    payment_client = PaymentClient(config)
+
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
+
+    # Step 2: Capture — settle the reserved funds
+    capture_response = await payment_client.capture(_build_capture_request(authorize_response.connector_transaction_id))
+
+    if capture_response.status == "FAILED":
+        raise RuntimeError(f"Capture failed: {capture_response.error}")
+
+    return {"status": capture_response.status, "transaction_id": authorize_response.connector_transaction_id}
+
+
 async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Card Payment (Automatic Capture)
 
@@ -81,6 +141,87 @@ async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
 
+async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Refund a Payment
+
+    Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+    """
+    payment_client = PaymentClient(config)
+
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(_build_authorize_request("AUTOMATIC"))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
+
+    # Step 2: Refund — return funds to the customer
+    refund_response = await payment_client.refund(ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification
+            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
+            "payment_amount": 1000,  # Amount Information
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "reason": "customer_request"  # Reason for the refund
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
+    ))
+
+    if refund_response.status == "FAILED":
+        raise RuntimeError(f"Refund failed: {refund_response.error}")
+
+    return {"status": refund_response.status}
+
+
+async def process_void_payment(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Void a Payment
+
+    Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+    """
+    payment_client = PaymentClient(config)
+
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
+
+    # Step 2: Void — release reserved funds (cancel authorization)
+    void_response = await payment_client.void(_build_void_request(authorize_response.connector_transaction_id))
+
+    return {"status": void_response.status, "transaction_id": authorize_response.connector_transaction_id}
+
+
+async def process_get_payment(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Get Payment Status
+
+    Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+    """
+    payment_client = PaymentClient(config)
+
+    # Step 1: Authorize — reserve funds on the payment method
+    authorize_response = await payment_client.authorize(_build_authorize_request("MANUAL"))
+
+    if authorize_response.status == "FAILED":
+        raise RuntimeError(f"Payment failed: {authorize_response.error}")
+    if authorize_response.status == "PENDING":
+        # Awaiting async confirmation — handle via webhook
+        return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
+
+    # Step 2: Get — retrieve current payment status from the connector
+    get_response = await payment_client.get(_build_get_request(authorize_response.connector_transaction_id))
+
+    return {"status": get_response.status, "transaction_id": get_response.connector_transaction_id}
+
+
 async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Authorize (Card)"""
     payment_client = PaymentClient(config)
@@ -89,8 +230,35 @@ async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.Connect
 
     return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
 
+
+async def capture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Capture"""
+    payment_client = PaymentClient(config)
+
+    capture_response = await payment_client.capture(_build_capture_request("12345"))
+
+    return {"status": capture_response.status}
+
+
+async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Get"""
+    payment_client = PaymentClient(config)
+
+    get_response = await payment_client.get(_build_get_request("12345"))
+
+    return {"status": get_response.status}
+
+
+async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Void"""
+    payment_client = PaymentClient(config)
+
+    void_response = await payment_client.void(_build_void_request("12345"))
+
+    return {"status": void_response.status}
+
 if __name__ == "__main__":
-    scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_autocapture"
+    scenario = sys.argv[1] if len(sys.argv) > 1 else "checkout_card"
     fn = globals().get(f"process_{scenario}")
     if not fn:
         available = [k[8:] for k in globals() if k.startswith("process_")]

@@ -13,6 +13,7 @@ ffi = { path = "../ffi", default-features = false }
 grpc-api-types = { path = "../grpc-api-types" }
 domain_types = { path = "../domain_types" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
+common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 ucs_env = { path = "../ucs_env" }
 cards = { path = "../cards", package = "ucs_cards" }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
