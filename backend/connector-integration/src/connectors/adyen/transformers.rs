@@ -173,7 +173,6 @@ pub struct AdyenNetworkTokenData {
     number: NetworkToken,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     holder_name: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     brand: Option<CardBrand>,
