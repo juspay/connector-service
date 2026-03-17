@@ -1146,6 +1146,11 @@ fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             payme_client_key: None,
             base_url: None,
         },
+        ConnectorEnum::Peachpayments => ConnectorSpecificConfig::Peachpayments {
+            api_key: k(),
+            tenant_id: id(),
+            base_url: None,
+        },
         ConnectorEnum::Braintree => ConnectorSpecificConfig::Braintree {
             public_key: k(),
             private_key: s(),

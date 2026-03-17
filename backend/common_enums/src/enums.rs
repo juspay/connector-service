@@ -1378,6 +1378,7 @@ pub enum PaymentMethod {
     GiftCard,
     OpenBanking,
     MobilePayment,
+    NetworkToken,
 }
 
 /// Specifies the type of cardholder authentication to be applied for a payment.
