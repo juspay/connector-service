@@ -460,7 +460,7 @@ mod tests {
     fn test_valid_card_number_deserialization() {
         let card_number = serde_json::from_str::<CardNumber>(r#""3714 4963 5398 431""#).unwrap();
         let secret = &(*card_number);
-        assert_eq!(r#""371449*********""#, format!("{secret:?}"));
+        assert_eq!("371449*********", format!("{secret:?}"));
     }
 
     #[test]
