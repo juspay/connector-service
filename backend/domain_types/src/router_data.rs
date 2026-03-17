@@ -390,6 +390,11 @@ pub enum ConnectorSpecificConfig {
         payme_client_key: Option<Secret<String>>,
         base_url: Option<String>,
     },
+    Peachpayments {
+        api_key: Secret<String>,
+        tenant_id: Secret<String>,
+        base_url: Option<String>,
+    },
     Braintree {
         public_key: Secret<String>,
         private_key: Secret<String>,
@@ -855,6 +860,7 @@ impl ConnectorSpecificConfig {
                 salt_key,
                 salt_index
             },
+            Peachpayments { api_key, tenant_id },
             Redsys {
                 merchant_id,
                 terminal_id,
@@ -1223,6 +1229,7 @@ impl ConnectorSpecificConfig {
                     salt_key,
                     salt_index
                 },
+                Peachpayments { api_key, tenant_id },
                 Redsys {
                     merchant_id,
                     terminal_id,
@@ -1744,6 +1751,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 name: authorizedotnet.name.ok_or_else(err)?,
                 transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
                 base_url: authorizedotnet.base_url,
+            }),
+            AuthType::Peachpayments(peachpayments) => Ok(Self::Peachpayments {
+                api_key: peachpayments.api_key.ok_or_else(err)?,
+                tenant_id: peachpayments.tenant_id.ok_or_else(err)?,
+                base_url: peachpayments.base_url,
             }),
             AuthType::Paypal(paypal) => Ok(Self::Paypal {
                 client_id: paypal.client_id.ok_or_else(err)?,
@@ -2652,6 +2664,14 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
             ConnectorEnum::Revolv3 => match auth {
                 ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Revolv3 {
                     api_key: api_key.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Peachpayments => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Peachpayments {
+                    api_key: api_key.clone(),
+                    tenant_id: key1.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),
