@@ -14,7 +14,7 @@ hyperswitch_masking = { version = "0.0.1", default-features = false, features = 
 
 [dev-dependencies]
 prost = { workspace = true }
-prost-types = "0.13"
+prost-types = "0.14"
 
 [lints]
 workspace = true
