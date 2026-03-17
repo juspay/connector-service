@@ -1084,27 +1084,40 @@ fn validate_shipping_address_against_payment_method(
     payment_method: Option<&StripePaymentMethodType>,
 ) -> Result<(), error_stack::Report<ConnectorError>> {
     match payment_method {
-        Some(StripePaymentMethodType::AfterpayClearpay) => match shipping_address {
-            Some(address) => {
-                let missing_fields = collect_missing_value_keys!(
-                    ("shipping.address.line1", address.line1),
-                    ("shipping.address.country", address.country),
-                    ("shipping.address.zip", address.zip)
-                );
+        Some(StripePaymentMethodType::AfterpayClearpay) => {
+            // Use ValidationError helper for cleaner multi-field validation
+            let mut validation = domain_types::validation::ValidationError::new();
 
-                if !missing_fields.is_empty() {
-                    return Err(ConnectorError::MissingRequiredFields {
-                        field_names: missing_fields,
-                    }
-                    .into());
+            match shipping_address {
+                Some(address) => {
+                    // Collect ALL missing fields at once - better DX!
+                    validation
+                        .require_field(
+                            "shipping.address.line1",
+                            address.line1.as_ref(),
+                            "Required for Afterpay/Clearpay payments",
+                        )
+                        .require_field(
+                            "shipping.address.country",
+                            address.country.as_ref(),
+                            "Required for Afterpay/Clearpay payments",
+                        )
+                        .require_field(
+                            "shipping.address.zip",
+                            address.zip.as_ref(),
+                            "Required for Afterpay/Clearpay payments",
+                        );
                 }
-                Ok(())
+                None => {
+                    validation.add_field_error(
+                        "shipping.address",
+                        "Shipping address is required for Afterpay/Clearpay payments",
+                    );
+                }
             }
-            None => Err(ConnectorError::MissingRequiredField {
-                field_name: "shipping.address",
-            }
-            .into()),
-        },
+
+            validation.check().map_err(|e| e.into())
+        }
         _ => Ok(()),
     }
 }
