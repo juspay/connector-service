@@ -181,29 +181,33 @@ impl CompositePreAuthNRequest for CompositeAuthenticateRequest {
         &self,
         connector: &ConnectorEnum,
     ) -> Result<bool, Box<tonic::Status>> {
-        let connector_data =
-            ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+        if self.redirection_response.is_none() {
+            let connector_data =
+                ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
 
-        let auth_type = if self.enrolled_for_3ds {
-            common_enums::AuthenticationType::ThreeDs
+            let auth_type = if self.enrolled_for_3ds {
+                common_enums::AuthenticationType::ThreeDs
+            } else {
+                common_enums::AuthenticationType::NoThreeDs
+            };
+
+            let payment_method_data = self
+                .payment_method
+                .clone()
+                .map(domain_types::payment_method_data::PaymentMethodData::foreign_try_from)
+                .transpose()
+                .map_err(|err| {
+                    Box::new(tonic::Status::invalid_argument(format!(
+                        "Failed to convert payment method data: {err:?}"
+                    )))
+                })?;
+
+            Ok(connector_data
+                .connector
+                .should_do_pre_authenticate_before_authenticate(auth_type, &payment_method_data))
         } else {
-            common_enums::AuthenticationType::NoThreeDs
-        };
-
-        let payment_method_data = self
-            .payment_method
-            .clone()
-            .map(domain_types::payment_method_data::PaymentMethodData::foreign_try_from)
-            .transpose()
-            .map_err(|err| {
-                Box::new(tonic::Status::invalid_argument(format!(
-                    "Failed to convert payment method data: {err:?}"
-                )))
-            })?;
-
-        Ok(connector_data
-            .connector
-            .should_do_pre_authenticate_before_authenticate(auth_type, &payment_method_data))
+            Ok(false)
+        }
     }
 }
 
