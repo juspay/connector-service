@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, RepeatPayment},
@@ -7,13 +9,13 @@ use domain_types::{
         RepeatPaymentData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::types::ResponseRouterData;
 
@@ -1167,6 +1169,67 @@ pub struct RegisterSingleCustomerResponseInner {
 }
 
 // ============================================================================
+// GOOGLE PAY FLOW STRUCTURES (Worldline NAM REST API)
+// ============================================================================
+
+/// Google Pay Request Structure for Worldline NAM REST API
+#[derive(Debug, Clone, Serialize)]
+pub struct BamboraapacGooglePayRequest {
+    pub order_number: String,
+    pub amount: f64,
+    pub payment_method: String,
+    pub customer_ip: Option<String>,
+    pub billing: Option<BamboraapacBillingAddress>,
+    pub google_pay: BamboraapacGooglePayData,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BamboraapacGooglePayData {
+    pub transaction_payload: String,
+    pub complete: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BamboraapacBillingAddress {
+    pub name: Option<String>,
+    pub email_address: Option<String>,
+    pub phone_number: Option<String>,
+    pub address_line1: Option<String>,
+    pub city: Option<String>,
+    pub province: Option<String>,
+    pub country: Option<String>,
+    pub postal_code: Option<String>,
+}
+
+/// Google Pay Response Structure
+#[derive(Debug, Clone, Deserialize)]
+pub struct BamboraapacGooglePayResponse {
+    pub id: String,
+    pub authorizing_merchant_id: Option<i64>,
+    pub approved: String,
+    pub message_id: Option<i32>,
+    pub message: Option<String>,
+    pub auth_code: Option<String>,
+    pub created: Option<String>,
+    pub order_number: Option<String>,
+    #[serde(rename = "type")]
+    pub transaction_type: Option<String>,
+    pub amount: Option<f64>,
+    pub payment_method: Option<String>,
+    pub card: Option<BamboraapacCardResponse>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BamboraapacCardResponse {
+    pub card_type: Option<String>,
+    pub last_four: Option<String>,
+    pub card_bin: Option<String>,
+    pub cvd_result: Option<i32>,
+    pub eci: Option<i32>,
+    pub status: Option<String>,
+}
+
+// ============================================================================
 // SETUP MANDATE FLOW TRANSFORMERS
 // ============================================================================
 
@@ -1725,9 +1788,7 @@ impl GetSoapXml for BamboraapacRepeatPaymentRequest {
 // TRYFROM IMPLEMENTATIONS FOR MACRO FRAMEWORK WRAPPER
 // ============================================================================
 
-// These implementations delegate to the existing TryFrom implementations from &RouterDataV2
-// The macro framework wraps RouterDataV2 in a BamboraapacRouterData struct created by the create_all_prerequisites! macro
-
+// Unified TryFrom for Authorize request - dispatches based on payment method
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         super::BamboraapacRouterData<
@@ -1739,7 +1800,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    > for BamboraapacPaymentRequest<T>
+    > for BamboraapacAuthorizeRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
 
@@ -1754,7 +1815,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&data.router_data)
+        // Check payment method and dispatch accordingly
+        match &data.router_data.request.payment_method_data {
+            PaymentMethodData::Wallet(WalletData::GooglePay(_)) => {
+                // Google Pay uses JSON REST API
+                let google_pay_req = BamboraapacGooglePayRequest::try_from(&data.router_data)?;
+                Ok(BamboraapacAuthorizeRequest::GooglePay(google_pay_req))
+            }
+            _ => {
+                // Default to card payment using SOAP
+                let card_req = BamboraapacPaymentRequest::try_from(&data.router_data)?;
+                Ok(BamboraapacAuthorizeRequest::Card(card_req))
+            }
+        }
     }
 }
 
@@ -1905,5 +1978,218 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&data.router_data)
+    }
+}
+
+// ============================================================================
+// GOOGLE PAY FLOW TRANSFORMERS (Worldline NAM REST API)
+// ============================================================================
+
+// Unified Authorize Request enum for dynamic content type selection
+#[derive(Debug, Clone)]
+pub enum BamboraapacAuthorizeRequest<
+    T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
+> {
+    Card(BamboraapacPaymentRequest<T>),
+    GooglePay(BamboraapacGooglePayRequest),
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> Serialize
+    for BamboraapacAuthorizeRequest<T>
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            BamboraapacAuthorizeRequest::Card(req) => req.serialize(serializer),
+            BamboraapacAuthorizeRequest::GooglePay(req) => req.serialize(serializer),
+        }
+    }
+}
+
+// Google Pay Request Transformation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    > for BamboraapacGooglePayRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        router_data: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Extract Google Pay data
+        let google_pay_data = match &router_data.request.payment_method_data {
+            PaymentMethodData::Wallet(WalletData::GooglePay(data)) => Ok(data),
+            _ => Err(ConnectorError::NotImplemented(
+                "Only Google Pay wallet is supported for this flow".to_string(),
+            )),
+        }?;
+
+        // Extract the encrypted token from Google Pay
+        let token_data = google_pay_data
+            .tokenization_data
+            .get_encrypted_google_pay_payment_data_mandatory()
+            .change_context(ConnectorError::InvalidWalletToken {
+                wallet_name: "Google Pay".to_string(),
+            })?;
+
+        // Build billing address from request data (if available)
+        let billing = router_data.request.browser_info.as_ref().map(|_| {
+            // Extract billing info from browser_info or other fields if available
+            BamboraapacBillingAddress {
+                name: None,
+                email_address: router_data
+                    .request
+                    .email
+                    .as_ref()
+                    .map(|e| e.peek().to_string()),
+                phone_number: None,
+                address_line1: None,
+                city: None,
+                province: None,
+                country: None,
+                postal_code: None,
+            }
+        });
+
+        // Determine if this is a purchase (complete=true) or pre-auth (complete=false)
+        let complete = !matches!(
+            router_data.request.capture_method,
+            Some(common_enums::CaptureMethod::Manual)
+        );
+
+        // Convert amount from minor units to dollars
+        let amount_dollars = router_data.request.minor_amount.get_amount_as_i64() as f64 / 100.0;
+
+        Ok(Self {
+            order_number: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            amount: amount_dollars,
+            payment_method: "google_pay".to_string(),
+            customer_ip: None,
+            billing,
+            google_pay: BamboraapacGooglePayData {
+                transaction_payload: token_data.token.clone(),
+                complete,
+            },
+        })
+    }
+}
+
+// Google Pay Response Transformation
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BamboraapacGooglePayResponse, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BamboraapacGooglePayResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let response = &item.response;
+
+        // Map Bambora approved status to standard status
+        // "1" = Approved, "0" = Declined
+        let status = if response.approved == "1" {
+            if router_data.request.capture_method == Some(common_enums::CaptureMethod::Manual) {
+                common_enums::AttemptStatus::Authorized
+            } else {
+                common_enums::AttemptStatus::Charged
+            }
+        } else {
+            common_enums::AttemptStatus::Failure
+        };
+
+        // Handle error responses
+        if status == common_enums::AttemptStatus::Failure {
+            return Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status,
+                    ..router_data.resource_common_data.clone()
+                },
+                response: Err(ErrorResponse {
+                    code: response
+                        .message_id
+                        .map(|id| id.to_string())
+                        .unwrap_or_else(|| "DECLINED".to_string()),
+                    message: response
+                        .message
+                        .clone()
+                        .unwrap_or_else(|| "Payment declined".to_string()),
+                    reason: response.message.clone(),
+                    status_code: item.http_code,
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
+                    connector_transaction_id: Some(response.id.clone()),
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: response.message.clone(),
+                }),
+                ..router_data.clone()
+            });
+        }
+
+        // Success response
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: response.order_number.clone(),
+            incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data.clone()
+            },
+            response: Ok(payments_response_data),
+            ..router_data.clone()
+        })
+    }
+}
+
+// GetSoapXml trait for unified request type
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> GetSoapXml
+    for BamboraapacAuthorizeRequest<T>
+{
+    fn to_soap_xml(&self) -> String {
+        match self {
+            BamboraapacAuthorizeRequest::Card(req) => req.to_soap_xml(),
+            BamboraapacAuthorizeRequest::GooglePay(_) => {
+                // GooglePay uses JSON, not SOAP
+                String::new()
+            }
+        }
+    }
+}
+
+// GetFormData trait for unified request type
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    super::super::macros::GetFormData for BamboraapacAuthorizeRequest<T>
+{
+    fn get_form_data(&self) -> std::collections::HashMap<String, String> {
+        match self {
+            BamboraapacAuthorizeRequest::Card(_) => {
+                // SOAP uses XML, not form data
+                std::collections::HashMap::new()
+            }
+            BamboraapacAuthorizeRequest::GooglePay(_) => {
+                // GooglePay uses JSON, not form data
+                std::collections::HashMap::new()
+            }
+        }
     }
 }
