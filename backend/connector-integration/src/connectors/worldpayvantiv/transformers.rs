@@ -1282,7 +1282,9 @@ fn get_payment_flow_type(
         Ok(WorldpayvantivPaymentFlow::Capture)
     } else {
         Err(ConnectorError::NotSupported {
-            message: format!("Unable to determine payment flow type from merchant transaction ID: {merchant_txn_id}"),
+            message: format!(
+                "Unable to determine payment flow type from merchant transaction ID: {merchant_txn_id}"
+            ),
             connector: "worldpayvantiv",
         })
     }

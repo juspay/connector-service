@@ -319,9 +319,7 @@ impl TrustpayPaymentStatusCode {
             Self::RejectedByThrottling => "Rejected by throttling",
             Self::CountryBlacklisted => "Country blacklisted",
             Self::BinBlacklisted => "Bin blacklisted",
-            Self::SessionBeingProcessed => {
-                "Transaction for the same session is currently being processed, please try again later"
-            }
+            Self::SessionBeingProcessed => "Transaction for the same session is currently being processed, please try again later",
             Self::CommunicationError => "Unexpected communication error with connector/acquirer",
             Self::TimeoutUncertainResult => "Timeout, uncertain result",
             Self::Unknown => "",

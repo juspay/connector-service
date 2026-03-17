@@ -177,10 +177,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let card_number = ccard.card_number.peek();
                 let card_issuer = utils::get_card_issuer(card_number)?;
                 let card_type = ForteCardType::try_from(card_issuer)?;
-                let address = item.router_data.resource_common_data.get_billing_address()?;
+                let address = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_address()?;
                 let card = Card {
                     card_type,
-                    name_on_card: item.router_data.resource_common_data.get_billing_full_name()?,
+                    name_on_card: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_full_name()?,
                     account_number: ccard.card_number.clone(),
                     expire_month: ccard.card_exp_month.clone(),
                     expire_year: ccard.card_exp_year.clone(),
@@ -194,7 +200,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let authorization_amount = item
                     .connector
                     .amount_converter
-                    .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                     .convert(
+                        item.router_data.request.minor_amount,
+                        item.router_data.request.currency,
+                    )
                     .change_context(ConnectorError::RequestEncodingFailed)?;
                 Ok(Self {
                     action,
@@ -218,7 +227,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                     let account_holder = bank_account_holder_name
                         .clone()
-                        .or(item.router_data.resource_common_data.get_billing_full_name().ok())
+                        .or(item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_full_name()
+                            .ok())
                         .ok_or(ConnectorError::MissingRequiredField {
                             field_name: "bank_account_holder_name",
                         })?;
@@ -233,7 +246,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         account_holder,
                     };
 
-                    let address = item.router_data.resource_common_data.get_billing_address()?;
+                    let address = item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_address()?;
                     let first_name = address.get_first_name()?;
                     let billing_address = BillingAddress {
                         first_name: first_name.clone(),
@@ -243,7 +259,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let authorization_amount = item
                         .connector
                         .amount_converter
-                        .convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                        .convert(
+                            item.router_data.request.minor_amount,
+                            item.router_data.request.currency,
+                        )
                         .change_context(ConnectorError::RequestEncodingFailed)?;
 
                     Ok(Self {
@@ -253,19 +272,26 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         payment_method: FortePaymentMethod::Echeck(ForteEcheckWrapper { echeck }),
                     })
                 }
-                BankDebitData::SepaBankDebit { .. } => Err(ConnectorError::NotImplemented(
-                    "SEPA bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
-                ))?,
-                BankDebitData::BecsBankDebit { .. } => Err(ConnectorError::NotImplemented(
-                    "BECS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
-                ))?,
-                BankDebitData::BacsBankDebit { .. } => Err(ConnectorError::NotImplemented(
-                    "BACS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
-                ))?,
-                BankDebitData::SepaGuaranteedBankDebit { .. } => Err(ConnectorError::NotImplemented(
-                    "SEPA Guaranteed bank debit is not supported by Forte. Only ACH (US) bank debits are supported."
-                        .to_string(),
-                ))?,
+                BankDebitData::SepaBankDebit { .. } => {
+                    Err(ConnectorError::NotImplemented(
+                        "SEPA bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
+                    ))?
+                }
+                BankDebitData::BecsBankDebit { .. } => {
+                    Err(ConnectorError::NotImplemented(
+                        "BECS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
+                    ))?
+                }
+                BankDebitData::BacsBankDebit { .. } => {
+                    Err(ConnectorError::NotImplemented(
+                        "BACS bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
+                    ))?
+                }
+                BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                    Err(ConnectorError::NotImplemented(
+                        "SEPA Guaranteed bank debit is not supported by Forte. Only ACH (US) bank debits are supported.".to_string(),
+                    ))?
+                }
             },
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
@@ -283,9 +309,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::OpenBanking(_)
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => Err(ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Forte"),
-            ))?,
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Err(ConnectorError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Forte"),
+                ))?
+            }
         }
     }
 }

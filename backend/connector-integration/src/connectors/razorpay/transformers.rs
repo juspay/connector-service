@@ -805,11 +805,12 @@ impl<F, Req>
                     .as_ref()
                     .filter(|upi| upi.payer_account_type == "credit_card")
                     .map(|_| {
-                        domain_types::router_data::ConnectorResponseData::with_additional_payment_method_data(
-                            domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
-                                upi_mode: Some(domain_types::payment_method_data::UpiSource::UpiCc),
-                            },
-                        )
+                        domain_types::router_data::ConnectorResponseData::
+                            with_additional_payment_method_data(
+                                domain_types::router_data::AdditionalPaymentMethodConnectorResponse::Upi {
+                                    upi_mode: Some(domain_types::payment_method_data::UpiSource::UpiCc),
+                                },
+                            )
                     });
 
                 let psync_response_data = PaymentsResponseData::TransactionResponse {

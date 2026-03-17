@@ -120,148 +120,117 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             config: "merchant_connector_account.metadata",
         })?;
         match item.router_data.request.payment_method_data.clone() {
-            PaymentMethodData::Wallet(wallet_data) => {
-                match wallet_data {
-                    WalletData::Mifinity(data) => {
-                        let money = Money {
-                            amount: item
-                                .connector
-                                .amount_converter
-                                .convert(
-                                    item.router_data.request.minor_amount,
-                                    item.router_data.request.currency,
-                                )
-                                .change_context(ConnectorError::RequestEncodingFailed)?,
-                            currency: item.router_data.request.currency,
-                        };
-                        let phone_details =
-                            item.router_data.resource_common_data.get_billing_phone()?;
-                        let billing_country = item
+            PaymentMethodData::Wallet(wallet_data) => match wallet_data {
+                WalletData::Mifinity(data) => {
+                    let money = Money {
+                        amount: item
+                            .connector
+                            .amount_converter
+                            .convert(
+                                item.router_data.request.minor_amount,
+                                item.router_data.request.currency,
+                            )
+                            .change_context(ConnectorError::RequestEncodingFailed)?,
+                        currency: item.router_data.request.currency,
+                    };
+                    let phone_details =
+                        item.router_data.resource_common_data.get_billing_phone()?;
+                    let billing_country = item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_country()?;
+                    let client = MifinityClient {
+                        first_name: item
                             .router_data
                             .resource_common_data
-                            .get_billing_country()?;
-                        let client = MifinityClient {
-                            first_name: item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_first_name()?,
-                            last_name: item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_last_name()?,
-                            phone: phone_details.get_number()?,
-                            dialing_code: phone_details.get_country_code()?,
-                            nationality: billing_country,
-                            email_address: item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_email()?,
-                            dob: data.date_of_birth.clone(),
-                        };
-                        let address = MifinityAddress {
-                            address_line1: item
-                                .router_data
-                                .resource_common_data
-                                .get_billing_line1()?,
-                            country_code: billing_country,
-                            city: item.router_data.resource_common_data.get_billing_city()?,
-                        };
-                        let validation_key = format!(
-                            "payment_validation_key_{}_{}",
-                            item.router_data
-                                .resource_common_data
-                                .merchant_id
-                                .get_string_repr(),
-                            item.router_data
-                                .resource_common_data
-                                .connector_request_reference_id
-                                .clone()
-                        );
-                        let client_reference = item.router_data.request.customer_id.clone().ok_or(
-                            ConnectorError::MissingRequiredField {
-                                field_name: "client_reference",
-                            },
-                        )?;
-                        let destination_account_number = metadata.destination_account_number;
-                        let trace_id = item
+                            .get_billing_first_name()?,
+                        last_name: item
                             .router_data
+                            .resource_common_data
+                            .get_billing_last_name()?,
+                        phone: phone_details.get_number()?,
+                        dialing_code: phone_details.get_country_code()?,
+                        nationality: billing_country,
+                        email_address: item.router_data.resource_common_data.get_billing_email()?,
+                        dob: data.date_of_birth.clone(),
+                    };
+                    let address = MifinityAddress {
+                        address_line1: item.router_data.resource_common_data.get_billing_line1()?,
+                        country_code: billing_country,
+                        city: item.router_data.resource_common_data.get_billing_city()?,
+                    };
+                    let validation_key = format!(
+                        "payment_validation_key_{}_{}",
+                        item.router_data
+                            .resource_common_data
+                            .merchant_id
+                            .get_string_repr(),
+                        item.router_data
                             .resource_common_data
                             .connector_request_reference_id
-                            .clone();
-                        let brand_id = metadata.brand_id;
-                        let language_preference = data.language_preference;
-                        Ok(Self {
-                            money,
-                            client,
-                            address,
-                            validation_key,
-                            client_reference,
-                            trace_id: trace_id.clone(),
-                            description: trace_id.clone(), //Connector recommend to use the traceId for a better experience in the BackOffice application later.
-                            destination_account_number,
-                            brand_id,
-                            return_url: item.router_data.request.get_router_return_url()?,
-                            language_preference,
-                        })
-                    }
-                    WalletData::AliPayQr(_)
-                    | WalletData::BluecodeRedirect {}
-                    | WalletData::AliPayRedirect(_)
-                    | WalletData::AliPayHkRedirect(_)
-                    | WalletData::AmazonPayRedirect(_)
-                    | WalletData::MomoRedirect(_)
-                    | WalletData::KakaoPayRedirect(_)
-                    | WalletData::GoPayRedirect(_)
-                    | WalletData::GcashRedirect(_)
-                    | WalletData::ApplePay(_)
-                    | WalletData::ApplePayRedirect(_)
-                    | WalletData::ApplePayThirdPartySdk(_)
-                    | WalletData::DanaRedirect {}
-                    | WalletData::GooglePay(_)
-                    | WalletData::GooglePayRedirect(_)
-                    | WalletData::GooglePayThirdPartySdk(_)
-                    | WalletData::MbWayRedirect(_)
-                    | WalletData::MobilePayRedirect(_)
-                    | WalletData::PaypalRedirect(_)
-                    | WalletData::PaypalSdk(_)
-                    | WalletData::Paze(_)
-                    | WalletData::SamsungPay(_)
-                    | WalletData::TwintRedirect {}
-                    | WalletData::VippsRedirect {}
-                    | WalletData::TouchNGoRedirect(_)
-                    | WalletData::WeChatPayRedirect(_)
-                    | WalletData::WeChatPayQr(_)
-                    | WalletData::CashappQr(_)
-                    | WalletData::SwishQr(_)
-                    | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("Mifinity"),
-                    )
-                    .into()),
+                            .clone()
+                    );
+                    let client_reference = item.router_data.request.customer_id.clone().ok_or(
+                        ConnectorError::MissingRequiredField {
+                            field_name: "client_reference",
+                        },
+                    )?;
+                    let destination_account_number = metadata.destination_account_number;
+                    let trace_id = item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone();
+                    let brand_id = metadata.brand_id;
+                    let language_preference = data.language_preference;
+                    Ok(Self {
+                        money,
+                        client,
+                        address,
+                        validation_key,
+                        client_reference,
+                        trace_id: trace_id.clone(),
+                        description: trace_id.clone(), //Connector recommend to use the traceId for a better experience in the BackOffice application later.
+                        destination_account_number,
+                        brand_id,
+                        return_url: item.router_data.request.get_router_return_url()?,
+                        language_preference,
+                    })
                 }
-            }
-            PaymentMethodData::Card(_)
-            | PaymentMethodData::CardRedirect(_)
-            | PaymentMethodData::BankRedirect(_)
-            | PaymentMethodData::PayLater(_)
-            | PaymentMethodData::BankDebit(_)
-            | PaymentMethodData::BankTransfer(_)
-            | PaymentMethodData::Crypto(_)
-            | PaymentMethodData::MandatePayment
-            | PaymentMethodData::Reward
-            | PaymentMethodData::RealTimePayment(_)
-            | PaymentMethodData::MobilePayment(_)
-            | PaymentMethodData::Upi(_)
-            | PaymentMethodData::Voucher(_)
-            | PaymentMethodData::GiftCard(_)
-            | PaymentMethodData::OpenBanking(_)
-            | PaymentMethodData::CardToken(_)
-            | PaymentMethodData::NetworkToken(_)
-            | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
+                WalletData::AliPayQr(_)
+                | WalletData::BluecodeRedirect {}
+                | WalletData::AliPayRedirect(_)
+                | WalletData::AliPayHkRedirect(_)
+                | WalletData::AmazonPayRedirect(_)
+                | WalletData::MomoRedirect(_)
+                | WalletData::KakaoPayRedirect(_)
+                | WalletData::GoPayRedirect(_)
+                | WalletData::GcashRedirect(_)
+                | WalletData::ApplePay(_)
+                | WalletData::ApplePayRedirect(_)
+                | WalletData::ApplePayThirdPartySdk(_)
+                | WalletData::DanaRedirect {}
+                | WalletData::GooglePay(_)
+                | WalletData::GooglePayRedirect(_)
+                | WalletData::GooglePayThirdPartySdk(_)
+                | WalletData::MbWayRedirect(_)
+                | WalletData::MobilePayRedirect(_)
+                | WalletData::PaypalRedirect(_)
+                | WalletData::PaypalSdk(_)
+                | WalletData::Paze(_)
+                | WalletData::SamsungPay(_)
+                | WalletData::TwintRedirect {}
+                | WalletData::VippsRedirect {}
+                | WalletData::TouchNGoRedirect(_)
+                | WalletData::WeChatPayRedirect(_)
+                | WalletData::WeChatPayQr(_)
+                | WalletData::CashappQr(_)
+                | WalletData::SwishQr(_)
+                | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Mifinity"),
                 )
-                .into())
-            }
+                .into()),
+            },
         }
     }
 }

@@ -287,12 +287,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // For ACH payments, Paysafe requires settleWithAuth to be true
         let settle_with_auth = match payment_type {
             PaysafePaymentType::Ach => true,
-            PaysafePaymentType::Card => {
-                matches!(
-                    router_data.request.capture_method,
-                    Some(enums::CaptureMethod::Automatic) | None
-                )
-            }
+            PaysafePaymentType::Card => matches!(
+                router_data.request.capture_method,
+                Some(enums::CaptureMethod::Automatic) | None
+            ),
         };
 
         let billing_details = create_paysafe_billing_details(&router_data.resource_common_data)?;

@@ -346,9 +346,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
             Err(error_msg) => {
                 if let Some(event) = event_builder {
-                    event.set_connector_response(
-                        &serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}),
-                    )
+                    event.set_connector_response(&serde_json::json!({"error": "Error response parsing failed", "status_code": res.status_code}))
                 };
                 tracing::error!(deserialization_error =? error_msg);
                 domain_types::utils::handle_json_response_deserialization_failure(res, "nuvei")

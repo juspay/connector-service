@@ -2077,12 +2077,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             match charge_type {
                 Some(common_enums::PaymentChargeType::Stripe(
                     common_enums::StripeChargeType::Direct,
-                )) => {
-                    Some(IntentCharges {
-                        application_fee_amount: application_fees, // default to 0 if None
-                        destination_account_id: None,
-                    })
-                }
+                )) => Some(IntentCharges {
+                    application_fee_amount: application_fees, // default to 0 if None
+                    destination_account_id: None,
+                }),
                 Some(common_enums::PaymentChargeType::Stripe(
                     common_enums::StripeChargeType::Destination,
                 )) => Some(IntentCharges {
@@ -4693,23 +4691,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Ser
         >,
     ) -> Result<Self, Self::Error> {
         //extracting mandate metadata from CIT call if CIT call was a Split Payment
-        let from_metadata = match &item.request.mandate_reference {
-            MandateReferenceId::ConnectorMandateId(mandate_data) => mandate_data.get_mandate_metadata(),
-            _ => None,
-        }
-        .and_then(|secret_value| {
-            let json_value = secret_value.clone().expose();
-            match serde_json::from_value::<Self>(json_value.clone()) {
-                Ok(val) => Some(val),
-                Err(err) => {
-                    tracing::info!(
-                        "STRIPE: Picking merchant_account_id and merchant_config_currency from payments request: {:?}",
-                        err
-                    );
-                    None
+        let from_metadata = match &item
+            .request
+            .mandate_reference {
+                MandateReferenceId::ConnectorMandateId(mandate_data) => {
+                    mandate_data.get_mandate_metadata()
                 }
+                _ => None,
             }
-        });
+            .and_then(|secret_value| {
+                let json_value = secret_value.clone().expose();
+                match serde_json::from_value::<Self>(json_value.clone()) {
+                    Ok(val) => Some(val),
+                    Err(err) => {
+                        tracing::info!(
+                            "STRIPE: Picking merchant_account_id and merchant_config_currency from payments request: {:?}", err
+                        );
+                        None
+                    }
+                }
+            });
 
         // If the Split Payment Request in MIT mismatches with the metadata from CIT, throw an error
         if from_metadata.is_some() && item.request.split_payments.is_some() {
@@ -5053,12 +5054,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             match charge_type {
                 Some(common_enums::PaymentChargeType::Stripe(
                     common_enums::StripeChargeType::Direct,
-                )) => {
-                    Some(IntentCharges {
-                        application_fee_amount: application_fees, // default to 0 if None
-                        destination_account_id: None,
-                    })
-                }
+                )) => Some(IntentCharges {
+                    application_fee_amount: application_fees, // default to 0 if None
+                    destination_account_id: None,
+                }),
                 Some(common_enums::PaymentChargeType::Stripe(
                     common_enums::StripeChargeType::Destination,
                 )) => Some(IntentCharges {
@@ -5125,20 +5124,17 @@ fn get_payment_method_type_for_saved_payment_method_payment<
             .recurring_mandate_payment_data
             .clone()
         {
-            Some(recurring_payment_method_data) => match recurring_payment_method_data
-                .payment_method_type
-            {
-                Some(payment_method_type) => StripePaymentMethodType::try_from(payment_method_type),
-                None => Err(ConnectorError::MissingRequiredField {
-                    field_name: "payment_method_type",
+           Some(recurring_payment_method_data) => {
+                match recurring_payment_method_data.payment_method_type {
+                    Some(payment_method_type) => {
+                        StripePaymentMethodType::try_from(payment_method_type)
+                    }
+                    None => Err(ConnectorError::MissingRequiredField {
+                        field_name: "payment_method_type",
+                    }
+                    .into()),
                 }
-                .into()),
-            },
-            None => Err(ConnectorError::MissingRequiredField {
-                field_name: "recurring_mandate_payment_data",
             }
-            .into()),
-        }?;
         match stripe_payment_method_type {
             //Stripe converts Ideal, Bancontact & Sofort Bank redirect methods to Sepa direct debit and attaches to the customer for future usage
             StripePaymentMethodType::Ideal

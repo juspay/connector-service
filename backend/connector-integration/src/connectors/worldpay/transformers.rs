@@ -96,20 +96,25 @@ fn fetch_payment_instrument<
                     card_number: card.card_number,
                 },
                 cvc: card.card_cvc,
-                card_holder_name: billing_address.and_then(|address| address.get_optional_full_name()),
+                card_holder_name: billing_address
+                    .and_then(|address| address.get_optional_full_name()),
                 billing_address: billing_address
                     .and_then(|addr| addr.address.clone())
-                    .and_then(|address| match (address.line1, address.city, address.zip, address.country) {
-                        (Some(address1), Some(city), Some(postal_code), Some(country_code)) => Some(BillingAddress {
-                            address1,
-                            address2: address.line2,
-                            address3: address.line3,
-                            city,
-                            state: address.state,
-                            postal_code,
-                            country_code,
-                        }),
-                        _ => None,
+                    .and_then(|address| {
+                        match (address.line1, address.city, address.zip, address.country) {
+                            (Some(address1), Some(city), Some(postal_code), Some(country_code)) => {
+                                Some(BillingAddress {
+                                    address1,
+                                    address2: address.line2,
+                                    address3: address.line3,
+                                    city,
+                                    state: address.state,
+                                    postal_code,
+                                    country_code,
+                                })
+                            }
+                            _ => None,
+                        }
                     }),
             }))
         }
@@ -131,26 +136,32 @@ fn fetch_payment_instrument<
                 card_number: RawCardNumber(raw_card_details.card_number),
             }))
         }
-        PaymentMethodData::MandatePayment => Err(ConnectorError::NotImplemented(
-            "MandatePayment should not be used in Authorize flow - use RepeatPayment flow for MIT transactions"
-                .to_string(),
-        )
-        .into()),
+        PaymentMethodData::MandatePayment => {
+            Err(ConnectorError::NotImplemented(
+                "MandatePayment should not be used in Authorize flow - use RepeatPayment flow for MIT transactions".to_string()
+            ).into())
+        }
         PaymentMethodData::Wallet(wallet) => match wallet {
-            WalletDataPaymentMethod::GooglePay(data) => Ok(PaymentInstrument::Googlepay(WalletPayment {
-                payment_type: PaymentType::Encrypted,
-                wallet_token: Secret::new(data.tokenization_data.get_encrypted_google_pay_token().change_context(
-                    ConnectorError::MissingRequiredField {
-                        field_name: "gpay wallet_token",
-                    },
-                )?),
-                ..WalletPayment::default()
-            })),
-            WalletDataPaymentMethod::ApplePay(data) => Ok(PaymentInstrument::Applepay(WalletPayment {
-                payment_type: PaymentType::Encrypted,
-                wallet_token: data.get_applepay_decoded_payment_data()?,
-                ..WalletPayment::default()
-            })),
+            WalletDataPaymentMethod::GooglePay(data) => {
+                Ok(PaymentInstrument::Googlepay(WalletPayment {
+                    payment_type: PaymentType::Encrypted,
+                    wallet_token: Secret::new(
+                        data.tokenization_data
+                            .get_encrypted_google_pay_token()
+                            .change_context(ConnectorError::MissingRequiredField {
+                                field_name: "gpay wallet_token",
+                            })?,
+                    ),
+                    ..WalletPayment::default()
+                }))
+            }
+            WalletDataPaymentMethod::ApplePay(data) => {
+                Ok(PaymentInstrument::Applepay(WalletPayment {
+                    payment_type: PaymentType::Encrypted,
+                    wallet_token: data.get_applepay_decoded_payment_data()?,
+                    ..WalletPayment::default()
+                }))
+            }
             WalletDataPaymentMethod::AliPayQr(_)
             | WalletDataPaymentMethod::AliPayRedirect(_)
             | WalletDataPaymentMethod::AliPayHkRedirect(_)

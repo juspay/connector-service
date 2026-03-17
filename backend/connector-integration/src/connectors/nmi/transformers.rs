@@ -717,10 +717,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Get the refund ID (refund_id) as orderid
         // If refund_id is not present, use connector_request_reference_id as fallback
-        let orderid = router_data.resource_common_data.refund_id.clone().unwrap_or_else(|| {
-            tracing::debug!("Refund: refund_id not present, using connector_request_reference_id as orderid");
-            router_data.resource_common_data.connector_request_reference_id.clone()
-        });
+        let orderid = router_data
+            .resource_common_data
+            .refund_id
+            .clone()
+            .unwrap_or_else(|| {
+                tracing::debug!("Refund: refund_id not present, using connector_request_reference_id as orderid");
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone()
+            });
 
         // Convert amount from minor to major units using framework converter
         let converter = FloatMajorUnitForConnector;

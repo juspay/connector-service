@@ -1020,8 +1020,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .or_else(|| bank_account_holder_name.clone())
                     .or_else(|| card_holder_name.clone())
                     .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name:
-                            "billing.first_name or bank_account_holder_name (required by Stax for bank tokenization)",
+                        field_name: "billing.first_name or bank_account_holder_name (required by Stax for bank tokenization)",
                     })?;
 
                 // bank_name is already None if Unspecified was sent in gRPC request
