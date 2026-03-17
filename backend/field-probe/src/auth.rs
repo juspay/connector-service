@@ -4,7 +4,10 @@ use std::sync::Arc;
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
 use domain_types::{
     connector_types::ConnectorEnum,
-    router_data::{ConnectorSpecificConfig, PaysafeAchAccountId, PaysafeCardAccountId, PaysafePaymentMethodDetails},
+    router_data::{
+        ConnectorSpecificConfig, PaysafeAchAccountId, PaysafeCardAccountId,
+        PaysafePaymentMethodDetails,
+    },
 };
 use hyperswitch_masking::Secret;
 

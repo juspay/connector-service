@@ -13,7 +13,6 @@ pub(crate) fn usd_money(minor: i64) -> Money {
     }
 }
 
-
 pub(crate) fn full_browser_info() -> BrowserInformation {
     BrowserInformation {
         color_depth: Some(24),
@@ -33,7 +32,6 @@ pub(crate) fn full_browser_info() -> BrowserInformation {
         device_model: None,
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Payment method builders

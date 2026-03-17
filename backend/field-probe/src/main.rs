@@ -41,13 +41,13 @@ mod flow_registry;
 mod json_utils;
 mod normalizer;
 mod orchestrator;
+mod patcher;
 mod probe_engine;
 mod registry;
 mod requests;
 mod sample_data;
 mod status;
 mod types;
-mod patcher;
 
 use config::get_config;
 use flow_metadata::{parse_message_schemas, parse_services_proto};

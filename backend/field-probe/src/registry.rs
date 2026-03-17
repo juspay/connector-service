@@ -12,12 +12,18 @@ pub(crate) fn authorize_pm_variants() -> Vec<(&'static str, fn() -> PaymentMetho
         ("Bacs", bacs_payment_method as fn() -> PaymentMethod),
         ("Ach", ach_payment_method as fn() -> PaymentMethod),
         ("Becs", becs_payment_method as fn() -> PaymentMethod),
-        ("GooglePay", google_pay_encrypted_method as fn() -> PaymentMethod),
+        (
+            "GooglePay",
+            google_pay_encrypted_method as fn() -> PaymentMethod,
+        ),
         (
             "GooglePayDecrypted",
             google_pay_decrypted_method as fn() -> PaymentMethod,
         ),
-        ("ApplePay", apple_pay_encrypted_method as fn() -> PaymentMethod),
+        (
+            "ApplePay",
+            apple_pay_encrypted_method as fn() -> PaymentMethod,
+        ),
         (
             "ApplePayDecrypted",
             apple_pay_method as fn() -> PaymentMethod,

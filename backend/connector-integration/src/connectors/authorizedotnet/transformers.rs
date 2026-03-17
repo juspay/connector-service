@@ -659,7 +659,9 @@ fn create_regular_transaction_request<
                 }
             }
         }
-        pm => Err(error_stack::report!(ConnectorError::NotImplemented(format!("Payment method {:?}", pm)))),
+        pm => Err(error_stack::report!(ConnectorError::NotImplemented(
+            format!("Payment method {:?}", pm)
+        ))),
     }?;
 
     let transaction_type = match item.router_data.request.capture_method {
@@ -2684,7 +2686,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
         let ccard = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
-            pm => return Err(error_stack::report!(ConnectorError::NotImplemented(format!("Payment method {:?}", pm)))),
+            pm => {
+                return Err(error_stack::report!(ConnectorError::NotImplemented(
+                    format!("Payment method {:?}", pm)
+                )))
+            }
         };
 
         let merchant_authentication =

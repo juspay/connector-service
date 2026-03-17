@@ -819,13 +819,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             Err(errors::ConnectorError::MissingRequiredField {
                 field_name: "email",
             })?
-        } 
-        else if item.router_data.request.name.is_none() {
-            Err(errors::ConnectorError::MissingRequiredField {
-                field_name: "name",
-            })?
-        } 
-        else {
+        } else if item.router_data.request.name.is_none() {
+            Err(errors::ConnectorError::MissingRequiredField { field_name: "name" })?
+        } else {
             Ok(Self {
                 email: item
                     .router_data
