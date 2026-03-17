@@ -228,6 +228,17 @@ jobs:
           name: generated-javascript
           path: sdk/javascript/src/payments/generated/
 
+      - name: Generate Ruby SDK (Ruby proto stubs + native lib)
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: make -C sdk/ruby generate-all
+
+      - name: Upload Ruby SDK generated files
+        if: matrix.target == 'aarch64-apple-darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-ruby
+          path: sdk/ruby/lib/payments/generated/
+
   # Job 3: Build universal macOS binary (temporarily disabled)
   # build-macos-universal:
   #   name: Build macOS Universal Binary
@@ -374,7 +385,45 @@ jobs:
           name: sdk-javascript
           path: artifacts/sdk-javascript/*.tgz
 
-  # Job 4d: Package Rust SDK (builds for verification, packages source only)
+  # Job 4d: Package Ruby SDK
+  package-sdk-ruby:
+    name: Package Ruby SDK
+    runs-on: ubuntu-latest
+    needs: [build-binaries, version-and-changelog]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
+        run: |
+          for dir in target/binary-*; do
+            if [ -d "$dir" ]; then
+              target_name=$(basename "$dir" | sed 's/binary-//')
+              mkdir -p "target/$target_name/release"
+              cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+            fi
+          done
+      - name: Download Ruby SDK generated files
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-ruby
+          path: sdk/ruby/lib/payments/generated/
+      - name: Package Ruby SDK
+        run: make -C sdk/ruby dist
+      - name: Upload Ruby SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-ruby
+          path: artifacts/sdk-ruby/*.gem
+
+  # Job 4e: Package Rust SDK (builds for verification, packages source only)
   package-sdk-rust:
     name: Package Rust SDK
     runs-on: ubuntu-latest
@@ -399,11 +448,11 @@ jobs:
           name: sdk-rust
           path: artifacts/sdk-rust/*.zip
 
-  # Job 4e: Collect SDK Artifacts
+  # Job 4f: Collect SDK Artifacts
   collect-sdks:
     name: Collect SDK Artifacts
     runs-on: ubuntu-latest
-    needs: [package-sdk-java, package-sdk-python, package-sdk-javascript, package-sdk-rust]
+    needs: [package-sdk-java, package-sdk-python, package-sdk-javascript, package-sdk-ruby, package-sdk-rust]
     steps:
       - name: Download all SDK artifacts
         uses: actions/download-artifact@v4
