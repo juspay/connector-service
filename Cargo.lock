@@ -1961,7 +1961,7 @@ dependencies = [
 [[package]]
 name = "g2h"
 version = "0.5.0"
-source = "git+https://github.com/juspay/g2h?branch=bump-tonic#f443d66e33b06023e8dd373e6e4f21a6cb236788"
+source = "git+https://github.com/juspay/g2h?rev=399d5257744cabffe88d9871a1192eacbbe9f484#399d5257744cabffe88d9871a1192eacbbe9f484"
 dependencies = [
  "cargo_metadata 0.19.2",
  "heck",

@@ -23,4 +23,4 @@ tonic-build = { workspace = true }
 prost-build = { workspace = true }
 prost = { workspace = true }
 heck = "0.5.0"
-g2h = { git = "https://github.com/juspay/g2h", branch = "bump-tonic" }
+g2h = { git = "https://github.com/juspay/g2h", rev = "399d5257744cabffe88d9871a1192eacbbe9f484" }
