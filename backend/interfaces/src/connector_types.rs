@@ -583,7 +583,7 @@ fn get_connector_payment_method_type_info(
     connector: &'static str,
 ) -> CustomResult<Option<PaymentMethodDetails>, domain_types::errors::ConnectorError> {
     let payment_method_details =
-        supported_payment_methods
+        supported_payment_method
             .get(&payment_method)
             .ok_or_else(|| domain_types::errors::ConnectorError::NotSupported {
                 message: payment_method.to_string(),

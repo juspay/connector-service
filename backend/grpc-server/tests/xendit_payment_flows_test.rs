@@ -111,7 +111,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         nick_name: None,
     };
     PaymentServiceAuthorizeRequest {
-        amount: Some(grpc_api_types::payments::Money {
+        amount:  Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Idr),
         }),
@@ -119,10 +119,11 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
             payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some(
-            "http://localhost:8080/payments/pay_h6dmtWPxiJ4jgtFpk8JK/merchant_1753672298/redirect/response/novalnet"
-                .to_string(),
+            "http://localhost:8080/payments/pay_h6dmtWPxiJ4jgtFpk8JK/merchant_1753672298/redirect/response/novalnet".to_string(),
         ),
-        webhook_url: Some("http://localhost:8080/webhooks/merchant_1753672298/mca_8rIwEeXmFvrIA59fMH75".to_string()),
+        webhook_url: Some(
+            "http://localhost:8080/webhooks/merchant_1753672298/mca_8rIwEeXmFvrIA59fMH75".to_string(),
+        ),
         address: Some(grpc_api_types::payments::PaymentAddress {
             billing_address: Some(grpc_api_types::payments::Address {
                 phone_number: Some(Secret::new("9123456789".to_string())),

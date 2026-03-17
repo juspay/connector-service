@@ -454,9 +454,11 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     // Create refund metadata with credit card information as required by Authorize.net
     let mut refund_metadata_map = HashMap::new();
     refund_metadata_map.insert(
-        "refund_metadata".to_string(),
-        format!("{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2050-12\"}}}}",),
-    );
+          "refund_metadata".to_string(),
+          format!(
+              "{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2050-12\"}}}}",
+          ),
+      );
 
     let refund_metadata_json = serde_json::to_string(&refund_metadata_map).unwrap();
 
@@ -725,10 +727,10 @@ async fn test_payment_authorization_manual_capture() {
             // i32::from(PaymentStatus::Failure),
         ];
         assert!(
-            acceptable_statuses.contains(&capture_response.status),
-            "Payment should be in CHARGED, PENDING, or FAILURE state after capture (sandbox) but was: {}",
-            capture_response.status
-        );
+              acceptable_statuses.contains(&capture_response.status),
+              "Payment should be in CHARGED, PENDING, or FAILURE state after capture (sandbox) but was: {}",
+              capture_response.status
+          );
     });
 }
 

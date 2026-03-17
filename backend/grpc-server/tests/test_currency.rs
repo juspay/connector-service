@@ -232,10 +232,8 @@ mod tests {
         for (currency, expected_decimals) in currencies_to_test {
             match currency.number_of_digits_after_decimal_point() {
                 Ok(decimals) => {
-                    assert_eq!(
-                        decimals, expected_decimals,
-                        "Currency {currency:?} should have {expected_decimals} decimals, got {decimals}"
-                    );
+                    assert_eq!(decimals, expected_decimals,
+                              "Currency {currency:?} should have {expected_decimals} decimals, got {decimals}");
                 }
                 Err(e) => {
                     panic!("Currency {currency:?} should be classified but got error: {e}");

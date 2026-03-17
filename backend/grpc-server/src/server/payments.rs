@@ -1468,7 +1468,7 @@ impl PaymentService for Payments {
                                 }
                             }
                         }
-                    },
+                    }
                     _ => {
                         match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                             &config,
@@ -1955,27 +1955,30 @@ impl PaymentService for Payments {
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                        .ok_or_else(|| tonic::Status::invalid_argument("missing request_details in the payload"))?
+                        .ok_or_else(|| {
+                            tonic::Status::invalid_argument("missing request_details in the payload")
+                        })?
                         .map_err(|e| e.into_grpc_status())?;
                     let webhook_secrets = payload
                         .webhook_secrets
                         .clone()
                         .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(details)
-                                .map_err(|e| e.into_grpc_status())
+                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                                details,
+                            )
+                            .map_err(|e| e.into_grpc_status())
                         })
                         .transpose()?;
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
 
-                    let requires_external_verification =
-                        connector_data.connector.requires_external_webhook_verification(
-                            config
-                                .webhook_source_verification_call
-                                .connectors_with_webhook_source_verification_call
-                                .as_ref(),
-                        );
+                    let requires_external_verification = connector_data
+                        .connector
+                        .requires_external_webhook_verification(config
+                            .webhook_source_verification_call
+                            .connectors_with_webhook_source_verification_call
+                            .as_ref());
 
                     let source_verified = if requires_external_verification {
                         verify_webhook_source_external(
@@ -2088,18 +2091,20 @@ impl PaymentService for Payments {
 
                     let decoded_body = match connector_data
                         .connector
-                        .decode_redirect_response_body(&request_details, secrets.clone())
-                    {
-                        Ok(result) => result,
-                        Err(err) => {
-                            tracing::warn!(
-                                target: "decode_redirect_response_body",
-                                "{:?}",
-                                err
-                            );
-                            request_details.body
-                        }
-                    };
+                        .decode_redirect_response_body(
+                            &request_details,
+                            secrets.clone(),
+                        ) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!(
+                                    target: "decode_redirect_response_body",
+                                    "{:?}",
+                                    err
+                                );
+                                request_details.body
+                            }
+                        };
 
                     // Create request_details with decoded body for connector processing
                     let updated_request_details = domain_types::connector_types::RequestDetails {
@@ -2112,36 +2117,36 @@ impl PaymentService for Payments {
 
                     let source_verified = match connector_data
                         .connector
-                        .verify_redirect_response_source(&updated_request_details, secrets)
-                    {
-                        Ok(result) => result,
-                        Err(err) => {
-                            tracing::warn!(
-                                target: "verify_redirect_response",
-                                "{:?}",
-                                err
-                            );
-                            false
-                        }
-                    };
+                        .verify_redirect_response_source(
+                            &updated_request_details,
+                            secrets,
+                        ) {
+                            Ok(result) => result,
+                            Err(err) => {
+                                tracing::warn!(
+                                    target: "verify_redirect_response",
+                                    "{:?}",
+                                    err
+                                );
+                                false
+                            }
+                        };
 
                     let redirect_details_response = connector_data
                         .connector
-                        .process_redirect_response(&updated_request_details)
+                        .process_redirect_response(
+                            &updated_request_details,
+                        )
                         .switch()
                         .into_grpc_status()?;
 
-                    let response = PaymentServiceVerifyRedirectResponseResponse::foreign_try_from((
-                        source_verified,
-                        redirect_details_response,
-                    ))
-                    .map_err(|e| e.into_grpc_status())?;
+                    let response = PaymentServiceVerifyRedirectResponseResponse::foreign_try_from((source_verified, redirect_details_response))
+                        .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(response))
                 }
-            },
-        )
-        .await
+            }
+        ).await
     }
 
     #[tracing::instrument(

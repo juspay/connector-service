@@ -267,13 +267,13 @@ macro_rules! implement_connector_operation {
                 .get::<String>()
                 .cloned()
                 .unwrap_or_else(|| "unknown_service".to_string());
-            let result = Box::pin(async {
-                let $crate::request::RequestData {
-                    payload,
-                    extracted_metadata: metadata_payload,
-                    masked_metadata,
-                    extensions: _, // unused in macro
-                } = request;
+            let result = Box::pin(async{
+            let $crate::request::RequestData {
+                payload,
+                extracted_metadata: metadata_payload,
+                masked_metadata,
+                extensions: _  // unused in macro
+            } = request;
 
             let (connector, request_id, connector_config) = (
                 metadata_payload.connector,
@@ -282,18 +282,17 @@ macro_rules! implement_connector_operation {
             );
 
 
-                // Get connector data
-                let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> =
-                    connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            // Get connector data
+            let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
-                // Get connector integration
-                let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-                    '_,
-                    $flow_marker,
-                    $resource_common_data_type,
-                    $request_data_type,
-                    $response_data_type,
-                > = connector_data.connector.get_connector_integration_v2();
+            // Get connector integration
+            let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
+                '_,
+                $flow_marker,
+                $resource_common_data_type,
+                $request_data_type,
+                $response_data_type,
+            > = connector_data.connector.get_connector_integration_v2();
 
             // Create connector request data
             let specific_request_data = $request_data_constructor(payload.clone())
@@ -323,54 +322,51 @@ macro_rules! implement_connector_operation {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
-                // Calculate flow name for dynamic flow-specific configurations
-                let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+            // Calculate flow name for dynamic flow-specific configurations
+            let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
 
-                // Get API tag for the current flow
-                // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
-                let api_tag = config.api_tags.get_tag(flow_name, None);
+            // Get API tag for the current flow
+            // Note: Flows with payment_method_type should implement manually (e.g., authorize, psync)
+            let api_tag = config
+                .api_tags
+                .get_tag(flow_name, None);
 
-                // Create test context if test mode is enabled
-                let test_context = config
-                    .test
-                    .create_test_context(&request_id)
-                    .map_err(|e| tonic::Status::internal(format!("Test mode configuration error: {e}")))?;
+            // Create test context if test mode is enabled
+            let test_context = config.test.create_test_context(&request_id).map_err(|e| {
+                tonic::Status::internal(format!("Test mode configuration error: {e}"))
+            })?;
 
-                // Execute connector processing
-                let event_params = external_services::service::EventProcessingParams {
-                    connector_name: &connector.to_string(),
-                    service_name: &service_name,
-                    service_type: $crate::utils::service_type_str(&config.server.type_),
-                    flow_name,
-                    event_config: &config.events,
-                    request_id: &request_id,
-                    lineage_ids: &metadata_payload.lineage_ids,
-                    reference_id: &metadata_payload.reference_id,
-                    resource_id: &metadata_payload.resource_id,
-                    shadow_mode: metadata_payload.shadow_mode,
-                };
-                let response_result = external_services::service::execute_connector_processing_step(
-                    &config.proxy,
-                    connector_integration,
-                    router_data,
-                    $all_keys_required,
-                    event_params,
-                    None,
-                    common_enums::CallConnectorAction::Trigger,
-                    test_context,
-                    api_tag,
-                )
-                .await
-                .switch()
-                .into_grpc_status()?;
+            // Execute connector processing
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                service_type: $crate::utils::service_type_str(&config.server.type_),
+                flow_name,
+                event_config: &config.events,
+                request_id: &request_id,
+                lineage_ids: &metadata_payload.lineage_ids,
+                reference_id: &metadata_payload.reference_id,
+                resource_id: &metadata_payload.resource_id,
+                shadow_mode: metadata_payload.shadow_mode,
+            };
+            let response_result = external_services::service::execute_connector_processing_step(
+                &config.proxy,
+                connector_integration,
+                router_data,
+                $all_keys_required,
+                event_params,
+                None,
+                common_enums::CallConnectorAction::Trigger,
+                test_context,
+                api_tag,
+            )
+            .await
+            .switch()
+            .into_grpc_status()?;
 
-                // Generate response
-                let final_response = $generate_response_fn(response_result).into_grpc_status()?;
-
-                Ok(tonic::Response::new(final_response))
-            })
-            .await;
-            result
-        }
-    };
+            Ok(tonic::Response::new(final_response))
+        }).await;
+        result
+    }
+}
 }

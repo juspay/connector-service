@@ -454,15 +454,21 @@ impl DisputeService for Disputes {
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                        .ok_or_else(|| tonic::Status::invalid_argument("missing request_details in the payload"))?
+                        .ok_or_else(|| {
+                            tonic::Status::invalid_argument(
+                                "missing request_details in the payload",
+                            )
+                        })?
                         .map_err(|e| e.into_grpc_status())?;
                     let webhook_secrets = payload
-                        .webhook_secrets
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(details)
-                                .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
                     // Get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
                     let source_verified = connector_data

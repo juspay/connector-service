@@ -1168,9 +1168,7 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
                 | RequestContent::Xml(_) => {
                     let exposed_value = request.get_inner_value().expose();
                     serde_json::from_str(&exposed_value).unwrap_or_else(|_| {
-                        tracing::warn!(
-                            "failed to parse body as JSON, treating as string in extract_raw_connector_request"
-                        );
+                        tracing::warn!("failed to parse body as JSON, treating as string in extract_raw_connector_request");
                         serde_json::Value::String(exposed_value)
                     })
                 }

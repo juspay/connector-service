@@ -354,9 +354,7 @@ async fn test_payment_authorization_auto_capture() {
         assert!(
             response.status == i32::from(PaymentStatus::Charged),
             "Payment should be in Charged state. Got status: {}, error_code: {:?}, error_message: {:?}",
-            response.status,
-            error.as_ref().and_then(|d| d.code.clone()),
-            error.as_ref().and_then(|d| d.message.clone())
+            response.status, error.as_ref().and_then(|d| d.code.clone()), error.as_ref().and_then(|d| d.message.clone())
         );
     });
 }

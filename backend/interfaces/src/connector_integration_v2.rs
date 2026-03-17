@@ -132,9 +132,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
         if let Some(event) = event_builder {
-            event.set_connector_response(
-                &json!({"error": "Error response parsing not implemented", "status_code": res.status_code}),
-            )
+            event.set_connector_response(&json!({"error": "Error response parsing not implemented", "status_code": res.status_code}))
         }
         Ok(ErrorResponse::get_not_implemented())
     }
