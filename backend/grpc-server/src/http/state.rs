@@ -10,6 +10,7 @@ type CompositePaymentMethodAuthenticationService = composite_service::payments::
     crate::server::payments::Payments,
     crate::server::payments::MerchantAuthentication,
     crate::server::payments::Customer,
+    crate::server::refunds::Refunds,
     crate::server::payments::PaymentMethodAuthentication,
 >;
 

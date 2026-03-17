@@ -29,3 +29,12 @@ service CompositeRefundService {
   rpc Get(CompositeRefundGetRequest) returns (CompositeRefundGetResponse);
 }
 
+// Service for composite payment method authentication operations.
+service CompositePaymentMethodAuthenticationService {
+  // Initiate 3DS flow before payment authorization.
+  rpc Preauthenticate(CompositePreauthenticateRequest) returns (CompositePreauthenticateResponse);
+
+  // Execute 3DS challenge or frictionless verification.
+  // For frictionless, performs Authenticate after Preauthenticate
+  rpc Authenticate(CompositeAuthenticateRequest) returns (CompositeAuthenticateResponse);
+}

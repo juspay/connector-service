@@ -6,25 +6,26 @@ use domain_types::{
 use grpc_api_types::payments::{
     composite_payment_method_authentication_service_server::CompositePaymentMethodAuthenticationService,
     composite_payment_service_server::CompositePaymentService,
+    composite_refund_service_server::CompositeRefundService,
     customer_service_server::CustomerService,
     merchant_authentication_service_server::MerchantAuthenticationService,
     payment_method_authentication_service_server::PaymentMethodAuthenticationService,
-    payment_service_server::PaymentService, CompositeAuthenticateRequest,
-    CompositeAuthenticateResponse, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    payment_service_server::PaymentService, refund_service_server::RefundService,
+    CompositeAuthenticateRequest, CompositeAuthenticateResponse, CompositeAuthorizeRequest,
+    CompositeAuthorizeResponse, CompositeCaptureRequest, CompositeCaptureResponse,
     CompositeGetRequest, CompositeGetResponse, CompositePreauthenticateRequest,
-    CompositePreauthenticateResponse, ConnectorState, CustomerServiceCreateResponse, CompositeRefundGetRequest,
-    CompositeRefundGetResponse, CompositeRefundRequest, CompositeRefundResponse,
-    CompositeVoidRequest, CompositeVoidResponse, ConnectorState, refund_service_server::RefundService,
-    CompositeCaptureRequest, CompositeCaptureResponse,
+    CompositePreauthenticateResponse, CompositeRefundGetRequest, CompositeRefundGetResponse,
+    CompositeRefundRequest, CompositeRefundResponse, CompositeVoidRequest, CompositeVoidResponse,
+    ConnectorState, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServiceAuthenticateResponse,
     PaymentMethodAuthenticationServicePreAuthenticateRequest,
     PaymentMethodAuthenticationServicePreAuthenticateResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
 };
 
 use crate::transformers::ForeignFrom;
@@ -241,10 +242,10 @@ where
     R: RefundService + Clone + Send + Sync + 'static,
     A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
-    async fn create_access_token<R: CompositeAccessTokenRequest>(
+    async fn create_access_token<Req: CompositeAccessTokenRequest>(
         &self,
         connector: &ConnectorEnum,
-        payload: &R,
+        payload: &Req,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<Option<MerchantAuthenticationServiceCreateAccessTokenResponse>, tonic::Status> {
@@ -468,8 +469,7 @@ where
     ) -> Result<tonic::Response<CompositeRefundResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector =
-            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector = connector_from_composite_request_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
@@ -517,8 +517,7 @@ where
     ) -> Result<tonic::Response<CompositeRefundGetResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector =
-            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector = connector_from_composite_request_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
@@ -562,8 +561,7 @@ where
     ) -> Result<tonic::Response<CompositeVoidResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector =
-            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector = connector_from_composite_request_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
@@ -611,8 +609,7 @@ where
     ) -> Result<tonic::Response<CompositeCaptureResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector =
-            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector = connector_from_composite_request_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
@@ -631,9 +628,9 @@ where
         }))
     }
 
-    async fn pre_authenticate<R: CompositePreAuthNRequest>(
+    async fn pre_authenticate<Req: CompositePreAuthNRequest>(
         &self,
-        payload: &R,
+        payload: &Req,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
     ) -> Result<Option<PaymentMethodAuthenticationServicePreAuthenticateResponse>, tonic::Status>
@@ -741,14 +738,14 @@ where
     R: RefundService + Clone + Send + Sync + 'static,
     A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
-    async fn composite_authorize(
+    async fn authorize(
         &self,
         request: tonic::Request<CompositeAuthorizeRequest>,
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         self.process_composite_authorize(request).await
     }
 
-    async fn composite_get(
+    async fn get(
         &self,
         request: tonic::Request<CompositeGetRequest>,
     ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
@@ -778,12 +775,13 @@ where
 }
 
 #[tonic::async_trait]
-impl<P, M, C, R> CompositeRefundService for Payments<P, M, C, R>
+impl<P, M, C, R, A> CompositeRefundService for Payments<P, M, C, R, A>
 where
     P: PaymentService + Clone + Send + Sync + 'static,
     M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
     C: CustomerService + Clone + Send + Sync + 'static,
     R: RefundService + Clone + Send + Sync + 'static,
+    A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
     async fn get(
         &self,
@@ -793,23 +791,23 @@ where
     }
 }
 
-
 #[tonic::async_trait]
-impl<P, M, C, A> CompositePaymentMethodAuthenticationService for Payments<P, M, C, A>
+impl<P, M, C, R, A> CompositePaymentMethodAuthenticationService for Payments<P, M, C, R, A>
 where
     P: PaymentService + Clone + Send + Sync + 'static,
     M: MerchantAuthenticationService + Clone + Send + Sync + 'static,
     C: CustomerService + Clone + Send + Sync + 'static,
+    R: RefundService + Clone + Send + Sync + 'static,
     A: PaymentMethodAuthenticationService + Clone + Send + Sync + 'static,
 {
-    async fn composite_preauthenticate(
+    async fn preauthenticate(
         &self,
         request: tonic::Request<CompositePreauthenticateRequest>,
     ) -> Result<tonic::Response<CompositePreauthenticateResponse>, tonic::Status> {
         self.process_composite_pre_authenticate(request).await
     }
 
-    async fn composite_authenticate(
+    async fn authenticate(
         &self,
         request: tonic::Request<CompositeAuthenticateRequest>,
     ) -> Result<tonic::Response<CompositeAuthenticateResponse>, tonic::Status> {
