@@ -1019,6 +1019,7 @@ pub enum PaymentMethodType {
     RedCompra,
     RedPagos,
     SamsungPay,
+    Satispay,
     Sepa,
     SepaBankTransfer,
     Sofort,
@@ -1034,6 +1035,7 @@ pub enum PaymentMethodType {
     Venmo,
     Walley,
     WeChatPay,
+    Wero,
     SevenEleven,
     Lawson,
     MiniStop,
@@ -1685,6 +1687,7 @@ pub enum RoutableConnectors {
     Worldpayxml,
     Xendit,
     Zen,
+    Ppro,
     Plaid,
     Zsl,
 }
