@@ -16,6 +16,12 @@ service CompositePaymentService {
 
   // Runs composite refund flow.
   rpc Refund(CompositeRefundRequest) returns (CompositeRefundResponse);
+
+  // Runs composite void flow.
+  rpc Void(CompositeVoidRequest) returns (CompositeVoidResponse);
+
+  // Runs composite capture flow.
+  rpc Capture(CompositeCaptureRequest) returns (CompositeCaptureResponse);
 }
 
 service CompositeRefundService {
