@@ -1,7 +1,7 @@
 # Architecture Overview
 
-<!--
----
+## <!--
+
 title: Architecture Overview
 description: How Connector Service library is architected for multi-language SDKs and unified payment processing
 last_updated: 2026-03-03
@@ -10,12 +10,14 @@ auto_generated: false
 reviewed_by: engineering
 reviewed_at: 2026-03-03
 approved: true
+
 ---
+
 -->
 
 ## Architecture Components
 
-The Connector Service supports a three layered architecture, each solving a purpose 
+The Connector Service supports a three layered architecture, each solving a purpose
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -116,12 +118,12 @@ The core value: Connector Service transforms unified requests to connector-speci
 
 **Authorization Mapping:**
 
-| Unified Field | Stripe | Adyen |
-|---------------|--------|-------|
-| `amount.currency` | `currency` | `amount.currency` |
-| `amount.amount` | `amount` (cents) | `value` (cents) |
+| Unified Field                     | Stripe                         | Adyen                   |
+| --------------------------------- | ------------------------------ | ----------------------- |
+| `amount.currency`                 | `currency`                     | `amount.currency`       |
+| `amount.amount`                   | `amount` (cents)               | `value` (cents)         |
 | `payment_method.card.card_number` | `payment_method[card][number]` | `paymentMethod[number]` |
-| `connector_metadata` | `metadata` | `additionalData` |
+| `connector_metadata`              | `metadata`                     | `additionalData`        |
 
 This transformation happens server-side, so SDKs remain unchanged when adding new connectors.
 
@@ -138,6 +140,7 @@ trait ConnectorAdapter {
     // ... 20+ operations
 }
 ```
+
 Adding new connectors only need an adapter implementation. SDKs require zero changes.
 
 ## Summary
