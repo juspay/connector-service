@@ -128,7 +128,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
-
         let webhook_secret = connector_webhook_secret
             .ok_or(errors::ConnectorError::WebhookVerificationSecretNotFound)?
             .secret;
@@ -138,7 +137,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .get(headers::REVOLV3_SIGNATURE_KEY_LOWERCASE)
             .or_else(|| request.headers.get(headers::REVOLV3_SIGNATURE_KEY))
             .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
-
 
         let url = match request.url {
             Some(url) => url,
