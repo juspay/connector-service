@@ -4412,10 +4412,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
             } => Ok(Self::BankDebit),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_)),
-            } => Ok(Self::NetworkToken),
-            grpc_api_types::payments::PaymentMethod {
-                payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::SepaGuaranteedDebit(_)),
             } => Ok(Self::BankDebit),
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
