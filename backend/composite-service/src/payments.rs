@@ -23,7 +23,7 @@ use grpc_api_types::payments::{
 };
 
 use crate::transformers::ForeignFrom;
-use crate::utils::connector_from_composite_authorize_metadata;
+use crate::utils::connector_from_composite_request_metadata;
 
 /// Trait for abstracting access to common fields needed for access token creation.
 pub trait CompositeAccessTokenRequest {
@@ -36,10 +36,12 @@ pub trait CompositeAccessTokenRequest {
 }
 
 /// Trait for abstracting pre-authenticate request conversion.
-pub trait PreAuthenticatePayload {
+pub trait CompositePreAuthNRequest {
     fn build_pre_authenticate_request(
         &self,
     ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest;
+
+    fn should_do_pre_authenticate(&self, connector: &ConnectorEnum) -> Result<bool, tonic::Status>;
 }
 
 impl CompositeAccessTokenRequest for CompositeAuthorizeRequest {
@@ -76,19 +78,52 @@ impl CompositeAccessTokenRequest for CompositeGetRequest {
     }
 }
 
-impl PreAuthenticatePayload for CompositePreauthenticateRequest {
+impl CompositePreAuthNRequest for CompositePreauthenticateRequest {
     fn build_pre_authenticate_request(
         &self,
     ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
         PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(self)
     }
+
+    fn should_do_pre_authenticate(
+        &self,
+        _connector: &ConnectorEnum,
+    ) -> Result<bool, tonic::Status> {
+        Ok(true)
+    }
 }
 
-impl PreAuthenticatePayload for CompositeAuthenticateRequest {
+impl CompositePreAuthNRequest for CompositeAuthenticateRequest {
     fn build_pre_authenticate_request(
         &self,
     ) -> PaymentMethodAuthenticationServicePreAuthenticateRequest {
         PaymentMethodAuthenticationServicePreAuthenticateRequest::foreign_from(self)
+    }
+
+    fn should_do_pre_authenticate(&self, connector: &ConnectorEnum) -> Result<bool, tonic::Status> {
+        let connector_data =
+            ConnectorData::<domain_types::payment_method_data::DefaultPCIHolder>::get_connector_by_name(connector);
+
+        let auth_type = if self.enrolled_for_3ds {
+            common_enums::AuthenticationType::ThreeDs
+        } else {
+            common_enums::AuthenticationType::NoThreeDs
+        };
+
+        let payment_method_data = self
+            .payment_method
+            .clone()
+            .map(domain_types::payment_method_data::PaymentMethodData::foreign_try_from)
+            .transpose()
+            .map_err(|err| {
+                tonic::Status::invalid_argument(format!(
+                    "Failed to convert payment method data: {err:?}"
+                ))
+            })?;
+
+        Ok(connector_data
+            .connector
+            .should_do_pre_authenticate_before_authenticate(auth_type, &payment_method_data))
     }
 }
 
@@ -251,8 +286,7 @@ where
     ) -> Result<tonic::Response<CompositeAuthorizeResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector =
-            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector = connector_from_composite_request_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
@@ -303,8 +337,7 @@ where
     ) -> Result<tonic::Response<CompositeGetResponse>, tonic::Status> {
         let (metadata, extensions, payload) = request.into_parts();
 
-        let connector =
-            connector_from_composite_authorize_metadata(&metadata).map_err(|err| *err)?;
+        let connector = connector_from_composite_request_metadata(&metadata).map_err(|err| *err)?;
         let access_token_response = self
             .create_access_token(&connector, &payload, &metadata, &extensions)
             .await?;
@@ -323,23 +356,31 @@ where
         }))
     }
 
-    async fn pre_authenticate<R: PreAuthenticatePayload>(
+    async fn pre_authenticate<R: CompositePreAuthNRequest>(
         &self,
         payload: &R,
         metadata: &tonic::metadata::MetadataMap,
         extensions: &tonic::Extensions,
-    ) -> Result<PaymentMethodAuthenticationServicePreAuthenticateResponse, tonic::Status> {
-        let pre_authenticate_payload = payload.build_pre_authenticate_request();
+    ) -> Result<Option<PaymentMethodAuthenticationServicePreAuthenticateResponse>, tonic::Status>
+    {
+        let connector = connector_from_composite_request_metadata(metadata).map_err(|err| *err)?;
 
-        let mut pre_authenticate_request = tonic::Request::new(pre_authenticate_payload);
-        *pre_authenticate_request.metadata_mut() = metadata.clone();
-        *pre_authenticate_request.extensions_mut() = extensions.clone();
+        let pre_authenticate_response = if payload.should_do_pre_authenticate(&connector)? {
+            let pre_authenticate_payload = payload.build_pre_authenticate_request();
 
-        let pre_authenticate_response = self
-            .payment_method_authentication_service
-            .pre_authenticate(pre_authenticate_request)
-            .await?
-            .into_inner();
+            let mut pre_authenticate_request = tonic::Request::new(pre_authenticate_payload);
+            *pre_authenticate_request.metadata_mut() = metadata.clone();
+            *pre_authenticate_request.extensions_mut() = extensions.clone();
+
+            Some(
+                self.payment_method_authentication_service
+                    .pre_authenticate(pre_authenticate_request)
+                    .await?
+                    .into_inner(),
+            )
+        } else {
+            None
+        };
 
         Ok(pre_authenticate_response)
     }
@@ -355,7 +396,7 @@ where
             .await?;
 
         Ok(tonic::Response::new(CompositePreauthenticateResponse {
-            pre_authenticate_response: Some(pre_authenticate_response),
+            pre_authenticate_response,
         }))
     }
 
@@ -400,7 +441,7 @@ where
         let authenticate_response = self
             .authenticate(
                 &payload,
-                Some(&pre_authenticate_response),
+                pre_authenticate_response.as_ref(),
                 &metadata,
                 &extensions,
             )
@@ -408,7 +449,7 @@ where
 
         Ok(tonic::Response::new(CompositeAuthenticateResponse {
             authenticate_response: Some(authenticate_response),
-            pre_authenticate_response: Some(pre_authenticate_response),
+            pre_authenticate_response,
         }))
     }
 }

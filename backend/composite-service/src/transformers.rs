@@ -239,11 +239,8 @@ impl
             Option<&PaymentMethodAuthenticationServicePreAuthenticateResponse>,
         ),
     ) -> Self {
-        let authentication_data_from_req = item.authentication_data.clone();
-        let authentication_data = get_authentication_data(
-            authentication_data_from_req.clone(),
-            pre_authenticate_response,
-        );
+        let authentication_data =
+            get_authentication_data(item.authentication_data.clone(), pre_authenticate_response);
 
         Self {
             merchant_order_id: item.merchant_order_id.clone(),

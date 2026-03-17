@@ -822,7 +822,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
     /// For 3dsexempt: if PreAuth returns no redirect (no three_ds_method_url),
     /// continue to AuthN in the same composite call
-    fn should_continue_to_authenticate_after_preauth(
+    fn should_do_pre_authenticate_before_authenticate(
         &self,
         auth_type: common_enums::AuthenticationType,
         payment_method_data: &Option<

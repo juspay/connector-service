@@ -2676,14 +2676,28 @@ impl<
                 })
                 .transpose()?,
             redirect_response,
-            threeds_method_comp_ind: value.threeds_completion_indicator.and_then(|value| {
-                grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value)
-                    .ok()
-                    .and_then(|indicator| {
-                        connector_types::ThreeDsCompletionIndicator::foreign_try_from(indicator)
-                            .ok()
-                    })
-            }),
+            threeds_method_comp_ind: value
+                .threeds_completion_indicator
+                .map(|value| {
+                    grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value)
+                        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_THREEDS_COMPLETION_INDICATOR".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid 3DS completion indicator value".to_owned(),
+                            error_object: None,
+                        }))
+                        .and_then(|indicator| {
+                            connector_types::ThreeDsCompletionIndicator::foreign_try_from(indicator)
+                                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_THREEDS_COMPLETION_INDICATOR".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Invalid 3DS completion indicator value"
+                                        .to_owned(),
+                                    error_object: None,
+                                }))
+                        })
+                })
+                .transpose()?,
             tokenization,
         })
     }

@@ -2705,8 +2705,8 @@ pub trait ConnectorSpecifications {
         None
     }
 
-    /// Check if authenticate should be called after pre-authenticate (for no redirect flows)
-    fn should_continue_to_authenticate_after_preauth(
+    /// Check if pre-authenticate is required before authenticate
+    fn should_do_pre_authenticate_before_authenticate(
         &self,
         _auth_type: AuthenticationType,
         _payment_method_data: &Option<

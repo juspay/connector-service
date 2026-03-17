@@ -8,7 +8,8 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePreAuthenticateResponse,
 };
 
-pub fn connector_from_composite_authorize_metadata(
+pub fn connector_from_composite_request_metadata(
+    //TODO: x-connector header should be removed and x-connector-config should be used for determining the connector
     metadata: &tonic::metadata::MetadataMap,
 ) -> Result<ConnectorEnum, Box<tonic::Status>> {
     metadata
