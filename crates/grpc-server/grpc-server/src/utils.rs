@@ -7,7 +7,7 @@ pub use ucs_interface_common::metadata::*;
 use base64::{engine::general_purpose, Engine as _};
 use common_utils::{
     config_patch::Patch,
-    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
+    consts::{self, Env, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
     events::{Event, EventStage, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
@@ -55,27 +55,46 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
     span
 }
 
+pub fn validate_environment(environment: &str) -> Result<Env, String> {
+    let environment_lower = environment.to_lowercase();
+    serde::Deserialize::deserialize(
+        serde::de::value::StrDeserializer::<serde::de::value::Error>::new(&environment_lower),
+    )
+    .map_err(|_| {
+        format!(
+            "Invalid environment '{}'. Valid values are: development, sandbox, production",
+            environment
+        )
+    })
+}
+
 /// Resolve connector URLs from superposition configuration.
 ///
 /// This function attempts to resolve connector URLs dynamically based on the
-/// connector name and environment dimensions. If superposition config is not
-/// available or resolution fails, it returns `None` (falling back to static config).
+/// connector name and environment dimensions.
 ///
 /// # Arguments
 /// * `superposition_config` - Optional reference to the loaded superposition configuration
 /// * `connector` - The connector name (e.g., "stripe", "adyen")
-/// * `environment` - The environment dimension (e.g., "production", "sandbox", "development")
+/// * `environment` - The environment dimension (must be one of: "production", "sandbox", "development")
 ///
 /// # Returns
 /// * `Some(ConnectorUrls)` - Successfully resolved URLs from superposition
-/// * `None` - Superposition not configured or resolution failed
+/// * `None` - Superposition not configured or resolution failed (caller should fallback to static config)
+///
+/// # Note
+/// This function does NOT validate the environment. Call `validate_environment()` first if you need
+/// to reject invalid environment values with an error.
 ///
 /// # Example
 /// ```ignore
+/// // First validate if you want to reject invalid environments
+/// validate_environment(environment)?;
+///
 /// let urls = resolve_connector_urls(
 ///     config.superposition_config.as_ref(),
 ///     &metadata_payload.connector,
-///     "production",
+///     environment,
 /// );
 /// ```
 pub fn resolve_connector_urls(
@@ -85,14 +104,23 @@ pub fn resolve_connector_urls(
 ) -> Option<ConnectorUrls> {
     let config = superposition_config?;
 
+    let environment_lower = environment.to_lowercase();
     let connector_str = connector.to_string().to_lowercase();
 
-    match config.resolve(&connector_str, environment) {
+    match config.resolve(&connector_str, &environment_lower) {
         Ok(resolved) => {
             let urls = get_connector_urls(&resolved);
+            if urls.base_url.is_none() {
+                tracing::warn!(
+                    connector = %connector_str,
+                    environment = %environment_lower,
+                    "Superposition resolved but no base_url found, falling back to static config"
+                );
+                return None;
+            }
             tracing::info!(
                 connector = %connector_str,
-                environment = ?environment,
+                environment = %environment_lower,
                 base_url = ?urls.base_url,
                 "Resolved connector URLs from superposition"
             );
@@ -101,7 +129,7 @@ pub fn resolve_connector_urls(
         Err(e) => {
             tracing::warn!(
                 connector = %connector_str,
-                environment = ?environment,
+                environment = %environment_lower,
                 error = %e,
                 "Failed to resolve connector URLs from superposition, falling back to static config"
             );
@@ -524,25 +552,39 @@ macro_rules! implement_connector_operation {
             let specific_request_data = $request_data_constructor(payload.clone())
                 .into_grpc_status()?;
 
-            // Resolve connector URLs from superposition config if available
-            // Use header environment if provided, otherwise fall back to server's environment
-            let server_env = config.common.environment.to_string();
-            let effective_environment = metadata_payload.environment.as_deref()
-                .unwrap_or(server_env.as_str());
+            // Resolve connector URLs from superposition config ONLY when x-environment header is explicitly provided
+            // If no header is provided, fall back to static config (development.toml/sandbox.toml/production.toml)
+            let connectors = if let Some(env) = metadata_payload.environment.as_deref() {
+                $crate::utils::validate_environment(env)
+                    .map_err(|e| tonic::Status::invalid_argument(e))?;
 
-            let connectors = if let Some(urls) = $crate::utils::resolve_connector_urls(
-                config.superposition_config.as_ref().map(|arc| arc.as_ref()),
-                &metadata_payload.connector,
-                effective_environment,
-            ) {
-                tracing::info!(concat!($log_prefix, "urls present from superposition"));
-                config.connectors.patch_connector_urls(
-                    &metadata_payload.connector.to_string().to_lowercase(),
-                    &urls,
-                )
+                if let Some(urls) = $crate::utils::resolve_connector_urls(
+                    config.superposition_config.as_ref().map(|arc| arc.as_ref()),
+                    &metadata_payload.connector,
+                    env,
+                ) {
+                    tracing::info!("{} resolved URLs from superposition for environment: {}", $log_prefix, env);
+                    let patched_connectors = config.connectors.patch_connector_urls(
+                        &metadata_payload.connector.to_string().to_lowercase(),
+                        &urls,
+                    );
+                    $crate::utils::connectors_with_connector_config_overrides_on_connectors(
+                        &connector_config,
+                        patched_connectors,
+                    ).into_grpc_status()?
+                } else {
+                    tracing::info!(concat!($log_prefix, "superposition resolution failed, using static config with overrides"));
+                    $crate::utils::connectors_with_connector_config_overrides(
+                        &connector_config,
+                        &config,
+                    ).into_grpc_status()?
+                }
             } else {
-                tracing::info!(concat!($log_prefix, "using static config"));
-                config.connectors.clone()
+                tracing::info!(concat!($log_prefix, "no x-environment header, using static config with overrides"));
+                $crate::utils::connectors_with_connector_config_overrides(
+                    &connector_config,
+                    &config,
+                ).into_grpc_status()?
             };
 
             // Create common request data
