@@ -159,21 +159,12 @@ message FfiConnectorHttpResponse {
   bytes body = 3;
 }
 
-// Error category for error classification
-enum IntegrationErrorCategory {
-  VALIDATION_ERROR = 0;      // Invalid/missing request data
-  CONFIGURATION_ERROR = 1;   // Auth/config issues
-  NOT_SUPPORTED = 2;         // Feature not available
-  PROCESSING_ERROR = 3;      // Internal error
-}
-
 // Error when transforming SDK request → connector HTTP request (FFI boundary)
 message IntegrationError {
   optional string error_message = 1;           // Human-readable error description with full context (e.g., "Missing required field 'card_exp'")
   optional string error_code = 2;              // Machine-readable code for programmatic handling (e.g., "MISSING_REQUIRED_FIELD")
-  optional IntegrationErrorCategory error_category = 3;   // Broad classification for easier error handling
-  optional string suggested_action = 4;        // Actionable guidance for developers to resolve the error (e.g., "Provide the 'card_exp' field in your request")
-  optional string doc_url = 5;                 // documentation url for reference
+  optional string suggested_action = 3;        // Actionable guidance for developers to resolve the error (e.g., "Provide the 'card_exp' field in your request")
+  optional string doc_url = 4;                 // documentation url for reference
 }
 
 // Error when parsing connector HTTP response → SDK response (FFI boundary)
