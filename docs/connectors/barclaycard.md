@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/barclaycard.json
-Regenerate: python3 scripts/generate-connector-docs.py barclaycard
+Regenerate: python3 scripts/generators/docs/generate.py barclaycard
 -->
 
 ## SDK Configuration

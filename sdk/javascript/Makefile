@@ -90,7 +90,7 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 generate-flows: install-codegen-deps
 	@echo "Generating JavaScript flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang javascript
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang javascript
 	@echo "JavaScript flow methods generated."
 
 # ---------------------------------------------------------------------------

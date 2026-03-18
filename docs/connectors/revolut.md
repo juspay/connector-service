@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/revolut.json
-Regenerate: python3 scripts/generate-connector-docs.py revolut
+Regenerate: python3 scripts/generators/docs/generate.py revolut
 -->
 
 ## SDK Configuration

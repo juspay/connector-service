@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/revolv3.json
-Regenerate: python3 scripts/generate-connector-docs.py revolv3
+Regenerate: python3 scripts/generators/docs/generate.py revolv3
 -->
 
 ## SDK Configuration

@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/trustpayments.json
-Regenerate: python3 scripts/generate-connector-docs.py trustpayments
+Regenerate: python3 scripts/generators/docs/generate.py trustpayments
 -->
 
 ## SDK Configuration

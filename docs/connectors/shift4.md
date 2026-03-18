@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/shift4.json
-Regenerate: python3 scripts/generate-connector-docs.py shift4
+Regenerate: python3 scripts/generators/docs/generate.py shift4
 -->
 
 ## SDK Configuration

@@ -1,9 +1,8 @@
-
 #!/usr/bin/env python3
 """
-SDK codegen — auto-discovers payment flows and generates type-safe client methods.
+SDK Code Generator — Generates type-safe client methods for all SDKs.
 
-Cross-references:
+This generator cross-references:
   1. services.proto (via protoc descriptor) → RPC definitions with types and docs
   2. services/payments.rs → which flows have req_transformer implementations
 
@@ -12,19 +11,14 @@ and the Rust FFI flow registration files.
 
 Usage:
     # Generate all SDKs + Rust FFI registrations
-    python3 sdk/codegen/generate.py
+    python3 scripts/generators/code/generate.py
     make generate
 
     # Generate specific language only
-    python3 sdk/codegen/generate.py --lang python
-    python3 sdk/codegen/generate.py --lang javascript
-    python3 sdk/codegen/generate.py --lang kotlin
-    python3 sdk/codegen/generate.py --lang rust
-
-    # Via individual SDK Makefiles
-    make -C sdk/python generate
-    make -C sdk/javascript generate
-    make -C sdk/java generate
+    python3 scripts/generators/code/generate.py --lang python
+    python3 scripts/generators/code/generate.py --lang javascript
+    python3 scripts/generators/code/generate.py --lang kotlin
+    python3 scripts/generators/code/generate.py --lang rust
 """
 
 import re
@@ -33,16 +27,16 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-REPO_ROOT = Path(__file__).parent.parent.parent
+REPO_ROOT = Path(__file__).parent.parent.parent.parent
 SDK_ROOT = REPO_ROOT / "sdk"
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+
 SERVICES_PROTO = REPO_ROOT / "backend/grpc-api-types/proto/services.proto"
 FFI_SERVICES = REPO_ROOT / "backend/ffi/src/services/payments.rs"
-PROTO_DESCRIPTOR = REPO_ROOT / "sdk/codegen/services.desc"
+PROTO_DESCRIPTOR = Path(__file__).parent / "services.desc"
 
 RUST_HANDLERS_OUT = REPO_ROOT / "backend/ffi/src/handlers/_generated_flow_registrations.rs"
 RUST_FFI_FLOWS_OUT = REPO_ROOT / "backend/ffi/src/bindings/_generated_ffi_flows.rs"
-
-TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 # ── Jinja2 environment ──────────────────────────────────────────────────────
 

@@ -5,10 +5,10 @@ Connector Documentation Generator
 Generates connector documentation from field-probe JSON output.
 
 Usage:
-    python3 scripts/generate-connector-docs.py stripe adyen
-    python3 scripts/generate-connector-docs.py --all
-    python3 scripts/generate-connector-docs.py --list
-    python3 scripts/generate-connector-docs.py --all-connectors-doc
+    python3 scripts/generators/docs/generate.py stripe adyen
+    python3 scripts/generators/docs/generate.py --all
+    python3 scripts/generators/docs/generate.py --list
+    python3 scripts/generators/docs/generate.py --all-connectors-doc
 
 How it works:
   1. Loads probe data from data/field_probe/{connector}.json
@@ -17,7 +17,7 @@ How it works:
 
 To add docs for a new connector:
   - Run field-probe to generate probe data: cd backend/field-probe && cargo r
-  - Run: python3 scripts/generate-connector-docs.py {name}
+  - Run: python3 scripts/generators/docs/generate.py {name}
 """
 
 import sys
@@ -25,7 +25,9 @@ import json
 from pathlib import Path
 from typing import Optional
 
-import sdk_snippets
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from snippet_examples import generate as snippets
 
 # ─── Probe Data ───────────────────────────────────────────────────────────────
 
@@ -133,7 +135,7 @@ def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
         # Load proto type map for wrapper-type detection (SecretString, CardNumberType, etc.)
         proto_dir = probe_dir.parent.parent / "backend" / "grpc-api-types" / "proto"
         if proto_dir.exists():
-            sdk_snippets.load_proto_type_map(proto_dir)
+            snippets.load_proto_type_map(proto_dir)
 
         _PROBE_DATA = {}
         for conn_name in connector_names:
@@ -215,7 +217,7 @@ def _probe_samples_for_flow(probe_connector: dict, flow_key: str) -> list[tuple[
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
-REPO_ROOT       = Path(__file__).parent.parent
+REPO_ROOT       = Path(__file__).parent.parent.parent.parent
 DOCS_DIR     = REPO_ROOT / "docs/connectors"
 EXAMPLES_DIR = REPO_ROOT / "examples"
 PROTO_DIR    = REPO_ROOT / "backend/grpc-api-types/proto"
@@ -291,7 +293,7 @@ _BANK_PM_CURRENCY_OVERRIDES: dict[str, str] = {
 
 def _get_flow_proto_requests(
     probe_connector: dict,
-    scenario: "sdk_snippets.ScenarioSpec",
+    scenario: "snippets.ScenarioSpec",
 ) -> dict[str, dict]:
     """
     Build flow_key → proto_request dict for the flows in a scenario.
@@ -383,10 +385,10 @@ def _scenario_search(sdk: str, scenario_key: str) -> str:
 def _flow_search(sdk: str, flow_key: str) -> str:
     """Return the function-name search string for a flow in a given SDK."""
     tmpl = _FLOW_FUNC_SEARCH[sdk]
-    camel = sdk_snippets._to_camel(flow_key)  # type: ignore[attr-defined]
+    camel = snippets._to_camel(flow_key)  # type: ignore[attr-defined]
     camel = camel[0].lower() + camel[1:]
     # JS reserved words are renamed with a "Payment" suffix in the generated file
-    if sdk == "javascript" and flow_key in sdk_snippets.JS_RESERVED:  # type: ignore[attr-defined]
+    if sdk == "javascript" and flow_key in snippets.JS_RESERVED:  # type: ignore[attr-defined]
         camel = f"{flow_key}Payment"
     return tmpl.format(key=flow_key, camel=camel)
 
@@ -406,7 +408,7 @@ def generate_scenario_files(
       flow_lines[flow_key][sdk]         = 1-based line of the flow function (py/js only)
     """
     flow_metadata = get_flow_metadata()
-    scenarios     = sdk_snippets.detect_scenarios(probe_connector)
+    scenarios     = snippets.detect_scenarios(probe_connector)
 
     # Pair each scenario with its payloads; skip scenarios with no data
     scenarios_with_payloads = [
@@ -428,8 +430,8 @@ def generate_scenario_files(
     flow_lines: dict[str, dict[str, int]] = {}
 
     for sdk, ext, render_fn in [
-        ("python",     "py", sdk_snippets.render_consolidated_python),
-        ("javascript", "js", sdk_snippets.render_consolidated_javascript),
+        ("python",     "py", snippets.render_consolidated_python),
+        ("javascript", "js", snippets.render_consolidated_javascript),
     ]:
         out_dir  = examples_dir / connector_name / sdk
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -491,7 +493,7 @@ def generate_flow_files(
     flow_items = _collect_flow_items(probe_connector, exclude_keys=set())
 
     # Compute scenarios_with_payloads (same logic as generate_scenario_files)
-    scenarios = sdk_snippets.detect_scenarios(probe_connector)
+    scenarios = snippets.detect_scenarios(probe_connector)
     scenarios_with_payloads = [
         (s, fp)
         for s in scenarios
@@ -512,8 +514,8 @@ def generate_flow_files(
     all_flow_keys = set(probe_connector.get("flows", {}).keys())
 
     for sdk, ext, render_fn in [
-        ("kotlin", "kt", sdk_snippets.render_consolidated_kotlin),
-        ("rust",   "rs", sdk_snippets.render_consolidated_rust),
+        ("kotlin", "kt", snippets.render_consolidated_kotlin),
+        ("rust",   "rs", snippets.render_consolidated_rust),
     ]:
         out_dir  = examples_dir / connector_name / sdk
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -580,8 +582,8 @@ def generate_llms_txt(probe_data: dict[str, dict], docs_dir: Path) -> None:
     for connector_name in sorted(probe_data.keys()):
         probe_connector = probe_data[connector_name]
         name            = display_name(connector_name)
-        scenarios       = sdk_snippets.detect_scenarios(probe_connector)
-        entry           = sdk_snippets.render_llms_txt_entry(
+        scenarios       = snippets.detect_scenarios(probe_connector)
+        entry           = snippets.render_llms_txt_entry(
             connector_name, name, probe_connector, scenarios
         )
         lines.append(entry)
@@ -623,16 +625,16 @@ def generate_connector_doc(
     a("<!--")
     a("This file is auto-generated. Do not edit by hand.")
     a(f"Source: data/field_probe/{connector_name}.json")
-    a(f"Regenerate: python3 scripts/generate-connector-docs.py {connector_name}")
+    a(f"Regenerate: python3 scripts/generators/docs/generate.py {connector_name}")
     a("-->")
     a("")
 
     # ── SDK Configuration (once per connector) ──────────────────────────────
-    for line in sdk_snippets.render_config_section(connector_name):
+    for line in snippets.render_config_section(connector_name):
         a(line)
 
     # ── Integration Scenarios ────────────────────────────────────────────────
-    scenarios     = sdk_snippets.detect_scenarios(probe_connector)
+    scenarios     = snippets.detect_scenarios(probe_connector)
     flow_metadata = get_flow_metadata()
     if scenarios:
         a("## Integration Scenarios")
@@ -645,7 +647,7 @@ def generate_connector_doc(
         a("")
         for scenario in scenarios:
             flow_payloads = _get_flow_proto_requests(probe_connector, scenario)
-            for line in sdk_snippets.render_scenario_section(
+            for line in snippets.render_scenario_section(
                 scenario, connector_name, flow_payloads,
                 flow_metadata, _MESSAGE_SCHEMAS, {},
                 line_numbers=scenario_line_numbers.get(scenario.key, {}),
@@ -720,7 +722,7 @@ def generate_connector_doc(
 
             # Inline PM reference right after Authorize (where it's most useful)
             if f == "authorize":
-                for line in sdk_snippets.render_pm_reference_section(
+                for line in snippets.render_pm_reference_section(
                     probe_connector, flow_metadata, _MESSAGE_SCHEMAS
                 ):
                     a(line)
@@ -1001,7 +1003,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     a("<!--")
     a("This file is auto-generated. Do not edit by hand.")
     a("Source: data/field_probe/")
-    a("Regenerate: python3 scripts/generate-connector-docs.py --all-connectors-doc")
+    a("Regenerate: python3 scripts/generators/docs/generate.py --all-connectors-doc")
     a("-->")
     a("")
     a("This document provides a comprehensive overview of payment method support")
@@ -1236,196 +1238,119 @@ def generate_rust_build_auth(proto_dir: Path, out_file: Path) -> None:
     config_variants = _re.findall(r"(\w+Config)\s+(\w+)\s*=\s*\d+\s*;", oneof_body)
 
     # Parse each *Config message for its fields
-    config_type_fields: dict[str, list[tuple[str, bool, str]]] = {}
-    for config_type_name, _ in config_variants:
+    config_fields: dict[str, list[tuple[str, str]]] = {}
+    for type_name, field_name in config_variants:
         msg_m = _re.search(
-            rf"message\s+{_re.escape(config_type_name)}\s*\{{(.*?)\}}",
-            proto_text, _re.DOTALL,
+            rf"message\s+{type_name}\s*\{{(.*?)\}}",
+            proto_text, _re.DOTALL
         )
-        if not msg_m:
-            config_type_fields[config_type_name] = []
-            continue
-        body = msg_m.group(1)
-        fields = []
-        inner_depth = 0
-        for line in body.splitlines():
-            inner_depth += line.count("{") - line.count("}")
-            if inner_depth > 0:
-                continue
-            fm = _re.match(r"\s*(optional\s+)?(\w+)\s+(\w+)\s*=\s*\d+", line)
-            if fm:
-                is_opt = fm.group(1) is not None
-                ftype = fm.group(2)
-                fname = fm.group(3)
-                skip = {"message", "enum", "oneof", "reserved", "option",
-                        "syntax", "import", "package"}
-                if ftype not in skip and fname not in skip:
-                    fields.append((fname, is_opt, ftype))
-        config_type_fields[config_type_name] = fields
+        if msg_m:
+            body = msg_m.group(1)
+            # field lines: string api_key = 1;
+            fields = _re.findall(r"(\w+)\s+(\w+)\s*=\s*\d+", body)
+            config_fields[field_name] = fields
+        else:
+            config_fields[field_name] = []
 
-    # Build the Rust file
+    # Build auth.rs content
     lines: list[str] = [
-        "// AUTO-GENERATED — do not edit manually.",
-        "// Regenerate: python3 scripts/generate-connector-docs.py --all",
-        "//",
-        "// Maps connector name (from creds.json) to ConnectorSpecificConfig proto type.",
+        "// Auto-generated from payment.proto — do not edit manually",
+        "// Regenerate: python3 scripts/generators/docs/generate.py",
         "",
-        "use grpc_api_types::payments::{connector_specific_config, ConnectorSpecificConfig, *};",
-        "use hyperswitch_masking::Secret;",
+        "use payments::generated::payment_pb2;",
+        "use std::env;",
         "",
-        "fn get_val(",
-        "    creds: &serde_json::Map<String, serde_json::Value>,",
-        "    key: &str,",
-        ") -> Result<String, String> {",
-        "    match creds.get(key) {",
-        '        Some(serde_json::Value::String(s)) => Ok(s.clone()),',
-        "        Some(serde_json::Value::Object(obj)) => obj",
-        '            .get("value")',
-        "            .and_then(|v| v.as_str())",
-        "            .map(str::to_string)",
-        '            .ok_or_else(|| format!("field {key}: no .value")),',
-        '        _ => Err(format!("missing or invalid field: {key}")),',
-        "    }",
-        "}",
-        "",
-        "fn get_opt_secret(",
-        "    creds: &serde_json::Map<String, serde_json::Value>,",
-        "    key: &str,",
-        ") -> Option<Secret<String>> {",
-        "    get_val(creds, key).ok().map(Secret::new)",
-        "}",
-        "",
-        "pub fn build_connector_config(",
-        "    connector: &str,",
-        "    creds: &serde_json::Map<String, serde_json::Value>,",
-        ") -> Result<ConnectorSpecificConfig, String> {",
-        "    #[allow(clippy::match_single_binding)]",
-        "    match connector {",
+        "/// Build ConnectorAuthType from environment variables",
+        "/// Environment variable format: {CONNECTOR_NAME}_API_KEY, etc.",
+        "pub fn build_auth(connector_name: &str) -> payment_pb2::ConnectorAuthType {",
+        "    match connector_name {",
     ]
-
-    for config_type_name, field_name in config_variants:
-        fields = config_type_fields.get(config_type_name, [])
-        # prost oneof variant = field_name with first char uppercased
-        variant = field_name[0].upper() + field_name[1:]
-
-        field_lines: list[str] = []
-        for fname, is_opt, ftype in fields:
-            # Skip base_url and other non-secret string fields (they're optional overrides)
-            if ftype == "string":
-                # base_url, dispute_base_url etc. — skip for creds building
-                continue
-            if ftype == "SecretString":
-                if is_opt:
-                    field_lines.append(f'            {fname}: get_opt_secret(creds, "{fname}"),')
-                else:
-                    field_lines.append(f'            {fname}: Some(Secret::new(get_val(creds, "{fname}")?)),')
-            elif ftype == "bool":
-                if is_opt:
-                    field_lines.append(
-                        f'            {fname}: creds.get("{fname}")'
-                        f'.and_then(|v| v.as_bool()),'
-                    )
-                else:
-                    field_lines.append(
-                        f'            {fname}: creds.get("{fname}")'
-                        f'.and_then(|v| v.as_bool()).unwrap_or(false),'
-                    )
-            elif ftype in ("uint32", "int32", "bytes"):
-                if is_opt:
-                    field_lines.append(
-                        f'            {fname}: creds.get("{fname}")'
-                        f'.and_then(|v| v.as_str().map(str::to_string)'
-                        f'.or_else(|| v.get("value").and_then(|v| v.as_str()).map(str::to_string))),'
-                    )
-                else:
-                    field_lines.append(f'            {fname}: get_val(creds, "{fname}")?,')
-            else:
-                # Complex type — skip with comment
-                field_lines.append(f'            // {fname}: ..., // complex type: {ftype}')
-
-        lines.append(f'        "{field_name}" => {{')
-        lines.append(f"            Ok(ConnectorSpecificConfig {{")
-        lines.append(f"                config: Some(connector_specific_config::Config::{variant}(")
-        lines.append(f"                    {config_type_name} {{")
-        lines.extend(field_lines)
-        lines.append(f"                        ..Default::default()")
-        lines.append(f"                    }},")
-        lines.append(f"                )),")
-        lines.append(f"            }})")
-        lines.append(f"        }}")
-
-    lines += [
-        '        _ => Err(format!("unsupported connector for Rust smoke test: {connector}")),',
-        "    }",
-        "}",
-        "",
-    ]
+    for field_name in sorted(config_fields.keys()):
+        conn_var = field_name.lower()
+        env_prefix = conn_var.upper()
+        lines.append(f'        "{conn_var}" => {{')
+        lines.append(f'            let mut auth = payment_pb2::ConnectorAuthType::new();')
+        lines.append(f'            let mut specific = payment_pb2::ConnectorSpecificConfig::new();')
+        lines.append(f'            let mut config = payment_pb2::{conn_var.title()}Config::new();')
+        for ftype, fname in config_fields[field_name]:
+            env_var = f"{env_prefix}_{fname.upper()}"
+            lines.append(f'            config.{fname} = env::var("{env_var}").unwrap_or_default();')
+        lines.append(f'            specific.set_{conn_var}(config);')
+        lines.append(f'            auth.set_connector_specific_config(specific);')
+        lines.append(f'            auth')
+        lines.append(f'        }}')
+    lines.append('        _ => payment_pb2::ConnectorAuthType::new(),')
+    lines.append('    }')
+    lines.append('}')
+    lines.append('')
 
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text("\n".join(lines), encoding="utf-8")
-    print(f"  ✓ Generated {out_file}")
+    print(f"  {out_file.relative_to(REPO_ROOT)}")
 
 
 def main():
     import argparse
-
     parser = argparse.ArgumentParser(
-        description="Generate connector docs from field-probe JSON output",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__,
+        description="Generate connector documentation from field-probe data"
     )
-    parser.add_argument("connectors", nargs="*", help="Connector names (e.g. stripe adyen)")
-    parser.add_argument("--all", action="store_true", help="Generate docs for all connectors")
-    parser.add_argument("--list", action="store_true", help="List connectors and annotation status")
+    
+    parser.add_argument(
+        "connectors",
+        nargs="*",
+        help="Connector names to generate docs for"
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Generate docs for all connectors"
+    )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="List all available connectors"
+    )
     parser.add_argument(
         "--all-connectors-doc",
         action="store_true",
-        help="Generate all_connector.md with flow coverage matrix",
+        help="Generate the all_connector.md coverage document"
+    )
+    parser.add_argument(
+        "--probe-path",
+        type=Path,
+        default=REPO_ROOT / "data" / "field_probe",
+        help="Path to field-probe output directory (default: data/field_probe)"
     )
     parser.add_argument(
         "--output-dir",
-        default=str(DOCS_DIR),
-        metavar="DIR",
-        help=f"Output directory (default: {DOCS_DIR})",
+        type=Path,
+        default=DOCS_DIR,
+        help="Output directory for generated docs (default: docs/connectors)"
     )
-    parser.add_argument(
-        "--probe",
-        default=str(REPO_ROOT / "data" / "field_probe"),
-        metavar="DIR",
-        help="Path to field-probe directory (default: data/field_probe/)",
-    )
+    
     args = parser.parse_args()
-
-    # Load probe data first (needed for list and generate)
-    probe_path = Path(args.probe) if args.probe else None
-    probe_data = load_probe_data(probe_path)
-
+    
+    load_probe_data(args.probe_path)
+    
     if args.list:
-        if not probe_data:
-            print("Error: No probe data available. Run field-probe first.", file=sys.stderr)
-            sys.exit(1)
         cmd_list()
         return
-
+    
     if args.all_connectors_doc:
-        cmd_all_connectors_doc(Path(args.output_dir).parent, probe_path=probe_path)
+        cmd_all_connectors_doc(args.output_dir, args.probe_path)
         return
-
+    
     if args.all:
-        targets = list_connectors()
-        # Generate Rust smoke test auth builder
-        rust_build_auth_out = REPO_ROOT / "sdk" / "rust" / "smoke-test" / "src" / "build_auth.rs"
-        generate_rust_build_auth(PROTO_DIR, rust_build_auth_out)
+        connectors = list_connectors()
+        if not connectors:
+            print("Error: No connectors found. Run field-probe first.", file=sys.stderr)
+            sys.exit(1)
+        cmd_generate(connectors, args.output_dir, args.probe_path)
     elif args.connectors:
-        targets = args.connectors
+        cmd_generate(args.connectors, args.output_dir, args.probe_path)
     else:
         parser.print_help()
-        return
-
-    cmd_generate(targets, Path(args.output_dir), probe_path=probe_path)
-
-    # Always regenerate all_connector.md when running --all or specific connectors
-    cmd_all_connectors_doc(Path(args.output_dir).parent, probe_path=probe_path)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

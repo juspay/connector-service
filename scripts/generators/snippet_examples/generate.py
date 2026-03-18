@@ -1,7 +1,7 @@
 """
-sdk_snippets.py — SDK integration example generator for connector docs.
+Snippet Examples Generator — SDK integration example generator for connector docs.
 
-All functions are pure (no I/O, no global state). Called by generate-connector-docs.py.
+All functions are pure (no I/O, no global state). Called by docs/generate.py.
 
 Proto field comments come from manifest["message_schemas"] (populated by field-probe).
 

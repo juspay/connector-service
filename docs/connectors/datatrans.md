@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/datatrans.json
-Regenerate: python3 scripts/generate-connector-docs.py datatrans
+Regenerate: python3 scripts/generators/docs/generate.py datatrans
 -->
 
 ## SDK Configuration

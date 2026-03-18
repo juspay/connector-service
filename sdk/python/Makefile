@@ -107,7 +107,7 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 generate-flows: install-codegen-deps
 	@echo "Generating Python flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang python
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang python
 	@echo "Python flow methods generated."
 
 # ---------------------------------------------------------------------------

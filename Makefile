@@ -106,12 +106,17 @@ field-probe:
 ## Generate connector docs from source code (all connectors)
 docs: field-probe
 	@echo "▶ Generating connector docs…"
-	python3 scripts/generate-connector-docs.py --all --probe data/field_probe
+	python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe
+
+## Generate the all-connectors coverage document
+all-connectors-doc: field-probe
+	@echo "▶ Generating all-connectors coverage doc…"
+	python3 scripts/generators/docs/generate.py --all-connectors-doc --probe-path data/field_probe
 
 ## Report annotation coverage for connector docs
 docs-check:
 	@echo "▶ Checking connector annotation coverage…"
-	python3 scripts/generate-connector-docs.py --check
+	python3 scripts/generators/docs/generate.py --check
 
 ## Show this help
 help:

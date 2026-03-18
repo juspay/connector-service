@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/phonepe.json
-Regenerate: python3 scripts/generate-connector-docs.py phonepe
+Regenerate: python3 scripts/generators/docs/generate.py phonepe
 -->
 
 ## SDK Configuration

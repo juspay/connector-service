@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/hipay.json
-Regenerate: python3 scripts/generate-connector-docs.py hipay
+Regenerate: python3 scripts/generators/docs/generate.py hipay
 -->
 
 ## SDK Configuration

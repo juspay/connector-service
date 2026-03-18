@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/bambora.json
-Regenerate: python3 scripts/generate-connector-docs.py bambora
+Regenerate: python3 scripts/generators/docs/generate.py bambora
 -->
 
 ## SDK Configuration

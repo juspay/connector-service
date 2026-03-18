@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/gigadat.json
-Regenerate: python3 scripts/generate-connector-docs.py gigadat
+Regenerate: python3 scripts/generators/docs/generate.py gigadat
 -->
 
 ## SDK Configuration
