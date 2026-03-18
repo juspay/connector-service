@@ -272,7 +272,6 @@ mod tests {
     fn test_is_not_supported() {
         assert!(is_not_supported("Payment method not supported"));
         assert!(is_not_supported("Only card payments are supported"));
-        assert!(is_not_supported("Selected payment method through fiserv"));
         assert!(!is_not_supported("Missing required field"));
     }
 

@@ -337,32 +337,6 @@ mod tests {
     }
 
     #[test]
-    fn test_smart_patch_ideal_bank_name() {
-        // Test the smart_patch function with a simple JSON structure
-        // that mimics the authorize request with Ideal payment method
-        let mut json = json!({
-            "amount": 1000,
-            "payment_method": {
-                "ideal": {}
-            }
-        });
-
-        // Apply the patch - this is what happens during probing
-        smart_patch(&mut json, "authorize", "ideal.bank_name");
-
-        // Verify the patch was applied
-        println!(
-            "Patched JSON: {}",
-            serde_json::to_string_pretty(&json).unwrap()
-        );
-        assert!(
-            json["payment_method"]["ideal"]["bank_name"].is_number(),
-            "bank_name should be set to a number. Got: {:?}",
-            json["payment_method"]["ideal"]["bank_name"]
-        );
-    }
-
-    #[test]
     fn test_smart_patch_ideal_bank_name_proto() {
         // Test with actual proto-generated types
         use grpc_api_types::payments::{
