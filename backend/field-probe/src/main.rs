@@ -117,6 +117,7 @@ fn main() {
     let mut connector_names: Vec<String> = Vec::new();
     let mut total_supported = 0;
     let mut total_not_supported = 0;
+    #[allow(unused_mut)]
     let mut error_stats = ErrorStats::default();
     // (connector, flow, pm, full_error) for "Stuck on field:" errors
     let mut stuck_entries: Vec<(String, String, String, String)> = Vec::new();

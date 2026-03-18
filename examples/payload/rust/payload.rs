@@ -9,7 +9,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your PayloadConfig
     let config = ConnectorConfig {
@@ -93,19 +93,22 @@ fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidReque
 
 
 // Flow: PaymentService.Capture
+#[allow(dead_code)]
 pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.capture(build_capture_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Get
+#[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: RecurringPaymentService.Charge
-pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn recurring_charge(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
     "connector_recurring_payment_id": {  // Reference to existing mandate
         "mandate_id_type": {
@@ -133,22 +136,25 @@ pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id:
         },
     },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Refund
+#[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Void
+#[allow(dead_code)]
 pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
     let client = build_client();

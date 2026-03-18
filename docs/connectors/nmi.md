@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L87) · [JavaScript](../../examples/nmi/javascript/nmi.js#L78) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L100) · [Rust](../../examples/nmi/rust/nmi.rs#L97)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L87) · [JavaScript](../../examples/nmi/javascript/nmi.js#L78) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L100) · [Rust](../../examples/nmi/rust/nmi.rs#L98)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,7 +122,7 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L112) · [JavaScript](../../examples/nmi/javascript/nmi.js#L104) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L122) · [Rust](../../examples/nmi/rust/nmi.rs#L119)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L112) · [JavaScript](../../examples/nmi/javascript/nmi.js#L104) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L122) · [Rust](../../examples/nmi/rust/nmi.rs#L121)
 
 ### Bank Transfer (SEPA / ACH / BACS)
 
@@ -136,25 +136,25 @@ Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L131) · [JavaScript](../../examples/nmi/javascript/nmi.js#L123) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L138) · [Rust](../../examples/nmi/rust/nmi.rs#L134)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L131) · [JavaScript](../../examples/nmi/javascript/nmi.js#L123) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L138) · [Rust](../../examples/nmi/rust/nmi.rs#L137)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L173) · [JavaScript](../../examples/nmi/javascript/nmi.js#L162) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L174) · [Rust](../../examples/nmi/rust/nmi.rs#L171)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L173) · [JavaScript](../../examples/nmi/javascript/nmi.js#L162) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L174) · [Rust](../../examples/nmi/rust/nmi.rs#L175)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L210) · [JavaScript](../../examples/nmi/javascript/nmi.js#L197) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L196) · [Rust](../../examples/nmi/rust/nmi.rs#L193)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L210) · [JavaScript](../../examples/nmi/javascript/nmi.js#L197) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L196) · [Rust](../../examples/nmi/rust/nmi.rs#L198)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L232) · [JavaScript](../../examples/nmi/javascript/nmi.js#L219) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L215) · [Rust](../../examples/nmi/rust/nmi.rs#L211)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L232) · [JavaScript](../../examples/nmi/javascript/nmi.js#L219) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L215) · [Rust](../../examples/nmi/rust/nmi.rs#L217)
 
 ## API Reference
 
@@ -225,7 +225,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L254) · [JavaScript](../../examples/nmi/javascript/nmi.js#L240) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L233) · [Rust](../../examples/nmi/rust/nmi.rs#L228)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L254) · [JavaScript](../../examples/nmi/javascript/nmi.js#L240) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L233) · [Rust](../../examples/nmi/rust/nmi.rs#L235)
 
 #### PaymentService.Capture
 
@@ -236,7 +236,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L263) · [JavaScript](../../examples/nmi/javascript/nmi.js#L249) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L245) · [Rust](../../examples/nmi/rust/nmi.rs#L239)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L263) · [JavaScript](../../examples/nmi/javascript/nmi.js#L249) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L245) · [Rust](../../examples/nmi/rust/nmi.rs#L247)
 
 #### PaymentService.Get
 
@@ -247,7 +247,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L272) · [JavaScript](../../examples/nmi/javascript/nmi.js#L258) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L255) · [Rust](../../examples/nmi/rust/nmi.rs#L245)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L272) · [JavaScript](../../examples/nmi/javascript/nmi.js#L258) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L255) · [Rust](../../examples/nmi/rust/nmi.rs#L254)
 
 #### PaymentService.Refund
 
@@ -258,7 +258,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L173) · [JavaScript](../../examples/nmi/javascript/nmi.js#L162) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L263) · [Rust](../../examples/nmi/rust/nmi.rs#L251)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L173) · [JavaScript](../../examples/nmi/javascript/nmi.js#L162) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L263) · [Rust](../../examples/nmi/rust/nmi.rs#L261)
 
 #### PaymentService.Void
 
@@ -269,4 +269,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/nmi/python/nmi.py#L281) · [JavaScript](../../examples/nmi/javascript/nmi.js#L267) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L273) · [Rust](../../examples/nmi/rust/nmi.rs#L257)
+**Examples:** [Python](../../examples/nmi/python/nmi.py#L281) · [JavaScript](../../examples/nmi/javascript/nmi.js#L267) · [Kotlin](../../examples/nmi/kotlin/nmi.kt#L273) · [Rust](../../examples/nmi/rust/nmi.rs#L268)

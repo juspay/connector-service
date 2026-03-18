@@ -9,7 +9,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your PaymeConfig
     let config = ConnectorConfig {
@@ -69,13 +69,15 @@ fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidReque
 
 
 // Flow: PaymentService.Capture
+#[allow(dead_code)]
 pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.capture(build_capture_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.CreateOrder
-pub async fn create_order(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn create_order(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.create_order(serde_json::from_value::<PaymentServiceCreateOrderRequest>(serde_json::json!({
     "merchant_order_id": "probe_order_001",  // Identification
     "amount": {  // Amount Information
@@ -83,28 +85,32 @@ pub async fn create_order(client: &ConnectorClient, merchant_transaction_id: &st
         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
     },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Get
+#[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Refund
+#[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Void
+#[allow(dead_code)]
 pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
     let client = build_client();

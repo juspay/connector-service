@@ -9,7 +9,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your TruelayerConfig
     let config = ConnectorConfig {
@@ -41,20 +41,23 @@ fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest
 
 
 // Flow: MerchantAuthenticationService.CreateAccessToken
-pub async fn create_access_token(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn create_access_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.create_access_token(serde_json::from_value::<MerchantAuthenticationServiceCreateAccessTokenRequest>(serde_json::json!({
 
     })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("Session token obtained (statusCode={})", response.status_code));
+    Ok(format!("Session token obtained (statusCode={})", response.status_code))
 }
 
 // Flow: PaymentService.Get
+#[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
     let client = build_client();

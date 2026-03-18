@@ -142,7 +142,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L68) · [Rust](../../examples/payu/rust/payu.rs#L68)
+**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L68) · [Rust](../../examples/payu/rust/payu.rs#L69)
 
 #### PaymentService.Get
 
@@ -153,4 +153,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L80) · [Rust](../../examples/payu/rust/payu.rs#L79)
+**Examples:** [Python](../../examples/payu/python/payu.py) · [JavaScript](../../examples/payu/javascript/payu.js) · [Kotlin](../../examples/payu/kotlin/payu.kt#L80) · [Rust](../../examples/payu/rust/payu.rs#L81)

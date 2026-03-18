@@ -9,7 +9,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your BraintreeConfig
     let config = ConnectorConfig {
@@ -82,6 +82,7 @@ fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidReque
 
 // Scenario: Card Payment (Authorize + Capture)
 // Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+#[allow(dead_code)]
 pub async fn process_checkout_card(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("MANUAL"), &HashMap::new(), None).await?;
@@ -104,6 +105,7 @@ pub async fn process_checkout_card(client: &ConnectorClient, _merchant_transacti
 
 // Scenario: Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+#[allow(dead_code)]
 pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
@@ -119,6 +121,7 @@ pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_tr
 
 // Scenario: Void a Payment
 // Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+#[allow(dead_code)]
 pub async fn process_void_payment(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("MANUAL"), &HashMap::new(), None).await?;
@@ -137,6 +140,7 @@ pub async fn process_void_payment(client: &ConnectorClient, _merchant_transactio
 
 // Scenario: Get Payment Status
 // Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+#[allow(dead_code)]
 pub async fn process_get_payment(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("MANUAL"), &HashMap::new(), None).await?;
@@ -155,6 +159,7 @@ pub async fn process_get_payment(client: &ConnectorClient, _merchant_transaction
 
 // Scenario: Tokenize Payment Method
 // Store card details in the connector's vault and receive a reusable payment token. Use the returned token for one-click payments and recurring billing without re-collecting card data.
+#[allow(dead_code)]
 pub async fn process_tokenize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Tokenize — store card details and return a reusable token
     let tokenize_response = client.tokenize(serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
@@ -183,30 +188,34 @@ pub async fn process_tokenize(client: &ConnectorClient, _merchant_transaction_id
 }
 
 // Flow: PaymentService.Authorize (Card)
+#[allow(dead_code)]
 pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
     match response.status() {
         PaymentStatus::Failure | PaymentStatus::AuthorizationFailed
-            => return Err(format!("Authorize failed: {:?}", response.error).into()),
-        PaymentStatus::Pending => return Ok("pending — await webhook".to_string()),
-        _  => return Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
+            => Err(format!("Authorize failed: {:?}", response.error).into()),
+        PaymentStatus::Pending => Ok("pending — await webhook".to_string()),
+        _  => Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
     }
 }
 
 // Flow: PaymentService.Capture
+#[allow(dead_code)]
 pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.capture(build_capture_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Get
+#[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentMethodService.Tokenize
-pub async fn tokenize(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn tokenize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.tokenize(serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
     "amount": {  // Payment Information
         "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
@@ -228,16 +237,18 @@ pub async fn tokenize(client: &ConnectorClient, merchant_transaction_id: &str) -
         },
     },
     })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("token: {}", response.payment_method_token));
+    Ok(format!("token: {}", response.payment_method_token))
 }
 
 // Flow: PaymentService.Void
+#[allow(dead_code)]
 pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
     let client = build_client();

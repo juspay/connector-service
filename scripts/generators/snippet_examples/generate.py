@@ -2962,6 +2962,7 @@ def render_consolidated_rust(
         func_blocks.append(
             f"// Scenario: {scenario.title}\n"
             f"// {scenario.description}\n"
+            f"#[allow(dead_code)]\n"
             f"pub async fn {process_scenario_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
             f"{body}\n"
             f"}}"
@@ -2979,9 +2980,9 @@ def render_consolidated_rust(
             status_block = (
                 '    match response.status() {\n'
                 '        PaymentStatus::Failure | PaymentStatus::AuthorizationFailed\n'
-                '            => return Err(format!("Authorize failed: {:?}", response.error).into()),\n'
-                '        PaymentStatus::Pending => return Ok("pending — await webhook".to_string()),\n'
-                '        _  => return Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),\n'
+                '            => Err(format!("Authorize failed: {:?}", response.error).into()),\n'
+                '        PaymentStatus::Pending => Ok("pending — await webhook".to_string()),\n'
+                '        _  => Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),\n'
                 '    }'
             )
         elif flow_key == "setup_recurring":
@@ -2989,18 +2990,18 @@ def render_consolidated_rust(
                 '    if response.status() == PaymentStatus::Failure {\n'
                 '        return Err(format!("Setup failed: {:?}", response.error).into());\n'
                 '    }\n'
-                '    return Ok(format!("Mandate: {}", response.connector_recurring_payment_id.as_deref().unwrap_or("")));'
+                '    Ok(format!("Mandate: {}", response.connector_recurring_payment_id.as_deref().unwrap_or("")))'
             )
         elif flow_key == "tokenize":
-            status_block = '    return Ok(format!("token: {}", response.payment_method_token));'
+            status_block = '    Ok(format!("token: {}", response.payment_method_token))'
         elif flow_key == "create_customer":
-            status_block = '    return Ok(format!("customer_id: {}", response.connector_customer_id));'
+            status_block = '    Ok(format!("customer_id: {}", response.connector_customer_id))'
         elif flow_key in ("dispute_accept", "dispute_defend", "dispute_submit_evidence"):
-            status_block = '    return Ok(format!("dispute_status: {:?}", response.dispute_status()));'
+            status_block = '    Ok(format!("dispute_status: {:?}", response.dispute_status()))'
         elif flow_key in ("create_access_token", "create_session_token"):
-            status_block = '    return Ok(format!("Session token obtained (statusCode={})", response.status_code));'
+            status_block = '    Ok(format!("Session token obtained (statusCode={})", response.status_code))'
         else:
-            status_block = '    return Ok(format!("status: {:?}", response.status()));'
+            status_block = '    Ok(format!("status: {:?}", response.status()))'
 
         func_names.append(flow_key)
         match_arms.append(f'        "{flow_key}" => {flow_key}(&client, "order_001").await,')
@@ -3014,6 +3015,7 @@ def render_consolidated_rust(
             builder_call = f'build_{flow_key}_request("{default_val}")'
             func_blocks.append(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
+                f"#[allow(dead_code)]\n"
                 f"pub async fn {flow_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
                 f"    let response = client.{flow_key}({builder_call}, &HashMap::new(), None).await?;\n"
                 f"{status_block}\n"
@@ -3024,7 +3026,8 @@ def render_consolidated_rust(
             json_body  = "\n".join(json_lines)
             func_blocks.append(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
-                f"pub async fn {flow_key}(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+                f"#[allow(dead_code)]\n"
+                f"pub async fn {flow_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
                 f"    let response = client.{flow_key}(serde_json::from_value::<{grpc_req}>(serde_json::json!({{\n"
                 f"{json_body}\n"
                 f"    }})).unwrap_or_default(), &HashMap::new(), None).await?;\n"
@@ -3050,7 +3053,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {{
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your {conn_enum}Config
     let config = ConnectorConfig {{
@@ -3065,6 +3068,7 @@ fn build_client() -> ConnectorClient {{
 {funcs_text}
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {{
     let client = build_client();

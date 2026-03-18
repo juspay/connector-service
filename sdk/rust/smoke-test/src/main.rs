@@ -115,6 +115,7 @@ async fn run_connector_scenarios(
 #[derive(Debug)]
 struct ScenarioResult {
     passed: bool,
+    #[allow(dead_code)]
     message: Option<String>,
     error: Option<String>,
 }

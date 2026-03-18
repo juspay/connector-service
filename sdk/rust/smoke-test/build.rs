@@ -8,9 +8,6 @@ fn main() {
     let connectors_path = format!("{out_dir}/connectors.rs");
     let scenarios_path = format!("{out_dir}/connector_scenarios.rs");
 
-    // Rebuild if any example file changes
-    println!("cargo:rerun-if-changed={}", examples_dir.display());
-
     // Known scenario function names (subset may be present in any connector)
     let all_scenarios: &[(&str, &str)] = &[
         ("checkout_autocapture", "process_checkout_autocapture"),
@@ -83,7 +80,7 @@ fn main() {
             ));
         }
 
-        code.push_str("\npub const ALL_CONNECTORS: &[&str] = &[\n");
+        code.push_str("\n#[allow(dead_code)]\npub const ALL_CONNECTORS: &[&str] = &[\n");
         for (name, _) in &modules {
             code.push_str(&format!("    \"{name}\",\n"));
         }

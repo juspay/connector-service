@@ -55,7 +55,7 @@ test-package:
 		echo "  Note: creds.json not found, smoke test will use placeholder credentials"; \
 		echo '{"stripe":{"api_key":{"value":"placeholder"}}}' > $(SDK_ROOT)/smoke-test/creds.json; \
 	fi
-	@cd $(SDK_ROOT)/smoke-test && cargo run --release -- --connectors $(CONNECTORS) --creds-file creds.json 2>&1 || \
+	@cd $(SDK_ROOT)/smoke-test && cargo run --profile release-fast -- --connectors $(CONNECTORS) --creds-file creds.json 2>&1 || \
 		(echo "  Note: smoke test requires real credentials to pass"; exit 0)
 	@echo "✓ Rust SDK package check passed."
 

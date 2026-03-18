@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L87) · [JavaScript](../../examples/authipay/javascript/authipay.js#L78) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L100) · [Rust](../../examples/authipay/rust/authipay.rs#L97)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L87) · [JavaScript](../../examples/authipay/javascript/authipay.js#L78) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L100) · [Rust](../../examples/authipay/rust/authipay.rs#L98)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L112) · [JavaScript](../../examples/authipay/javascript/authipay.js#L104) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L122) · [Rust](../../examples/authipay/rust/authipay.rs#L119)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L112) · [JavaScript](../../examples/authipay/javascript/authipay.js#L104) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L122) · [Rust](../../examples/authipay/rust/authipay.rs#L121)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L131) · [JavaScript](../../examples/authipay/javascript/authipay.js#L123) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L138) · [Rust](../../examples/authipay/rust/authipay.rs#L134)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L131) · [JavaScript](../../examples/authipay/javascript/authipay.js#L123) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L138) · [Rust](../../examples/authipay/rust/authipay.rs#L137)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L168) · [JavaScript](../../examples/authipay/javascript/authipay.js#L158) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L160) · [Rust](../../examples/authipay/rust/authipay.rs#L156)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L168) · [JavaScript](../../examples/authipay/javascript/authipay.js#L158) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L160) · [Rust](../../examples/authipay/rust/authipay.rs#L160)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L190) · [JavaScript](../../examples/authipay/javascript/authipay.js#L180) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L179) · [Rust](../../examples/authipay/rust/authipay.rs#L174)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L190) · [JavaScript](../../examples/authipay/javascript/authipay.js#L180) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L179) · [Rust](../../examples/authipay/rust/authipay.rs#L179)
 
 ## API Reference
 
@@ -199,7 +199,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L212) · [JavaScript](../../examples/authipay/javascript/authipay.js#L201) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L197) · [Rust](../../examples/authipay/rust/authipay.rs#L191)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L212) · [JavaScript](../../examples/authipay/javascript/authipay.js#L201) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L197) · [Rust](../../examples/authipay/rust/authipay.rs#L197)
 
 #### PaymentService.Capture
 
@@ -210,7 +210,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L221) · [JavaScript](../../examples/authipay/javascript/authipay.js#L210) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L209) · [Rust](../../examples/authipay/rust/authipay.rs#L202)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L221) · [JavaScript](../../examples/authipay/javascript/authipay.js#L210) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L209) · [Rust](../../examples/authipay/rust/authipay.rs#L209)
 
 #### PaymentService.Get
 
@@ -221,7 +221,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L230) · [JavaScript](../../examples/authipay/javascript/authipay.js#L219) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L219) · [Rust](../../examples/authipay/rust/authipay.rs#L208)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L230) · [JavaScript](../../examples/authipay/javascript/authipay.js#L219) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L219) · [Rust](../../examples/authipay/rust/authipay.rs#L216)
 
 #### PaymentService.Refund
 
@@ -232,7 +232,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L131) · [JavaScript](../../examples/authipay/javascript/authipay.js#L123) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L227) · [Rust](../../examples/authipay/rust/authipay.rs#L214)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L131) · [JavaScript](../../examples/authipay/javascript/authipay.js#L123) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L227) · [Rust](../../examples/authipay/rust/authipay.rs#L223)
 
 #### PaymentService.Void
 
@@ -243,4 +243,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/authipay/python/authipay.py#L239) · [JavaScript](../../examples/authipay/javascript/authipay.js#L228) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L237) · [Rust](../../examples/authipay/rust/authipay.rs#L220)
+**Examples:** [Python](../../examples/authipay/python/authipay.py#L239) · [JavaScript](../../examples/authipay/javascript/authipay.js#L228) · [Kotlin](../../examples/authipay/kotlin/authipay.kt#L237) · [Rust](../../examples/authipay/rust/authipay.rs#L230)

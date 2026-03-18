@@ -9,7 +9,7 @@ use std::fmt;
 ///
 /// Each variant maps to a specific string value that's stored in the JSON output
 /// and used by the documentation generation scripts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum FlowStatus {
     /// Flow is fully supported - the connector produced a valid HTTP request.
     Supported,
@@ -24,6 +24,7 @@ pub enum FlowStatus {
 
     /// An error occurred during probing - usually a missing required field
     /// that couldn't be patched automatically.
+    #[default]
     Failed,
 }
 
@@ -73,12 +74,6 @@ impl TryFrom<&str> for FlowStatus {
             "error" => Ok(Self::Failed),
             other => Err(format!("Unknown flow status: {}", other)),
         }
-    }
-}
-
-impl Default for FlowStatus {
-    fn default() -> Self {
-        Self::Failed
     }
 }
 

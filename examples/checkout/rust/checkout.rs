@@ -9,7 +9,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your CheckoutConfig
     let config = ConnectorConfig {
@@ -94,6 +94,7 @@ fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidReque
 
 // Scenario: Card Payment (Authorize + Capture)
 // Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+#[allow(dead_code)]
 pub async fn process_checkout_card(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("MANUAL"), &HashMap::new(), None).await?;
@@ -116,6 +117,7 @@ pub async fn process_checkout_card(client: &ConnectorClient, _merchant_transacti
 
 // Scenario: Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+#[allow(dead_code)]
 pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
@@ -131,6 +133,7 @@ pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_tr
 
 // Scenario: Bank Transfer (SEPA / ACH / BACS)
 // Direct bank debit (Ach). Bank transfers typically use `capture_method=AUTOMATIC`.
+#[allow(dead_code)]
 pub async fn process_checkout_bank(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
@@ -168,6 +171,7 @@ pub async fn process_checkout_bank(client: &ConnectorClient, _merchant_transacti
 
 // Scenario: Refund a Payment
 // Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+#[allow(dead_code)]
 pub async fn process_refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
@@ -190,6 +194,7 @@ pub async fn process_refund(client: &ConnectorClient, _merchant_transaction_id: 
 
 // Scenario: Recurring / Mandate Payments
 // Store a payment mandate with SetupRecurring, then charge it repeatedly with RecurringPaymentService.Charge without requiring customer action.
+#[allow(dead_code)]
 pub async fn process_recurring(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Setup Recurring — store the payment mandate
     let setup_response = client.setup_recurring(serde_json::from_value::<PaymentServiceSetupRecurringRequest>(serde_json::json!({
@@ -249,6 +254,7 @@ pub async fn process_recurring(client: &ConnectorClient, _merchant_transaction_i
 
 // Scenario: Void a Payment
 // Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+#[allow(dead_code)]
 pub async fn process_void_payment(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("MANUAL"), &HashMap::new(), None).await?;
@@ -267,6 +273,7 @@ pub async fn process_void_payment(client: &ConnectorClient, _merchant_transactio
 
 // Scenario: Get Payment Status
 // Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+#[allow(dead_code)]
 pub async fn process_get_payment(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("MANUAL"), &HashMap::new(), None).await?;
@@ -284,30 +291,34 @@ pub async fn process_get_payment(client: &ConnectorClient, _merchant_transaction
 }
 
 // Flow: PaymentService.Authorize (Card)
+#[allow(dead_code)]
 pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
     match response.status() {
         PaymentStatus::Failure | PaymentStatus::AuthorizationFailed
-            => return Err(format!("Authorize failed: {:?}", response.error).into()),
-        PaymentStatus::Pending => return Ok("pending — await webhook".to_string()),
-        _  => return Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
+            => Err(format!("Authorize failed: {:?}", response.error).into()),
+        PaymentStatus::Pending => Ok("pending — await webhook".to_string()),
+        _  => Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
     }
 }
 
 // Flow: PaymentService.Capture
+#[allow(dead_code)]
 pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.capture(build_capture_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Get
+#[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: RecurringPaymentService.Charge
-pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn recurring_charge(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
     "connector_recurring_payment_id": {  // Reference to existing mandate
         "mandate_id_type": {
@@ -328,17 +339,19 @@ pub async fn recurring_charge(client: &ConnectorClient, merchant_transaction_id:
     "payment_method_type": "PAY_PAL",
     "off_session": true,  // Behavioral Flags and Preferences
     })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Refund
+#[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.SetupRecurring
-pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn setup_recurring(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.setup_recurring(serde_json::from_value::<PaymentServiceSetupRecurringRequest>(serde_json::json!({
     "merchant_recurring_payment_id": "probe_mandate_001",  // Identification
     "amount": {  // Mandate Details
@@ -373,16 +386,18 @@ pub async fn setup_recurring(client: &ConnectorClient, merchant_transaction_id: 
     if response.status() == PaymentStatus::Failure {
         return Err(format!("Setup failed: {:?}", response.error).into());
     }
-    return Ok(format!("Mandate: {}", response.connector_recurring_payment_id.as_deref().unwrap_or("")));
+    Ok(format!("Mandate: {}", response.connector_recurring_payment_id.as_deref().unwrap_or("")))
 }
 
 // Flow: PaymentService.Void
+#[allow(dead_code)]
 pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
     let client = build_client();

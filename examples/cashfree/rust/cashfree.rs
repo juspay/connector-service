@@ -9,7 +9,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your CashfreeConfig
     let config = ConnectorConfig {
@@ -48,17 +48,19 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
 
 
 // Flow: PaymentService.Authorize (UpiCollect)
+#[allow(dead_code)]
 pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
     match response.status() {
         PaymentStatus::Failure | PaymentStatus::AuthorizationFailed
-            => return Err(format!("Authorize failed: {:?}", response.error).into()),
-        PaymentStatus::Pending => return Ok("pending — await webhook".to_string()),
-        _  => return Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
+            => Err(format!("Authorize failed: {:?}", response.error).into()),
+        PaymentStatus::Pending => Ok("pending — await webhook".to_string()),
+        _  => Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
     }
 }
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
     let client = build_client();

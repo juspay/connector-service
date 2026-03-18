@@ -9,7 +9,7 @@ use grpc_api_types::payments::*;
 use hyperswitch_payments_client::ConnectorClient;
 use std::collections::HashMap;
 
-
+#[allow(dead_code)]
 fn build_client() -> ConnectorClient {
     // Set connector_config to authenticate: use ConnectorSpecificConfig with your IatapayConfig
     let config = ConnectorConfig {
@@ -94,37 +94,42 @@ fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundR
 
 
 // Flow: PaymentService.Authorize (Ideal)
+#[allow(dead_code)]
 pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
     match response.status() {
         PaymentStatus::Failure | PaymentStatus::AuthorizationFailed
-            => return Err(format!("Authorize failed: {:?}", response.error).into()),
-        PaymentStatus::Pending => return Ok("pending — await webhook".to_string()),
-        _  => return Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
+            => Err(format!("Authorize failed: {:?}", response.error).into()),
+        PaymentStatus::Pending => Ok("pending — await webhook".to_string()),
+        _  => Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
     }
 }
 
 // Flow: MerchantAuthenticationService.CreateAccessToken
-pub async fn create_access_token(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+#[allow(dead_code)]
+pub async fn create_access_token(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.create_access_token(serde_json::from_value::<MerchantAuthenticationServiceCreateAccessTokenRequest>(serde_json::json!({
 
     })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("Session token obtained (statusCode={})", response.status_code));
+    Ok(format!("Session token obtained (statusCode={})", response.status_code))
 }
 
 // Flow: PaymentService.Get
+#[allow(dead_code)]
 pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 // Flow: PaymentService.Refund
+#[allow(dead_code)]
 pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    Ok(format!("status: {:?}", response.status()))
 }
 
 
+#[allow(dead_code)]
 #[tokio::main]
 async fn main() {
     let client = build_client();
