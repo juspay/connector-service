@@ -5,7 +5,15 @@
 #   - Direct imports via wildcard from generated proto files
 #   - Exception classes (RequestError, ResponseError) from connector_client
 
-from payments._generated_service_clients import PaymentClient, MerchantAuthenticationClient
+from payments._generated_service_clients import (
+    CustomerClient,
+    DisputeClient,
+    MerchantAuthenticationClient,
+    PaymentClient,
+    PaymentMethodAuthenticationClient,
+    PaymentMethodClient,
+    RecurringPaymentClient,
+)
 
 # Direct access to all types via wildcard imports
 from payments.generated.payment_pb2 import *

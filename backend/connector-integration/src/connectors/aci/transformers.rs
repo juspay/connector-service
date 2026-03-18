@@ -461,7 +461,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Ok(Self::AciCard(Box::new(CardDetails {
             card_number: card_data.card_number,
             card_holder: card_holder_name.ok_or(ConnectorError::MissingRequiredField {
-                field_name: "card_holder_name",
+                field_name: "billing_address.first_name",
             })?,
             card_expiry_month: card_data.card_exp_month.clone(),
             card_expiry_year,
@@ -1176,7 +1176,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     card_cvv: card_data.card_cvc.clone(),
                     card_holder: card_data.card_holder_name.clone().ok_or(
                         ConnectorError::MissingRequiredField {
-                            field_name: "card_holder_name",
+                            field_name: "payment_method.card.card_holder_name",
                         },
                     )?,
                     payment_brand: brand.clone(),

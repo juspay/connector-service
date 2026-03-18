@@ -310,7 +310,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Instead of using request_body which could cause a recursive call,
         // directly create the ElavonPaymentsRequest from data directly
         let request = ElavonPaymentsRequest::try_from(data)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to create ElavonPaymentsRequest from ElavonRouterData")?;
 
         // Log that we're creating the XML request

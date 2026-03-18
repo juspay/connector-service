@@ -3,10 +3,153 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/bamboraapac.json
-Regenerate: python3 scripts/generate-connector-docs.py bamboraapac
+Regenerate: python3 scripts/generators/docs/generate.py bamboraapac
 -->
 
-## Implemented Flows
+## SDK Configuration
+
+Use this config for all flows in this connector. Replace `YOUR_API_KEY` with your actual credentials.
+
+<table>
+<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
+<tr>
+<td valign="top">
+
+<details><summary>Python</summary>
+
+```python
+from payments.generated import sdk_config_pb2, payment_pb2
+
+config = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
+)
+# Set credentials before running (field names depend on connector auth type):
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     bamboraapac=payment_pb2.BamboraapacConfig(api_key=...),
+# ))
+
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>JavaScript</summary>
+
+```javascript
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+// Reuse this client for all flows
+const client = new ConnectorClient({
+    connector: 'Bamboraapac',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Kotlin</summary>
+
+```kotlin
+val config = ConnectorConfig.newBuilder()
+    .setConnector("Bamboraapac")
+    .setEnvironment(Environment.SANDBOX)
+    .setAuth(
+        ConnectorAuthType.newBuilder()
+            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
+    )
+    .build()
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Rust</summary>
+
+```rust
+use connector_service_sdk::{ConnectorClient, ConnectorConfig};
+
+let config = ConnectorConfig {
+    connector: "Bamboraapac".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
+    ..Default::default()
+};
+```
+
+</details>
+
+</td>
+</tr>
+</table>
+
+## Integration Scenarios
+
+Complete, runnable examples for common integration patterns. Each example shows the full flow with status handling. Copy-paste into your app and replace placeholder values.
+
+### Card Payment (Authorize + Capture)
+
+Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L79) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L71) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L98) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L91)
+
+### Card Payment (Automatic Capture)
+
+Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L104) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L97) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L120) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L114)
+
+### Refund a Payment
+
+Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L123) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L116) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L136) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L130)
+
+### Recurring / Mandate Payments
+
+Store a payment mandate with SetupRecurring, then charge it repeatedly with RecurringPaymentService.Charge without requiring customer action.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
+| `FAILED` | Setup failed — customer must re-enter payment details |
+
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L160) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L151) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L158) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L153)
+
+### Get Payment Status
+
+Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
+
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L229) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L211) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L220) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L213)
+
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
@@ -16,8 +159,6 @@ Regenerate: python3 scripts/generate-connector-docs.py bamboraapac
 | [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
-
-## Flow Details
 
 ### Payments
 
@@ -35,78 +176,38 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
-**Card (Raw PAN)**
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "card": {
-      "card_number": "4111111111111111",
-      "card_exp_month": "03",
-      "card_exp_year": "2030",
-      "card_cvc": "737",
-      "card_holder_name": "John Doe"
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
+
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L251) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L232) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L238) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L231)
 
 #### PaymentService.Capture
 
@@ -117,18 +218,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_capture_id": "probe_capture_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount_to_capture": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L260) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L241) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L250) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L243)
 
 #### PaymentService.Get
 
@@ -139,17 +229,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L269) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L250) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L260) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L250)
 
 #### PaymentService.Refund
 
@@ -160,20 +240,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_refund_id": "probe_refund_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "payment_amount": 1000,
-  "refund_amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "reason": "customer_request"
-}
-```
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L123) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L116) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L297) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L283)
 
 #### PaymentService.SetupRecurring
 
@@ -184,69 +251,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_recurring_payment_id": "probe_mandate_001",
-  "amount": {
-    "minor_amount": 0,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "card": {
-      "card_number": "4111111111111111",
-      "card_exp_month": "03",
-      "card_exp_year": "2030",
-      "card_cvc": "737",
-      "card_holder_name": "John Doe"
-    }
-  },
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "enrolled_for_3ds": false,
-  "return_url": "https://example.com/mandate-return",
-  "setup_future_usage": "OFF_SESSION",
-  "request_incremental_authorization": false,
-  "customer_acceptance": {
-    "acceptance_type": "OFFLINE",
-    "accepted_at": 0
-  },
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
-}
-```
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L311) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L288) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L307) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L290)
 
 ### Mandates
 
@@ -259,25 +264,4 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "connector_recurring_payment_id": {
-    "mandate_id_type": {
-      "connector_mandate_id": "probe_mandate_123"
-    }
-  },
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "token": "probe_pm_token"
-  },
-  "return_url": "https://example.com/recurring-return",
-  "connector_customer_id": "probe_cust_connector_001",
-  "payment_method_type": "PAY_PAL",
-  "off_session": true
-}
-```
+**Examples:** [Python](../../examples/bamboraapac/python/bamboraapac.py#L278) · [JavaScript](../../examples/bamboraapac/javascript/bamboraapac.js#L259) · [Kotlin](../../examples/bamboraapac/kotlin/bamboraapac.kt#L268) · [Rust](../../examples/bamboraapac/rust/bamboraapac.rs#L257)
