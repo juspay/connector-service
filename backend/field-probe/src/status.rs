@@ -106,10 +106,7 @@ impl ErrorCategory {
     /// Returns true if this error category indicates the flow is not available.
     #[allow(dead_code)]
     pub const fn is_flow_unavailable(&self) -> bool {
-        matches!(
-            self,
-            Self::NotImplemented | Self::NotSupported
-        )
+        matches!(self, Self::NotImplemented | Self::NotSupported)
     }
 
     /// Returns true if this error can potentially be fixed by field patching.
