@@ -494,7 +494,7 @@ pub enum BankTransferData {
     CimbVaBankTransfer {},
     DanamonVaBankTransfer {},
     MandiriVaBankTransfer {},
-    Pix {
+    PixQr {
         /// Unique key for pix transfer
         pix_key: Option<Secret<String>>,
         /// CPF is a Brazilian tax identification number

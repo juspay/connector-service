@@ -1011,7 +1011,7 @@ pub enum PaymentMethodType {
     PayBright,
     Paypal,
     Paze,
-    Pix,
+    PixQr,
     PaySafeCard,
     Przelewy24,
     PromptPay,
