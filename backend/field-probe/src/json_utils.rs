@@ -1,4 +1,3 @@
-use serde_json;
 
 /// Convert PascalCase to snake_case
 pub(crate) fn pascal_to_snake(name: &str) -> String {

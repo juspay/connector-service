@@ -145,6 +145,7 @@ pub(crate) fn google_pay_encrypted_method() -> PaymentMethod {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn google_pay_method() -> PaymentMethod {
     google_pay_decrypted_method()
 }

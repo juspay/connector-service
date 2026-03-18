@@ -157,6 +157,7 @@ pub(crate) fn all_connectors() -> Vec<ConnectorEnum> {
 // functions return the correct real-world `payment_method` JSON that should
 // appear in the published documentation proto_request.
 
+#[allow(dead_code)]
 pub(crate) fn doc_payment_method_override(pm_name: &str) -> Option<serde_json::Value> {
     // Produce the correct proto3 JSON format for wallet payment methods.
     // In proto3 JSON, oneof variants are inlined at the containing-message level

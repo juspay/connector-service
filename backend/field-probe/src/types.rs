@@ -13,6 +13,7 @@ pub(crate) struct ErrorStats {
 }
 
 impl ErrorStats {
+    #[allow(dead_code)]
     pub(crate) fn total(&self) -> usize {
         self.missing_field
             + self.not_implemented

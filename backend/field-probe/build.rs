@@ -6,6 +6,10 @@
 //! 3. Maps request_type to service/rpc by naming convention
 //! 4. Generates flow_runners.rs with all probe functions
 
+// Build scripts are allowed to use expect/unwrap for simplicity
+#![allow(clippy::expect_used)]
+#![allow(clippy::unwrap_used)]
+
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -45,7 +49,7 @@ fn discover_flows_from_ffi() -> Vec<FlowInfo> {
             let mut fn_name = None;
             let mut request_type = None;
 
-            while let Some(line) = lines.next() {
+            for line in lines.by_ref() {
                 let trimmed = line.trim();
 
                 if trimmed.starts_with("fn_name:") {
@@ -333,11 +337,7 @@ fn generate_authorize_probe(f: &mut fs::File) {
         "        let connector_meta = connector_feature_data_json(connector);"
     )
     .unwrap();
-    writeln!(
-        f,
-        "        let mut req = if is_oauth_connector(connector) {{"
-    )
-    .unwrap();
+    writeln!(f, "        let req = if is_oauth_connector(connector) {{").unwrap();
     writeln!(f, "            base_authorize_request_with_state(payment_method, connector_meta, mock_connector_state())").unwrap();
     writeln!(f, "        }} else {{").unwrap();
     writeln!(

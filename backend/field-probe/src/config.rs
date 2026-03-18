@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for PatchConfig {
         D: serde::Deserializer<'de>,
     {
         let map = HashMap::<String, Rule>::deserialize(deserializer)?;
-        Ok(PatchConfig { rules: map })
+        Ok(Self { rules: map })
     }
 }
 

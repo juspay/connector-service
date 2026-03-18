@@ -122,7 +122,7 @@ fn apply_patch(config: &PatchConfig, flow: &str, field: &str, json: &mut Value) 
                 continue;
             }
 
-            let flow_matches = rule_flow.map_or(true, |f| f == flow);
+            let flow_matches = rule_flow.is_none_or(|f| f == flow);
             if flow_matches && rule.aliases.iter().any(|a| a == field) {
                 if let Some(v) = patch_type_to_value(&rule.patch_type, rule.value.as_deref()) {
                     set_at_path(json, target_path, v);

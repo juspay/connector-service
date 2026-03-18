@@ -31,22 +31,22 @@ impl FlowStatus {
     /// Returns the string representation used in JSON output.
     pub const fn as_str(&self) -> &'static str {
         match self {
-            FlowStatus::Supported => "supported",
-            FlowStatus::NotImplemented => "not_implemented",
-            FlowStatus::NotSupported => "not_supported",
-            FlowStatus::Failed => "error",
+            Self::Supported => "supported",
+            Self::NotImplemented => "not_implemented",
+            Self::NotSupported => "not_supported",
+            Self::Failed => "error",
         }
     }
 
     /// Returns true if this status represents a successful probe.
     pub const fn is_success(&self) -> bool {
-        matches!(self, FlowStatus::Supported)
+        matches!(self, Self::Supported)
     }
 
     /// Returns true if this status should be included in the compact output.
     /// NotSupported entries are typically omitted to reduce output size.
     pub const fn should_include_in_compact(&self) -> bool {
-        !matches!(self, FlowStatus::NotSupported)
+        !matches!(self, Self::NotSupported)
     }
 }
 
@@ -67,10 +67,10 @@ impl TryFrom<&str> for FlowStatus {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         match s {
-            "supported" => Ok(FlowStatus::Supported),
-            "not_implemented" => Ok(FlowStatus::NotImplemented),
-            "not_supported" => Ok(FlowStatus::NotSupported),
-            "error" => Ok(FlowStatus::Failed),
+            "supported" => Ok(Self::Supported),
+            "not_implemented" => Ok(Self::NotImplemented),
+            "not_supported" => Ok(Self::NotSupported),
+            "error" => Ok(Self::Failed),
             other => Err(format!("Unknown flow status: {}", other)),
         }
     }
@@ -78,7 +78,7 @@ impl TryFrom<&str> for FlowStatus {
 
 impl Default for FlowStatus {
     fn default() -> Self {
-        FlowStatus::Failed
+        Self::Failed
     }
 }
 
@@ -108,14 +108,14 @@ impl ErrorCategory {
     pub const fn is_flow_unavailable(&self) -> bool {
         matches!(
             self,
-            ErrorCategory::NotImplemented | ErrorCategory::NotSupported
+            Self::NotImplemented | Self::NotSupported
         )
     }
 
     /// Returns true if this error can potentially be fixed by field patching.
     #[allow(dead_code)]
     pub const fn is_patchable(&self) -> bool {
-        matches!(self, ErrorCategory::MissingField)
+        matches!(self, Self::MissingField)
     }
 }
 

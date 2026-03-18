@@ -147,7 +147,7 @@ where
 }
 
 /// Attempts a single probe call.
-fn attempt_probe<Req, F>(flow_name: &str, req: &Req, call: &mut F) -> ProbeAttemptResult
+fn attempt_probe<Req, F>(_flow_name: &str, req: &Req, call: &mut F) -> ProbeAttemptResult
 where
     Req: Clone + Serialize,
     F: FnMut(
