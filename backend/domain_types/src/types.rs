@@ -11424,9 +11424,9 @@ pub fn generate_payout_create_response(
             response,
         )),
         Err(err) => {
-            let payout_status =
-                grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(router_data_v2.resource_common_data.status)
-                    as i32;
+            let payout_status = grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(
+                router_data_v2.resource_common_data.status,
+            ) as i32;
             Ok(grpc_api_types::payouts::PayoutServiceCreateResponse {
                 merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
                 payout_status: Some(payout_status),
