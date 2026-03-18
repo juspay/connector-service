@@ -1017,7 +1017,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     if not connectors_with_probe:
         a("No probe data available.")
         output_dir.mkdir(parents=True, exist_ok=True)
-        out_path = output_dir / "all_connector.md"
+        out_path = output_dir.parent / "all_connector.md"
         out_path.write_text("\n".join(out), encoding="utf-8")
         return
     
@@ -1198,7 +1198,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     
     # Write output
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / "all_connector.md"
+    out_path = output_dir.parent / "all_connector.md"
     out_path.write_text("\n".join(out), encoding="utf-8")
     print(f"  ✓ Generated {out_path.relative_to(REPO_ROOT)}")
 
