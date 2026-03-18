@@ -168,7 +168,7 @@ message IntegrationError {
 }
 
 // Error when parsing connector HTTP response → SDK response (FFI boundary)
-message ConnectorResponseError {
+message ConnectorResponseTransformationError {
   string error_message = 1;           // Human-readable description of parsing failure (e.g., "Expected JSON response, got HTML")
   string error_code = 2;              // Machine-readable code (e.g., "RESPONSE_DESERIALIZATION_FAILED")
   optional uint32 http_status_code = 3;        // HTTP status from connector before parsing failed (e.g., 401, 500, 200)
