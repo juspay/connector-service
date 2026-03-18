@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use common_enums::enums;
 use common_utils::{ext_traits::ValueExt, request::Method};
 use domain_types::{
@@ -12,15 +10,15 @@ use domain_types::{
     },
     errors,
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
+use crate::connectors::paysafe::PaysafeRouterData;
 use crate::types::ResponseRouterData;
-use crate::{connectors::paysafe::PaysafeRouterData, utils};
 
 pub use super::requests::*;
 pub use super::responses::*;
@@ -33,83 +31,25 @@ type ConnectorError = error_stack::Report<errors::ConnectorError>;
 pub struct PaysafeAuthType {
     pub username: Secret<String>,
     pub password: Secret<String>,
+    pub account_id: Option<PaysafePaymentMethodDetails>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PaysafeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PaysafeAuthType {
     type Error = ConnectorError;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Paysafe { username, password } => Ok(Self {
+            ConnectorSpecificConfig::Paysafe {
+                username,
+                password,
+                account_id,
+                ..
+            } => Ok(Self {
                 username: username.clone(),
                 password: password.clone(),
+                account_id: account_id.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
-    }
-}
-
-// Connector Metadata
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct PaysafeConnectorMetadataObject {
-    pub account_id: PaysafePaymentMethodDetails,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct PaysafePaymentMethodDetails {
-    pub card: Option<HashMap<enums::Currency, CardAccountId>>,
-    pub ach: Option<HashMap<enums::Currency, AchAccountId>>,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct CardAccountId {
-    pub no_three_ds: Option<Secret<String>>,
-    pub three_ds: Option<Secret<String>>,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
-pub struct AchAccountId {
-    pub account_id: Option<Secret<String>>,
-}
-
-impl PaysafePaymentMethodDetails {
-    pub fn get_no_three_ds_account_id(
-        &self,
-        currency: enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
-        self.card
-            .as_ref()
-            .and_then(|cards| cards.get(&currency))
-            .and_then(|card| card.no_three_ds.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "Missing no_3ds account_id",
-            })
-    }
-
-    pub fn get_three_ds_account_id(
-        &self,
-        currency: enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
-        self.card
-            .as_ref()
-            .and_then(|cards| cards.get(&currency))
-            .and_then(|card| card.three_ds.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "Missing 3ds account_id",
-            })
-    }
-
-    pub fn get_ach_account_id(
-        &self,
-        currency: enums::Currency,
-    ) -> Result<Secret<String>, errors::ConnectorError> {
-        self.ach
-            .as_ref()
-            .and_then(|ach| ach.get(&currency))
-            .and_then(|ach| ach.account_id.clone())
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
-                config: "Missing ach account_id",
-            })
     }
 }
 
@@ -261,12 +201,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
 
-        let metadata: PaysafeConnectorMetadataObject = utils::to_connector_meta_from_secret(
-            item.router_data.request.merchant_account_metadata.clone(),
-        )
-        .change_context(errors::ConnectorError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-        })?;
+        let auth = PaysafeAuthType::try_from(&item.router_data.connector_config)?;
+        let account_id = auth
+            .account_id
+            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                config: "account_id",
+            })?;
 
         let currency = router_data.request.currency;
         let amount = router_data.request.amount;
@@ -291,7 +231,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .get_optional_billing_full_name()
                         }),
                     };
-                    let account_id = metadata.account_id.get_no_three_ds_account_id(currency)?;
+                    let account_id = account_id.get_no_three_ds_account_id(currency)?;
                     (
                         PaysafePaymentMethod::Card { card },
                         PaysafePaymentType::Card,
@@ -326,7 +266,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         routing_number: routing_number.clone(),
                         account_type,
                     };
-                    let account_id = metadata.account_id.get_ach_account_id(currency)?;
+                    let account_id = account_id.get_ach_account_id(currency)?;
                     (
                         PaysafePaymentMethod::Ach { ach },
                         PaysafePaymentType::Ach,
@@ -464,12 +404,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let amount = router_data.request.minor_amount;
 
-        let metadata: PaysafeConnectorMetadataObject = utils::to_connector_meta_from_secret(
-            item.router_data.request.merchant_account_metadata.clone(),
-        )
-        .change_context(errors::ConnectorError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-        })?;
+        let auth = PaysafeAuthType::try_from(&item.router_data.connector_config)?;
+        let account_id = auth
+            .account_id
+            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+                config: "account_id",
+            })?;
 
         let payment_handle_token: Secret<String> = router_data
             .resource_common_data
@@ -481,7 +421,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .or_else(|| {
                 router_data
                     .resource_common_data
-                    .connector_meta_data
+                    .connector_feature_data
                     .as_ref()
                     .and_then(|metadata_value| {
                         metadata_value
@@ -520,17 +460,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // For ACH, use the ach account_id; for cards, use card account_id
         let account_id = Some(if is_ach {
-            metadata
-                .account_id
-                .get_ach_account_id(router_data.request.currency)?
+            account_id.get_ach_account_id(router_data.request.currency)?
         } else if router_data.resource_common_data.is_three_ds() {
-            metadata
-                .account_id
-                .get_three_ds_account_id(router_data.request.currency)?
+            account_id.get_three_ds_account_id(router_data.request.currency)?
         } else {
-            metadata
-                .account_id
-                .get_no_three_ds_account_id(router_data.request.currency)?
+            account_id.get_no_three_ds_account_id(router_data.request.currency)?
         });
 
         Ok(Self {

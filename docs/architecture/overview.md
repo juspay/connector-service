@@ -1,7 +1,7 @@
 # Architecture Overview
 
-<!--
----
+## <!--
+
 title: Architecture Overview
 description: How Connector Service library is architected for multi-language SDKs and unified payment processing
 last_updated: 2026-03-03
@@ -10,12 +10,14 @@ auto_generated: false
 reviewed_by: engineering
 reviewed_at: 2026-03-03
 approved: true
+
 ---
+
 -->
 
 ## Architecture Components
 
-The Connector Service supports a three layered architecture, each solving a purpose 
+The Connector Service supports a three layered architecture, each solving a purpose
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -116,12 +118,12 @@ The core value: Connector Service transforms unified requests to connector-speci
 
 **Authorization Mapping:**
 
-| Unified Field | Stripe | Adyen |
-|---------------|--------|-------|
-| `amount.currency` | `currency` | `amount.currency` |
-| `amount.amount` | `amount` (cents) | `value` (cents) |
+| Unified Field                     | Stripe                         | Adyen                   |
+| --------------------------------- | ------------------------------ | ----------------------- |
+| `amount.currency`                 | `currency`                     | `amount.currency`       |
+| `amount.amount`                   | `amount` (cents)               | `value` (cents)         |
 | `payment_method.card.card_number` | `payment_method[card][number]` | `paymentMethod[number]` |
-| `connector_metadata` | `metadata` | `additionalData` |
+| `connector_metadata`              | `metadata`                     | `additionalData`        |
 
 This transformation happens server-side, so SDKs remain unchanged when adding new connectors.
 
@@ -138,6 +140,7 @@ trait ConnectorAdapter {
     // ... 20+ operations
 }
 ```
+
 Adding new connectors only need an adapter implementation. SDKs require zero changes.
 
 ## Summary
@@ -146,7 +149,7 @@ The architecture prioritizes:
 
 1. **Consistency**: Same types, patterns, and errors across all connectors
 2. **Extensibility**: Add connectors without SDK changes
-3. **Performance**: gRPC interface provides significant advantage over REST APIs for high volume payment processing. The lirabry could also be used as microservice with 10x smaller paylos, faster serialization/ deserialization hops, reduced bannwidth consumption and optimized for concurrent requests on a single connection
+3. **Performance**: gRPC interface provides significant advantage over REST APIs for high volume payment processing. The library could also be used as microservice with 10x smaller payloads, faster serialization/ deserialization hops, reduced bandwidth consumption and optimized for concurrent requests on a single connection
 4. **Developer Experience**: Idiomatic payments interface with multi language SDKs 
 
 For developers integrating multiple payment providers, this means weeks of integration work becomes hours, and maintenance burden drops from O(N connectors) to O(1).

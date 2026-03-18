@@ -16,12 +16,12 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        payment_method, payment_service_client::PaymentServiceClient,
         refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
-        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundResponse,
-        RefundServiceGetRequest, RefundStatus,
+        Currency, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
+        RefundStatus,
     },
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -101,10 +101,7 @@ fn add_fiuu_metadata<T>(request: &mut Request<T>) {
 // Helper function to extract connector transaction ID from response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
     match &response.connector_transaction_id {
-        Some(id) => match id.id_type.as_ref().unwrap() {
-            IdType::Id(id) => id.clone(),
-            _ => panic!("Expected connector transaction ID"),
-        },
+        Some(id) => id.clone(),
         None => panic!("Resource ID is None"),
     }
 }
@@ -153,9 +150,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         }),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        merchant_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("fiuu_test"))),
-        }),
+        merchant_transaction_id: Some(generate_unique_id("fiuu_test")),
         enrolled_for_3ds: Some(false),
         request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
@@ -167,11 +162,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         encoded_data: None,
         capture_method: None,
+        merchant_transaction_id: None,
         handle_response: None,
         amount: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
@@ -191,9 +185,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         amount_to_capture: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
             currency: i32::from(Currency::Myr),
@@ -207,13 +199,9 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 // Helper function to create a payment void request
 fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         cancellation_reason: None,
-        merchant_void_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("fiuu_void"))),
-        }),
+        merchant_void_id: Some(format!("void_{}", generate_unique_id("fiuu_void"))),
         all_keys_required: None,
         browser_info: None,
         amount: None,
@@ -224,12 +212,8 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        merchant_refund_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("refund_{}", generate_unique_id("test")))),
-        }),
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        merchant_refund_id: Some(format!("refund_{}", generate_unique_id("test"))),
+        connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,
         refund_amount: Some(grpc_api_types::payments::Money {
             minor_amount: TEST_AMOUNT,
@@ -249,9 +233,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
     RefundServiceGetRequest {
-        connector_transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         refund_id: refund_id.to_string(),
         refund_reason: None,
         merchant_refund_id: None,
@@ -582,7 +564,7 @@ async fn test_payment_void() {
 
         // Verify the void response
         assert!(
-            void_response.connector_transaction_id.is_some(),
+            !void_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in void response"
         );
 

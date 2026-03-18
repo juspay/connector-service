@@ -1,17 +1,17 @@
 use common_utils::{crypto, CustomResult};
 use domain_types::{
     connector_types::{ConnectorRedirectResponseSecrets, ConnectorWebhookSecrets},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
 };
 use error_stack::ResultExt;
 
 #[derive(Clone)]
 pub enum ConnectorSourceVerificationSecrets {
-    AuthHeaders(ConnectorSpecificAuth),
+    AuthHeaders(ConnectorSpecificConfig),
     WebhookSecret(ConnectorWebhookSecrets),
     RedirectResponseSecret(ConnectorRedirectResponseSecrets),
     AuthWithWebHookSecret {
-        auth_headers: ConnectorSpecificAuth,
+        auth_headers: ConnectorSpecificConfig,
         webhook_secret: ConnectorWebhookSecrets,
     },
 }

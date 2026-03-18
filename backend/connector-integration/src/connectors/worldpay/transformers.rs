@@ -15,7 +15,7 @@ use domain_types::{
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -51,7 +51,7 @@ const METADATA_DDC_REFERENCE: &str = "device_data_collection";
 const STAGE_DDC: &str = "ddc";
 const STAGE_CHALLENGE: &str = "challenge";
 
-/// Metadata object extracted from merchant_account_metadata
+/// Metadata object extracted from connector_feature_data
 /// Contains Worldpay-specific merchant configuration
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct WorldpayConnectorMetadataObject {
@@ -64,7 +64,7 @@ impl TryFrom<Option<&pii::SecretSerdeValue>> for WorldpayConnectorMetadataObject
         let metadata: Self =
             crate::utils::to_connector_meta_from_secret::<Self>(meta_data.cloned())
                 .change_context(ConnectorError::InvalidConnectorConfig {
-                    config: "merchant_account_metadata",
+                    config: "connector_feature_data",
                 })?;
         Ok(metadata)
     }
@@ -190,7 +190,10 @@ fn fetch_payment_instrument<
             | WalletDataPaymentMethod::WeChatPayQr(_)
             | WalletDataPaymentMethod::Mifinity(_)
             | WalletDataPaymentMethod::RevolutPay(_)
-            | WalletDataPaymentMethod::BluecodeRedirect {} => {
+            | WalletDataPaymentMethod::BluecodeRedirect {}
+            | WalletDataPaymentMethod::MbWay(_)
+            | WalletDataPaymentMethod::Satispay(_)
+            | WalletDataPaymentMethod::Wero(_) => {
                 Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("worldpay"),
                 )
@@ -413,16 +416,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let worldpay_connector_metadata_object: WorldpayConnectorMetadataObject =
-            WorldpayConnectorMetadataObject::try_from(
-                item.router_data.request.merchant_account_metadata.as_ref(),
-            )?;
+        let auth = WorldpayAuthType::try_from(&item.router_data.connector_config)?;
 
-        let merchant_name = worldpay_connector_metadata_object.merchant_name.ok_or(
-            ConnectorError::InvalidConnectorConfig {
-                config: "merchant_account_metadata.merchant_name",
-            },
-        )?;
+        let merchant_name = auth
+            .merchant_name
+            .ok_or(ConnectorError::InvalidConnectorConfig {
+                config: "connector_config.merchant_name",
+            })?;
 
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
         let three_ds = create_three_ds_request(&item.router_data, is_mandate_payment)?;
@@ -461,8 +461,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 customer_agreement,
             },
             merchant: Merchant {
-                entity: WorldpayAuthType::try_from(&item.router_data.connector_auth_type)?
-                    .entity_id,
+                entity: WorldpayAuthType::try_from(&item.router_data.connector_config)?.entity_id,
                 ..Default::default()
             },
             transaction_reference: item
@@ -501,17 +500,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Extract merchant name from metadata
-        let worldpay_connector_metadata_object: WorldpayConnectorMetadataObject =
-            WorldpayConnectorMetadataObject::try_from(
-                item.router_data.request.merchant_account_metadata.as_ref(),
-            )?;
+        // Extract merchant name from connector config
+        let auth = WorldpayAuthType::try_from(&item.router_data.connector_config)?;
 
-        let merchant_name = worldpay_connector_metadata_object.merchant_name.ok_or(
-            ConnectorError::InvalidConnectorConfig {
-                config: "merchant_account_metadata.merchant_name",
-            },
-        )?;
+        let merchant_name = auth
+            .merchant_name
+            .ok_or(ConnectorError::InvalidConnectorConfig {
+                config: "connector_config.merchant_name",
+            })?;
 
         // Extract payment instrument from mandate_reference
         let payment_instrument = match &item.router_data.request.mandate_reference {
@@ -576,8 +572,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }),
             },
             merchant: Merchant {
-                entity: WorldpayAuthType::try_from(&item.router_data.connector_auth_type)?
-                    .entity_id,
+                entity: WorldpayAuthType::try_from(&item.router_data.connector_config)?.entity_id,
                 ..Default::default()
             },
             transaction_reference: item
@@ -593,16 +588,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 pub struct WorldpayAuthType {
     pub(super) api_key: Secret<String>,
     pub(super) entity_id: Secret<String>,
+    pub(super) merchant_name: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for WorldpayAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for WorldpayAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Worldpay {
+            ConnectorSpecificConfig::Worldpay {
                 username,
                 password,
                 entity_id,
+                merchant_name,
+                ..
             } => {
                 let auth_key = format!("{}:{}", username.peek(), password.peek());
                 let auth_header = format!(
@@ -612,6 +610,7 @@ impl TryFrom<&ConnectorSpecificAuth> for WorldpayAuthType {
                 Ok(Self {
                     api_key: Secret::new(auth_header),
                     entity_id: entity_id.clone(),
+                    merchant_name: merchant_name.clone(),
                 })
             }
             _ => Err(ConnectorError::FailedToObtainAuthType)?,

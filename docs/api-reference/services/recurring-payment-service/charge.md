@@ -4,7 +4,7 @@
 ---
 title: Charge
 description: Process a recurring payment using an existing mandate - charge customer's stored payment method for subscription renewal without requiring their presence
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: false
 reviewed_by: engineering
@@ -41,7 +41,7 @@ The `Charge` RPC processes a recurring payment using a previously established ma
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_charge_id` | Identifier | Yes | Your unique identifier for this charge transaction |
+| `merchant_charge_id` | string | Yes | Your unique identifier for this charge transaction |
 | `mandate_reference_id` | MandateReference | Yes | Reference to the existing mandate from SetupRecurring |
 | `amount` | Money | Yes | Amount to charge (may differ from original mandate amount) |
 | `payment_method` | PaymentMethod | No | Optional payment method for network transaction flows |
@@ -75,14 +75,14 @@ The `Charge` RPC processes a recurring payment using a previously established ma
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_transaction_id` | Identifier | Connector's transaction ID for this charge |
+| `connector_transaction_id` | string | Connector's transaction ID for this charge |
 | `status` | PaymentStatus | Current status: CHARGED, AUTHORIZED, PENDING, FAILED, etc. |
 | `error` | ErrorInfo | Error details if charge failed |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
 | `response_headers` | map<string,string> | Connector-specific response headers |
 | `connector_feature_data` | SecretString | Connector-specific metadata |
 | `network_transaction_id` | string | Card network transaction reference |
-| `merchant_charge_id` | Identifier | Your charge reference (echoed back) |
+| `merchant_charge_id` | string | Your charge reference (echoed back) |
 | `mandate_reference` | MandateReference | Mandate reference used for this charge |
 | `state` | ConnectorState | State to pass to next request in multi-step flow |
 | `raw_connector_response` | SecretString | Raw API response from connector (debugging) |
@@ -97,9 +97,9 @@ The `Charge` RPC processes a recurring payment using a previously established ma
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_charge_id": {"id": "charge_sub_001"},
+    "merchant_charge_id": "charge_sub_001",
     "mandate_reference_id": {
       "connector_mandate_id": "seti_3Oxxx...",
       "payment_method_id": "pm_1Oxxx..."
@@ -114,21 +114,17 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.RecurringPaymentService/Charge
+  types.RecurringPaymentService/Charge
 ```
 
 ### Response (Success)
 
 ```json
 {
-  "connector_transaction_id": {
-    "id": "pi_3Pxxx..."
-  },
+  "connector_transaction_id": "pi_3Pxxx...",
   "status": "CHARGED",
   "status_code": 200,
-  "merchant_charge_id": {
-    "id": "charge_sub_001"
-  },
+  "merchant_charge_id": "charge_sub_001",
   "mandate_reference": {
     "connector_mandate_id": "seti_3Oxxx...",
     "payment_method_id": "pm_1Oxxx..."
@@ -142,14 +138,10 @@ grpcurl -H "x-connector: stripe" \
 
 ```json
 {
-  "connector_transaction_id": {
-    "id": "pi_3Pxxx..."
-  },
+  "connector_transaction_id": "pi_3Pxxx...",
   "status": "FAILED",
   "status_code": 402,
-  "merchant_charge_id": {
-    "id": "charge_sub_001"
-  },
+  "merchant_charge_id": "charge_sub_001",
   "error": {
     "code": "card_declined",
     "message": "Your card was declined.",

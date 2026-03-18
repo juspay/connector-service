@@ -1,0 +1,99 @@
+{
+  "connector": "payload",
+  "flows": {
+    "authorize": {
+      "Ach": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Affirm": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Afterpay": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "ApplePay": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Bacs": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Becs": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Blik": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Card": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "GooglePay": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Ideal": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Klarna": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "PaypalRedirect": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "Sepa": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      },
+      "UpiCollect": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      }
+    },
+    "get": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Failed to obtain authentication type"
+      }
+    }
+  }
+}

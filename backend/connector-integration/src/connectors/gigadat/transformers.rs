@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -55,15 +55,16 @@ pub struct GigadatAuthType {
     pub security_token: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for GigadatAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for GigadatAuthType {
     type Error = Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Gigadat {
+            ConnectorSpecificConfig::Gigadat {
                 campaign_id,
                 access_token,
                 security_token,
+                ..
             } => Ok(Self {
                 security_token: security_token.to_owned(),
                 access_token: access_token.to_owned(),
@@ -235,9 +236,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Get metadata for site - try connector_meta_data first, then fallback to request metadata
+        // Get metadata for site from connector_feature_data, then fallback to request metadata
         let metadata = GigadatConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_meta_data,
+            &item.router_data.resource_common_data.connector_feature_data,
         )
         .or_else(|_| {
             // Try to get site from request metadata
@@ -252,7 +253,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
                 .ok_or_else(|| {
                     Report::from(ConnectorError::InvalidConnectorConfig {
-                        config: "missing 'site' in connector_meta_data or metadata",
+                        config: "missing 'site' in connector_feature_data or metadata",
                     })
                 })
         })?;
@@ -478,7 +479,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = GigadatAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = GigadatAuthType::try_from(&item.router_data.connector_config)?;
 
         let amount = item
             .connector

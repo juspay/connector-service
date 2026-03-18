@@ -62,7 +62,11 @@ message PaymentMethod {
     MifinityWallet mifinity = 21;                       // Mifinity
     Bluecode bluecode = 22;                             // Bluecode
     PazeWallet paze = 23;                               // Paze
-    
+    SamsungWallet samsung_pay = 24;                     //Samsung
+    MBWay mb_way = 25;                                  // MB WAY 
+    Satispay satispay = 26;                             // Satispay 
+    Wero wero = 27;                                     // Wero 
+
     // UPI METHODS (30-39) - Direct variants
     UpiCollect upi_collect = 30;                        // UPI Collect
     UpiIntent upi_intent = 31;                          // UPI Intent
@@ -450,22 +454,13 @@ message SamsungWallet {
     // Whether this is a recurring payment
     optional bool recurring_payment = 2;
     
-    // Card brand
-    enum CardBrand {
-      CARD_BRAND_UNSPECIFIED = 0;
-      VISA = 1;
-      MASTERCARD = 2;
-      AMEX = 3;
-      DISCOVER = 4;
-      JCB = 5;
-    }
-    CardBrand card_brand = 3;
+    CardNetwork card_brand = 3;
     
     // Last four digits of DPAN (Device Primary Account Number)
-    optional string dpan_last_four_digits = 4;
+    optional SecretString dpan_last_four_digits = 4;
     
     // Last four digits of card
-    string card_last_four_digits = 5;
+    SecretString card_last_four_digits = 5;
     
     // 3DS token data
     message TokenData {
@@ -476,7 +471,7 @@ message SamsungWallet {
       string version = 2;
       
       // Token data
-      string data = 3;
+      SecretString data = 3;
     }
     TokenData token_data = 6;
   }
@@ -602,6 +597,21 @@ message RevolutPayWallet {
 }
 
 message Bluecode {
+}
+
+// MB WAY - Portuguese mobile payment solution
+message MBWay {
+  // Fields will be added as needed for MB WAY integration
+}
+
+// Satispay - Italian mobile payment solution
+message Satispay {
+  // Fields will be added as needed for Satispay integration
+}
+
+// Wero - European digital wallet payment solution
+message Wero {
+  // Fields will be added as needed for Wero integration
 }
 
 // Apple Pay Third Party SDK - Apple Pay with token from third-party SDK
@@ -1024,11 +1034,6 @@ message GCash {
 // KakaoPay - South Korean mobile payment service
 message KakaoPay {
   // Fields will be added as needed for KakaoPay integration
-}
-
-// MB WAY - Portuguese mobile payment solution
-message MBWay {
-  // Fields will be added as needed for MB WAY integration
 }
 
 // MobilePay - Nordic mobile payment platform

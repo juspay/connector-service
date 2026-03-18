@@ -16,7 +16,7 @@ use domain_types::{
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -63,12 +63,14 @@ pub struct GlobalpayAuthType {
     pub app_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for GlobalpayAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for GlobalpayAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Globalpay { app_id, app_key } => Ok(Self {
+            ConnectorSpecificConfig::Globalpay {
+                app_id, app_key, ..
+            } => Ok(Self {
                 app_id: app_id.to_owned(),
                 app_key: app_key.to_owned(),
             }),
@@ -192,7 +194,10 @@ impl
             AccessTokenResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Globalpay { app_id, app_key } = &item.connector_auth_type {
+        if let ConnectorSpecificConfig::Globalpay {
+            app_id, app_key, ..
+        } = &item.connector_config
+        {
             use sha2::{Digest, Sha512};
 
             // Generate random alphanumeric nonce (matching Hyperswitch implementation)

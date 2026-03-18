@@ -9,8 +9,10 @@ repositories {
 }
 
 dependencies {
+    implementation("com.google.code.gson:gson:2.10.1")
+    // Depend on published SDK to avoid Gradle circular dependency (root :jar -> :classes -> :compileKotlin).
+    // CI and Makefile run publishToMavenLocal (or equivalent) before running smoke-test.
     implementation("com.hyperswitch:payments-client:0.1.0")
-    implementation("org.json:json:20240303")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
 

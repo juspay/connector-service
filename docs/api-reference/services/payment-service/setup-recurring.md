@@ -4,7 +4,7 @@
 ---
 title: SetupRecurring
 description: Setup a recurring payment instruction for future payments/debits - for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -42,7 +42,7 @@ The `SetupRecurring` RPC establishes a payment mandate (recurring payment instru
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_recurring_payment_id` | Identifier | Yes | Your unique identifier for this recurring setup |
+| `merchant_recurring_payment_id` | string | Yes | Your unique identifier for this recurring setup |
 | `amount` | Money | Yes | Initial amount (for validation) |
 | `payment_method` | PaymentMethod | Yes | Payment method to be used for recurring charges |
 | `customer` | Customer | No | Customer information |
@@ -80,7 +80,7 @@ The `SetupRecurring` RPC establishes a payment mandate (recurring payment instru
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_registration_id` | Identifier | Identifier for the mandate registration |
+| `connector_recurring_payment_id` | string | Identifier for the mandate registration |
 | `status` | PaymentStatus | Status of the mandate setup attempt |
 | `error` | ErrorInfo | Error details if setup failed |
 | `status_code` | uint32 | HTTP status code from the connector |
@@ -88,7 +88,7 @@ The `SetupRecurring` RPC establishes a payment mandate (recurring payment instru
 | `mandate_reference` | MandateReference | Reference to the created mandate for future charges |
 | `redirection_data` | RedirectForm | Data for redirecting the customer's browser (if additional auth required) |
 | `network_transaction_id` | string | Card network transaction reference |
-| `merchant_recurring_payment_id` | Identifier | Your recurring payment reference (echoed back) |
+| `merchant_recurring_payment_id` | string | Your recurring payment reference (echoed back) |
 | `connector_response` | ConnectorResponseData | Various data regarding the response from connector |
 | `incremental_authorization_allowed` | bool | Indicates if incremental authorization is allowed |
 | `captured_amount` | int64 | Captured amount in minor currency units if initial charge included |
@@ -102,20 +102,20 @@ The `SetupRecurring` RPC establishes a payment mandate (recurring payment instru
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_recurring_payment_id": {"id": "recurring_001"},
+    "merchant_recurring_payment_id": "recurring_001",
     "amount": {
       "minor_amount": 2900,
       "currency": "USD"
     },
     "payment_method": {
       "card": {
-        "card_number": {"value": "4242424242424242"},
-        "expiry_month": {"value": "12"},
-        "expiry_year": {"value": "2027"},
-        "card_holder_name": {"value": "John Doe"},
-        "cvc": {"value": "123"}
+        "card_number": "4242424242424242",
+        "expiry_month": "12",
+        "expiry_year": "2027",
+        "card_holder_name": "John Doe",
+        "cvc": "123"
       }
     },
     "address": {
@@ -133,25 +133,21 @@ grpcurl -H "x-connector: stripe" \
     "setup_future_usage": "OFF_SESSION"
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/SetupRecurring
+  types.PaymentService/SetupRecurring
 ```
 
 ### Response
 
 ```json
 {
-  "connector_registration_id": {
-    "id": "seti_3Oxxx..."
-  },
+  "connector_recurring_payment_id": "seti_3Oxxx...",
   "status": "AUTHORIZED",
   "status_code": 200,
   "mandate_reference": {
     "mandate_id": "pm_3Oxxx...",
     "mandate_status": "ACTIVE"
   },
-  "merchant_recurring_payment_id": {
-    "id": "recurring_001"
-  },
+  "merchant_recurring_payment_id": "recurring_001",
   "incremental_authorization_allowed": false
 }
 ```

@@ -1,0 +1,45 @@
+{
+  "connector": "bankofamerica",
+  "flows": {
+    "authorize": {
+      "Card": {
+        "status": "error",
+        "error": "Integration error: Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "get": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "error",
+        "error": "Integration error: Invalid Configuration: connector_account_details.api_secret"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "error",
+        "required_fields": [
+          "Amount",
+          "Cancellation Reason"
+        ],
+        "error": "Integration error: Invalid Configuration: connector_account_details.api_secret"
+      }
+    }
+  }
+}

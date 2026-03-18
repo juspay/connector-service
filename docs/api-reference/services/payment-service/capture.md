@@ -4,7 +4,7 @@
 ---
 title: Capture
 description: Finalize an authorized payment transaction - transfers reserved funds to complete the payment lifecycle
-last_updated: 2026-03-05
+last_updated: 2026-03-11
 generated_from: backend/grpc-api-types/proto/services.proto
 auto_generated: true
 reviewed_by: ''
@@ -41,8 +41,8 @@ The `Capture` RPC finalizes an authorized payment by transferring the reserved f
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `merchant_capture_id` | Identifier | Yes | Your unique identifier for this capture operation |
-| `connector_transaction_id` | Identifier | Yes | The connector's transaction ID from the original authorization |
+| `merchant_capture_id` | string | Yes | Your unique identifier for this capture operation |
+| `connector_transaction_id` | string | Yes | The connector's transaction ID from the original authorization |
 | `amount_to_capture` | Money | Yes | The amount to capture (can be less than or equal to authorized amount) |
 | `metadata` | SecretString | No | Additional metadata for the connector |
 | `connector_feature_data` | SecretString | No | Connector-specific metadata for the transaction |
@@ -57,12 +57,12 @@ The `Capture` RPC finalizes an authorized payment by transferring the reserved f
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `connector_transaction_id` | Identifier | Connector's transaction ID |
+| `connector_transaction_id` | string | Connector's transaction ID |
 | `status` | PaymentStatus | Current status of the payment (CAPTURED, PENDING, FAILED, etc.) |
 | `error` | ErrorInfo | Error details if status is FAILED |
 | `status_code` | uint32 | HTTP-style status code (200, 402, etc.) |
 | `response_headers` | map<string, string> | Connector-specific response headers |
-| `merchant_capture_id` | Identifier | Your capture reference (echoed back) |
+| `merchant_capture_id` | string | Your capture reference (echoed back) |
 | `state` | ConnectorState | State to pass to next request in multi-step flow |
 | `raw_connector_request` | SecretString | Raw API request sent to connector (debugging) |
 | `captured_amount` | int64 | Total captured amount in minor currency units |
@@ -76,10 +76,10 @@ The `Capture` RPC finalizes an authorized payment by transferring the reserved f
 
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
   -d '{
-    "merchant_capture_id": {"id": "capture_001"},
-    "connector_transaction_id": {"id": "pi_3Oxxx..."},
+    "merchant_capture_id": "capture_001",
+    "connector_transaction_id": "pi_3Oxxx...",
     "amount_to_capture": {
       "minor_amount": 1000,
       "currency": "USD"
@@ -88,7 +88,7 @@ grpcurl -H "x-connector: stripe" \
     "test_mode": true
   }' \
   localhost:8080 \
-  ucs.v2.PaymentService/Capture
+  types.PaymentService/Capture
 
 ```
 
@@ -96,14 +96,10 @@ grpcurl -H "x-connector: stripe" \
 
 ```json
 {
-  "connector_transaction_id": {
-    "id": "pi_3Oxxx..."
-  },
+  "connector_transaction_id": "pi_3Oxxx...",
   "status": "CAPTURED",
   "status_code": 200,
-  "merchant_capture_id": {
-    "id": "capture_001"
-  },
+  "merchant_capture_id": "capture_001",
   "captured_amount": 1000
 }
 ```

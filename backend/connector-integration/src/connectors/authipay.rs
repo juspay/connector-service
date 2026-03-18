@@ -26,7 +26,7 @@ use domain_types::{
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -370,7 +370,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = authipay::AuthipayAuthType::try_from(&req.connector_auth_type)
+            let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
@@ -411,7 +411,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = authipay::AuthipayAuthType::try_from(&req.connector_auth_type)
+            let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // For GET requests, use empty body for HMAC signature
@@ -454,7 +454,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = authipay::AuthipayAuthType::try_from(&req.connector_auth_type)
+            let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
@@ -511,7 +511,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = authipay::AuthipayAuthType::try_from(&req.connector_auth_type)
+            let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
@@ -562,7 +562,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = authipay::AuthipayAuthType::try_from(&req.connector_auth_type)
+            let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // Build the request to get the body for HMAC signature
@@ -608,7 +608,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = authipay::AuthipayAuthType::try_from(&req.connector_auth_type)
+            let auth = authipay::AuthipayAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
             // For GET requests, use empty body for HMAC signature
@@ -804,7 +804,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        _auth_type: &ConnectorSpecificAuth,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         // Authentication is handled in get_headers for Authipay
         // because we need the request body to generate the HMAC signature
