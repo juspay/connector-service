@@ -46,6 +46,26 @@ const COMPOSITE_FLOW_SPECS: &[CompositeFlowSpec] = &[
         ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
         ignore_composite_only_fields: IGNORE_COMPOSITE_ONLY_FIELDS,
     },
+    CompositeFlowSpec {
+        name: "refund",
+        composite_request_message: "CompositeRefundRequest",
+        granular_request_messages: &[
+            "MerchantAuthenticationServiceCreateAccessTokenRequest",
+            "PaymentServiceRefundRequest",
+        ],
+        ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
+        ignore_composite_only_fields: IGNORE_COMPOSITE_ONLY_FIELDS,
+    },
+    CompositeFlowSpec {
+        name: "refund_get",
+        composite_request_message: "CompositeRefundGetRequest",
+        granular_request_messages: &[
+            "MerchantAuthenticationServiceCreateAccessTokenRequest",
+            "RefundServiceGetRequest",
+        ],
+        ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
+        ignore_composite_only_fields: IGNORE_COMPOSITE_ONLY_FIELDS,
+    },
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
