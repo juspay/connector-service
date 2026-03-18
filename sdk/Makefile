@@ -3,9 +3,9 @@
 # This Makefile should be run from the repository root
 
 .PHONY: help build build-all build-macos build-linux clean check-cargo generate install-deps \
-        generate-descriptor generate-rust generate-flows-python generate-flows-javascript generate-flows-java \
-        test test-python test-javascript test-java \
-        dist dist-python dist-javascript dist-java
+        generate-descriptor generate-rust generate-flows-python generate-flows-javascript generate-flows-java generate-flows-haskell \
+        test test-python test-javascript test-java test-haskell \
+        dist dist-python dist-javascript dist-java dist-haskell
 
 # Default target
 .DEFAULT_GOAL := help
@@ -127,6 +127,9 @@ generate-javascript: ## Regenerate JavaScript/TypeScript SDK client (flows)
 generate-kotlin: ## Regenerate Kotlin SDK client (flows)
 	@$(MAKE) -C $(MAKEFILE_DIR)java generate-flows
 
+generate-haskell: ## Regenerate Haskell SDK client (flows)
+	@$(MAKE) -C $(MAKEFILE_DIR)haskell generate-flows
+
 # ---------------------------------------------------------------------------
 # generate-descriptor
 # Generates the proto descriptor file used by all SDK codegen scripts.
@@ -170,7 +173,7 @@ generate-client-java: generate-descriptor
 # Main entry point for regenerating all SDK clients.
 # Generates the descriptor, then delegates to each SDK's generate-client target.
 # ---------------------------------------------------------------------------
-generate: install-deps generate-descriptor generate-rust generate-python generate-javascript generate-kotlin ## Auto-discover flows and regenerate all SDK clients
+generate: install-deps generate-descriptor generate-rust generate-python generate-javascript generate-kotlin generate-haskell ## Auto-discover flows and regenerate all SDK clients
 	@echo
 	@echo "Generating Python protobuf stubs (_pb2.pyi)..."
 	@MYPY_BIN="$$(python3 -c "import sysconfig; print(sysconfig.get_path('scripts', 'posix_user'))")" && \
@@ -186,7 +189,7 @@ generate: install-deps generate-descriptor generate-rust generate-python generat
 # ---------------------------------------------------------------------------
 # Test targets - delegate to SDK-specific test-package
 # ---------------------------------------------------------------------------
-test: test-python test-javascript test-java ## Run all SDK smoke tests
+test: test-python test-javascript test-java test-haskell ## Run all SDK smoke tests
 
 test-python: build-ffi-lib ## Build FFI → Run Python smoke test
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python test-package CONNECTORS=$(CONNECTORS)
@@ -197,10 +200,13 @@ test-javascript: build-ffi-lib ## Build FFI → Run JavaScript smoke test
 test-java: build-ffi-lib ## Build FFI → Run Java smoke test
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java test-package CONNECTORS=$(CONNECTORS)
 
+test-haskell: build-ffi-lib ## Build FFI → Run Haskell smoke test
+	@$(MAKE) -C $(REPO_ROOT)/sdk/haskell test-package CONNECTORS=$(CONNECTORS)
+
 # ---------------------------------------------------------------------------
 # Distribution targets - delegate to SDK-specific dist
 # ---------------------------------------------------------------------------
-dist: dist-python dist-javascript dist-java ## Build all SDK distribution packages
+dist: dist-python dist-javascript dist-java dist-haskell ## Build all SDK distribution packages
 
 dist-python: build-ffi-lib ## Build FFI → Build Python wheel
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python dist
@@ -210,6 +216,9 @@ dist-javascript: build-ffi-lib ## Build FFI → Build JS npm package
 
 dist-java: build-ffi-lib ## Build FFI → Build Java JAR
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java dist
+
+dist-haskell: build-ffi-lib ## Build FFI → Build Haskell source tarball
+	@$(MAKE) -C $(REPO_ROOT)/sdk/haskell dist
 
 # ---------------------------------------------------------------------------
 # Clean - comprehensive cleanup across all SDKs
@@ -223,4 +232,5 @@ clean: ## Clean all build artifacts
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python clean
 	@$(MAKE) -C $(REPO_ROOT)/sdk/javascript clean
 	@$(MAKE) -C $(REPO_ROOT)/sdk/java clean
+	@$(MAKE) -C $(REPO_ROOT)/sdk/haskell clean
 	@echo "Clean complete."

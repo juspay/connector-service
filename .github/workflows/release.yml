@@ -374,7 +374,41 @@ jobs:
           name: sdk-javascript
           path: artifacts/sdk-javascript/*.tgz
 
-  # Job 4d: Package Rust SDK (builds for verification, packages source only)
+  # Job 4d: Package Haskell SDK
+  package-sdk-haskell:
+    name: Package Haskell SDK
+    runs-on: ubuntu-latest
+    needs: [build-binaries, version-and-changelog]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Haskell
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.6'
+          cabal-version: '3.10'
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: target
+      - name: Organize binaries
+        run: |
+          for dir in target/binary-*; do
+            if [ -d "$dir" ]; then
+              target_name=$(basename "$dir" | sed 's/binary-//')
+              mkdir -p "target/$target_name/release"
+              cp "$dir"/* "target/$target_name/release/" 2>/dev/null || true
+            fi
+          done
+      - name: Package Haskell SDK
+        run: make -C sdk/haskell dist
+      - name: Upload Haskell SDK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdk-haskell
+          path: artifacts/sdk-haskell/*.tar.gz
+
+  # Job 4e: Package Rust SDK
   package-sdk-rust:
     name: Package Rust SDK
     runs-on: ubuntu-latest
@@ -399,11 +433,11 @@ jobs:
           name: sdk-rust
           path: artifacts/sdk-rust/*.zip
 
-  # Job 4e: Collect SDK Artifacts
+  # Job 4f: Collect SDK Artifacts
   collect-sdks:
     name: Collect SDK Artifacts
     runs-on: ubuntu-latest
-    needs: [package-sdk-java, package-sdk-python, package-sdk-javascript, package-sdk-rust]
+    needs: [package-sdk-java, package-sdk-python, package-sdk-javascript, package-sdk-haskell, package-sdk-rust]
     steps:
       - name: Download all SDK artifacts
         uses: actions/download-artifact@v4

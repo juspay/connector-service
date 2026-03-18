@@ -19,6 +19,7 @@ Usage:
     python3 sdk/codegen/generate.py --lang python
     python3 sdk/codegen/generate.py --lang javascript
     python3 sdk/codegen/generate.py --lang kotlin
+    python3 sdk/codegen/generate.py --lang haskell
     python3 sdk/codegen/generate.py --lang rust
 
     # Via individual SDK Makefiles
@@ -372,6 +373,15 @@ def gen_rust_ffi_flows(flows: list[dict]) -> None:
     )
 
 
+def gen_haskell(flows: list[dict], single_flows: list[dict]) -> None:
+    render(
+        "haskell_flows.hs.j2",
+        SDK_ROOT / "haskell/src/Payments/Generated/Flows.hs",
+        flows=flows,
+        single_flows=single_flows,
+    )
+
+
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -382,7 +392,7 @@ def main() -> None:
 
     parser.add_argument(
         "--lang",
-        choices=["python", "javascript", "kotlin", "rust", "all"],
+        choices=["python", "javascript", "kotlin", "haskell", "rust", "all"],
         default="all",
         help="Which language/SDK to generate (default: all)"
     )
@@ -419,6 +429,10 @@ def main() -> None:
     if args.lang in ("kotlin", "all"):
         print("Generating Kotlin SDK...")
         gen_kotlin(flows, single_flows)
+
+    if args.lang in ("haskell", "all"):
+        print("Generating Haskell SDK...")
+        gen_haskell(flows, single_flows)
 
     print("\nDone.")
 
