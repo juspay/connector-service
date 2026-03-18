@@ -202,7 +202,11 @@ async fn test_connector_scenarios(
 
 fn print_result(result: &ConnectorResult) {
     match result.status {
-        "passed" => println!("{} ({} scenario(s))", green("  PASSED"), result.scenarios.len()),
+        "passed" => println!(
+            "{} ({} scenario(s))",
+            green("  PASSED"),
+            result.scenarios.len()
+        ),
         "dry_run" => println!("{}", grey("  DRY RUN")),
         "skipped" => {
             let reason = result.error.as_deref().unwrap_or("unknown");
@@ -236,11 +240,14 @@ async fn run_tests(
     let credentials: serde_json::Map<String, serde_json::Value> =
         serde_json::from_str(&text).expect("Invalid creds.json");
 
-    let test_connectors: Vec<String> = connectors
-        .unwrap_or_else(|| credentials.keys().cloned().collect());
+    let test_connectors: Vec<String> =
+        connectors.unwrap_or_else(|| credentials.keys().cloned().collect());
 
     println!("\n{}", "=".repeat(60));
-    println!("Running smoke tests for {} connector(s)", test_connectors.len());
+    println!(
+        "Running smoke tests for {} connector(s)",
+        test_connectors.len()
+    );
     println!("{}\n", "=".repeat(60));
 
     let mut results = vec![];
@@ -444,7 +451,12 @@ fn parse_args() -> (String, Option<Vec<String>>, bool, bool) {
         std::process::exit(1);
     }
 
-    (creds_file, if all { None } else { connectors }, dry_run, all)
+    (
+        creds_file,
+        if all { None } else { connectors },
+        dry_run,
+        all,
+    )
 }
 
 #[tokio::main]
