@@ -11232,7 +11232,6 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
     Ok(response)
 }
 
-
 impl
     ForeignTryFrom<(
         grpc_api_types::payouts::PayoutServiceCreateRequest,
