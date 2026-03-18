@@ -258,6 +258,11 @@ pub enum ConnectorSpecificConfig {
         api_key: Secret<String>,
         base_url: Option<String>,
     },
+    Ppro {
+        api_key: Secret<String>,
+        merchant_id: Secret<String>,
+        base_url: Option<String>,
+    },
 
     // --- Two-field connectors ---
     Razorpay {
@@ -388,6 +393,11 @@ pub enum ConnectorSpecificConfig {
     Payme {
         seller_payme_id: Secret<String>,
         payme_client_key: Option<Secret<String>>,
+        base_url: Option<String>,
+    },
+    Peachpayments {
+        api_key: Secret<String>,
+        tenant_id: Secret<String>,
         base_url: Option<String>,
     },
     Braintree {
@@ -855,6 +865,7 @@ impl ConnectorSpecificConfig {
                 salt_key,
                 salt_index
             },
+            Peachpayments { api_key, tenant_id },
             Redsys {
                 merchant_id,
                 terminal_id,
@@ -939,6 +950,10 @@ impl ConnectorSpecificConfig {
                 finix_user_name,
                 finix_password,
                 merchant_identity_id,
+                merchant_id
+            },
+            Ppro {
+                api_key,
                 merchant_id
             },
         )
@@ -1223,6 +1238,7 @@ impl ConnectorSpecificConfig {
                     salt_key,
                     salt_index
                 },
+                Peachpayments { api_key, tenant_id },
                 Redsys {
                     merchant_id,
                     terminal_id,
@@ -1307,6 +1323,10 @@ impl ConnectorSpecificConfig {
                     finix_user_name,
                     finix_password,
                     merchant_identity_id,
+                    merchant_id
+                },
+                Ppro {
+                    api_key,
                     merchant_id
                 }
             ),
@@ -1744,6 +1764,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 name: authorizedotnet.name.ok_or_else(err)?,
                 transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
                 base_url: authorizedotnet.base_url,
+            }),
+            AuthType::Peachpayments(peachpayments) => Ok(Self::Peachpayments {
+                api_key: peachpayments.api_key.ok_or_else(err)?,
+                tenant_id: peachpayments.tenant_id.ok_or_else(err)?,
+                base_url: peachpayments.base_url,
             }),
             AuthType::Paypal(paypal) => Ok(Self::Paypal {
                 client_id: paypal.client_id.ok_or_else(err)?,
@@ -2656,6 +2681,14 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 }),
                 _ => Err(err().into()),
             },
+            ConnectorEnum::Peachpayments => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Peachpayments {
+                    api_key: api_key.clone(),
+                    tenant_id: key1.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
             ConnectorEnum::Finix => match auth {
                 ConnectorAuthType::MultiAuthKey {
                     api_key,
@@ -2667,6 +2700,14 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     finix_password: api_secret.clone(),
                     merchant_identity_id: key1.clone(),
                     merchant_id: key2.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Ppro => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(ConnectorSpecificConfig::Ppro {
+                    api_key: api_key.clone(),
+                    merchant_id: key1.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

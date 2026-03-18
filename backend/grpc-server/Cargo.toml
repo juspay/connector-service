@@ -15,8 +15,9 @@ common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 composite-service = { path = "../composite-service" }
 config_patch_derive = { path = "../config_patch_derive" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
-injector = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0" }
+hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
+# TODO! update to latest Hyperswitch Tag once hyperswitch_masking crate changes are merged to hyperswitch main
+injector = { git = "https://github.com/juspay/hyperswitch",  branch = "solve-injector-masking-cyclic-dependency" }
 tracing-kafka = { git = "https://github.com/juspay/framework-libs-rs", branch = "feat/kafka-writer", features = ["layer"], optional = true }
 ucs_env = { path = "../ucs_env" }
 ucs_interface_common = { path = "../ucs_interface_common" }
@@ -43,7 +44,7 @@ tokio = { version = "1.48.0", features = [
     "signal",
 ] }
 tonic = { workspace = true }
-tonic-reflection = "0.13.0"
+tonic-reflection = "0.14.0"
 hyper = "1.6.0"
 tower-http = { version = "0.6.2", features = ["trace", "request-id"] }
 tower = "0.5.2"
