@@ -1791,6 +1791,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
                 Ok(Some(PaymentMethodType::InstantBankTransferPoland))
             }
+            grpc_api_types::payments::PaymentMethodType::NetworkToken => {
+                Ok(Some(PaymentMethodType::NetworkToken))
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -5558,6 +5561,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::Knet => Ok(Self::CardRedirect),
             grpc_api_types::payments::PaymentMethodType::Benefit => Ok(Self::CardRedirect),
             grpc_api_types::payments::PaymentMethodType::MomoAtm => Ok(Self::CardRedirect),
+
+            grpc_api_types::payments::PaymentMethodType::NetworkToken => Ok(Self::Card),
 
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "UNSUPPORTED_PAYMENT_METHOD_TYPE".to_owned(),
