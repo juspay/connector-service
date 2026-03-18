@@ -97,7 +97,7 @@ async function processCheckoutAutocapture(merchantTransactionId, config = _defau
         return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
     }
 
-    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: authorizeResponse.error };
 }
 
 // Refund a Payment
@@ -139,7 +139,7 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
         throw new Error(`Refund failed: ${refundResponse.error?.message}`);
     }
 
-    return { status: refundResponse.status };
+    return { status: refundResponse.status, error: refundResponse.error };
 }
 
 // Get Payment Status
@@ -161,7 +161,7 @@ async function processGetPayment(merchantTransactionId, config = _defaultConfig)
     // Step 2: Get — retrieve current payment status from the connector
     const getResponse = await paymentClient.get(_buildGetRequest(authorizeResponse.connectorTransactionId));
 
-    return { status: getResponse.status, transactionId: getResponse.connectorTransactionId };
+    return { status: getResponse.status, transactionId: getResponse.connectorTransactionId, error: getResponse.error };
 }
 
 // Flow: PaymentService.Authorize (Card)

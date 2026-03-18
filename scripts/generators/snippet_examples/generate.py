@@ -843,23 +843,23 @@ def _scenario_step_python(
 def _scenario_return_python(scenario: ScenarioSpec) -> str:
     """Return the final return statement for a scenario function."""
     if scenario.key in ("checkout_card",):
-        return '    return {"status": capture_response.status, "transaction_id": authorize_response.connector_transaction_id}'
+        return '    return {"status": getattr(capture_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(capture_response, "error", None)}'
     elif scenario.key in ("checkout_autocapture", "checkout_wallet", "checkout_bank"):
-        return '    return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}'
+        return '    return {"status": getattr(authorize_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(authorize_response, "error", None)}'
     elif scenario.key == "refund":
-        return '    return {"status": refund_response.status}'
+        return '    return {"status": getattr(refund_response, "status", ""), "error": getattr(refund_response, "error", None)}'
     elif scenario.key == "recurring":
-        return '    return {"status": recurring_response.status, "transaction_id": getattr(recurring_response, "connector_transaction_id", "")}'
+        return '    return {"status": getattr(recurring_response, "status", ""), "transaction_id": getattr(recurring_response, "connector_transaction_id", ""), "error": getattr(recurring_response, "error", None)}'
     elif scenario.key == "void_payment":
-        return '    return {"status": void_response.status, "transaction_id": authorize_response.connector_transaction_id}'
+        return '    return {"status": getattr(void_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(void_response, "error", None)}'
     elif scenario.key == "get_payment":
-        return '    return {"status": get_response.status, "transaction_id": get_response.connector_transaction_id}'
+        return '    return {"status": getattr(get_response, "status", ""), "transaction_id": getattr(get_response, "connector_transaction_id", ""), "error": getattr(get_response, "error", None)}'
     elif scenario.key == "create_customer":
-        return '    return {"customer_id": create_response.connector_customer_id}'
+        return '    return {"customer_id": getattr(create_response, "connector_customer_id", ""), "error": getattr(create_response, "error", None)}'
     elif scenario.key == "tokenize":
-        return '    return {"token": tokenize_response.payment_method_token}'
+        return '    return {"token": getattr(tokenize_response, "payment_method_token", ""), "error": getattr(tokenize_response, "error", None)}'
     elif scenario.key == "authentication":
-        return '    return {"status": post_authenticate_response.status}'
+        return '    return {"status": getattr(post_authenticate_response, "status", ""), "error": getattr(post_authenticate_response, "error", None)}'
     return '    return {}'
 
 
@@ -1034,23 +1034,23 @@ def _scenario_step_javascript(
 
 def _scenario_return_javascript(scenario: ScenarioSpec) -> str:
     if scenario.key == "checkout_card":
-        return "    return { status: captureResponse.status, transactionId: authorizeResponse.connectorTransactionId };"
+        return "    return { status: captureResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: authorizeResponse.error };"
     elif scenario.key in ("checkout_autocapture", "checkout_wallet", "checkout_bank"):
-        return "    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };"
+        return "    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: authorizeResponse.error };"
     elif scenario.key == "refund":
-        return "    return { status: refundResponse.status };"
+        return "    return { status: refundResponse.status, error: refundResponse.error };"
     elif scenario.key == "recurring":
-        return "    return { status: recurringResponse.status, transactionId: recurringResponse.connectorTransactionId ?? '' };"
+        return "    return { status: recurringResponse.status, transactionId: recurringResponse.connectorTransactionId ?? '', error: recurringResponse.error };"
     elif scenario.key == "void_payment":
-        return "    return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId };"
+        return "    return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: voidResponse.error };"
     elif scenario.key == "get_payment":
-        return "    return { status: getResponse.status, transactionId: getResponse.connectorTransactionId };"
+        return "    return { status: getResponse.status, transactionId: getResponse.connectorTransactionId, error: getResponse.error };"
     elif scenario.key == "create_customer":
-        return "    return { customerId: createResponse.connectorCustomerId };"
+        return "    return { customerId: createResponse.connectorCustomerId, error: createResponse.error };"
     elif scenario.key == "tokenize":
-        return "    return { token: tokenizeResponse.paymentMethodToken };"
+        return "    return { token: tokenizeResponse.paymentMethodToken, error: tokenizeResponse.error };"
     elif scenario.key == "authentication":
-        return "    return { status: postAuthenticateResponse.status };"
+        return "    return { status: postAuthenticateResponse.status, error: postAuthenticateResponse.error };"
     return "    return {};"
 
 
@@ -1112,23 +1112,23 @@ def _scenario_step_kotlin(
 
 def _scenario_return_kotlin(scenario: "ScenarioSpec") -> str:
     if scenario.key == "checkout_card":
-        return '    return mapOf("status" to captureResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)'
+        return '    return mapOf("status" to captureResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)'
     elif scenario.key in ("checkout_autocapture", "checkout_wallet", "checkout_bank"):
-        return '    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)'
+        return '    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)'
     elif scenario.key == "refund":
-        return '    return mapOf("status" to refundResponse.status.name)'
+        return '    return mapOf("status" to refundResponse.status.name, "error" to refundResponse.error)'
     elif scenario.key == "recurring":
-        return '    return mapOf("status" to recurringResponse.status.name, "transactionId" to (recurringResponse.connectorTransactionId ?: ""))'
+        return '    return mapOf("status" to recurringResponse.status.name, "transactionId" to (recurringResponse.connectorTransactionId ?: ""), "error" to recurringResponse.error)'
     elif scenario.key == "void_payment":
-        return '    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)'
+        return '    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to voidResponse.error)'
     elif scenario.key == "get_payment":
-        return '    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId)'
+        return '    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId, "error" to getResponse.error)'
     elif scenario.key == "create_customer":
-        return '    return mapOf("customerId" to createResponse.connectorCustomerId)'
+        return '    return mapOf("customerId" to createResponse.connectorCustomerId, "error" to createResponse.error)'
     elif scenario.key == "tokenize":
-        return '    return mapOf("token" to tokenizeResponse.paymentMethodToken)'
+        return '    return mapOf("token" to tokenizeResponse.paymentMethodToken, "error" to tokenizeResponse.error)'
     elif scenario.key == "authentication":
-        return '    return mapOf("status" to postAuthenticateResponse.status.name)'
+        return '    return mapOf("status" to postAuthenticateResponse.status.name, "error" to postAuthenticateResponse.error)'
     return '    return mapOf()'
 
 
@@ -2962,7 +2962,7 @@ def render_consolidated_rust(
         func_blocks.append(
             f"// Scenario: {scenario.title}\n"
             f"// {scenario.description}\n"
-            f"pub async fn {process_scenario_key}(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+            f"pub async fn {process_scenario_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
             f"{body}\n"
             f"}}"
         )
@@ -2997,6 +2997,8 @@ def render_consolidated_rust(
             status_block = '    return Ok(format!("customer_id: {}", response.connector_customer_id));'
         elif flow_key in ("dispute_accept", "dispute_defend", "dispute_submit_evidence"):
             status_block = '    return Ok(format!("dispute_status: {:?}", response.dispute_status()));'
+        elif flow_key in ("create_access_token", "create_session_token"):
+            status_block = '    return Ok(format!("Session token obtained (statusCode={})", response.status_code));'
         else:
             status_block = '    return Ok(format!("status: {:?}", response.status()));'
 
@@ -3012,7 +3014,7 @@ def render_consolidated_rust(
             builder_call = f'build_{flow_key}_request("{default_val}")'
             func_blocks.append(
                 f"// Flow: {svc}.{rpc_name}{pm_part}\n"
-                f"pub async fn {flow_key}(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
+                f"pub async fn {flow_key}(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {{\n"
                 f"    let response = client.{flow_key}({builder_call}, &HashMap::new(), None).await?;\n"
                 f"{status_block}\n"
                 f"}}"

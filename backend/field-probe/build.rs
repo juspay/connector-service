@@ -21,7 +21,7 @@ fn main() {
     let flows = discover_flows_from_ffi();
     generate_flow_runners(&flows);
 
-    println!("cargo:warning=Discovered {} flows from FFI", flows.len());
+    println!("cargo:info=Discovered {} flows from FFI", flows.len());
 }
 
 #[derive(Debug, Clone)]

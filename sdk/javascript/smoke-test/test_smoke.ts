@@ -147,36 +147,15 @@ async function testConnectorScenarios(
         (result as any).error = `import error: ${e.message}`;
         return result;
     }
-    catch (e: any) {
-      if (e instanceof RequestError) {
-        result.roundTripTest = {
-          passed: true,
-          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
-        };
-        result.status = "passed_with_error";
-        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
-      } else if (e instanceof ResponseError) {
-        result.roundTripTest = {
-          passed: true,
-          error: e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e),
-        };
-        result.status = "passed_with_error";
-        result.error = e.errorMessage || `${types.PaymentStatus[e.status]}}` || String(e.statusCode) || String(e);
-      } else if (e instanceof NetworkError) {
-        result.roundTripTest = {
-          passed: true,
-          error: `${e.code}: ${e.message}`,
-        };
-        result.status = "passed_with_error";
-        result.error = `${e.code}: ${e.message}`;
-      } else {
-        result.roundTripTest = {
-          passed: true,
-          error: e.message || String(e),
-        };
-        result.status = "passed_with_error";
-        result.error = e.message || String(e);
-      }
+
+    // Discover exported process* functions in canonical scenario order
+    interface ScenarioFn { key: string; fn: Function }
+    const scenarioFns: ScenarioFn[] = [];
+    for (const name of SCENARIO_NAMES) {
+        const funcName = "process" + name.replace(/_([a-z])/g, (_, l) => l.toUpperCase()).replace(/^(.)/, c => c.toUpperCase());
+        if (typeof mod[funcName] === "function") {
+            scenarioFns.push({ key: name, fn: mod[funcName] });
+        }
     }
 
     if (scenarioFns.length === 0) {
@@ -194,9 +173,17 @@ async function testConnectorScenarios(
 
         try {
             const response = await processFn(txnId, config);
-            const summary = JSON.stringify(response);
-            console.log(_green("✓ ok") + _grey(` — ${summary}`));
-            result.scenarios[scenarioKey] = { passed: true, result: response };
+            
+            // Check if response contains error (connector returned error in response body)
+            if (response && response.error) {
+                const errorStr = JSON.stringify(response.error);
+                console.log(_yellow("~ connector error") + _grey(` — ${errorStr}`));
+                result.scenarios[scenarioKey] = { passed: true, connectorError: errorStr };
+            } else {
+                const summary = JSON.stringify(response);
+                console.log(_green("✓ ok") + _grey(` — ${summary}`));
+                result.scenarios[scenarioKey] = { passed: true, result: response };
+            }
         } catch (e: any) {
             const isConnectorError =
                 e instanceof (RequestError as any) || e instanceof (ResponseError as any) ||

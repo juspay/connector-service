@@ -69,13 +69,13 @@ fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidReque
 
 
 // Flow: PaymentService.Capture
-pub async fn capture(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.capture(build_capture_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }
 
 // Flow: PaymentService.Get
-pub async fn get(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }
@@ -109,13 +109,13 @@ pub async fn pre_authenticate(client: &ConnectorClient, merchant_transaction_id:
 }
 
 // Flow: PaymentService.Refund
-pub async fn refund(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }
 
 // Flow: PaymentService.Void
-pub async fn void(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }

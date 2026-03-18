@@ -3369,6 +3369,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperswitch-smoke-test"
+version = "0.1.0"
+dependencies = [
+ "grpc-api-types",
+ "hyperswitch-payments-client",
+ "hyperswitch_masking",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "hyperswitch_masking"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

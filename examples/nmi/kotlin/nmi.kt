@@ -114,7 +114,7 @@ fun processCheckoutCard(txnId: String, config: ConnectorConfig = _defaultConfig)
     if (captureResponse.status.name == "FAILED")
         throw RuntimeException("Capture failed: ${captureResponse.error.unifiedDetails.message}")
 
-    return mapOf("status" to captureResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to captureResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
 }
 
 // Scenario: Card Payment (Automatic Capture)
@@ -130,7 +130,7 @@ fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig = _default
         "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
     }
 
-    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
 }
 
 // Scenario: Bank Transfer (SEPA / ACH / BACS)
@@ -166,7 +166,7 @@ fun processCheckoutBank(txnId: String, config: ConnectorConfig = _defaultConfig)
         "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
     }
 
-    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
 }
 
 // Scenario: Refund a Payment
@@ -188,7 +188,7 @@ fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<
     if (refundResponse.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${refundResponse.error.unifiedDetails.message}")
 
-    return mapOf("status" to refundResponse.status.name)
+    return mapOf("status" to refundResponse.status.name, "error" to refundResponse.error)
 }
 
 // Scenario: Void a Payment
@@ -207,7 +207,7 @@ fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig):
     // Step 2: Void — release reserved funds (cancel authorization)
     val voidResponse = paymentClient.void(buildVoidRequest(authorizeResponse.connectorTransactionId ?: ""))
 
-    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to voidResponse.error)
 }
 
 // Scenario: Get Payment Status
@@ -226,7 +226,7 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     // Step 2: Get — retrieve current payment status from the connector
     val getResponse = paymentClient.get(buildGetRequest(authorizeResponse.connectorTransactionId ?: ""))
 
-    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId)
+    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId, "error" to getResponse.error)
 }
 
 // Flow: PaymentService.Authorize (Card)

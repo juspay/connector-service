@@ -12,7 +12,6 @@
  *   cargo run --bin hyperswitch-smoke-test -- --creds-file creds.json --connectors stripe,adyen
  *   cargo run --bin hyperswitch-smoke-test -- --creds-file creds.json --all --dry-run
  */
-
 mod build_auth;
 
 // Include the auto-generated connector modules (built by build.rs).

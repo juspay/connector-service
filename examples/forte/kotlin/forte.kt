@@ -83,7 +83,7 @@ fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig = _default
         "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
     }
 
-    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
 }
 
 // Scenario: Bank Transfer (SEPA / ACH / BACS)
@@ -120,7 +120,7 @@ fun processCheckoutBank(txnId: String, config: ConnectorConfig = _defaultConfig)
         "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
     }
 
-    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
 }
 
 // Scenario: Void a Payment
@@ -139,7 +139,7 @@ fun processVoidPayment(txnId: String, config: ConnectorConfig = _defaultConfig):
     // Step 2: Void — release reserved funds (cancel authorization)
     val voidResponse = paymentClient.void(buildVoidRequest(authorizeResponse.connectorTransactionId ?: ""))
 
-    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to voidResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to voidResponse.error)
 }
 
 // Scenario: Get Payment Status
@@ -158,7 +158,7 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     // Step 2: Get — retrieve current payment status from the connector
     val getResponse = paymentClient.get(buildGetRequest(authorizeResponse.connectorTransactionId ?: ""))
 
-    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId)
+    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId, "error" to getResponse.error)
 }
 
 // Flow: PaymentService.Authorize (Card)

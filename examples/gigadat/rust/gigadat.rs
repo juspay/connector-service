@@ -47,13 +47,13 @@ fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundR
 
 
 // Flow: PaymentService.Get
-pub async fn get(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }
 
 // Flow: PaymentService.Refund
-pub async fn refund(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }

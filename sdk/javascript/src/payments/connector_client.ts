@@ -141,24 +141,10 @@ export class ConnectorClient {
 
     // 6. Parse connector response via FFI and decode
     const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, optionsBytes);
-    const result = resType.decode(resultBytesRes) as any;
-
-    // Secondary check: connector error embedded in success proto's statusCode field.
-    // When a connector returns HTTP 4xx/5xx, the Rust transformer stores the HTTP
-    // status code in the success proto's statusCode field rather than returning a
-    // ResponseError proto. Mirror Python SDK's _check_res_error secondary check.
-    const sc: number = result.statusCode ?? 0;
-    if (sc >= 400) {
-      const errProto = v2.ResponseError.create({ statusCode: sc });
-      try {
-        const cd = result.error?.connectorDetails;
-        if (cd?.message) errProto.errorMessage = cd.message;
-        if (cd?.code) errProto.errorCode = cd.code;
-      } catch (_) {}
-      throw errProto;
-    }
-
-    return result;
+    // callRes returns FfiConnectorHttpResponse, extract domain response from body
+    const httpResponse = v2.FfiConnectorHttpResponse.decode(resultBytesRes);
+    // Convert to plain object with enum names as strings (not numbers)
+    return resType.toObject(resType.decode(httpResponse.body) as any, { enums: String });
   }
 
   /**

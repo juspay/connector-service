@@ -53,7 +53,7 @@ try:
         RequestError,
         ResponseError,
     )
-    from payments.generated.connector_service_ffi import UniffiError
+    from payments.generated.connector_service_ffi import InternalError
 except ImportError as e:
     print(f"Error importing payments package: {e}")
     print("Make sure the wheel is installed: pip install dist/hyperswitch_payments-*.whl")
@@ -213,9 +213,35 @@ async def test_connector_scenarios(
         print(f"    [{scenario_key}] running (txn={txn_id}) ...", flush=True)
         try:
             response = await process_fn(txn_id, config=config)
-            print(_green(f"    [{scenario_key}] OK") + f" — {response}", flush=True)
-            result["scenarios"][scenario_key] = {"passed": True, "result": response}
-        except (RequestError, ResponseError, UniffiError) as e:
+            # Check for error in response (works for both dict and protobuf objects)
+            error = None
+            if isinstance(response, dict):
+                error = response.get('error')
+            else:
+                error = getattr(response, 'error', None)
+            
+            # Check if error has meaningful content (not empty/default ErrorInfo)
+            error_str = str(error) if error else ""
+            # An error is "real" if it contains actual error details like code, message, or reason
+            has_error = error_str.strip() and (
+                'code:' in error_str or 
+                'message:' in error_str or 
+                'reason:' in error_str or
+                ('error' in error_str.lower() and len(error_str) > 50)  # Long error strings are likely real
+            )
+            
+            if has_error:
+                print(_yellow(f"    [{scenario_key}] connector error") + f" — {error_str}", flush=True)
+                result["scenarios"][scenario_key] = {"passed": True, "connector_error": error_str}
+            else:
+                # For display, show the actual response content
+                try:
+                    response_display = str(response)
+                except Exception:
+                    response_display = f"<{type(response).__name__}>"
+                print(_green(f"    [{scenario_key}] OK") + f" — {response_display}", flush=True)
+                result["scenarios"][scenario_key] = {"passed": True, "result": response}
+        except (RequestError, ResponseError, InternalError) as e:
             # Connector rejected our test data — SDK round-trip succeeded.
             # RequestError/ResponseError: FFI completed a full cycle, connector returned error.
             # UniffiError (e.g. HandlerError): FFI-level connector rejection before HTTP
@@ -231,7 +257,10 @@ async def test_connector_scenarios(
         except Exception as e:
             # Unexpected Python-level failure — import crash, serialization bug, etc.
             # This indicates a real SDK or example-file problem.
+            import traceback
+            tb = traceback.format_exc()
             print(_red(f"    [{scenario_key}] FAILED") + f" — {type(e).__name__}: {e}", flush=True)
+            print(f"    Traceback: {tb[:500]}", flush=True)  # Print first 500 chars of traceback
             result["scenarios"][scenario_key] = {
                 "passed": False,
                 "error": f"{type(e).__name__}: {e}",

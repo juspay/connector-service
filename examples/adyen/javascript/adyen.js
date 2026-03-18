@@ -98,7 +98,7 @@ async function processCheckoutCard(merchantTransactionId, config = _defaultConfi
         throw new Error(`Capture failed: ${captureResponse.error?.message}`);
     }
 
-    return { status: captureResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+    return { status: captureResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: authorizeResponse.error };
 }
 
 // Card Payment (Automatic Capture)
@@ -117,7 +117,7 @@ async function processCheckoutAutocapture(merchantTransactionId, config = _defau
         return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
     }
 
-    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: authorizeResponse.error };
 }
 
 // Wallet Payment (Google Pay / Apple Pay)
@@ -178,7 +178,7 @@ async function processCheckoutWallet(merchantTransactionId, config = _defaultCon
         return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
     }
 
-    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: authorizeResponse.error };
 }
 
 // Bank Transfer (SEPA / ACH / BACS)
@@ -217,7 +217,7 @@ async function processCheckoutBank(merchantTransactionId, config = _defaultConfi
         return { status: 'pending', transactionId: authorizeResponse.connectorTransactionId };
     }
 
-    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+    return { status: authorizeResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: authorizeResponse.error };
 }
 
 // Refund a Payment
@@ -252,7 +252,7 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
         throw new Error(`Refund failed: ${refundResponse.error?.message}`);
     }
 
-    return { status: refundResponse.status };
+    return { status: refundResponse.status, error: refundResponse.error };
 }
 
 // Recurring / Mandate Payments
@@ -328,7 +328,7 @@ async function processRecurring(merchantTransactionId, config = _defaultConfig) 
         throw new Error(`Recurring_Charge failed: ${recurringResponse.error?.message}`);
     }
 
-    return { status: recurringResponse.status, transactionId: recurringResponse.connectorTransactionId ?? '' };
+    return { status: recurringResponse.status, transactionId: recurringResponse.connectorTransactionId ?? '', error: recurringResponse.error };
 }
 
 // Void a Payment
@@ -350,7 +350,7 @@ async function processVoidPayment(merchantTransactionId, config = _defaultConfig
     // Step 2: Void — release reserved funds (cancel authorization)
     const voidResponse = await paymentClient.void(_buildVoidRequest(authorizeResponse.connectorTransactionId));
 
-    return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId };
+    return { status: voidResponse.status, transactionId: authorizeResponse.connectorTransactionId, error: voidResponse.error };
 }
 
 // Flow: PaymentService.Authorize (Card)

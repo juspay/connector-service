@@ -25,6 +25,7 @@
 #![allow(clippy::type_complexity)] // Complex types are fine
 #![allow(clippy::clone_on_copy)] // clone on Copy types is harmless
 #![allow(clippy::indexing_slicing)] // Byte-parsing loops have explicit bounds checks
+#![allow(unused_variables)]
 
 extern crate connector_service_ffi as ffi;
 

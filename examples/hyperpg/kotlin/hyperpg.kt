@@ -89,7 +89,7 @@ fun processCheckoutAutocapture(txnId: String, config: ConnectorConfig = _default
         "PENDING" -> return mapOf("status" to "PENDING")  // await webhook before proceeding
     }
 
-    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId)
+    return mapOf("status" to authorizeResponse.status.name, "transactionId" to authorizeResponse.connectorTransactionId, "error" to authorizeResponse.error)
 }
 
 // Scenario: Refund a Payment
@@ -111,7 +111,7 @@ fun processRefund(txnId: String, config: ConnectorConfig = _defaultConfig): Map<
     if (refundResponse.status.name == "FAILED")
         throw RuntimeException("Refund failed: ${refundResponse.error.unifiedDetails.message}")
 
-    return mapOf("status" to refundResponse.status.name)
+    return mapOf("status" to refundResponse.status.name, "error" to refundResponse.error)
 }
 
 // Scenario: Get Payment Status
@@ -130,7 +130,7 @@ fun processGetPayment(txnId: String, config: ConnectorConfig = _defaultConfig): 
     // Step 2: Get — retrieve current payment status from the connector
     val getResponse = paymentClient.get(buildGetRequest(authorizeResponse.connectorTransactionId ?: ""))
 
-    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId)
+    return mapOf("status" to getResponse.status.name, "transactionId" to getResponse.connectorTransactionId, "error" to getResponse.error)
 }
 
 // Flow: PaymentService.Authorize (Card)

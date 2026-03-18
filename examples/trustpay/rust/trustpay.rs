@@ -109,7 +109,7 @@ fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundR
 
 // Scenario: Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
-pub async fn process_checkout_autocapture(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn process_checkout_autocapture(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
 
@@ -124,7 +124,7 @@ pub async fn process_checkout_autocapture(client: &ConnectorClient, merchant_tra
 
 // Scenario: Refund a Payment
 // Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
-pub async fn process_refund(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn process_refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
 
@@ -146,7 +146,7 @@ pub async fn process_refund(client: &ConnectorClient, merchant_transaction_id: &
 
 // Scenario: Get Payment Status
 // Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
-pub async fn process_get_payment(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn process_get_payment(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Step 1: Authorize — reserve funds on the payment method
     let authorize_response = client.authorize(build_authorize_request("MANUAL"), &HashMap::new(), None).await?;
 
@@ -163,7 +163,7 @@ pub async fn process_get_payment(client: &ConnectorClient, merchant_transaction_
 }
 
 // Flow: PaymentService.Authorize (Card)
-pub async fn authorize(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
     match response.status() {
         PaymentStatus::Failure | PaymentStatus::AuthorizationFailed
@@ -178,7 +178,7 @@ pub async fn create_access_token(client: &ConnectorClient, merchant_transaction_
     let response = client.create_access_token(serde_json::from_value::<MerchantAuthenticationServiceCreateAccessTokenRequest>(serde_json::json!({
 
     })).unwrap_or_default(), &HashMap::new(), None).await?;
-    return Ok(format!("status: {:?}", response.status()));
+    return Ok(format!("Session token obtained (statusCode={})", response.status_code));
 }
 
 // Flow: PaymentService.CreateOrder
@@ -201,13 +201,13 @@ pub async fn create_order(client: &ConnectorClient, merchant_transaction_id: &st
 }
 
 // Flow: PaymentService.Get
-pub async fn get(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }
 
 // Flow: PaymentService.Refund
-pub async fn refund(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.refund(build_refund_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }

@@ -48,7 +48,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
 
 
 // Flow: PaymentService.Authorize (UpiCollect)
-pub async fn authorize(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
     match response.status() {
         PaymentStatus::Failure | PaymentStatus::AuthorizationFailed

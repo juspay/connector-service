@@ -28,34 +28,40 @@ fn main() {
 
     let mut modules: Vec<(String, Vec<(&'static str, &'static str)>)> = Vec::new();
 
-    if let Ok(entries) = fs::read_dir(&examples_dir) {
-        let mut entries: Vec<_> = entries.flatten().collect();
-        entries.sort_by_key(|e| e.file_name());
+    // Allow limiting connectors via environment variable for faster builds
+    // Usage: CONNECTORS=stripe,adyen cargo build
+    // Default to just 'stripe' for faster compilation during development
+    let allowed_connectors: Vec<String> = std::env::var("CONNECTORS")
+        .ok()
+        .map(|s| s.split(',').map(|s| s.trim().to_string()).collect())
+        .unwrap_or_else(|| vec!["stripe".to_string()]);
 
-        for entry in entries {
-            let name = entry.file_name().into_string().unwrap_or_default();
-            let rs_file = entry.path().join("rust").join(format!("{name}.rs"));
-            if !rs_file.exists() {
-                continue;
+    // Process only the allowed connectors directly (much faster than scanning all 75)
+    for connector_name in &allowed_connectors {
+        let rs_file = examples_dir
+            .join(connector_name)
+            .join("rust")
+            .join(format!("{connector_name}.rs"));
+
+        if !rs_file.exists() {
+            continue;
+        }
+
+        println!("cargo:rerun-if-changed={}", rs_file.display());
+
+        // Read the file to discover which process_* functions exist.
+        // Only include connectors that use `pub async fn` (regenerated with new sdk_snippets.py).
+        let content = fs::read_to_string(&rs_file).unwrap_or_default();
+        let mut present = Vec::new();
+        for (key, fn_name) in all_scenarios {
+            // Only match public async functions (regenerated files)
+            if content.contains(&format!("pub async fn {fn_name}(")) {
+                present.push((*key, *fn_name));
             }
+        }
 
-            println!("cargo:rerun-if-changed={}", rs_file.display());
-
-            // Read the file to discover which process_* functions exist.
-            // Only include connectors that use `pub async fn` (regenerated with new sdk_snippets.py).
-            // Old files without `pub` are skipped to avoid compile errors from private function access.
-            let content = fs::read_to_string(&rs_file).unwrap_or_default();
-            let mut present = Vec::new();
-            for (key, fn_name) in all_scenarios {
-                // Only match public async functions (regenerated files)
-                if content.contains(&format!("pub async fn {fn_name}(")) {
-                    present.push((*key, *fn_name));
-                }
-            }
-
-            if !present.is_empty() {
-                modules.push((name, present));
-            }
+        if !present.is_empty() {
+            modules.push((connector_name.clone(), present));
         }
     }
 

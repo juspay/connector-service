@@ -203,8 +203,19 @@ fun testConnectorScenarios(
         try {
             @Suppress("UNCHECKED_CAST")
             val response = method.invoke(null, txnId, config) as Map<String, Any?>
-            println(green("✓ ok") + grey(" — $response"))
-            result.scenarios[scenarioKey] = ScenarioResult(passed = true, result = response)
+            // Check if response contains error with actual data (not just empty/default ErrorInfo)
+            val error = response["error"]
+            val hasError = error != null && error.toString().let { 
+                it.isNotBlank() && it != "{}" && !it.matches(Regex("""\w+\s*\{\s*\}"""))
+            }
+            if (hasError) {
+                val errorStr = error.toString()
+                println(yellow("~ connector error") + grey(" — $errorStr"))
+                result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = errorStr)
+            } else {
+                println(green("✓ ok") + grey(" — $response"))
+                result.scenarios[scenarioKey] = ScenarioResult(passed = true, result = response)
+            }
         } catch (e: InvocationTargetException) {
             // Unwrap: InvocationTargetException wraps the real exception from the called method
             val cause = e.cause ?: e

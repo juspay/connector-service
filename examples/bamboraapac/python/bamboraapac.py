@@ -98,7 +98,7 @@ async def process_checkout_card(merchant_transaction_id: str, config: sdk_config
     if capture_response.status == "FAILED":
         raise RuntimeError(f"Capture failed: {capture_response.error}")
 
-    return {"status": capture_response.status, "transaction_id": authorize_response.connector_transaction_id}
+    return {"status": getattr(capture_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(capture_response, "error", None)}
 
 
 async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
@@ -117,7 +117,7 @@ async def process_checkout_autocapture(merchant_transaction_id: str, config: sdk
         # Awaiting async confirmation — handle via webhook
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
-    return {"status": authorize_response.status, "transaction_id": authorize_response.connector_transaction_id}
+    return {"status": getattr(authorize_response, "status", ""), "transaction_id": getattr(authorize_response, "connector_transaction_id", ""), "error": getattr(authorize_response, "error", None)}
 
 
 async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
@@ -154,7 +154,7 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
 
-    return {"status": refund_response.status}
+    return {"status": getattr(refund_response, "status", ""), "error": getattr(refund_response, "error", None)}
 
 
 async def process_recurring(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
@@ -223,7 +223,7 @@ async def process_recurring(merchant_transaction_id: str, config: sdk_config_pb2
     if recurring_response.status == "FAILED":
         raise RuntimeError(f"Recurring_Charge failed: {recurring_response.error}")
 
-    return {"status": recurring_response.status, "transaction_id": getattr(recurring_response, "connector_transaction_id", "")}
+    return {"status": getattr(recurring_response, "status", ""), "transaction_id": getattr(recurring_response, "connector_transaction_id", ""), "error": getattr(recurring_response, "error", None)}
 
 
 async def process_get_payment(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
@@ -245,7 +245,7 @@ async def process_get_payment(merchant_transaction_id: str, config: sdk_config_p
     # Step 2: Get — retrieve current payment status from the connector
     get_response = await payment_client.get(_build_get_request(authorize_response.connector_transaction_id))
 
-    return {"status": get_response.status, "transaction_id": get_response.connector_transaction_id}
+    return {"status": getattr(get_response, "status", ""), "transaction_id": getattr(get_response, "connector_transaction_id", ""), "error": getattr(get_response, "error", None)}
 
 
 async def authorize(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

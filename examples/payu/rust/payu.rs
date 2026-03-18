@@ -65,7 +65,7 @@ fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest
 
 
 // Flow: PaymentService.Authorize (UpiCollect)
-pub async fn authorize(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.authorize(build_authorize_request("AUTOMATIC"), &HashMap::new(), None).await?;
     match response.status() {
         PaymentStatus::Failure | PaymentStatus::AuthorizationFailed
@@ -76,7 +76,7 @@ pub async fn authorize(client: &ConnectorClient, merchant_transaction_id: &str) 
 }
 
 // Flow: PaymentService.Get
-pub async fn get(client: &ConnectorClient, merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     return Ok(format!("status: {:?}", response.status()));
 }
