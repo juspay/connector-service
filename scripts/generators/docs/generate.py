@@ -13,7 +13,7 @@ Usage:
 How it works:
   1. Loads probe data from data/field_probe/{connector}.json
   2. All content is derived exclusively from probe data — no manual annotation files
-  3. Outputs docs/connectors/{name}.md
+  3. Outputs docs-generated/connectors/{name}.md
 
 To add docs for a new connector:
   - Run field-probe to generate probe data: cd backend/field-probe && cargo r
@@ -218,7 +218,7 @@ def _probe_samples_for_flow(probe_connector: dict, flow_key: str) -> list[tuple[
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
 REPO_ROOT       = Path(__file__).parent.parent.parent.parent
-DOCS_DIR     = REPO_ROOT / "docs/connectors"
+DOCS_DIR     = REPO_ROOT / "docs-generated/connectors"
 EXAMPLES_DIR = REPO_ROOT / "examples"
 PROTO_DIR    = REPO_ROOT / "backend/grpc-api-types/proto"
 
@@ -564,9 +564,9 @@ def generate_llms_txt(probe_data: dict[str, dict], docs_dir: Path) -> None:
         "",
         "overview:",
         f"  total_connectors: {len(probe_data)}",
-        "  docs_root: docs/connectors/",
+        "  docs_root: docs-generated/connectors/",
         "  examples_root: examples/",
-        "  all_connectors_matrix: docs/all_connector.md",
+        "  all_connectors_matrix: docs-generated/all_connector.md",
         "",
         "integration_pattern:",
         "  1. Configure ConnectorConfig with connector name and credentials",
@@ -1325,7 +1325,7 @@ def main():
         "--output-dir",
         type=Path,
         default=DOCS_DIR,
-        help="Output directory for generated docs (default: docs/connectors)"
+        help="Output directory for generated docs (default: docs-generated/connectors)"
     )
     
     args = parser.parse_args()
