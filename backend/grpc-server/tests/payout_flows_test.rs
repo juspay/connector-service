@@ -54,8 +54,6 @@ async fn test_payout_create_client_basic() {
         // Send the create payout request using the client
         let response = client.create(request).await;
 
-        println!("cur********* {:?}", response);
-
         // We expect this to execute without panicking and return some form of response (even if it's an error).
         // This confirms the gRPC wiring for PayoutService is intact.
         assert!(response.is_err() || response.is_ok());
