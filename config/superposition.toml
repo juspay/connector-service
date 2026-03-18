@@ -301,7 +301,7 @@ connector_base_url = "https://staging.ptranz.com/api"
 # Revolut
 [[overrides]]
 _context_ = { connector = "revolut" }
-connector_base_url = "https://sandbox-oba-auth.revolut.com/"
+connector_base_url = "https://sandbox-merchant.revolut.com/"
 
 # Airwallex
 [[overrides]]
@@ -388,6 +388,8 @@ connector_base_url = "https://apis.sandbox.globalpay.com/ucp"
 [[overrides]]
 _context_ = { connector = "fiuu" }
 connector_base_url = "https://sandbox.merchant.razer.com/"
+connector_secondary_base_url = "https://sandbox.merchant.razer.com/"
+connector_third_base_url = "https://api.merchant.razer.com/"
 
 # Payload
 [[overrides]]
@@ -585,9 +587,9 @@ connector_base_url = "https://gateway.transit-pass.com/"
 # Revolut Production
 [[overrides]]
 _context_ = { connector = "revolut", environment = "production" }
-connector_base_url = "https://oba-auth.revolut.com/"
+connector_base_url = "https://merchant.revolut.com/"
 
-# Revolut Development (different from sandbox)
+# Revolut Development
 [[overrides]]
 _context_ = { connector = "revolut", environment = "development" }
 connector_base_url = "https://sandbox-merchant.revolut.com/"
@@ -646,6 +648,8 @@ connector_base_url = "https://apis.globalpay.com/ucp"
 [[overrides]]
 _context_ = { connector = "fiuu", environment = "production" }
 connector_base_url = "https://pay.merchant.razer.com/"
+connector_secondary_base_url = "https://api.merchant.razer.com/"
+connector_third_base_url = "https://api.merchant.razer.com/"
 
 # CashToCode Production
 [[overrides]]

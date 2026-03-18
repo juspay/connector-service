@@ -7,6 +7,12 @@ use serde_json::{Map, Value};
 use std::collections::HashMap;
 use superposition_core::{eval_config, parse_toml_config, Config, MergeStrategy};
 
+use crate::consts::{
+    CONFIG_KEY_CONNECTOR_BASE_URL, CONFIG_KEY_CONNECTOR_BASE_URL_BANK_REDIRECTS,
+    CONFIG_KEY_CONNECTOR_DISPUTE_BASE_URL, CONFIG_KEY_CONNECTOR_SECONDARY_BASE_URL,
+    CONFIG_KEY_CONNECTOR_THIRD_BASE_URL, DIMENSION_CONNECTOR, DIMENSION_ENVIRONMENT,
+};
+
 /// Error type for superposition configuration operations
 #[derive(Debug, thiserror::Error)]
 pub enum SuperpositionConfigError {
@@ -60,30 +66,30 @@ impl SuperpositionConfig {
     ///
     /// # Arguments
     /// * `connector` - The connector name (e.g., "stripe", "adyen")
-    /// * `environment` - Optional environment name (e.g., "production", "sandbox")
+    /// * `environment` - The environment name (e.g., "production", "sandbox", "development")
     ///
     /// # Returns
     /// A HashMap of configuration keys to their resolved values.
-    /// If `environment` is None, only the connector dimension is used for resolution.
     ///
     /// # Example
     /// ```ignore
-    /// let resolved = config.resolve("stripe", Some("production"))?;
+    /// let resolved = config.resolve("stripe", "production")?;
     /// let base_url = resolved.get("connector_base_url").and_then(|v| v.as_str());
     /// ```
     pub fn resolve(
         &self,
         connector: &str,
-        environment: Option<&str>,
+        environment: &str,
     ) -> Result<HashMap<String, Value>, SuperpositionConfigError> {
         let mut dims: Map<String, Value> = Map::new();
         dims.insert(
-            "connector".to_string(),
+            DIMENSION_CONNECTOR.to_string(),
             Value::String(connector.to_string()),
         );
-        if let Some(env) = environment {
-            dims.insert("environment".to_string(), Value::String(env.to_string()));
-        }
+        dims.insert(
+            DIMENSION_ENVIRONMENT.to_string(),
+            Value::String(environment.to_string()),
+        );
 
         let default_configs = self.config.default_configs.clone().into_inner();
 
@@ -101,26 +107,24 @@ impl SuperpositionConfig {
     }
 }
 
-/// Helper function to extract a string value from the resolved configuration
-pub fn get_string(resolved: &HashMap<String, Value>, key: &str) -> String {
+/// Helper function to extract a string value from the resolved configuration.
+///
+/// Returns `Some(String)` if the key exists and the value is a string, `None` otherwise.
+pub fn get_string(resolved: &HashMap<String, Value>, key: &str) -> Option<String> {
     resolved
         .get(key)
         .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string()
+        .map(|s| s.to_string())
 }
 
-/// Helper function to extract an optional non-empty string from the resolved configuration
+/// Helper function to extract an optional non-empty string from the resolved configuration.
+///
+/// Returns `Some(String)` if the key exists, is a string, and is non-empty; `None` otherwise.
 pub fn get_optional_nonempty_string(
     resolved: &HashMap<String, Value>,
     key: &str,
 ) -> Option<String> {
-    let value = get_string(resolved, key);
-    if value.is_empty() {
-        None
-    } else {
-        Some(value)
-    }
+    get_string(resolved, key).filter(|s| !s.is_empty())
 }
 
 /// Container for resolved connector URLs from superposition configuration
@@ -153,13 +157,19 @@ pub struct ConnectorUrls {
 /// ```
 pub fn get_connector_urls(resolved: &HashMap<String, Value>) -> ConnectorUrls {
     ConnectorUrls {
-        base_url: get_optional_nonempty_string(resolved, "connector_base_url"),
-        dispute_base_url: get_optional_nonempty_string(resolved, "connector_dispute_base_url"),
-        secondary_base_url: get_optional_nonempty_string(resolved, "connector_secondary_base_url"),
-        third_base_url: get_optional_nonempty_string(resolved, "connector_third_base_url"),
+        base_url: get_optional_nonempty_string(resolved, CONFIG_KEY_CONNECTOR_BASE_URL),
+        dispute_base_url: get_optional_nonempty_string(
+            resolved,
+            CONFIG_KEY_CONNECTOR_DISPUTE_BASE_URL,
+        ),
+        secondary_base_url: get_optional_nonempty_string(
+            resolved,
+            CONFIG_KEY_CONNECTOR_SECONDARY_BASE_URL,
+        ),
+        third_base_url: get_optional_nonempty_string(resolved, CONFIG_KEY_CONNECTOR_THIRD_BASE_URL),
         base_url_bank_redirects: get_optional_nonempty_string(
             resolved,
-            "connector_base_url_bank_redirects",
+            CONFIG_KEY_CONNECTOR_BASE_URL_BANK_REDIRECTS,
         ),
     }
 }
@@ -169,13 +179,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_string_returns_empty_for_missing_key() {
+    fn test_get_string_returns_none_for_missing_key() {
         let resolved = HashMap::new();
-        assert_eq!(get_string(&resolved, "missing_key"), "");
+        assert_eq!(get_string(&resolved, "missing_key"), None);
     }
 
     #[test]
-    fn test_get_string_returns_value() {
+    fn test_get_string_returns_some_for_value() {
         let mut resolved = HashMap::new();
         resolved.insert(
             "connector_base_url".to_string(),
@@ -183,7 +193,7 @@ mod tests {
         );
         assert_eq!(
             get_string(&resolved, "connector_base_url"),
-            "https://api.example.com/"
+            Some("https://api.example.com/".to_string())
         );
     }
 

@@ -709,7 +709,7 @@ impl Payments {
         let effective_environment = metadata_payload
             .environment
             .as_deref()
-            .or(Some(server_env.as_str()));
+            .unwrap_or(server_env.as_str());
 
         let base_connectors = if let Some(urls) = utils::resolve_connector_urls(
             config.superposition_config.as_ref().map(|arc| arc.as_ref()),
@@ -1594,7 +1594,7 @@ impl PaymentService for Payments {
                     let effective_environment = metadata_payload
                         .environment
                         .as_deref()
-                        .or(Some(server_env.as_str()));
+                        .unwrap_or(server_env.as_str());
 
                     let base_connectors = if let Some(urls) = utils::resolve_connector_urls(
                         config.superposition_config.as_ref().map(|arc| arc.as_ref()),

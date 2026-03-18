@@ -170,6 +170,30 @@ pub const CONST_DEVELOPMENT: &str = "development";
 pub const CONST_PRODUCTION: &str = "production";
 
 // =============================================================================
+// Superposition Dimensions
+// =============================================================================
+
+/// Dimension key for connector in superposition config
+pub const DIMENSION_CONNECTOR: &str = "connector";
+/// Dimension key for environment in superposition config
+pub const DIMENSION_ENVIRONMENT: &str = "environment";
+
+// =============================================================================
+// Superposition Config Keys
+// =============================================================================
+
+/// Config key for connector base URL
+pub const CONFIG_KEY_CONNECTOR_BASE_URL: &str = "connector_base_url";
+/// Config key for connector dispute base URL
+pub const CONFIG_KEY_CONNECTOR_DISPUTE_BASE_URL: &str = "connector_dispute_base_url";
+/// Config key for connector secondary base URL
+pub const CONFIG_KEY_CONNECTOR_SECONDARY_BASE_URL: &str = "connector_secondary_base_url";
+/// Config key for connector third base URL
+pub const CONFIG_KEY_CONNECTOR_THIRD_BASE_URL: &str = "connector_third_base_url";
+/// Config key for connector bank redirects base URL
+pub const CONFIG_KEY_CONNECTOR_BASE_URL_BANK_REDIRECTS: &str = "connector_base_url_bank_redirects";
+
+// =============================================================================
 // Environment and Configuration
 // =============================================================================
 

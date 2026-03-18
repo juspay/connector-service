@@ -64,7 +64,7 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
 /// # Arguments
 /// * `superposition_config` - Optional reference to the loaded superposition configuration
 /// * `connector` - The connector name (e.g., "stripe", "adyen")
-/// * `environment` - Optional environment dimension (e.g., "production", "sandbox")
+/// * `environment` - The environment dimension (e.g., "production", "sandbox", "development")
 ///
 /// # Returns
 /// * `Some(ConnectorUrls)` - Successfully resolved URLs from superposition
@@ -75,13 +75,13 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
 /// let urls = resolve_connector_urls(
 ///     config.superposition_config.as_ref(),
 ///     &metadata_payload.connector,
-///     metadata_payload.environment.as_deref(),
+///     "production",
 /// );
 /// ```
 pub fn resolve_connector_urls(
     superposition_config: Option<&SuperpositionConfig>,
     connector: &connector_types::ConnectorEnum,
-    environment: Option<&str>,
+    environment: &str,
 ) -> Option<ConnectorUrls> {
     let config = superposition_config?;
 
@@ -528,7 +528,7 @@ macro_rules! implement_connector_operation {
             // Use header environment if provided, otherwise fall back to server's environment
             let server_env = config.common.environment.to_string();
             let effective_environment = metadata_payload.environment.as_deref()
-                .or(Some(server_env.as_str()));
+                .unwrap_or(server_env.as_str());
 
             let connectors = if let Some(urls) = $crate::utils::resolve_connector_urls(
                 config.superposition_config.as_ref().map(|arc| arc.as_ref()),
