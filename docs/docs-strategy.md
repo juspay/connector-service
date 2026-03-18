@@ -13,7 +13,7 @@ Become the **"Linux for Payments"** — a universal standard that makes payment 
 ## Overview
 
 
-Documentation is split into two distinct folders withing the juspay/connector-service repo:
+Documentation is split into two distinct folders within the juspay/connector-service repo:
 - **`/docs`** - Handwritten, curated content that explains concepts, provides guidance, and offers insights
 - **`/docs-generated`** - Auto-generated from code (API references, type definitions, SDK documentation)
 
