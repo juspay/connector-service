@@ -2655,13 +2655,7 @@ impl<
                         error_object: None,
                     })
                 })?,
-            )
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data construction failed".to_owned(),
-                error_object: None,
-            }))?,
+            )?,
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             confirm: true,
@@ -3346,7 +3340,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             minor_amount_captured: None,
             minor_amount_capturable: None,
             access_token,
-            session_token: None,
+            session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
             payment_method_token: value
                 .payment_method_token
@@ -8977,7 +8971,7 @@ impl
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: value.customer.unwrap().id,
+            connector_customer: value.customer.and_then(|c| c.id),
             description: None,
             return_url: value.return_url,
             connector_feature_data: None,
@@ -9289,13 +9283,7 @@ impl<
         let payment_method_data = value
             .payment_method
             .map(PaymentMethodData::<T>::foreign_try_from)
-            .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data construction failed".to_owned(),
-                error_object: None,
-            }))?
+            .transpose()?
             .unwrap_or(PaymentMethodData::MandatePayment);
 
         let billing_descriptor =
@@ -10213,13 +10201,7 @@ impl<
             payment_method_data: value
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .transpose()?,
             amount: amount.amount,
             currency: Some(amount.currency),
             email,
@@ -10339,13 +10321,7 @@ impl<
             payment_method_data: value
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .transpose()?,
             amount: amount.amount,
             email,
             currency: Some(amount.currency),
@@ -10468,13 +10444,7 @@ impl<
             payment_method_data: value
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .transpose()?,
             amount: amount.amount,
             currency: Some(amount.currency),
             email,

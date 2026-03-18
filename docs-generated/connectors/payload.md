@@ -3,54 +3,106 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/payload.json
-Regenerate: python3 scripts/generate-connector-docs.py payload
+Regenerate: python3 scripts/generators/docs/generate.py payload
 -->
 
-## Implemented Flows
+## SDK Configuration
+
+Use this config for all flows in this connector. Replace `YOUR_API_KEY` with your actual credentials.
+
+<table>
+<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
+<tr>
+<td valign="top">
+
+<details><summary>Python</summary>
+
+```python
+from payments.generated import sdk_config_pb2, payment_pb2
+
+config = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
+)
+# Set credentials before running (field names depend on connector auth type):
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     payload=payment_pb2.PayloadConfig(api_key=...),
+# ))
+
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>JavaScript</summary>
+
+```javascript
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+// Reuse this client for all flows
+const client = new ConnectorClient({
+    connector: 'Payload',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Kotlin</summary>
+
+```kotlin
+val config = ConnectorConfig.newBuilder()
+    .setConnector("Payload")
+    .setEnvironment(Environment.SANDBOX)
+    .setAuth(
+        ConnectorAuthType.newBuilder()
+            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
+    )
+    .build()
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Rust</summary>
+
+```rust
+use connector_service_sdk::{ConnectorClient, ConnectorConfig};
+
+let config = ConnectorConfig {
+    connector: "Payload".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
+    ..Default::default()
+};
+```
+
+</details>
+
+</td>
+</tr>
+</table>
+
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
 | [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
-| [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-## Flow Details
-
 ### Payments
-
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
-
-**Supported payment method types:**
-
-| Payment Method | Supported |
-|----------------|:---------:|
-| Card | — |
-| Google Pay | — |
-| Apple Pay | — |
-| SEPA | — |
-| BACS | — |
-| ACH | — |
-| BECS | — |
-| iDEAL | — |
-| PayPal | — |
-| BLIK | — |
-| Klarna | — |
-| Afterpay | — |
-| UPI | — |
-| Affirm | — |
-
-<!-- TODO: Add sample payload for `authorize` in `scripts/connector-annotations/payload.yaml` -->
 
 #### PaymentService.Capture
 
@@ -61,7 +113,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-<!-- TODO: Add sample payload for `capture` in `scripts/connector-annotations/payload.yaml` -->
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L101) · [Rust](../../examples/payload/rust/payload.rs#L97)
 
 #### PaymentService.Get
 
@@ -72,7 +124,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-<!-- TODO: Add sample payload for `get` in `scripts/connector-annotations/payload.yaml` -->
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L111) · [Rust](../../examples/payload/rust/payload.rs#L104)
 
 #### PaymentService.Refund
 
@@ -83,18 +135,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-<!-- TODO: Add sample payload for `refund` in `scripts/connector-annotations/payload.yaml` -->
-
-#### PaymentService.SetupRecurring
-
-Setup a recurring payment instruction for future payments/ debits. This could be for SaaS subscriptions, monthly bill payments, insurance payments and similar use cases.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceSetupRecurringRequest` |
-| **Response** | `PaymentServiceSetupRecurringResponse` |
-
-<!-- TODO: Add sample payload for `setup_recurring` in `scripts/connector-annotations/payload.yaml` -->
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L155) · [Rust](../../examples/payload/rust/payload.rs#L144)
 
 #### PaymentService.Void
 
@@ -105,7 +146,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-<!-- TODO: Add sample payload for `void` in `scripts/connector-annotations/payload.yaml` -->
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L165) · [Rust](../../examples/payload/rust/payload.rs#L151)
 
 ### Mandates
 
@@ -118,4 +159,4 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-<!-- TODO: Add sample payload for `recurring_charge` in `scripts/connector-annotations/payload.yaml` -->
+**Examples:** [Python](../../examples/payload/python/payload.py) · [JavaScript](../../examples/payload/javascript/payload.js) · [Kotlin](../../examples/payload/kotlin/payload.kt#L119) · [Rust](../../examples/payload/rust/payload.rs#L111)

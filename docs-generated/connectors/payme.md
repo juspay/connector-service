@@ -3,40 +3,106 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/payme.json
-Regenerate: python3 scripts/generate-connector-docs.py payme
+Regenerate: python3 scripts/generators/docs/generate.py payme
 -->
 
-## Implemented Flows
+## SDK Configuration
+
+Use this config for all flows in this connector. Replace `YOUR_API_KEY` with your actual credentials.
+
+<table>
+<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
+<tr>
+<td valign="top">
+
+<details><summary>Python</summary>
+
+```python
+from payments.generated import sdk_config_pb2, payment_pb2
+
+config = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
+)
+# Set credentials before running (field names depend on connector auth type):
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     payme=payment_pb2.PaymeConfig(api_key=...),
+# ))
+
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>JavaScript</summary>
+
+```javascript
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+// Reuse this client for all flows
+const client = new ConnectorClient({
+    connector: 'Payme',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Kotlin</summary>
+
+```kotlin
+val config = ConnectorConfig.newBuilder()
+    .setConnector("Payme")
+    .setEnvironment(Environment.SANDBOX)
+    .setAuth(
+        ConnectorAuthType.newBuilder()
+            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
+    )
+    .build()
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Rust</summary>
+
+```rust
+use connector_service_sdk::{ConnectorClient, ConnectorConfig};
+
+let config = ConnectorConfig {
+    connector: "Payme".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
+    ..Default::default()
+};
+```
+
+</details>
+
+</td>
+</tr>
+</table>
+
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
 | [PaymentService.CreateOrder](#paymentservicecreateorder) | Payments | `PaymentServiceCreateOrderRequest` |
 | [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
 
-## Flow Details
-
 ### Payments
-
-#### PaymentService.Authorize
-
-Authorize a payment amount on a payment method. This reserves funds without capturing them, essential for verifying availability before finalizing.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceAuthorizeRequest` |
-| **Response** | `PaymentServiceAuthorizeResponse` |
-
-**Supported payment method types:**
-
-| Payment Method | Supported |
-|----------------|:---------:|
-| Card | — |
-
-<!-- TODO: Add sample payload for `authorize` in `scripts/connector-annotations/payme.yaml` -->
 
 #### PaymentService.Capture
 
@@ -47,18 +113,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_capture_id": "probe_capture_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount_to_capture": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L75) · [Rust](../../examples/payme/rust/payme.rs#L73)
 
 #### PaymentService.CreateOrder
 
@@ -69,17 +124,7 @@ Initialize an order in the payment processor system. Sets up payment context bef
 | **Request** | `PaymentServiceCreateOrderRequest` |
 | **Response** | `PaymentServiceCreateOrderResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_order_id": "probe_order_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L85) · [Rust](../../examples/payme/rust/payme.rs#L80)
 
 #### PaymentService.Get
 
@@ -90,17 +135,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L99) · [Rust](../../examples/payme/rust/payme.rs#L93)
 
 #### PaymentService.Refund
 
@@ -111,20 +146,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_refund_id": "probe_refund_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "payment_amount": 1000,
-  "refund_amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "reason": "customer_request"
-}
-```
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L107) · [Rust](../../examples/payme/rust/payme.rs#L100)
 
 #### PaymentService.Void
 
@@ -135,15 +157,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_void_id": "probe_void_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+**Examples:** [Python](../../examples/payme/python/payme.py) · [JavaScript](../../examples/payme/javascript/payme.js) · [Kotlin](../../examples/payme/kotlin/payme.kt#L117) · [Rust](../../examples/payme/rust/payme.rs#L107)

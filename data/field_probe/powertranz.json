@@ -1,7 +1,44 @@
 {
   "connector": "powertranz",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -20,68 +57,55 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://staging.ptranz.com/api/sale",
           "method": "Post",
           "headers": {
-            "powertranz-powertranzpassword": "probe_pass",
-            "powertranz-powertranzid": "probe_id",
             "content-type": "application/json",
+            "powertranz-powertranzid": "probe_id",
+            "powertranz-powertranzpassword": "probe_pass",
             "via": "HyperSwitch"
           },
-          "body": "{\"TransactionIdentifier\":\"1becb7f1-f9c9-41f8-9e62-23e478305108\",\"TotalAmount\":10.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"4111111111111111\",\"CardCvv\":\"737\",\"CardExpiration\":\"3003\"},\"OrderIdentifier\":\"probe_txn_001\",\"ExtendedData\":null}"
+          "body": "{\"TransactionIdentifier\":\"00000000-0000-0000-0000-000000000000\",\"TotalAmount\":10.0,\"CurrencyCode\":\"840\",\"ThreeDSecure\":false,\"Source\":{\"CardholderName\":\"John Doe\",\"CardPan\":\"4111111111111111\",\"CardCvv\":\"737\",\"CardExpiration\":\"3003\"},\"OrderIdentifier\":\"probe_txn_001\",\"ExtendedData\":null}"
         }
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by powertranz"
       }
     },
     "capture": {
@@ -99,19 +123,55 @@
           "url": "https://staging.ptranz.com/api/capture",
           "method": "Post",
           "headers": {
-            "powertranz-powertranzpassword": "probe_pass",
+            "content-type": "application/json",
             "powertranz-powertranzid": "probe_id",
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "powertranz-powertranzpassword": "probe_pass",
+            "via": "HyperSwitch"
           },
           "body": "{\"TransactionIdentifier\":\"probe_connector_txn_001\",\"TotalAmount\":10.0,\"Refund\":null}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -123,12 +183,27 @@
           "method": "Get",
           "headers": {
             "content-type": "application/json",
+            "powertranz-powertranzid": "probe_id",
             "powertranz-powertranzpassword": "probe_pass",
-            "via": "HyperSwitch",
-            "powertranz-powertranzid": "probe_id"
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -148,13 +223,28 @@
           "url": "https://staging.ptranz.com/api/refund",
           "method": "Post",
           "headers": {
+            "content-type": "application/json",
             "powertranz-powertranzid": "probe_id",
-            "via": "HyperSwitch",
             "powertranz-powertranzpassword": "probe_pass",
-            "content-type": "application/json"
+            "via": "HyperSwitch"
           },
           "body": "{\"TransactionIdentifier\":\"probe_connector_txn_001\",\"TotalAmount\":10.0,\"Refund\":true}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {
@@ -169,9 +259,9 @@
           "method": "Post",
           "headers": {
             "content-type": "application/json",
-            "via": "HyperSwitch",
             "powertranz-powertranzid": "probe_id",
-            "powertranz-powertranzpassword": "probe_pass"
+            "powertranz-powertranzpassword": "probe_pass",
+            "via": "HyperSwitch"
           },
           "body": "{\"TransactionIdentifier\":\"probe_connector_txn_001\",\"TotalAmount\":null,\"Refund\":null}"
         }

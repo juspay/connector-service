@@ -659,7 +659,9 @@ fn create_regular_transaction_request<
                 }
             }
         }
-        _ => Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),
+        pm => Err(error_stack::report!(ConnectorError::NotImplemented(
+            format!("Payment method {:?}", pm)
+        ))),
     }?;
 
     let transaction_type = match item.router_data.request.capture_method {
@@ -851,9 +853,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let merchant_authentication =
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_config)?;
 
-        let currency_str = item.router_data.request.currency.to_string();
-        let currency = api_enums::Currency::from_str(&currency_str)
-            .map_err(|_| error_stack::report!(ConnectorError::RequestEncodingFailed))?;
+        let currency = item.router_data.request.currency;
 
         // Handle different mandate reference types with appropriate MIT structures
         let (profile, processing_options, subsequent_auth_information) =
@@ -2686,7 +2686,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
         let ccard = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
-            _ => return Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),
+            pm => {
+                return Err(error_stack::report!(ConnectorError::NotImplemented(
+                    format!("Payment method {:?}", pm)
+                )))
+            }
         };
 
         let merchant_authentication =

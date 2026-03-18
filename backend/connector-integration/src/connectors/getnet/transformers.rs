@@ -228,7 +228,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             .clone()
             .or_else(|| item.resource_common_data.get_optional_billing_full_name())
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_holder_name",
+                field_name: "payment_method.card.card_holder_name",
             })?;
 
         let card = GetnetCard {

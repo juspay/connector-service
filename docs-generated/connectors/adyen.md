@@ -3,46 +3,193 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/adyen.json
-Regenerate: python3 scripts/generate-connector-docs.py adyen
+Regenerate: python3 scripts/generators/docs/generate.py adyen
 -->
 
-## Overview
+## SDK Configuration
 
-Adyen is a global payment platform supporting 250+ payment methods across 40+ currencies.
-It operates at PCI DSS Level 1 and supports advanced fraud detection via RevenueProtect.
+Use this config for all flows in this connector. Replace `YOUR_API_KEY` with your actual credentials.
 
-| Attribute | Value |
-|-----------|-------|
-| Connector ID | `ADYEN` |
-| Regions | Global |
-| Currencies | 40+ |
-| API | Adyen Checkout API v69+ |
-| Amount Format | Minor units (cents) |
+<table>
+<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
+<tr>
+<td valign="top">
 
-## Required Credentials
+<details><summary>Python</summary>
 
-| Field | Description |
-|-------|-------------|
-| `api_key` | Adyen API Key (`AQE...`) |
-| `merchant_account` | Adyen Merchant Account name (e.g. `YourCompanyECOM`) |
-| `hmac_key` | HMAC key for webhook notification verification |
+```python
+from payments.generated import sdk_config_pb2, payment_pb2
 
-## Implemented Flows
+config = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
+)
+# Set credentials before running (field names depend on connector auth type):
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     adyen=payment_pb2.AdyenConfig(api_key=...),
+# ))
+
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>JavaScript</summary>
+
+```javascript
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+// Reuse this client for all flows
+const client = new ConnectorClient({
+    connector: 'Adyen',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Kotlin</summary>
+
+```kotlin
+val config = ConnectorConfig.newBuilder()
+    .setConnector("Adyen")
+    .setEnvironment(Environment.SANDBOX)
+    .setAuth(
+        ConnectorAuthType.newBuilder()
+            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
+    )
+    .build()
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Rust</summary>
+
+```rust
+use connector_service_sdk::{ConnectorClient, ConnectorConfig};
+
+let config = ConnectorConfig {
+    connector: "Adyen".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
+    ..Default::default()
+};
+```
+
+</details>
+
+</td>
+</tr>
+</table>
+
+## Integration Scenarios
+
+Complete, runnable examples for common integration patterns. Each example shows the full flow with status handling. Copy-paste into your app and replace placeholder values.
+
+### Card Payment (Authorize + Capture)
+
+Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L89) · [JavaScript](../../examples/adyen/javascript/adyen.js#L80) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L111) · [Rust](../../examples/adyen/rust/adyen.rs#L100)
+
+### Card Payment (Automatic Capture)
+
+Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L114) · [JavaScript](../../examples/adyen/javascript/adyen.js#L106) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L133) · [Rust](../../examples/adyen/rust/adyen.rs#L123)
+
+### Wallet Payment (Google Pay / Apple Pay)
+
+Wallet payments pass an encrypted token from the browser/device SDK. Pass the token blob directly — do not decrypt client-side.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L133) · [JavaScript](../../examples/adyen/javascript/adyen.js#L125) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L149) · [Rust](../../examples/adyen/rust/adyen.rs#L139)
+
+### Bank Transfer (SEPA / ACH / BACS)
+
+Direct bank debit (Sepa). Bank transfers typically use `capture_method=AUTOMATIC`.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L197) · [JavaScript](../../examples/adyen/javascript/adyen.js#L186) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L207) · [Rust](../../examples/adyen/rust/adyen.rs#L199)
+
+### Refund a Payment
+
+Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L239) · [JavaScript](../../examples/adyen/javascript/adyen.js#L225) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L243) · [Rust](../../examples/adyen/rust/adyen.rs#L237)
+
+### Recurring / Mandate Payments
+
+Store a payment mandate with SetupRecurring, then charge it repeatedly with RecurringPaymentService.Charge without requiring customer action.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
+| `FAILED` | Setup failed — customer must re-enter payment details |
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L276) · [JavaScript](../../examples/adyen/javascript/adyen.js#L260) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L265) · [Rust](../../examples/adyen/rust/adyen.rs#L260)
+
+### Void a Payment
+
+Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L361) · [JavaScript](../../examples/adyen/javascript/adyen.js#L336) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L343) · [Rust](../../examples/adyen/rust/adyen.rs#L336)
+
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
-| [accept_dispute](#accept_dispute) | Other | `—` |
 | [PaymentService.Authorize](#paymentserviceauthorize) | Payments | `PaymentServiceAuthorizeRequest` |
 | [PaymentService.Capture](#paymentservicecapture) | Payments | `PaymentServiceCaptureRequest` |
-| [defend_dispute](#defend_dispute) | Other | `—` |
-| [PaymentService.Get](#paymentserviceget) | Payments | `PaymentServiceGetRequest` |
+| [DisputeService.Accept](#disputeserviceaccept) | Disputes | `DisputeServiceAcceptRequest` |
+| [DisputeService.Defend](#disputeservicedefend) | Disputes | `DisputeServiceDefendRequest` |
+| [DisputeService.SubmitEvidence](#disputeservicesubmitevidence) | Disputes | `DisputeServiceSubmitEvidenceRequest` |
 | [RecurringPaymentService.Charge](#recurringpaymentservicecharge) | Mandates | `RecurringPaymentServiceChargeRequest` |
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
-| [submit_evidence](#submit_evidence) | Other | `—` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Details
 
 ### Payments
 
@@ -65,714 +212,153 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | SEPA | ✓ |
 | BACS | ✓ |
 | ACH | ✓ |
+| BECS | ⚠ |
 | iDEAL | ✓ |
+| PayPal | ⚠ |
 | BLIK | ✓ |
 | Klarna | ✓ |
 | Afterpay | ✓ |
+| UPI | ⚠ |
 | Affirm | ✓ |
+| Samsung Pay | ⚠ |
 
-**Card (Raw PAN)**
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "card": {
-      "card_number": "4111111111111111",
-      "card_exp_month": "03",
-      "card_exp_year": "2030",
-      "card_cvc": "737",
-      "card_holder_name": "John Doe"
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**Google Pay**
+##### Google Pay
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "google_pay": {
-      "type": "CARD",
-      "description": "Visa 1111",
-      "info": {
-        "card_network": "VISA",
-        "card_details": "1111"
-      },
-      "tokenization_data": {
-        "encrypted_data": {
-          "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",
-          "token_type": "PAYMENT_GATEWAY"
+```python
+"payment_method": {
+    "google_pay": {  # Google Pay
+        "type": "CARD",  # Type of payment method
+        "description": "Visa 1111",  # User-facing description of the payment method
+        "info": {
+            "card_network": "VISA",  # Card network name
+            "card_details": "1111"  # Card details (usually last 4 digits)
+        },
+        "tokenization_data": {
+            "encrypted_data": {  # Encrypted Google Pay payment data
+                "token_type": "PAYMENT_GATEWAY",  # The type of the token
+                "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"  # Token generated for the wallet
+            }
         }
-      }
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**Apple Pay**
+##### Apple Pay
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "apple_pay": {
-      "payment_data": {
-        "encrypted_data": "<base64_encoded_apple_pay_payment_token>"
-      },
-      "payment_method": {
-        "display_name": "Visa 1111",
-        "network": "Visa",
-        "type": "debit"
-      },
-      "transaction_identifier": "<apple_pay_transaction_identifier>"
+```python
+"payment_method": {
+    "apple_pay": {  # Apple Pay
+        "payment_data": {
+            "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"  # Encrypted Apple Pay payment data as string
+        },
+        "payment_method": {
+            "display_name": "Visa 1111",
+            "network": "Visa",
+            "type": "debit"
+        },
+        "transaction_identifier": "probe_txn_id"  # Transaction identifier
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**SEPA Direct Debit**
+##### SEPA Direct Debit
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "sepa": {
-      "iban": "DE89370400440532013000",
-      "bank_account_holder_name": "John Doe"
+```python
+"payment_method": {
+    "sepa": {  # Sepa - Single Euro Payments Area direct debit
+        "iban": {"value": "DE89370400440532013000"},  # International bank account number (iban) for SEPA
+        "bank_account_holder_name": {"value": "John Doe"}  # Owner name for bank debit
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**BACS Direct Debit**
+##### BACS Direct Debit
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "bacs": {
-      "account_number": "55779911",
-      "sort_code": "200000",
-      "bank_account_holder_name": "John Doe"
+```python
+"payment_method": {
+    "bacs": {  # Bacs - Bankers' Automated Clearing Services
+        "account_number": {"value": "55779911"},  # Account number for Bacs payment method
+        "sort_code": {"value": "200000"},  # Sort code for Bacs payment method
+        "bank_account_holder_name": {"value": "John Doe"}  # Holder name for bank debit
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**ACH Direct Debit**
+##### ACH Direct Debit
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "ach": {
-      "account_number": "000123456789",
-      "routing_number": "110000000",
-      "bank_account_holder_name": "John Doe"
+```python
+"payment_method": {
+    "ach": {  # Ach - Automated Clearing House
+        "account_number": {"value": "000123456789"},  # Account number for ach bank debit payment
+        "routing_number": {"value": "110000000"},  # Routing number for ach bank debit payment
+        "bank_account_holder_name": {"value": "John Doe"}  # Bank account holder name
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**iDEAL**
+##### iDEAL
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "ideal": {}
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+```python
+"payment_method": {
+    "ideal": {
     }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**BLIK**
+##### BLIK
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
+```python
+"payment_method": {
     "blik": {
-      "blik_code": "777124"
+        "blik_code": "777124"
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**Klarna**
+##### Klarna
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "klarna": {}
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "connector_customer_id": "probe_cust_connector_001",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+```python
+"payment_method": {
+    "klarna": {  # Klarna - Swedish BNPL service
     }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
 
-**Afterpay / Clearpay**
+##### Afterpay / Clearpay
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "afterpay_clearpay": {}
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
+```python
+"payment_method": {
+    "afterpay_clearpay": {  # Afterpay/Clearpay - BNPL service
     }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
+
+##### Affirm
+
+```python
+"payment_method": {
+    "affirm": {  # Affirm - US BNPL service
+    }
+}
+```
+
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L383) · [JavaScript](../../examples/adyen/javascript/adyen.js#L357) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L361) · [Rust](../../examples/adyen/rust/adyen.rs#L354)
 
 #### PaymentService.Capture
 
@@ -783,29 +369,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_capture_id": "probe_capture_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount_to_capture": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
-
-#### PaymentService.Get
-
-Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
-
-| | Message |
-|---|---------|
-| **Request** | `PaymentServiceGetRequest` |
-| **Response** | `PaymentServiceGetResponse` |
-
-<!-- TODO: Add sample payload for `get` in `scripts/connector-annotations/adyen.yaml` -->
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L392) · [JavaScript](../../examples/adyen/javascript/adyen.js#L366) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L373) · [Rust](../../examples/adyen/rust/adyen.rs#L366)
 
 #### PaymentService.Refund
 
@@ -816,20 +380,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_refund_id": "probe_refund_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "payment_amount": 1000,
-  "refund_amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "reason": "customer_request"
-}
-```
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L239) · [JavaScript](../../examples/adyen/javascript/adyen.js#L225) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L450) · [Rust](../../examples/adyen/rust/adyen.rs#L434)
 
 #### PaymentService.SetupRecurring
 
@@ -840,69 +391,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_recurring_payment_id": "probe_mandate_001",
-  "amount": {
-    "minor_amount": 0,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "card": {
-      "card_number": "4111111111111111",
-      "card_exp_month": "03",
-      "card_exp_year": "2030",
-      "card_cvc": "737",
-      "card_holder_name": "John Doe"
-    }
-  },
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "enrolled_for_3ds": false,
-  "return_url": "https://example.com/mandate-return",
-  "setup_future_usage": "OFF_SESSION",
-  "request_incremental_authorization": false,
-  "customer_acceptance": {
-    "acceptance_type": "OFFLINE",
-    "accepted_at": 0
-  },
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
-}
-```
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L487) · [JavaScript](../../examples/adyen/javascript/adyen.js#L442) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L460) · [Rust](../../examples/adyen/rust/adyen.rs#L441)
 
 #### PaymentService.Void
 
@@ -913,14 +402,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_void_id": "probe_void_001",
-  "connector_transaction_id": "probe_connector_txn_001"
-}
-```
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L550) · [JavaScript](../../examples/adyen/javascript/adyen.js#L498) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L515) · [Rust](../../examples/adyen/rust/adyen.rs#L497)
 
 ### Mandates
 
@@ -933,118 +415,39 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Minimum Request**
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L454) · [JavaScript](../../examples/adyen/javascript/adyen.js#L413) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L421) · [Rust](../../examples/adyen/rust/adyen.rs#L408)
 
-```json
-{
-  "connector_recurring_payment_id": {
-    "mandate_id_type": {
-      "connector_mandate_id": "probe_mandate_123"
-    }
-  },
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "token": "probe_pm_token"
-  },
-  "return_url": "https://example.com/recurring-return",
-  "connector_customer_id": "probe_cust_connector_001",
-  "payment_method_type": "PAY_PAL",
-  "off_session": true
-}
-```
+### Disputes
 
-### Other
+#### DisputeService.Accept
 
-#### accept_dispute
+Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
 
-**Minimum Request**
+| | Message |
+|---|---------|
+| **Request** | `DisputeServiceAcceptRequest` |
+| **Response** | `DisputeServiceAcceptResponse` |
 
-```json
-{
-  "merchant_dispute_id": "probe_dispute_001",
-  "connector_transaction_id": "probe_txn_001",
-  "dispute_id": "probe_dispute_id_001"
-}
-```
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L401) · [JavaScript](../../examples/adyen/javascript/adyen.js#L375) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L383) · [Rust](../../examples/adyen/rust/adyen.rs#L373)
 
-#### defend_dispute
+#### DisputeService.Defend
 
-**Minimum Request**
+Submit defense with reason code for dispute. Presents formal argument against customer's chargeback claim with supporting documentation.
 
-```json
-{
-  "merchant_dispute_id": "probe_dispute_001",
-  "connector_transaction_id": "probe_txn_001",
-  "dispute_id": "probe_dispute_id_001",
-  "reason_code": "probe_reason"
-}
-```
+| | Message |
+|---|---------|
+| **Request** | `DisputeServiceDefendRequest` |
+| **Response** | `DisputeServiceDefendResponse` |
 
-#### submit_evidence
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L418) · [JavaScript](../../examples/adyen/javascript/adyen.js#L387) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L395) · [Rust](../../examples/adyen/rust/adyen.rs#L384)
 
-**Minimum Request**
+#### DisputeService.SubmitEvidence
 
-```json
-{
-  "merchant_dispute_id": "probe_dispute_001",
-  "connector_transaction_id": "probe_txn_001",
-  "dispute_id": "probe_dispute_id_001",
-  "evidence_documents": [
-    {
-      "evidence_type": "SERVICE_DOCUMENTATION",
-      "file_content": [
-        112,
-        114,
-        111,
-        98,
-        101,
-        32,
-        101,
-        118,
-        105,
-        100,
-        101,
-        110,
-        99,
-        101,
-        32,
-        99,
-        111,
-        110,
-        116,
-        101,
-        110,
-        116
-      ],
-      "file_mime_type": "application/pdf"
-    }
-  ]
-}
-```
+Upload evidence to dispute customer chargeback. Provides documentation like receipts and delivery proof to contest fraudulent transaction claims.
 
-## Testing
+| | Message |
+|---|---------|
+| **Request** | `DisputeServiceSubmitEvidenceRequest` |
+| **Response** | `DisputeServiceSubmitEvidenceResponse` |
 
-Adyen test credentials are obtained from the Adyen Customer Area (test.adyen.com). The merchant account must be configured separately for test mode.
-
-**Test API Key:** `AQE...your-test-api-key...`
-
-### Test Cards
-
-| Card Number | Brand | CVV | Expiry | Scenario |
-|------------|-------|-----|--------|----------|
-| `4111111111111111` | Visa | `737` | `03/2030` | Successful payment |
-| `4000000000000002` | Visa | `737` | `03/2030` | Refused |
-| `5101180000000007` | Mastercard | `737` | `03/2030` | Successful payment |
-| `4212345678901237` | Visa | `737` | `03/2030` | 3DS2 required |
-| `6703444444444449` | Bancontact | `` | `01/2030` | Bancontact card – success |
-
-### Test Payment Methods
-
-- **iDEAL**: Bank selection triggers a simulated redirect; use any test bank
-- **Klarna**: Use `+46 700 123 456` in Sweden test accounts. customer.id required.
-- **Blik**: Use any 6-digit code in Adyen test environment
-- **EPS**: Use any bank_name enum value. `BANK_AUSTRIA` works.
-- **SEPA Direct Debit**: Use IBAN `NL13TEST0123456789` for successful test debit
+**Examples:** [Python](../../examples/adyen/python/adyen.py#L436) · [JavaScript](../../examples/adyen/javascript/adyen.js#L400) · [Kotlin](../../examples/adyen/kotlin/adyen.kt#L408) · [Rust](../../examples/adyen/rust/adyen.rs#L396)
