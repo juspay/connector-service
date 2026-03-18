@@ -128,7 +128,7 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
             card_number: self
                 .card_number
                 .as_ref()
-                .map(|cn| cn.to_string())
+                .map(|cn| cn.get_card_no())
                 .unwrap_or_default(),
             cvv: self
                 .card_cvc

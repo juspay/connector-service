@@ -412,6 +412,7 @@ enum WebhookEventType {
 
   // Mandate events
   MANDATE_ACTIVE = 24;                     // Mandate is active
+  MANDATE_FAILED = 41;                     // Mandate failed
   MANDATE_REVOKED = 25;                    // Mandate revoked
 
   // Misc events
@@ -487,8 +488,8 @@ enum Connector {
   SIGNIFYD = 86; PLAID = 87; RISKIFIED = 88; XENDIT = 89; ZEN = 90; ZSL = 91;
   PHONEPE = 92; CASHFREE = 93; PAYTM = 94; CALIDA = 95; PAYLOAD = 96; AUTHIPAY = 97;
   SILVERFLOW = 98; CELERO = 99; TRUSTPAYMENTS = 100; PAYSAFE = 101; BARCLAYCARD = 102;
-  WORLDPAYXML = 103; REVOLUT = 104; LOONIO = 105; GIGADAT = 106; HYPERPG = 107; ZIFT = 108; REVOLV3 = 109;   TRUELAYER = 110;  FINIX = 111;
-
+  WORLDPAYXML = 103; REVOLUT = 104; LOONIO = 105; GIGADAT = 106; HYPERPG = 107; ZIFT = 108; REVOLV3 = 109; TRUELAYER = 110; FINIX = 111;
+  PEACHPAYMENTS = 112; PPRO = 113;
 }
 
 // Payment method types
@@ -515,7 +516,7 @@ enum PaymentMethodType {
   WE_CHAT_PAY = 87; SEVEN_ELEVEN = 88; LAWSON = 89; MINI_STOP = 90; FAMILY_MART = 91;
   SEICOMART = 92; PAY_EASY = 93; LOCAL_BANK_TRANSFER = 94; OPEN_BANKING_PIS = 95;
   DIRECT_CARRIER_BILLING = 96; INSTANT_BANK_TRANSFER = 97; PAY_PAL = 98; REVOLUT_PAY = 99;
-  INSTANT_BANK_TRANSFER_FINLAND = 100; INSTANT_BANK_TRANSFER_POLAND = 101;
+  INSTANT_BANK_TRANSFER_FINLAND = 100; INSTANT_BANK_TRANSFER_POLAND = 101; SATISPAY = 102; WERO = 103;
 }
 
 // Product type enumeration
@@ -714,6 +715,8 @@ message MandateAmountData {
   Currency currency = 2;         // Currency code (ISO 4217)
   optional int64 start_date = 3;              // Unix timestamp for start date
   optional int64 end_date = 4;                // Unix timestamp for end date
+  optional string amount_type = 5;    // Amount type for variable mandates ("exact", "max", "variable")
+  optional string frequency = 6;     // Frequency for recurring mandates ("daily", "weekly", "monthly")
 }
 
 // Mandate type with amount details
@@ -2000,7 +2003,10 @@ message PaymentServiceSetupRecurringRequest {
   optional SecretString connector_testing_data = 33;  // Connector-specific testing data (JSON stringified)
 
   // Level 2 / Level 3 data for enhanced payment processing
-  optional L2L3Data l2_l3_data = 34; 
+  optional L2L3Data l2_l3_data = 34;
+
+  // Mandate setup details
+  optional SetupMandateDetails setup_mandate_details = 35;
 }
 
 // Response message for a mandate setup operation
@@ -3301,6 +3307,12 @@ message CoingateConfig {
   optional string base_url = 50;
 }
 
+message PeachpaymentsConfig {
+  SecretString api_key = 1;
+  SecretString tenant_id = 2;
+  optional string base_url = 50;
+}
+
 message PaypalConfig {
   SecretString client_id = 1;
   SecretString client_secret = 2;
@@ -3527,6 +3539,9 @@ message ConnectorSpecificConfig {
 
     // AUTHORIZEDOTNET = 5
     AuthorizedotnetConfig authorizedotnet = 72;
+
+    // PEACHPAYMENTS = 111
+    PeachpaymentsConfig peachpayments = 73;
 
     // PAYPAL = 62
     PaypalConfig paypal = 110;

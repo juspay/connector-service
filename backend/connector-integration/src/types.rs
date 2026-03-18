@@ -76,6 +76,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Payload => Box::new(connectors::Payload::new()),
             ConnectorEnum::Paysafe => Box::new(connectors::Paysafe::new()),
             ConnectorEnum::Paypal => Box::new(connectors::Paypal::new()),
+            ConnectorEnum::Peachpayments => Box::new(connectors::Peachpayments::new()),
             ConnectorEnum::Finix => Box::new(connectors::Finix::new()),
             ConnectorEnum::Revolv3 => Box::new(connectors::Revolv3::new()),
             ConnectorEnum::Mollie => Box::new(connectors::Mollie::new()),
@@ -99,6 +100,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Wellsfargo => Box::new(connectors::Wellsfargo::new()),
             ConnectorEnum::Hyperpg => Box::new(connectors::Hyperpg::new()),
             ConnectorEnum::Zift => Box::new(connectors::Zift::new()),
+            ConnectorEnum::Ppro => Box::new(connectors::Ppro::new()),
             ConnectorEnum::Truelayer => Box::new(connectors::Truelayer::new()),
         }
     }
