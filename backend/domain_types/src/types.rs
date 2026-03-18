@@ -11289,8 +11289,8 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRequest>
         };
 
         let source_currency = {
-            let curr = grpc_api_types::payments::Currency::try_from(amount.currency as i32)
-                .map_err(|_| {
+            let curr =
+                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
                     error_stack::report!(ApplicationErrorResponse::BadRequest(
                         crate::errors::ApiError {
                             sub_code: "INVALID_CURRENCY".to_owned(),
