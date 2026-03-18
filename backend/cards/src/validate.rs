@@ -276,6 +276,18 @@ impl<'de> Deserialize<'de> for NetworkToken {
     }
 }
 
+impl std::hash::Hash for CardNumber {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.peek().hash(state);
+    }
+}
+
+impl std::hash::Hash for NetworkToken {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.peek().hash(state);
+    }
+}
+
 pub enum CardNumberStrategy {}
 
 impl<T> Strategy<T> for CardNumberStrategy
@@ -419,7 +431,7 @@ mod tests {
     fn card_number_no_whitespace() {
         let s = "3714    4963  5398 431";
         assert_eq!(
-            CardNumber::from_str(s).unwrap().to_string(),
+            format!("{:?}", CardNumber::from_str(s).unwrap().0),
             "371449*********"
         );
     }
@@ -447,8 +459,8 @@ mod tests {
     #[test]
     fn test_valid_card_number_deserialization() {
         let card_number = serde_json::from_str::<CardNumber>(r#""3714 4963 5398 431""#).unwrap();
-        let secret = card_number.to_string();
-        assert_eq!(r#""371449*********""#, format!("{secret:?}"));
+        let secret = &(*card_number);
+        assert_eq!("371449*********", format!("{secret:?}"));
     }
 
     #[test]
