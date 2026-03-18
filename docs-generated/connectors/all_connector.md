@@ -3,7 +3,7 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/
-Regenerate: python3 scripts/generate-connector-docs.py --all-connectors-doc
+Regenerate: python3 scripts/generators/docs/generate.py --all-connectors-doc
 -->
 
 This document provides a comprehensive overview of payment method support
