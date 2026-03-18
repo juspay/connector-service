@@ -11259,7 +11259,7 @@ impl
             raw_connector_response: None,
             connector_response_headers: None,
             raw_connector_request: None,
-            access_token: None,
+            access_token: value.access_token.clone(),
             connector_meta_data: None,
             test_mode: None,
         })
@@ -11403,6 +11403,7 @@ impl From<crate::payout_types::PayoutCreateResponse>
             payout_status: Some(payout_status),
             connector_payout_id: response.connector_payout_id,
             error,
+            status_code: u32::from(response.status_code),
         }
     }
 }
@@ -11418,20 +11419,31 @@ pub fn generate_payout_create_response(
     grpc_api_types::payouts::PayoutServiceCreateResponse,
     error_stack::Report<ApplicationErrorResponse>,
 > {
-    let response = router_data_v2.response.map_err(|e| {
-        error_stack::report!(ApplicationErrorResponse::InternalServerError(
-            crate::errors::ApiError {
-                sub_code: "PAYOUT_CREATE_FAILED".to_owned(),
-                error_identifier: 500,
-                error_message: e.message.clone(),
-                error_object: None,
-            }
-        ))
-    })?;
-
-    Ok(grpc_api_types::payouts::PayoutServiceCreateResponse::from(
-        response,
-    ))
+    match router_data_v2.response {
+        Ok(response) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse::from(
+            response,
+        )),
+        Err(err) => {
+            let payout_status =
+                grpc_api_types::payouts::payout_enums::PayoutStatus::foreign_from(router_data_v2.resource_common_data.status)
+                    as i32;
+            Ok(grpc_api_types::payouts::PayoutServiceCreateResponse {
+                merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+                payout_status: Some(payout_status),
+                connector_payout_id: err.connector_transaction_id.clone(),
+                error: Some(grpc_api_types::payouts::ErrorInfo {
+                    unified_details: None,
+                    connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                        code: Some(err.code.clone()),
+                        message: Some(err.message.clone()),
+                        reason: err.reason.clone(),
+                    }),
+                    issuer_details: None,
+                }),
+                status_code: u32::from(err.status_code),
+            })
+        }
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payouts::payout_enums::PayoutPriority>
@@ -11501,12 +11513,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::CardPayout> for crate::payout_types
                 ))
             })?,
             expiry_month: ::hyperswitch_masking::Secret::new(
-                card.expiry_month
+                card.card_exp_month
                     .map(|m| m.peek().to_string())
                     .unwrap_or_default(),
             ),
             expiry_year: ::hyperswitch_masking::Secret::new(
-                card.expiry_year
+                card.card_exp_year
                     .map(|m| m.peek().to_string())
                     .unwrap_or_default(),
             ),
@@ -11528,7 +11540,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::AchBankTransferPayout>
         let bank_name = ach
             .bank_name
             .map(|bn| {
-                common_enums::BankNames::try_from(bn.as_str()).map_err(|_| {
+                common_enums::BankNames::try_from(
+                    grpc_api_types::payouts::BankNames::try_from(bn)
+                        .map(|b| b.as_str_name())
+                        .unwrap_or_default(),
+                )
+                .map_err(|_| {
                     error_stack::report!(ApplicationErrorResponse::BadRequest(
                         crate::errors::ApiError {
                             sub_code: "INVALID_BANK_NAME".to_owned(),
@@ -11601,7 +11618,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::BacsBankTransferPayout>
         let bank_name = bacs
             .bank_name
             .map(|bn| {
-                common_enums::BankNames::try_from(bn.as_str()).map_err(|_| {
+                common_enums::BankNames::try_from(
+                    grpc_api_types::payouts::BankNames::try_from(bn)
+                        .map(|b| b.as_str_name())
+                        .unwrap_or_default(),
+                )
+                .map_err(|_| {
                     error_stack::report!(ApplicationErrorResponse::BadRequest(
                         crate::errors::ApiError {
                             sub_code: "INVALID_BANK_NAME".to_owned(),
@@ -11673,7 +11695,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::SepaBankTransferPayout>
         let bank_name = sepa
             .bank_name
             .map(|bn| {
-                common_enums::BankNames::try_from(bn.as_str()).map_err(|_| {
+                common_enums::BankNames::try_from(
+                    grpc_api_types::payouts::BankNames::try_from(bn)
+                        .map(|b| b.as_str_name())
+                        .unwrap_or_default(),
+                )
+                .map_err(|_| {
                     error_stack::report!(ApplicationErrorResponse::BadRequest(
                         crate::errors::ApiError {
                             sub_code: "INVALID_BANK_NAME".to_owned(),
@@ -11725,7 +11752,12 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
         let bank_name = pix
             .bank_name
             .map(|bn| {
-                common_enums::BankNames::try_from(bn.as_str()).map_err(|_| {
+                common_enums::BankNames::try_from(
+                    grpc_api_types::payouts::BankNames::try_from(bn)
+                        .map(|b| b.as_str_name())
+                        .unwrap_or_default(),
+                )
+                .map_err(|_| {
                     error_stack::report!(ApplicationErrorResponse::BadRequest(
                         crate::errors::ApiError {
                             sub_code: "INVALID_BANK_NAME".to_owned(),
@@ -11754,46 +11786,6 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
                 .tax_id
                 .map(|t| ::hyperswitch_masking::Secret::new(t.peek().to_string())),
         })
-    }
-}
-impl ForeignTryFrom<grpc_api_types::payouts::BankPayout> for crate::payout_types::Bank {
-    type Error = ApplicationErrorResponse;
-    fn foreign_try_from(
-        bank: grpc_api_types::payouts::BankPayout,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let bank_details = bank.bank_details.ok_or_else(|| {
-            error_stack::report!(ApplicationErrorResponse::BadRequest(
-                crate::errors::ApiError {
-                    sub_code: "MISSING_BANK_DETAILS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Bank details are required".to_owned(),
-                    error_object: None,
-                }
-            ))
-        })?;
-
-        match bank_details {
-            grpc_api_types::payouts::bank_payout::BankDetails::Ach(ach) => {
-                Ok(crate::payout_types::Bank::Ach(
-                    crate::payout_types::AchBankTransfer::foreign_try_from(ach)?,
-                ))
-            }
-            grpc_api_types::payouts::bank_payout::BankDetails::Bacs(bacs) => {
-                Ok(crate::payout_types::Bank::Bacs(
-                    crate::payout_types::BacsBankTransfer::foreign_try_from(bacs)?,
-                ))
-            }
-            grpc_api_types::payouts::bank_payout::BankDetails::Sepa(sepa) => {
-                Ok(crate::payout_types::Bank::Sepa(
-                    crate::payout_types::SepaBankTransfer::foreign_try_from(sepa)?,
-                ))
-            }
-            grpc_api_types::payouts::bank_payout::BankDetails::Pix(pix) => {
-                Ok(crate::payout_types::Bank::Pix(
-                    crate::payout_types::PixBankTransfer::foreign_try_from(pix)?,
-                ))
-            }
-        }
     }
 }
 
@@ -11881,41 +11873,6 @@ impl ForeignTryFrom<grpc_api_types::payouts::Venmo> for crate::payout_types::Ven
         })
     }
 }
-impl ForeignTryFrom<grpc_api_types::payouts::Wallet> for crate::payout_types::Wallet {
-    type Error = ApplicationErrorResponse;
-    fn foreign_try_from(
-        wallet: grpc_api_types::payouts::Wallet,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let wallet_details = wallet.wallet_details.ok_or_else(|| {
-            error_stack::report!(ApplicationErrorResponse::BadRequest(
-                crate::errors::ApiError {
-                    sub_code: "MISSING_WALLET_DETAILS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Wallet details are required".to_owned(),
-                    error_object: None,
-                }
-            ))
-        })?;
-
-        match wallet_details {
-            grpc_api_types::payouts::wallet::WalletDetails::ApplePayDecrypt(apple) => {
-                Ok(crate::payout_types::Wallet::ApplePayDecrypt(
-                    crate::payout_types::ApplePayDecrypt::foreign_try_from(apple)?,
-                ))
-            }
-            grpc_api_types::payouts::wallet::WalletDetails::Paypal(paypal) => {
-                Ok(crate::payout_types::Wallet::Paypal(
-                    crate::payout_types::Paypal::foreign_try_from(paypal)?,
-                ))
-            }
-            grpc_api_types::payouts::wallet::WalletDetails::Venmo(venmo) => {
-                Ok(crate::payout_types::Wallet::Venmo(
-                    crate::payout_types::Venmo::foreign_try_from(venmo)?,
-                ))
-            }
-        }
-    }
-}
 
 impl ForeignTryFrom<grpc_api_types::payouts::InteracPayout> for crate::payout_types::Interac {
     type Error = ApplicationErrorResponse;
@@ -11950,35 +11907,7 @@ impl ForeignTryFrom<grpc_api_types::payouts::OpenBankingUkPayout>
         })
     }
 }
-impl ForeignTryFrom<grpc_api_types::payouts::BankRedirect> for crate::payout_types::BankRedirect {
-    type Error = ApplicationErrorResponse;
-    fn foreign_try_from(
-        br: grpc_api_types::payouts::BankRedirect,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let br_details = br.bank_redirect_details.ok_or_else(|| {
-            error_stack::report!(ApplicationErrorResponse::BadRequest(
-                crate::errors::ApiError {
-                    sub_code: "MISSING_BANK_REDIRECT_DETAILS".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Bank redirect details are required".to_owned(),
-                    error_object: None,
-                }
-            ))
-        })?;
-        match br_details {
-            grpc_api_types::payouts::bank_redirect::BankRedirectDetails::Interac(interac) => {
-                Ok(crate::payout_types::BankRedirect::Interac(
-                    crate::payout_types::Interac::foreign_try_from(interac)?,
-                ))
-            }
-            grpc_api_types::payouts::bank_redirect::BankRedirectDetails::OpenBankingUk(obuk) => {
-                Ok(crate::payout_types::BankRedirect::OpenBankingUk(
-                    crate::payout_types::OpenBankingUk::foreign_try_from(obuk)?,
-                ))
-            }
-        }
-    }
-}
+
 impl ForeignTryFrom<grpc_api_types::payouts::Passthrough> for crate::payout_types::Passthrough {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
@@ -12014,14 +11943,14 @@ impl ForeignTryFrom<grpc_api_types::payouts::Passthrough> for crate::payout_type
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payouts::PayoutMethodData>
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutMethod>
     for crate::payout_types::PayoutMethodData
 {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
-        value: grpc_api_types::payouts::PayoutMethodData,
+        value: grpc_api_types::payouts::PayoutMethod,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let data = value.data.ok_or_else(|| {
+        let data = value.payout_method_data.ok_or_else(|| {
             error_stack::report!(ApplicationErrorResponse::BadRequest(
                 crate::errors::ApiError {
                     sub_code: "MISSING_PAYOUT_METHOD_DATA".to_owned(),
@@ -12033,21 +11962,61 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutMethodData>
         })?;
 
         match data {
-            grpc_api_types::payouts::payout_method_data::Data::Card(card) => Ok(Self::Card(
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Card(card) => Ok(Self::Card(
                 crate::payout_types::CardPayout::foreign_try_from(card)?,
             )),
-            grpc_api_types::payouts::payout_method_data::Data::Bank(bank) => Ok(Self::Bank(
-                crate::payout_types::Bank::foreign_try_from(bank)?,
-            )),
-            grpc_api_types::payouts::payout_method_data::Data::Wallet(wallet) => Ok(Self::Wallet(
-                crate::payout_types::Wallet::foreign_try_from(wallet)?,
-            )),
-            grpc_api_types::payouts::payout_method_data::Data::BankRedirect(br) => Ok(
-                Self::BankRedirect(crate::payout_types::BankRedirect::foreign_try_from(br)?),
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Ach(ach) => {
+                Ok(Self::Bank(crate::payout_types::Bank::Ach(
+                    crate::payout_types::AchBankTransfer::foreign_try_from(ach)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Bacs(bacs) => {
+                Ok(Self::Bank(crate::payout_types::Bank::Bacs(
+                    crate::payout_types::BacsBankTransfer::foreign_try_from(bacs)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Sepa(sepa) => {
+                Ok(Self::Bank(crate::payout_types::Bank::Sepa(
+                    crate::payout_types::SepaBankTransfer::foreign_try_from(sepa)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Pix(pix) => {
+                Ok(Self::Bank(crate::payout_types::Bank::Pix(
+                    crate::payout_types::PixBankTransfer::foreign_try_from(pix)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::ApplePayDecrypt(
+                apple_pay_decrypt,
+            ) => Ok(Self::Wallet(crate::payout_types::Wallet::ApplePayDecrypt(
+                crate::payout_types::ApplePayDecrypt::foreign_try_from(apple_pay_decrypt)?,
+            ))),
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Paypal(paypal) => {
+                Ok(Self::Wallet(crate::payout_types::Wallet::Paypal(
+                    crate::payout_types::Paypal::foreign_try_from(paypal)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Venmo(venmo) => {
+                Ok(Self::Wallet(crate::payout_types::Wallet::Venmo(
+                    crate::payout_types::Venmo::foreign_try_from(venmo)?,
+                )))
+            }
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Interac(interac) => Ok(
+                Self::BankRedirect(crate::payout_types::BankRedirect::Interac(
+                    crate::payout_types::Interac::foreign_try_from(interac)?,
+                )),
             ),
-            grpc_api_types::payouts::payout_method_data::Data::Passthrough(pt) => Ok(
-                Self::Passthrough(crate::payout_types::Passthrough::foreign_try_from(pt)?),
-            ),
+            grpc_api_types::payouts::payout_method::PayoutMethodData::OpenBankingUk(
+                open_banking_uk,
+            ) => Ok(Self::BankRedirect(
+                crate::payout_types::BankRedirect::OpenBankingUk(
+                    crate::payout_types::OpenBankingUk::foreign_try_from(open_banking_uk)?,
+                ),
+            )),
+            grpc_api_types::payouts::payout_method::PayoutMethodData::Passthrough(passthrough) => {
+                Ok(Self::Passthrough(
+                    crate::payout_types::Passthrough::foreign_try_from(passthrough)?,
+                ))
+            }
         }
     }
 }

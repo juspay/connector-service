@@ -211,4 +211,5 @@ pub struct PayoutCreateResponse {
     pub connector_payout_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub status_code: u16,
 }
