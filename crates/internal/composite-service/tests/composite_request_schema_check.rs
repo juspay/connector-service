@@ -66,6 +66,33 @@ const COMPOSITE_FLOW_SPECS: &[CompositeFlowSpec] = &[
         ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
         ignore_composite_only_fields: IGNORE_COMPOSITE_ONLY_FIELDS,
     },
+    CompositeFlowSpec {
+        name: "verify_redirect_response",
+        composite_request_message: "CompositeVerifyRedirectResponseRequest",
+        granular_request_messages: &["PaymentServiceVerifyRedirectResponseRequest"],
+        ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
+        ignore_composite_only_fields: DEFAULT_IGNORE_COMPOSITE_ONLY_FIELDS,
+    },
+    CompositeFlowSpec {
+        name: "void",
+        composite_request_message: "CompositeVoidRequest",
+        granular_request_messages: &[
+            "MerchantAuthenticationServiceCreateAccessTokenRequest",
+            "PaymentServiceVoidRequest",
+        ],
+        ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
+        ignore_composite_only_fields: IGNORE_COMPOSITE_ONLY_FIELDS,
+    },
+    CompositeFlowSpec {
+        name: "capture",
+        composite_request_message: "CompositeCaptureRequest",
+        granular_request_messages: &[
+            "MerchantAuthenticationServiceCreateAccessTokenRequest",
+            "PaymentServiceCaptureRequest",
+        ],
+        ignore_granular_only_fields: DEFAULT_IGNORE_GRANULAR_ONLY_FIELDS,
+        ignore_composite_only_fields: IGNORE_COMPOSITE_ONLY_FIELDS,
+    },
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq)]

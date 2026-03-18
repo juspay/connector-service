@@ -246,6 +246,23 @@ message CompositeRefundGetResponse {
   optional RefundResponse refund_response = 2; // Refund get flow response
 }
 
+// Request message for composite verify redirect response flow.
+message CompositeVerifyRedirectResponseRequest {
+  // Identification
+  optional string merchant_order_id = 1; // Merchant's order reference ID
+
+  // Request Details
+  RequestDetails request_details = 2; // The redirect response details to verify
+
+  // Security
+  optional RedirectResponseSecrets redirect_response_secrets = 3; // Secrets for verifying the redirect response
+}
+
+// Response message for composite verify redirect response flow.
+message CompositeVerifyRedirectResponseResponse {
+  optional PaymentServiceVerifyRedirectResponseResponse verify_redirect_response = 1; // Verify redirect response flow response
+}
+
 // Request message for composite void flow.
 message CompositeVoidRequest {
   // Payment Identification

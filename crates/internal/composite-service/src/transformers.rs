@@ -1,12 +1,13 @@
 use domain_types::connector_types::ConnectorEnum;
 use grpc_api_types::payments::{
     CompositeAuthorizeRequest, CompositeCaptureRequest, CompositeGetRequest,
-    CompositeRefundGetRequest, CompositeRefundRequest, CompositeVoidRequest, ConnectorState,
-    CustomerServiceCreateRequest, CustomerServiceCreateResponse,
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    CompositeRefundGetRequest, CompositeRefundRequest, CompositeVerifyRedirectResponseRequest,
+    CompositeVoidRequest, ConnectorState, CustomerServiceCreateRequest,
+    CustomerServiceCreateResponse, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-    PaymentServiceVoidRequest, RefundServiceGetRequest,
+    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest,
+    RefundServiceGetRequest,
 };
 
 use crate::utils::{
@@ -439,6 +440,18 @@ impl
             state: resolved_state,
             test_mode: item.test_mode,
             merchant_order_id: item.merchant_order_id.clone(),
+        }
+    }
+}
+
+impl ForeignFrom<&CompositeVerifyRedirectResponseRequest>
+    for PaymentServiceVerifyRedirectResponseRequest
+{
+    fn foreign_from(item: &CompositeVerifyRedirectResponseRequest) -> Self {
+        Self {
+            merchant_order_id: item.merchant_order_id.clone(),
+            request_details: item.request_details.clone(),
+            redirect_response_secrets: item.redirect_response_secrets.clone(),
         }
     }
 }
