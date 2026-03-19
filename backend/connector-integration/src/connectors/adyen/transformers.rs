@@ -1092,8 +1092,8 @@ pub enum PaymentType {
     SevenEleven,
     #[serde(rename = "econtext_stores")]
     Lawson,
-    #[serde(rename = "pix_qr")]
-    PixQr,
+    #[serde(rename = "pix")]
+    Pix,
 }
 
 impl TryFrom<&common_enums::PaymentMethodType> for PaymentType {
@@ -1128,7 +1128,7 @@ impl TryFrom<&common_enums::PaymentMethodType> for PaymentType {
             common_enums::PaymentMethodType::Ach => Ok(Self::AchDirectDebit),
 
             common_enums::PaymentMethodType::Paypal => Ok(Self::Paypal),
-            common_enums::PaymentMethodType::PixQr => Ok(Self::PixQr),
+            common_enums::PaymentMethodType::PixQr => Ok(Self::Pix),
             common_enums::PaymentMethodType::Givex => Ok(Self::Giftcard),
             common_enums::PaymentMethodType::PaySafeCard => Ok(Self::PaySafeCard),
             _ => Err(errors::ConnectorError::NotImplemented(
@@ -4649,7 +4649,7 @@ pub fn get_wait_screen_metadata(
         | PaymentType::PaySafeCard
         | PaymentType::SevenEleven
         | PaymentType::Lawson
-        | PaymentType::PixQr => Ok(None),
+        | PaymentType::Pix => Ok(None),
     }
 }
 
@@ -6764,7 +6764,7 @@ pub fn get_present_to_shopper_metadata(
         | PaymentType::PaySafeCard
         | PaymentType::SevenEleven
         | PaymentType::Lawson
-        | PaymentType::PixQr => Ok(None),
+        | PaymentType::Pix => Ok(None),
     }
 }
 
