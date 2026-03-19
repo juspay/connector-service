@@ -159,7 +159,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | BACS | x |
 | ACH | x |
 | BECS | x |
-| iDEAL | x |
+| iDEAL | ✓ |
 | PayPal | x |
 | BLIK | x |
 | Klarna | x |
@@ -185,6 +185,20 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 ```
 
 **Examples:** [Python](../../examples/mollie/python/mollie.py#L175) · [JavaScript](../../examples/mollie/javascript/mollie.js#L165) · [Kotlin](../../examples/mollie/kotlin/mollie.kt#L164) · [Rust](../../examples/mollie/rust/mollie.rs#L164)
+
+##### iDEAL (Bank Redirect)
+
+```python
+"payment_method": {
+    "bank_redirect": {  # iDEAL bank redirect payment
+        "ideal": {
+            "bank_name": "Ing"  # Optional: specify the bank for direct redirect
+        }
+    }
+}
+```
+
+Supported banks: AbnAmro, AsnBank, Bunq, Handelsbanken, Ing, Knab, Moneyou, Rabobank, Regiobank, Revolut, SnsBank, TriodosBank, VanLanschot, N26, NationaleNederlanden
 
 #### PaymentService.Get
 

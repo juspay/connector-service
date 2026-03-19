@@ -1,4 +1,5 @@
 use crate::{connectors::mollie::MollieRouterData, types::ResponseRouterData};
+use common_enums::BankNames;
 use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
@@ -12,7 +13,9 @@ use domain_types::{
         ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{
+        BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+    },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -98,6 +101,7 @@ pub struct MolliePaymentsRequest {
 pub enum MolliePaymentMethodData {
     #[serde(rename = "creditcard")]
     CreditCard(Box<CreditCardMethodData>),
+    Ideal(Box<IdealMethodData>),
 }
 
 // Credit Card Method Data
@@ -107,6 +111,14 @@ pub struct CreditCardMethodData {
     pub card_token: Option<Secret<String>>,
     pub billing_address: Option<MollieAddress>,
     pub shipping_address: Option<MollieAddress>,
+}
+
+// iDEAL Method Data
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IdealMethodData {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuer: Option<String>,
 }
 
 // Mollie Address structure
@@ -211,6 +223,22 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     shipping_address: None,
                 }))
             }
+            PaymentMethodData::BankRedirect(bank_redirect_data) => match bank_redirect_data {
+                BankRedirectData::Ideal { bank_name } => {
+                    let issuer = bank_name.as_ref().map(|bank| get_mollie_ideal_issuer(bank));
+                    MolliePaymentMethodData::Ideal(Box::new(IdealMethodData { issuer }))
+                }
+                _ => {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message: format!(
+                            "BankRedirect type {:?} is not supported by Mollie",
+                            bank_redirect_data
+                        ),
+                        connector: "mollie",
+                    }
+                    .into());
+                }
+            },
             _ => {
                 return Err(errors::ConnectorError::NotSupported {
                     message: "Payment method ".to_string(),
@@ -828,3 +856,24 @@ pub type MollieCaptureResponse = MolliePaymentsResponse;
 pub type MolliePSyncResponse = MolliePaymentsResponse;
 pub type MollieVoidResponse = MolliePaymentsResponse;
 pub type MollieRSyncResponse = MollieRefundResponse;
+
+fn get_mollie_ideal_issuer(bank_name: &BankNames) -> String {
+    match bank_name {
+        BankNames::AbnAmro => "ideal_abn_amro".to_string(),
+        BankNames::AsnBank => "ideal_asn".to_string(),
+        BankNames::Bunq => "ideal_bunq".to_string(),
+        BankNames::Handelsbanken => "ideal_handelsbanken".to_string(),
+        BankNames::Ing => "ideal_ing".to_string(),
+        BankNames::Knab => "ideal_knab".to_string(),
+        BankNames::Moneyou => "ideal_moneyou".to_string(),
+        BankNames::Rabobank => "ideal_rabobank".to_string(),
+        BankNames::Regiobank => "ideal_regiobank".to_string(),
+        BankNames::Revolut => "ideal_revolut".to_string(),
+        BankNames::SnsBank => "ideal_sns".to_string(),
+        BankNames::TriodosBank => "ideal_triodos".to_string(),
+        BankNames::VanLanschot => "ideal_van_lanschot".to_string(),
+        BankNames::N26 => "ideal_n26".to_string(),
+        BankNames::NationaleNederlanden => "ideal_nationale_nederlanden".to_string(),
+        _ => format!("ideal_{}", bank_name.to_string().to_lowercase()),
+    }
+}
