@@ -14,7 +14,7 @@ use domain_types::{
         ResponseId,
     },
     errors,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{self, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, PaymentMethodToken as PaymentMethodTokenType},
     router_data_v2::RouterDataV2,
 };
@@ -272,6 +272,17 @@ pub struct HipayPaymentsRequest {
     pub notify_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication_indicator: Option<String>,
+    // SEPA Direct Debit specific fields
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub iban: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub firstname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lastname: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub eci: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring_payment: Option<String>,
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -300,10 +311,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Get payment method - determine payment_product based on card network
-        // Priority order (matching Hyperswitch):
-        // 1. For tokenized cards: Use connector_customer (contains domestic_network from tokenization)
-        // 2. For raw cards: Map card_network enum to HiPay payment products
+        // Get payment method - determine payment_product based on payment method type
+        // Also extract SEPA-specific fields if applicable
+        let mut sepa_iban: Option<String> = None;
+        let mut sepa_firstname: Option<String> = None;
+        let mut sepa_lastname: Option<String> = None;
+        let mut sepa_eci: Option<String> = None;
+        let mut sepa_recurring_payment: Option<String> = None;
+
         let payment_product = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_data) => {
                 // Map card network to HiPay payment product
@@ -334,6 +349,54 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .connector_customer
                     .clone()
                     .unwrap_or_default() // Empty string fallback
+            }
+            PaymentMethodData::BankDebit(bank_debit_data) => {
+                match bank_debit_data {
+                    payment_method_data::BankDebitData::SepaBankDebit {
+                        iban,
+                        bank_account_holder_name,
+                    } => {
+                        sepa_iban = Some(iban.peek().to_string());
+                        // Extract first/last name from billing address or bank_account_holder_name
+                        sepa_firstname = item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_first_name()
+                            .map(|s| s.peek().to_string())
+                            .or_else(|| {
+                                bank_account_holder_name
+                                    .as_ref()
+                                    .map(|s| s.peek().to_string())
+                            });
+                        sepa_lastname = item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_last_name()
+                            .map(|s| s.peek().to_string())
+                            .or_else(|| {
+                                bank_account_holder_name
+                                    .as_ref()
+                                    .map(|s| s.peek().to_string())
+                            });
+                        // ECI 7 = e-commerce, required for new SEPA mandate
+                        sepa_eci = Some("7".to_string());
+                        // recurring_payment=1 required for SEPA Direct Debit
+                        sepa_recurring_payment = Some("1".to_string());
+                        // Note: authentication_indicator will be set to "0" by default below
+                        "sdd".to_string()
+                    }
+                    payment_method_data::BankDebitData::AchBankDebit { .. }
+                    | payment_method_data::BankDebitData::BecsBankDebit { .. }
+                    | payment_method_data::BankDebitData::BacsBankDebit { .. }
+                    | payment_method_data::BankDebitData::SepaGuaranteedBankDebit { .. } => {
+                        return Err(errors::ConnectorError::NotImplemented(
+                            "BankDebit variant not supported by HiPay".to_string(),
+                        ))
+                        .change_context(
+                            errors::ConnectorError::NotImplemented("Payment method".to_string()),
+                        )
+                    }
+                }
             }
             _ => {
                 return Err(errors::ConnectorError::NotImplemented(
@@ -424,6 +487,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             cancel_url,
             notify_url,
             authentication_indicator,
+            iban: sepa_iban,
+            firstname: sepa_firstname,
+            lastname: sepa_lastname,
+            eci: sepa_eci,
+            recurring_payment: sepa_recurring_payment,
         })
     }
 }
