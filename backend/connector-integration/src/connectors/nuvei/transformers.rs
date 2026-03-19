@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -157,12 +157,29 @@ pub struct NuveiCard<
 pub struct NuveiAlternativePaymentMethod {
     #[serde(rename = "paymentMethod")]
     pub payment_method: String,
-    #[serde(rename = "AccountNumber")]
-    pub account_number: Secret<String>,
-    #[serde(rename = "RoutingNumber")]
-    pub routing_number: Secret<String>,
+    #[serde(rename = "AccountNumber", skip_serializing_if = "Option::is_none")]
+    pub account_number: Option<Secret<String>>,
+    #[serde(rename = "RoutingNumber", skip_serializing_if = "Option::is_none")]
+    pub routing_number: Option<Secret<String>>,
     #[serde(rename = "SECCode", skip_serializing_if = "Option::is_none")]
     pub sec_code: Option<String>,
+}
+
+// PayLater payment method types for Nuvei
+#[derive(Debug, Clone)]
+pub enum NuveiPayLaterType {
+    Klarna,
+    AfterPay,
+}
+
+impl NuveiPayLaterType {
+    /// Returns the Nuvei payment method string for the PayLater type
+    pub fn as_payment_method(&self) -> &'static str {
+        match self {
+            Self::Klarna => "apmgw_Klarna",
+            Self::AfterPay => "apmgw_AfterPay",
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -699,8 +716,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             card: None,
                             alternative_payment_method: Some(NuveiAlternativePaymentMethod {
                                 payment_method: "apmgw_ACH".to_string(),
-                                account_number: Secret::new(account_number.to_string()),
-                                routing_number: Secret::new(routing_number.to_string()),
+                                account_number: Some(Secret::new(account_number.to_string())),
+                                routing_number: Some(Secret::new(routing_number.to_string())),
                                 sec_code,
                             }),
                         }
@@ -712,6 +729,30 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         }
                         .into())
                     }
+                }
+            }
+            PaymentMethodData::PayLater(pay_later_data) => {
+                let pay_later_type = match pay_later_data {
+                    PayLaterData::KlarnaRedirect { .. } => NuveiPayLaterType::Klarna,
+                    PayLaterData::KlarnaSdk { .. } => NuveiPayLaterType::Klarna,
+                    PayLaterData::AfterpayClearpayRedirect { .. } => NuveiPayLaterType::AfterPay,
+                    other => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!("{:?} is not supported for Nuvei", other),
+                            connector: "nuvei",
+                        }
+                        .into())
+                    }
+                };
+
+                NuveiPaymentOption {
+                    card: None,
+                    alternative_payment_method: Some(NuveiAlternativePaymentMethod {
+                        payment_method: pay_later_type.as_payment_method().to_string(),
+                        account_number: None,
+                        routing_number: None,
+                        sec_code: None,
+                    }),
                 }
             }
             _ => {
