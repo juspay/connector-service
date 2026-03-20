@@ -434,3 +434,4 @@ artifacts/
 sdk/tests/client_sanity/artifacts/
 
 .claude
+scripts/generators/code/services.desc
