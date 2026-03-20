@@ -20,6 +20,28 @@ import { types } from "./generated/proto";
 
 const v2 = types;
 
+/**
+ * Exception raised when req_transformer fails (integration error).
+ * Wraps IntegrationError and provides access to proto fields.
+ */
+export class IntegrationError extends Error {
+  constructor(public proto: any) {
+    super(proto.errorMessage || proto.error_message);
+    this.name = 'IntegrationError';
+  }
+}
+
+/**
+ * Exception raised when res_transformer fails (response transformation error).
+ * Wraps ConnectorResponseTransformationError and provides access to proto fields.
+ */
+export class ConnectorResponseTransformationError extends Error {
+  constructor(public proto: any) {
+    super(proto.errorMessage || proto.error_message);
+    this.name = 'ConnectorResponseTransformationError';
+  }
+}
+
 export class ConnectorClient {
   private uniffi: UniffiClient;
   private config: types.ConnectorConfig;

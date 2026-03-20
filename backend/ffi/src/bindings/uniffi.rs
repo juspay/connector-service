@@ -12,8 +12,8 @@ mod uniffi_bindings_inner {
     use domain_types::router_response_types::Response;
     use grpc_api_types::payments::Environment;
     use grpc_api_types::payments::{
-        ffi_result, FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiResult, PaymentStatus,
-        RequestError, ResponseError,
+        ffi_result, ConnectorResponseTransformationError, FfiConnectorHttpRequest,
+        FfiConnectorHttpResponse, FfiResult, IntegrationError,
     };
     use prost::Message;
     use std::collections::HashMap;
@@ -28,14 +28,14 @@ mod uniffi_bindings_inner {
 
     /// Decode `request_bytes` as `Req`, build `FfiRequestData`, call `handler`,
     /// and encode the resulting connector HTTP request as Result proto.
-    /// If the handler returns an error, encode the RequestError in Result.
+    /// If the handler returns an error, encode the IntegrationError in Result.
     pub fn run_req_transformer<Req>(
         request_bytes: Vec<u8>,
         options_bytes: Vec<u8>,
         handler: impl Fn(
             crate::types::FfiRequestData<Req>,
             Option<Environment>,
-        ) -> Result<Option<Request>, RequestError>,
+        ) -> Result<Option<Request>, IntegrationError>,
     ) -> Vec<u8>
     where
         Req: Message + Default,
@@ -44,12 +44,12 @@ mod uniffi_bindings_inner {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::RequestError.into(),
-                    payload: Some(ffi_result::Payload::RequestError(RequestError {
-                        status: PaymentStatus::Pending.into(),
-                        error_message: Some(format!("Request payload decode failed: {e}")),
-                        error_code: None,
-                        status_code: Some(400),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
+                        error_message: format!("Request payload decode failed: {e}"),
+                        error_code: "DECODE_FAILED".to_string(),
+                        suggested_action: None,
+                        doc_url: None,
                     })),
                 }
                 .encode_to_vec();
@@ -60,8 +60,8 @@ mod uniffi_bindings_inner {
             Ok(o) => o,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::RequestError.into(),
-                    payload: Some(ffi_result::Payload::RequestError(e)),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -71,8 +71,8 @@ mod uniffi_bindings_inner {
             Ok(m) => m,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::RequestError.into(),
-                    payload: Some(ffi_result::Payload::RequestError(e)),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -90,8 +90,8 @@ mod uniffi_bindings_inner {
             Ok(r) => r,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::RequestError.into(),
-                    payload: Some(ffi_result::Payload::RequestError(e)),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -101,12 +101,12 @@ mod uniffi_bindings_inner {
             Some(r) => r,
             None => {
                 return FfiResult {
-                    r#type: ffi_result::Type::RequestError.into(),
-                    payload: Some(ffi_result::Payload::RequestError(RequestError {
-                        status: PaymentStatus::Pending.into(),
-                        error_message: Some("Request encoding failed".to_string()),
-                        error_code: None,
-                        status_code: Some(400),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
+                        error_message: "Request encoding failed".to_string(),
+                        error_code: "ENCODING_FAILED".to_string(),
+                        suggested_action: None,
+                        doc_url: None,
                     })),
                 }
                 .encode_to_vec();
@@ -121,19 +121,19 @@ mod uniffi_bindings_inner {
                 }
                 .encode_to_vec(),
                 Err(e) => FfiResult {
-                    r#type: ffi_result::Type::RequestError.into(),
-                    payload: Some(ffi_result::Payload::RequestError(RequestError {
-                        status: PaymentStatus::Pending.into(),
-                        error_message: Some(format!("Request re-decode failed: {e}")),
-                        error_code: None,
-                        status_code: Some(500),
+                    r#type: ffi_result::Type::IntegrationError.into(),
+                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
+                        error_message: format!("Request re-decode failed: {e}"),
+                        error_code: "RE_DECODE_FAILED".to_string(),
+                        suggested_action: None,
+                        doc_url: None,
                     })),
                 }
                 .encode_to_vec(),
             },
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::RequestError.into(),
-                payload: Some(ffi_result::Payload::RequestError(e)),
+                r#type: ffi_result::Type::IntegrationError.into(),
+                payload: Some(ffi_result::Payload::IntegrationError(e)),
             }
             .encode_to_vec(),
         }
@@ -141,7 +141,7 @@ mod uniffi_bindings_inner {
 
     /// Decode `response_bytes` as the domain `Response` and `request_bytes` as `Req`,
     /// call `handler`, and encode the result as Result proto.
-    /// If the handler returns an error, encode the ResponseError in Result.
+    /// If the handler returns an error, encode the ConnectorResponseTransformationError in Result.
     pub fn run_res_transformer<Req, Res>(
         response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
@@ -150,7 +150,7 @@ mod uniffi_bindings_inner {
             crate::types::FfiRequestData<Req>,
             Response,
             Option<Environment>,
-        ) -> Result<Res, ResponseError>,
+        ) -> Result<Res, ConnectorResponseTransformationError>,
     ) -> Vec<u8>
     where
         Req: Message + Default,
@@ -160,8 +160,8 @@ mod uniffi_bindings_inner {
             Ok(r) => r,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError.into(),
-                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -171,13 +171,14 @@ mod uniffi_bindings_inner {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError.into(),
-                    payload: Some(ffi_result::Payload::ResponseError(ResponseError {
-                        status: PaymentStatus::Pending.into(),
-                        error_message: Some(format!("Request payload decode failed: {e}")),
-                        error_code: None,
-                        status_code: Some(400),
-                    })),
+                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
+                        ConnectorResponseTransformationError {
+                            error_message: format!("Request payload decode failed: {e}"),
+                            error_code: "DECODE_FAILED".to_string(),
+                            http_status_code: None,
+                        },
+                    )),
                 }
                 .encode_to_vec();
             }
@@ -187,8 +188,8 @@ mod uniffi_bindings_inner {
             Ok(o) => o,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError.into(),
-                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -198,8 +199,8 @@ mod uniffi_bindings_inner {
             Ok(m) => m,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError.into(),
-                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -246,8 +247,8 @@ mod uniffi_bindings_inner {
                 .encode_to_vec()
             }
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::ResponseError.into(),
-                payload: Some(ffi_result::Payload::ResponseError(e)),
+                r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
             }
             .encode_to_vec(),
         }
@@ -275,15 +276,14 @@ mod uniffi_bindings_inner {
             Ok(p) => p,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError.into(),
-                    payload: Some(ffi_result::Payload::ResponseError(ResponseError {
-                        status: PaymentStatus::Pending.into(),
-                        error_message: Some(format!(
-                            "EventServiceHandleRequest decode failed: {e}"
-                        )),
-                        error_code: None,
-                        status_code: Some(400),
-                    })),
+                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
+                        ConnectorResponseTransformationError {
+                            error_message: format!("EventServiceHandleRequest decode failed: {e}"),
+                            error_code: "DECODE_FAILED".to_string(),
+                            http_status_code: None,
+                        },
+                    )),
                 }
                 .encode_to_vec();
             }
@@ -293,8 +293,8 @@ mod uniffi_bindings_inner {
             Ok(o) => o,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError.into(),
-                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -304,8 +304,8 @@ mod uniffi_bindings_inner {
             Ok(m) => m,
             Err(e) => {
                 return FfiResult {
-                    r#type: ffi_result::Type::ResponseError.into(),
-                    payload: Some(ffi_result::Payload::ResponseError(e)),
+                    r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                    payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
                 }
                 .encode_to_vec()
             }
@@ -336,8 +336,8 @@ mod uniffi_bindings_inner {
                 .encode_to_vec()
             }
             Err(e) => FfiResult {
-                r#type: ffi_result::Type::ResponseError.into(),
-                payload: Some(ffi_result::Payload::ResponseError(e)),
+                r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
+                payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(e)),
             }
             .encode_to_vec(),
         }

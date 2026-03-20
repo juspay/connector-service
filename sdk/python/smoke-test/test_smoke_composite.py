@@ -35,8 +35,8 @@ try:
         AccessToken,
         ConnectorState,
         PaymentAddress,
-        RequestError,
-        ResponseError,
+        IntegrationError,
+        ConnectorResponseTransformationError,
     )
 except ImportError as e:
     print(f"Error importing payments package: {e}")
@@ -109,12 +109,12 @@ async def test_access_token_flow() -> None:
             print("  WARNING: No access token in response")
             print(f"  Full response: {access_token_response}")
 
-    except RequestError as e:
-        print(f"  RequestError: {e.error_code} - {e.error_message}")
+    except IntegrationError as e:
+        print(f"  IntegrationError: {e.error_code} - {e.error_message}")
         print("  This might be expected if credentials are not valid")
         return
-    except ResponseError as e:
-        print(f"  ResponseError: {e.error_code} - {e.error_message}")
+    except ConnectorResponseTransformationError as e:
+        print(f"  ConnectorResponseTransformationError: {e.error_code} - {e.error_message}")
         print("  This might be expected if credentials are not valid")
         return
     except Exception as e:
@@ -168,11 +168,11 @@ async def test_access_token_flow() -> None:
         print(f"  Response type: {type(authorize_response).__name__}")
         print(f"  Payment status: {authorize_response.status}")
         print("  PASSED")
-    except RequestError as e:
-        print(f"  RequestError: {e.error_code} - {e.error_message}")
+    except IntegrationError as e:
+        print(f"  IntegrationError: {e.error_code} - {e.error_message}")
         print("  PASSED (round-trip completed, error is from PayPal)")
-    except ResponseError as e:
-        print(f"  ResponseError: {e.error_code} - {e.error_message}")
+    except ConnectorResponseTransformationError as e:
+        print(f"  ConnectorResponseTransformationError: {e.error_code} - {e.error_message}")
         print("  PASSED (round-trip completed, error is from PayPal)")
     except Exception as e:
         print(f"  Error during authorize: {e}")
