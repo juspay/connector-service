@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.03.04.0-hotfix1
+
+### Features
+
+- **framework:** Use hyperswitch_masking from crates.io instead of git dependency ([#682](https://github.com/juspay/connector-service/pull/682)) ([`5fc282f`](https://github.com/juspay/connector-service/commit/5fc282f36ccfe3868956328ba0cf647a63330f10))
+- Implement card flow for fiservcommercehub ([#629](https://github.com/juspay/connector-service/pull/629)) ([`c3da3a5`](https://github.com/juspay/connector-service/commit/c3da3a5bba82576eb9c5d1c39f28a10f3fbaee0c))
+
+**Full Changelog:** [`2026.03.04.0...2026.03.04.0-hotfix1`](https://github.com/juspay/connector-service/compare/2026.03.04.0...2026.03.04.0-hotfix1)
+
+- - -
+
 ## 2026.03.04.0
 
 ### Features
