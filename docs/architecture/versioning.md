@@ -1,64 +1,6 @@
-<!--
-@doc-guidance
-────────────────────────────────────────────────────
-PAGE INTENT: The connector service follow semantic versioning. new integrations, features on the .X. and bug fixes/ security fixes on the . .X and major uppgrade on the major version. How developers are supposed to integrated the library with 1.2.* to ensure that the bug fixes are auaomatically pulled.
-
-AUDIENCE: Payment developers and architects
-TONE: Direct, conversational, opinionated. Write like explaining to a colleague over coffee.
-PRIOR READING: [What pages should the reader have seen before this one? Link them.]
-LEADS INTO: [What page comes next?]
-────────────────────────────────────────────────────
-LENGTH: 1.5–2 pages max (~600–800 words prose, tables and code blocks don't count toward this).
-         If you need more space, the page is doing too much — split it.
-
-WRITING RULES:
-1. FIRST SENTENCE RULE — Open with what the reader gains, not what the thing is.
-   Bad:  "The Prism SDK provides a unified interface..."
-   Good: "You call one method. It works with Stripe, Adyen, or any of 50+ processors."
-
-2. NO HEDGING — Delete: "can be", "may", "it is possible to", "in some cases", "typically".
-   Say what IS. If something is conditional, state the condition.
-
-3. VERB OVER NOUN — "lets you configure" not "provides configuration capabilities".
-   "transforms the request" not "performs request transformation".
-
-4. ONE IDEA PER SECTION — If a section has more than one takeaway, split it.
-
-5. SHOW THEN TELL — Code example or diagram first, explanation after.
-   The reader should see what it looks like before reading why.
-
-6. EARN EVERY SENTENCE — If removing a sentence doesn't lose information, remove it.
-   No "In this section, we will discuss..." No "As mentioned earlier..."
-   No "It is important to note that..."
-
-7. SPECIFICS OVER CLAIMS — Never say "supports many payment methods".
-   Say "supports cards, wallets (Apple Pay, Google Pay), bank transfers, BNPL, and UPI".
-
-8. ERRORS ARE FEATURES — When documenting a flow, show what goes wrong too.
-   Include at least one error scenario with the actual error message.
-
-9. NAME THE PRODUCT "Prism" — Not "UCS", not "the service", not "our platform".
-
-10. TABLES FOR COMPARISON, PROSE FOR NARRATIVE — Don't put a story in a table.
-     Don't write paragraphs when a 3-row table would be clearer.
-
-CODE EXAMPLE RULES:
-- Every code block must be runnable or clearly marked as pseudocode
-- Use test credentials: Stripe key as $STRIPE_API_KEY, card 4242424242424242
-- Show the output, not just the input
-- If the example needs setup, show the setup
-
-ANTI-PATTERNS TO REJECT:
-- "Comprehensive", "robust", "seamless", "leverage", "utilize", "facilitate"
-- Starting paragraphs with "Additionally", "Furthermore", "Moreover"
-- Any sentence that describes the documentation itself ("This guide covers...")
-- Repeating the heading as the first sentence of a section
-────────────────────────────────────────────────────
--->
-
 # Versioning
 
-You update your dependency and critical payment flows break. Or worse: you miss a security patch because you pinned too conservatively. Prism uses semantic versioning to give you control over what changes land in your codebase.
+Prism follows [Semantic Versioning 2.0.0](https://semver.org/). A minor version upgrade or a patch will never break your existing integration.
 
 ```
 MAJOR.MINOR.PATCH
@@ -69,15 +11,13 @@ MAJOR.MINOR.PATCH
 
 | Position | When It Changes | What It Means for You |
 |----------|-----------------|----------------------|
-| **MAJOR** (1.x.x → 2.x.x) | Breaking API changes | You must update your code. Migration guide provided. |
-| **MINOR** (1.2.x → 1.3.x) | New features, new connectors | Add capabilities without touching existing code. |
 | **PATCH** (1.2.3 → 1.2.4) | Bug fixes, security patches | Update automatically. Zero code changes required. |
-
-Prism follows [Semantic Versioning 2.0.0](https://semver.org/). A minor version never breaks your existing integration. A patch version only fixes things.
+| **MINOR** (1.2.x → 1.3.x) | New features, new connectors | Add capabilities without touching existing code. |
+| **MAJOR** (1.x.x → 2.x.x) | Breaking API changes | You must update your code. Migration guide provided. |
 
 ## Pinning for Automatic Bug Fixes
 
-You want security patches and critical fixes without manual updates. Pin your dependency to accept patch increments automatically.
+It is stongly recommended You want security patches and critical fixes without manual updates. Pin your dependency to accept patch increments automatically.
 
 <!-- tabs:start -->
 
