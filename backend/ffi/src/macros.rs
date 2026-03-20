@@ -40,7 +40,7 @@ macro_rules! req_transformer {
             connector: domain_types::connector_types::ConnectorEnum,
             connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
-        ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::RequestError> {
+        ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::IntegrationError> {
 
             let connector_data: connector_integration::types::ConnectorData<T> =
                 connector_integration::types::ConnectorData::get_connector_by_name(&connector);
@@ -139,7 +139,7 @@ macro_rules! res_transformer {
             connector_config: domain_types::router_data::ConnectorSpecificConfig,
             metadata: &common_utils::metadata::MaskedMetadata,
             response: domain_types::router_response_types::Response,
-        ) -> Result<$response_type, grpc_api_types::payments::ResponseError> {
+        ) -> Result<$response_type, grpc_api_types::payments::ConnectorResponseTransformationError> {
             let connector_data: connector_integration::types::ConnectorData<T> =
                 connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
