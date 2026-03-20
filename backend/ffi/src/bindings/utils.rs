@@ -11,8 +11,8 @@ use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
 use error_stack::Report;
 use grpc_api_types::payments::{
-    FfiConnectorHttpRequest, FfiConnectorHttpResponse, FfiOptions, PaymentStatus, RequestError,
-    ResponseError,
+    ConnectorResponseTransformationError, FfiConnectorHttpRequest, FfiConnectorHttpResponse,
+    FfiOptions, IntegrationError,
 };
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use prost::Message;
@@ -21,18 +21,18 @@ use ucs_env::error::ErrorSwitch;
 /// Helper to convert internal Request to Protobuf FfiConnectorHttpRequest bytes.
 pub fn build_ffi_request_bytes(
     request: &common_utils::request::Request,
-) -> Result<Vec<u8>, RequestError> {
+) -> Result<Vec<u8>, IntegrationError> {
     let mut headers = request.get_headers_map();
     let (body, boundary) = request
         .body
         .as_ref()
         .map(|b| b.get_body_bytes())
         .transpose()
-        .map_err(|e| RequestError {
-            status: PaymentStatus::Pending.into(),
-            error_message: Some(format!("Body encoding failed: {e}")),
-            error_code: None,
-            status_code: Some(400),
+        .map_err(|e| IntegrationError {
+            error_message: format!("Body encoding failed: {e}"),
+            error_code: "BODY_ENCODING_FAILED".to_string(),
+            suggested_action: None,
+            doc_url: None,
         })?
         .unwrap_or((None, None));
 
@@ -54,13 +54,14 @@ pub fn build_ffi_request_bytes(
 }
 
 /// Helper to convert Protobuf FfiConnectorHttpResponse bytes to internal Response.
-pub fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, ResponseError> {
+pub fn build_domain_response(
+    response_bytes: Vec<u8>,
+) -> Result<Response, ConnectorResponseTransformationError> {
     let response = FfiConnectorHttpResponse::decode(Bytes::from(response_bytes)).map_err(|e| {
-        ResponseError {
-            status: PaymentStatus::Pending.into(),
-            error_message: Some(format!("ConnectorHttpResponse decode failed: {e}")),
-            error_code: None,
-            status_code: Some(400),
+        ConnectorResponseTransformationError {
+            error_message: format!("ConnectorHttpResponse decode failed: {e}"),
+            error_code: "DECODE_FAILED".to_string(),
+            http_status_code: None,
         }
     })?;
 
@@ -81,50 +82,53 @@ pub fn build_domain_response(response_bytes: Vec<u8>) -> Result<Response, Respon
             Some(header_map)
         },
         response: Bytes::from(response.body),
-        status_code: response.status_code.try_into().map_err(|e| ResponseError {
-            status: PaymentStatus::Pending.into(),
-            error_message: Some(format!("Invalid HTTP status code: {e}")),
-            error_code: None,
-            status_code: Some(400),
+        status_code: response.status_code.try_into().map_err(|e| {
+            ConnectorResponseTransformationError {
+                error_message: format!("Invalid HTTP status code: {e}"),
+                error_code: "INVALID_STATUS_CODE".to_string(),
+                http_status_code: None,
+            }
         })?,
     })
 }
 
 /// refactor later
 /// Parse FfiOptions from optional bytes (for request path).
-pub fn parse_ffi_options_for_req(options_bytes: Vec<u8>) -> Result<FfiOptions, RequestError> {
+pub fn parse_ffi_options_for_req(options_bytes: Vec<u8>) -> Result<FfiOptions, IntegrationError> {
     if options_bytes.is_empty() {
-        return Err(RequestError {
-            status: PaymentStatus::Pending.into(),
-            error_message: Some("Empty options bytes".to_string()),
-            error_code: None,
-            status_code: Some(400),
+        return Err(IntegrationError {
+            error_message: "Empty options bytes".to_string(),
+            error_code: "EMPTY_OPTIONS".to_string(),
+            suggested_action: None,
+            doc_url: None,
         });
     }
-    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| RequestError {
-        status: PaymentStatus::Pending.into(),
-        error_message: Some(format!("Options decode failed: {e}")),
-        error_code: None,
-        status_code: Some(400),
+    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| IntegrationError {
+        error_message: format!("Options decode failed: {e}"),
+        error_code: "DECODE_FAILED".to_string(),
+        suggested_action: None,
+        doc_url: None,
     })
 }
 
 /// refactor later
 /// Parse FfiOptions from optional bytes (for response path).
-pub fn parse_ffi_options_for_res(options_bytes: Vec<u8>) -> Result<FfiOptions, ResponseError> {
+pub fn parse_ffi_options_for_res(
+    options_bytes: Vec<u8>,
+) -> Result<FfiOptions, ConnectorResponseTransformationError> {
     if options_bytes.is_empty() {
-        return Err(ResponseError {
-            status: PaymentStatus::Pending.into(),
-            error_message: Some("Empty options bytes".to_string()),
-            error_code: None,
-            status_code: Some(400),
+        return Err(ConnectorResponseTransformationError {
+            error_message: "Empty options bytes".to_string(),
+            error_code: "EMPTY_OPTIONS".to_string(),
+            http_status_code: None,
         });
     }
-    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| ResponseError {
-        status: PaymentStatus::Pending.into(),
-        error_message: Some(format!("Options decode failed: {e}")),
-        error_code: None,
-        status_code: Some(400),
+    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| {
+        ConnectorResponseTransformationError {
+            error_message: format!("Options decode failed: {e}"),
+            error_code: "DECODE_FAILED".to_string(),
+            http_status_code: None,
+        }
     })
 }
 
@@ -133,25 +137,28 @@ pub fn parse_ffi_options_for_res(options_bytes: Vec<u8>) -> Result<FfiOptions, R
 /// The connector identity is inferred from which ConnectorSpecificConfig variant is set.
 pub fn parse_metadata_for_req(
     options: &FfiOptions,
-) -> Result<crate::types::FfiMetadataPayload, RequestError> {
+) -> Result<crate::types::FfiMetadataPayload, IntegrationError> {
     // 1. Resolve ConnectorSpecificConfig from FfiOptions
     let proto_config = options
         .connector_config
         .as_ref()
-        .ok_or_else(|| RequestError {
-            status: PaymentStatus::Pending.into(),
-            error_message: Some("Missing connector_config".to_string()),
-            error_code: None,
-            status_code: Some(400),
+        .ok_or_else(|| IntegrationError {
+            error_message: "Missing connector_config".to_string(),
+            error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
+            suggested_action: None,
+            doc_url: None,
         })?;
 
     // 2. Infer connector from which oneof variant is set
-    let config_variant = proto_config.config.as_ref().ok_or_else(|| RequestError {
-        status: PaymentStatus::Pending.into(),
-        error_message: Some("Missing connector_config.config".to_string()),
-        error_code: None,
-        status_code: Some(400),
-    })?;
+    let config_variant = proto_config
+        .config
+        .as_ref()
+        .ok_or_else(|| IntegrationError {
+            error_message: "Missing connector_config.config".to_string(),
+            error_code: "MISSING_CONNECTOR_CONFIG_VARIANT".to_string(),
+            suggested_action: None,
+            doc_url: None,
+        })?;
 
     let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
         .map_err(|e: Report<ApplicationErrorResponse>| e.current_context().switch())?;
@@ -173,25 +180,28 @@ pub fn parse_metadata_for_req(
 /// Build FfiMetadataPayload from FfiOptions (for response path).
 pub fn parse_metadata_for_res(
     options: &FfiOptions,
-) -> Result<crate::types::FfiMetadataPayload, ResponseError> {
+) -> Result<crate::types::FfiMetadataPayload, ConnectorResponseTransformationError> {
     // 1. Resolve ConnectorSpecificConfig from FfiOptions
-    let proto_config = options
-        .connector_config
-        .as_ref()
-        .ok_or_else(|| ResponseError {
-            status: PaymentStatus::Pending.into(),
-            error_message: Some("Missing connector_config".to_string()),
-            error_code: None,
-            status_code: Some(400),
-        })?;
+    let proto_config =
+        options
+            .connector_config
+            .as_ref()
+            .ok_or_else(|| ConnectorResponseTransformationError {
+                error_message: "Missing connector_config".to_string(),
+                error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
+                http_status_code: None,
+            })?;
 
     // 2. Infer connector from which oneof variant is set
-    let config_variant = proto_config.config.as_ref().ok_or_else(|| ResponseError {
-        status: PaymentStatus::Pending.into(),
-        error_message: Some("Missing connector_config.config".to_string()),
-        error_code: None,
-        status_code: Some(400),
-    })?;
+    let config_variant =
+        proto_config
+            .config
+            .as_ref()
+            .ok_or_else(|| ConnectorResponseTransformationError {
+                error_message: "Missing connector_config.config".to_string(),
+                error_code: "MISSING_CONNECTOR_CONFIG_VARIANT".to_string(),
+                http_status_code: None,
+            })?;
 
     let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
         .map_err(|e: Report<ApplicationErrorResponse>| e.current_context().switch())?;

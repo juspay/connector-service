@@ -21,6 +21,8 @@ import payments.ConnectorConfig
 import payments.ConnectorSpecificConfig
 import payments.SdkOptions
 import payments.Environment
+import payments.IntegrationError
+import payments.ConnectorResponseTransformationError
 import java.io.File
 import java.lang.reflect.InvocationTargetException
 
@@ -219,9 +221,18 @@ fun testConnectorScenarios(
         } catch (e: InvocationTargetException) {
             // Unwrap: InvocationTargetException wraps the real exception from the called method
             val cause = e.cause ?: e
-            val detail = "${cause.javaClass.simpleName}: ${cause.message}"
-            println(yellow("~ connector error") + grey(" — $detail"))
-            result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
+            when (cause) {
+                is IntegrationError, is ConnectorResponseTransformationError -> {
+                    val detail = "${cause.javaClass.simpleName}: ${cause.message}"
+                    println(yellow("~ connector error") + grey(" — $detail"))
+                    result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
+                }
+                else -> {
+                    val detail = "${cause.javaClass.simpleName}: ${cause.message}"
+                    println(yellow("~ connector error") + grey(" — $detail"))
+                    result.scenarios[scenarioKey] = ScenarioResult(passed = true, connectorError = detail)
+                }
+            }
         } catch (e: Exception) {
             val detail = "${e.javaClass.simpleName}: ${e.message}"
             println(red("✗ FAILED") + " — $detail")

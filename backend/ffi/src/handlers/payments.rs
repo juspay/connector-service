@@ -6,10 +6,12 @@ use domain_types::errors::{ApplicationErrorResponse, ConnectorError};
 use domain_types::payment_method_data::DefaultPCIHolder;
 use ucs_env::error::ErrorSwitch;
 
-use grpc_api_types::payments::{Environment, RequestError, ResponseError};
+use grpc_api_types::payments::{
+    ConnectorResponseTransformationError, Environment, IntegrationError,
+};
 fn get_config_for_req(
     environment: Option<Environment>,
-) -> Result<std::sync::Arc<ucs_env::configs::Config>, RequestError> {
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, IntegrationError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {
@@ -23,7 +25,7 @@ fn get_config_for_req(
 
 fn get_config_for_res(
     environment: Option<Environment>,
-) -> Result<std::sync::Arc<ucs_env::configs::Config>, ResponseError> {
+) -> Result<std::sync::Arc<ucs_env::configs::Config>, ConnectorResponseTransformationError> {
     let config_str = if environment == Some(Environment::Production) {
         EMBEDDED_PROD_CONFIG
     } else {
@@ -52,7 +54,7 @@ macro_rules! impl_flow_handlers {
             pub fn [<$flow _req_handler>](
                 request: FfiRequestData<$req_type>,
                 environment: Option<Environment>,
-            ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::RequestError> {
+            ) -> Result<Option<common_utils::request::Request>, grpc_api_types::payments::IntegrationError> {
                 let config = get_config_for_req(environment)?;
                 $req_svc::<DefaultPCIHolder>(
                     request.payload,
@@ -67,7 +69,7 @@ macro_rules! impl_flow_handlers {
                 request: FfiRequestData<$req_type>,
                 response: domain_types::router_response_types::Response,
                 environment: Option<Environment>,
-            ) -> Result<$res_type, grpc_api_types::payments::ResponseError> {
+            ) -> Result<$res_type, grpc_api_types::payments::ConnectorResponseTransformationError> {
                 let config = get_config_for_res(environment)?;
                 $res_svc::<DefaultPCIHolder>(
                     request.payload,
@@ -98,7 +100,10 @@ include!("_generated_flow_registrations.rs");
 pub fn handle_event_handler(
     request: FfiRequestData<grpc_api_types::payments::EventServiceHandleRequest>,
     environment: Option<Environment>,
-) -> Result<grpc_api_types::payments::EventServiceHandleResponse, ResponseError> {
+) -> Result<
+    grpc_api_types::payments::EventServiceHandleResponse,
+    ConnectorResponseTransformationError,
+> {
     let config = get_config_for_res(environment)?;
     crate::services::payments::handle_event_transformer(
         request.payload,
