@@ -22,7 +22,7 @@ Every payment processor has diverse APIs, error codes, authentication methods, P
 
 **Prism is the unified connector library for AI agents and Developers to connect with any payment processor.**
 
-**Prism offers hardened transformation through testing on the payment processor environments.**
+**Prism offers hardened transformation through testing on payment processor environments.**
 
 | ❌ Without Prism | ✅ With Prism |
 |------------------------------|----------------------------|
@@ -73,18 +73,18 @@ sequenceDiagram
    participant SDK as Prism SDK
    participant PSP as Payment Service Provider (PSP)
    
-   Note over App,PSP: Payment Authorization
-   App->>SDK: paymentservice.authorize(amount, currency, payment_method)
+   Note over App,PSP: Create Order
+   App->>SDK: payments.createOrder(amount, currency)
    activate SDK
-   SDK->>PSP: Provider-specific Authorize API call
+   SDK->>PSP: Provider-specific Order API call
    activate PSP
    PSP-->>SDK: Provider-specific response
    deactivate PSP
-   SDK-->>App: Unified authorize response
+   SDK-->>App: Unified order response with session_token
    deactivate SDK
 
    Note over App,PSP: Payment Capture
-   App->>SDK: paymentservice.capture(payment_id, amount)
+   App->>SDK: payments.capture(payment_id, amount)
    activate SDK
    SDK->>PSP: Provider-specific Capture API call
    activate PSP
@@ -92,15 +92,6 @@ sequenceDiagram
    deactivate PSP
    SDK-->>App: Unified capture response
    deactivate SDK
-
-   Note over App,PSP: Event Service (Webhooks)
-   PSP->>App: webhook(event_payload)
-   activate App
-   App->>SDK: eventservice.handle(unified_event)
-   activate SDK
-   SDK->>App: Unified event payload
-   deactivate SDK
-   deactivate App
 
 ```
 
@@ -148,102 +139,82 @@ For detailed installation instructions, see [Installation Guide](./getting-start
 
 ---
 
-### Make Your First Payment
+### Create a Payment Order
+
+Create an order to get a `session_token` (client secret) from your payment processor:
 
 <!-- tabs:start -->
 
 #### **Node.js**
 
-```bash
-npm install @juspay/hyperswitch-prism
-```
-
 ```javascript
-const { PaymentClient, Connector, Currency } = require('@juspay/hyperswitch-prism');
+const { ConnectorClient, Currency } = require('@juspay/hyperswitch-prism');
 
 async function main() {
-    const client = new PaymentClient('your_api_key');
-
-    const payment = await client.createPayment({
-        amount: { value: 1000, currency: Currency.USD }, // $10.00
-        connector: Connector.Stripe,
-        paymentMethod: {
-            card: {
-                number: '4242424242424242',
-                expMonth: 12,
-                expYear: 2030,
-                cvv: '123'
-            }
-        },
-        captureMethod: 'automatic'
+    const client = new ConnectorClient({
+        connectors: {
+            stripe: { apiKey: process.env.STRIPE_API_KEY }
+        }
     });
 
-    console.log('Payment ID:', payment.id);
-    console.log('Status:', payment.status);
+    const order = await client.payments.createOrder({
+        amount: {
+            minorAmount: 1000,  // $10.00
+            currency: Currency.USD
+        },
+        merchantOrderId: 'order-123'
+    });
+
+    console.log('Order ID:', order.connectorOrderId);
+    console.log('Client Secret:', order.sessionToken.clientSecret);
 }
 
-main();
+main().catch(console.error);
 ```
 
 #### **Python**
 
-```bash
-pip install hyperswitch-prism
-```
-
 ```python
-from hyperswitch_prism import PaymentClient, Connector, Currency
+import os
+from hyperswitch_prism import ConnectorClient, Currency
 
-client = PaymentClient('your_api_key')
+client = ConnectorClient(
+    connectors={
+        "stripe": {"api_key": os.environ["STRIPE_API_KEY"]}
+    }
+)
 
-payment = client.create_payment({
-    'amount': {'value': 1000, 'currency': Currency.USD},
-    'connector': Connector.STRIPE,
-    'payment_method': {
-        'card': {
-            'number': '4242424242424242',
-            'exp_month': 12,
-            'exp_year': 2030,
-            'cvv': '123'
-        }
-    },
-    'capture_method': 'automatic'
-})
+order = client.payments.create_order(
+    amount={"minor_amount": 1000, "currency": Currency.USD},
+    merchant_order_id="order-123"
+)
 
-print(f"Payment ID: {payment.id}")
-print(f"Status: {payment.status}")
+print(f"Order ID: {order.connector_order_id}")
+print(f"Client Secret: {order.session_token.client_secret}")
 ```
 
 #### **Java**
-
-```xml
-<!-- Add to pom.xml -->
-<dependency>
-    <groupId>com.juspay</groupId>
-    <artifactId>hyperswitch-prism</artifactId>
-    <version>1.0.0</version>
-</dependency>
-```
 
 ```java
 import com.juspay.hyperswitchprism.*;
 
 public class Example {
     public static void main(String[] args) {
-        PaymentClient client = PaymentClient.create("your_api_key");
-
-        PaymentRequest request = PaymentRequest.builder()
-            .amount(Amount.of(1000, Currency.USD))
-            .connector(Connector.STRIPE)
-            .paymentMethod(PaymentMethod.card(
-                "4242424242424242", 12, 2030, "123"))
-            .captureMethod(CaptureMethod.AUTOMATIC)
+        ConnectorClient client = ConnectorClient.builder()
+            .connector("stripe", StripeConfig.builder()
+                .apiKey(System.getenv("STRIPE_API_KEY"))
+                .build())
             .build();
 
-        Payment payment = client.createPayment(request);
+        CreateOrderResponse order = client.payments().createOrder(
+            CreateOrderRequest.builder()
+                .amount(Amount.of(1000, Currency.USD))
+                .merchantOrderId("order-123")
+                .build()
+        );
 
-        System.out.println("Payment ID: " + payment.getId());
-        System.out.println("Status: " + payment.getStatus());
+        System.out.println("Order ID: " + order.getConnectorOrderId());
+        System.out.println("Client Secret: " + order.getSessionToken().getClientSecret());
     }
 }
 ```
@@ -256,23 +227,35 @@ For complete payment workflows, see [First Payment Guide](./getting-started/firs
 
 ## 🔄 Switching Providers
 
-One of Prism's core benefits: switch payment providers by changing **one line**.
+One of Prism's core benefits: switch payment providers by changing the connector configuration.
 
 ```javascript
 // Before: Using Stripe
-const payment = await client.createPayment({
-    connector: Connector.Stripe,  // ← Change this
-    // ... rest stays the same
+const client = new ConnectorClient({
+    connectors: {
+        stripe: { apiKey: process.env.STRIPE_API_KEY }
+    }
 });
 
-// After: Using Adyen
-const payment = await client.createPayment({
-    connector: Connector.Adyen,   // ← That's it!
-    // ... everything else identical
+// After: Using Braintree
+const client = new ConnectorClient({
+    connectors: {
+        braintree: {
+            publicKey: process.env.BRAINTREE_PUBLIC_KEY,
+            privateKey: process.env.BRAINTREE_PRIVATE_KEY,
+            merchantAccountId: process.env.BRAINTREE_MERCHANT_ID
+        }
+    }
+});
+
+// The createOrder call stays exactly the same!
+const order = await client.payments.createOrder({
+    amount: { minorAmount: 1000, currency: Currency.USD },
+    merchantOrderId: 'order-123'
 });
 ```
 
-No rewriting. No re-architecting. Just swap the connector.
+No rewriting. No re-architecting. Just swap the connector config.
 
 ---
 
@@ -283,6 +266,7 @@ Prism unifies complex payment operations across all processors:
 ### Core Payment Operations
 | Flow | Description |
 |------|-------------|
+| **CreateOrder** | Create a payment intent/order with the processor |
 | **Authorize** | Hold funds on a customer's payment method |
 | **Capture** | Complete an authorized payment and transfer funds |
 | **Void** | Cancel an authorized payment without charging |
@@ -307,6 +291,7 @@ For all supported flows, see [Extending to More Flows](./getting-started/extend-
 | Guide | Description |
 |-------|-------------|
 | [Installation](./getting-started/installation.md) | Install SDKs for all supported languages |
+| [Create Order](./getting-started/create-order.md) | Create payment orders with any processor |
 | [First Payment](./getting-started/first-payment.md) | Complete payment flow with error handling |
 | [Extending Flows](./getting-started/extend-to-more-flows.md) | Subscriptions, 3DS, incremental auth, and more |
 | [Architecture](./architecture/README.md) | How Prism works under the hood |
