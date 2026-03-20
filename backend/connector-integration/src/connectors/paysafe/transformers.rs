@@ -432,7 +432,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })
             })
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "payment_handle_token",
+                field_name: "payment_method_token",
             })?;
 
         let customer_ip = router_data

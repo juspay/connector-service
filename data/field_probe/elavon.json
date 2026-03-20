@@ -1,34 +1,43 @@
 {
   "connector": "elavon",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Affirm": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Afterpay": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "ApplePay": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Bacs": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Becs": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Blik": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Card": {
         "status": "supported",
@@ -48,90 +57,53 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://api.demo.convergepay.com/VirtualMerchantDemo/processxml.do",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
-          "body": "xmldata=%3Ctxn%3E%3Cssl_transaction_type%3Eccsale%3C%2Fssl_transaction_type%3E%3Cssl_account_id%3Eprobe_merchant%3C%2Fssl_account_id%3E%3Cssl_user_id%3Eprobe_user%3C%2Fssl_user_id%3E%3Cssl_pin%3Eprobe_pin%3C%2Fssl_pin%3E%3Cssl_amount%3E10.00%3C%2Fssl_amount%3E%3Cssl_card_number%3E4111111111111111%3C%2Fssl_card_number%3E%3Cssl_exp_date%3E0330%3C%2Fssl_exp_date%3E%3Cssl_cvv2cvc2%3E737%3C%2Fssl_cvv2cvc2%3E%3Cssl_cvv2cvc2_indicator%3E1%3C%2Fssl_cvv2cvc2_indicator%3E%3Cssl_email%3Etest%40example.com%3C%2Fssl_email%3E%3Cssl_transaction_currency%3EUSD%3C%2Fssl_transaction_currency%3E%3Cssl_avs_address%3E123+Main+St%3C%2Fssl_avs_address%3E%3Cssl_avs_zip%3E98101%3C%2Fssl_avs_zip%3E%3Cssl_invoice_number%3EIRRELEVANT_PAYMENT_ID%3C%2Fssl_invoice_number%3E%3C%2Ftxn%3E"
+          "body": "xmldata=%3Ctxn%3E%3Cssl_transaction_type%3Eccsale%3C%2Fssl_transaction_type%3E%3Cssl_account_id%3Eprobe_merchant%3C%2Fssl_account_id%3E%3Cssl_user_id%3Eprobe_user%3C%2Fssl_user_id%3E%3Cssl_pin%3Eprobe_pin%3C%2Fssl_pin%3E%3Cssl_amount%3E10.00%3C%2Fssl_amount%3E%3Cssl_card_number%3E4111111111111111%3C%2Fssl_card_number%3E%3Cssl_exp_date%3E0330%3C%2Fssl_exp_date%3E%3Cssl_cvv2cvc2%3E737%3C%2Fssl_cvv2cvc2%3E%3Cssl_cvv2cvc2_indicator%3E1%3C%2Fssl_cvv2cvc2_indicator%3E%3Cssl_transaction_currency%3EUSD%3C%2Fssl_transaction_currency%3E%3Cssl_invoice_number%3EIRRELEVANT_PAYMENT_ID%3C%2Fssl_invoice_number%3E%3C%2Ftxn%3E"
         }
       },
       "GooglePay": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Ideal": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Klarna": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
+      },
+      "SamsungPay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "Sepa": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       },
       "UpiCollect": {
-        "status": "error",
-        "error": "Integration error: Failed to encode connector request"
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported for Elavon"
       }
     },
     "capture": {
@@ -156,10 +128,46 @@
         }
       }
     },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -175,6 +183,21 @@
           },
           "body": "xmldata=%3Ctxn%3E%3Cssl_transaction_type%3Etxnquery%3C%2Fssl_transaction_type%3E%3Cssl_account_id%3Eprobe_merchant%3C%2Fssl_account_id%3E%3Cssl_user_id%3Eprobe_user%3C%2Fssl_user_id%3E%3Cssl_pin%3Eprobe_pin%3C%2Fssl_pin%3E%3Cssl_txn_id%3Eprobe_connector_txn_001%3C%2Fssl_txn_id%3E%3C%2Ftxn%3E"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -199,6 +222,26 @@
           },
           "body": "xmldata=%3Ctxn%3E%3Cssl_transaction_type%3Eccreturn%3C%2Fssl_transaction_type%3E%3Cssl_account_id%3Eprobe_merchant%3C%2Fssl_account_id%3E%3Cssl_user_id%3Eprobe_user%3C%2Fssl_user_id%3E%3Cssl_pin%3Eprobe_pin%3C%2Fssl_pin%3E%3Cssl_amount%3E10.00%3C%2Fssl_amount%3E%3Cssl_txn_id%3Eprobe_connector_txn_001%3C%2Fssl_txn_id%3E%3C%2Ftxn%3E"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "not_implemented"
       }
     }
   }

@@ -317,7 +317,7 @@ macros::macro_connector_implementation!(
             // Get order_id from reference_id (stored after CreateOrder via set_order_reference_id)
             let order_id = req.resource_common_data.reference_id
                 .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "reference_id" })?;
+                .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "merchant_order_id" })?;
             Ok(format!("{}/pa/payment_intents/{}/confirm", &req.resource_common_data.connectors.airwallex.base_url, order_id))
         }
     }

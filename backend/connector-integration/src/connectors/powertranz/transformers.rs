@@ -348,7 +348,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     source: PowertranzSource {
                         cardholder_name: card_data.card_holder_name.clone().ok_or(
                             errors::ConnectorError::MissingRequiredField {
-                                field_name: "card_holder_name",
+                                field_name: "payment_method.card.card_holder_name",
                             },
                         )?,
                         card_pan: card_data.card_number.clone(),
