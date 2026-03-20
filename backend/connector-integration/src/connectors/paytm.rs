@@ -1,30 +1,34 @@
+pub mod request;
+pub mod response;
 pub mod transformers;
 
 use std::fmt::Debug;
 
 use common_enums::AttemptStatus;
-use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{errors::CustomResult, events, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
-        CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
-        PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -32,15 +36,15 @@ use domain_types::{
 use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent, verification,
+    decode::BodyDecoding, verification::SourceVerification,
 };
 use paytm::constants;
 use serde::Serialize;
 use transformers as paytm;
 
-use self::transformers::{
-    PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmInitiateTxnResponse,
-    PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse,
+use self::{
+    request::{PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmTransactionStatusRequest},
+    response::{PaytmInitiateTxnResponse, PaytmProcessTxnResponse, PaytmTransactionStatusResponse},
 };
 use crate::{connectors::macros, types::ResponseRouterData};
 
@@ -88,18 +92,18 @@ macros::create_all_prerequisites!(
         fn build_custom_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+            event_builder: Option<&mut events::Event>,
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             // First try to parse as session token error response format
             if let Ok(session_error_response) = res
                 .response
                 .parse_struct::<paytm::PaytmSessionTokenErrorResponse>("PaytmSessionTokenErrorResponse")
             {
                 if let Some(event) = event_builder {
-                    event.set_error_response_body(&session_error_response);
+                    event.set_connector_response(&session_error_response);
                 }
 
-                return Ok(domain_types::router_data::ErrorResponse {
+                return Ok(ErrorResponse {
                     code: session_error_response.body.result_info.result_code,
                     message: session_error_response.body.result_info.result_msg,
                     reason: None,
@@ -118,10 +122,10 @@ macros::create_all_prerequisites!(
                 .parse_struct::<paytm::PaytmCallbackErrorResponse>("PaytmCallbackErrorResponse")
             {
                 if let Some(event) = event_builder {
-                    event.set_error_response_body(&callback_response);
+                    event.set_connector_response(&callback_response);
                 }
 
-                return Ok(domain_types::router_data::ErrorResponse {
+                return Ok(ErrorResponse {
                     code: callback_response
                         .body
                         .txn_info
@@ -148,10 +152,10 @@ macros::create_all_prerequisites!(
                 .parse_struct::<paytm::PaytmErrorResponse>("PaytmErrorResponse")
             {
                 if let Some(event) = event_builder {
-                    event.set_error_response_body(&response);
+                    event.set_connector_response(&response);
                 }
 
-                return Ok(domain_types::router_data::ErrorResponse {
+                return Ok(ErrorResponse {
                     code: response.error_code.unwrap_or_default(),
                     message: response.error_message.unwrap_or_default(),
                     reason: response.error_description,
@@ -175,7 +179,7 @@ macros::create_all_prerequisites!(
                 _ => format!("HTTP {} error", res.status_code),
             };
 
-            Ok(domain_types::router_data::ErrorResponse {
+            Ok(ErrorResponse {
                 code: res.status_code.to_string(),
                 message: error_message,
                 reason: Some(format!(
@@ -194,6 +198,16 @@ macros::create_all_prerequisites!(
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        IncrementalAuthorization,
+        PaymentFlowData,
+        PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Paytm<T>
 {
     fn should_do_session_token(&self) -> bool {
@@ -207,6 +221,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 // Service trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SdkSessionTokenV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Paytm<T>
 {
 }
@@ -215,10 +234,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Paytm<T>
 {
 }
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentIncrementalAuthorization for Paytm<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Paytm<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::CreateConnectorCustomer for Paytm<T>
 {
@@ -246,9 +272,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Paytm<T>
+    connector_types::RepeatPaymentV2<T> for Paytm<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidPostCaptureV2 for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
+    > for Paytm<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentCapture for Paytm<T>
 {
@@ -278,7 +319,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyRedirectResponse for Paytm<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> SourceVerification
+    for Paytm<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> BodyDecoding
+    for Paytm<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentTokenV2<T> for Paytm<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateRevokeV2 for Paytm<T>
 {
 }
 
@@ -315,7 +373,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        _auth_type: &ConnectorAuthType,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         Ok(vec![(
             constants::CONTENT_TYPE_HEADER.to_string(),
@@ -326,140 +384,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_custom_error_response(res, event_builder)
     }
-}
-
-// SourceVerification implementations for all flows
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Paytm<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Paytm<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Paytm<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Paytm<T>
-{
 }
 
 // CreateSessionToken flow implementation using macros
@@ -480,7 +408,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let headers = self.get_auth_header(&req.connector_auth_type)?;
+            let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
 
@@ -489,7 +417,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
+            let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
             let order_id = &req.resource_common_data.connector_request_reference_id;
 
@@ -501,8 +429,8 @@ macros::macro_connector_implementation!(
         fn get_5xx_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+            event_builder: Option<&mut events::Event>,
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -549,7 +477,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
 
-            let headers = self.get_auth_header(&req.connector_auth_type)?;
+            let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
 
@@ -558,7 +486,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
-            let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
+            let auth = paytm::PaytmAuthType::try_from(&req.connector_config)?;
             let merchant_id = auth.merchant_id.peek();
             let order_id = &req.resource_common_data.connector_request_reference_id;
 
@@ -570,8 +498,8 @@ macros::macro_connector_implementation!(
         fn get_5xx_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+            event_builder: Option<&mut events::Event>,
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -595,7 +523,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let headers = self.get_auth_header(&req.connector_auth_type)?;
+            let headers = self.get_auth_header(&req.connector_config)?;
             Ok(headers)
         }
 
@@ -610,8 +538,8 @@ macros::macro_connector_implementation!(
         fn get_5xx_error_response(
             &self,
             res: Response,
-            event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+            event_builder: Option<&mut events::Event>,
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
     }
@@ -671,18 +599,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Paytm<T>
+    ConnectorIntegrationV2<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData<T>,
+        PaymentsResponseData,
+    > for Paytm<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PaymentMethodToken,
         PaymentFlowData,
@@ -723,43 +648,22 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-// Authentication flow SourceVerification implementations
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        PreAuthenticate,
+    ConnectorIntegrationV2<
+        SdkSessionToken,
         PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
+        PaymentsSdkSessionTokenData,
         PaymentsResponseData,
     > for Paytm<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        Authenticate,
+    ConnectorIntegrationV2<
+        MandateRevoke,
         PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        CreateConnectorCustomer,
-        PaymentFlowData,
-        ConnectorCustomerData,
-        ConnectorCustomerResponse,
+        MandateRevokeRequestData,
+        MandateRevokeResponseData,
     > for Paytm<T>
 {
 }

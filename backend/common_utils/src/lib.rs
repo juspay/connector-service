@@ -1,5 +1,8 @@
 //! Common utilities for connector service
 
+extern crate self as common_utils;
+
+pub mod config_patch;
 pub mod crypto;
 pub mod custom_serde;
 pub mod errors;

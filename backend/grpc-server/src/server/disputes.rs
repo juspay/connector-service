@@ -1,5 +1,9 @@
-use std::sync::Arc;
-
+use crate::utils::{self, get_config_from_request};
+use crate::{
+    implement_connector_operation,
+    request::RequestData,
+    utils::{grpc_logging_wrapper, MetadataPayload},
+};
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -10,7 +14,7 @@ use domain_types::{
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
         generate_accept_dispute_response, generate_defend_dispute_response,
@@ -19,43 +23,34 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
-use external_services;
 use grpc_api_types::payments::{
-    dispute_service_server::DisputeService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, DisputeResponse, DisputeServiceGetRequest,
-    DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse,
-    DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
-    WebhookResponseContent,
+    dispute_service_server::DisputeService, DisputeResponse, DisputeServiceAcceptRequest,
+    DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
+    DisputeServiceGetRequest, DisputeServiceSubmitEvidenceRequest,
+    DisputeServiceSubmitEvidenceResponse, EventResponse, EventServiceHandleRequest,
+    EventServiceHandleResponse, WebhookEventType,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
-
-use crate::{
-    configs::Config,
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    implement_connector_operation,
-    request::RequestData,
-    utils::{grpc_logging_wrapper, MetadataPayload},
-};
+use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {
     async fn internal_defend(
         &self,
-        request: RequestData<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
+        request: RequestData<DisputeServiceDefendRequest>,
+    ) -> Result<tonic::Response<DisputeServiceDefendResponse>, tonic::Status>;
 }
 
-pub struct Disputes {
-    pub config: Arc<Config>,
-}
+#[derive(Clone)]
+pub struct Disputes;
 
 impl DisputeOperationsInternal for Disputes {
     implement_connector_operation!(
         fn_name: internal_defend,
         log_prefix: "DEFEND_DISPUTE",
-        request_type: DisputeDefendRequest,
-        response_type: DisputeDefendResponse,
+        request_type: DisputeServiceDefendRequest,
+        response_type: DisputeServiceDefendResponse,
         flow_marker: DefendDispute,
         resource_common_data_type: DisputeFlowData,
         request_data_type: DisputeDefendData,
@@ -95,15 +90,16 @@ impl DisputeService for Disputes {
         request: tonic::Request<DisputeServiceSubmitEvidenceRequest>,
     ) -> Result<tonic::Response<DisputeServiceSubmitEvidenceResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::SubmitEvidence,
             |request_data| {
                 let service_name = service_name.clone();
@@ -113,8 +109,9 @@ impl DisputeService for Disputes {
                         connector,
                         request_id,
                         lineage_ids,
-                        connector_auth_type,
+                        connector_config,
                         reference_id,
+                        resource_id,
                         shadow_mode,
                         ..
                     } = request_data.extracted_metadata;
@@ -132,11 +129,15 @@ impl DisputeService for Disputes {
                     let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
-                        payload.clone(),
-                        self.config.connectors.clone(),
-                    ))
-                    .map_err(|e| e.into_grpc_status())?;
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
+                    let dispute_flow_data =
+                        DisputeFlowData::foreign_try_from((payload.clone(), connectors))
+                            .map_err(|e| e.into_grpc_status())?;
 
                     let router_data: RouterDataV2<
                         SubmitEvidence,
@@ -146,29 +147,35 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type,
+                        connector_config,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: common_utils::events::FlowName::SubmitEvidence,
-                        event_config: &self.config.events,
+                        event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        resource_id: &resource_id,
                         shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        common_enums::CallConnectorAction::Trigger,
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        ),
                     )
                     .await
                     .switch()
@@ -180,7 +187,7 @@ impl DisputeService for Disputes {
                     Ok(tonic::Response::new(dispute_response))
                 }
             },
-        )
+        ))
         .await
     }
 
@@ -211,6 +218,7 @@ impl DisputeService for Disputes {
     ) -> Result<tonic::Response<DisputeResponse>, tonic::Status> {
         // For now, return a basic dispute response
         // This will need proper implementation based on domain logic
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -219,7 +227,7 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::Dsync,
             |request_data| async {
                 let _payload = request_data.payload;
@@ -255,17 +263,18 @@ impl DisputeService for Disputes {
     )]
     async fn defend(
         &self,
-        request: tonic::Request<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
+        request: tonic::Request<DisputeServiceDefendRequest>,
+    ) -> Result<tonic::Response<DisputeServiceDefendResponse>, tonic::Status> {
         let service_name = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
+        let config = get_config_from_request(&request)?;
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::DefendDispute,
             |request_data| async move { self.internal_defend(request_data).await },
         )
@@ -295,18 +304,19 @@ impl DisputeService for Disputes {
     )]
     async fn accept(
         &self,
-        request: tonic::Request<AcceptDisputeRequest>,
-    ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
+        request: tonic::Request<DisputeServiceAcceptRequest>,
+    ) -> Result<tonic::Response<DisputeServiceAcceptResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "DisputeService".to_string());
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::AcceptDispute,
             |request_data| {
                 let service_name = service_name.clone();
@@ -316,8 +326,9 @@ impl DisputeService for Disputes {
                         connector,
                         request_id,
                         lineage_ids,
-                        connector_auth_type,
+                        connector_config,
                         reference_id,
+                        resource_id,
                         shadow_mode,
                         ..
                     } = request_data.extracted_metadata;
@@ -336,11 +347,15 @@ impl DisputeService for Disputes {
                     let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
-                        payload.clone(),
-                        self.config.connectors.clone(),
-                    ))
-                    .map_err(|e| e.into_grpc_status())?;
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
+                    let dispute_flow_data =
+                        DisputeFlowData::foreign_try_from((payload.clone(), connectors))
+                            .map_err(|e| e.into_grpc_status())?;
 
                     let router_data: RouterDataV2<
                         Accept,
@@ -350,7 +365,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type,
+                        connector_config,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -358,22 +373,28 @@ impl DisputeService for Disputes {
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        service_type: utils::service_type_str(&config.server.type_),
                         flow_name: common_utils::events::FlowName::AcceptDispute,
-                        event_config: &self.config.events,
+                        event_config: &config.events,
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        resource_id: &resource_id,
                         shadow_mode,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        common_enums::CallConnectorAction::Trigger,
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            common_enums::CallConnectorAction::Trigger,
+                            None,
+                            None,
+                        ),
                     )
                     .await
                     .switch()
@@ -385,7 +406,7 @@ impl DisputeService for Disputes {
                     Ok(tonic::Response::new(dispute_response))
                 }
             },
-        )
+        ))
         .await
     }
 
@@ -410,10 +431,11 @@ impl DisputeService for Disputes {
         )
         skip(self, request)
     )]
-    async fn transform(
+    async fn handle_event(
         &self,
-        request: tonic::Request<DisputeServiceTransformRequest>,
-    ) -> Result<tonic::Response<DisputeServiceTransformResponse>, tonic::Status> {
+        request: tonic::Request<EventServiceHandleRequest>,
+    ) -> Result<tonic::Response<EventServiceHandleResponse>, tonic::Status> {
+        let config = get_config_from_request(&request)?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -422,29 +444,31 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             common_utils::events::FlowName::IncomingWebhook,
             |request_data| {
                 async move {
                     let connector = request_data.extracted_metadata.connector;
-                    let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
+                    let connector_config = request_data.extracted_metadata.connector_config;
                     let payload = request_data.payload;
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
                         .ok_or_else(|| {
-                            tonic::Status::invalid_argument("missing request_details in the payload")
+                            tonic::Status::invalid_argument(
+                                "missing request_details in the payload",
+                            )
                         })?
                         .map_err(|e| e.into_grpc_status())?;
                     let webhook_secrets = payload
-                        .webhook_secrets
-                        .map(|details| {
-                            domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                                details,
-                            )
-                            .map_err(|e| e.into_grpc_status())
-                        })
-                        .transpose()?;
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
                     // Get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
                     let source_verified = connector_data
@@ -452,7 +476,7 @@ impl DisputeService for Disputes {
                         .verify_webhook_source(
                             request_details.clone(),
                             webhook_secrets.clone(),
-                            Some(connector_auth_details.clone()),
+                            Some(connector_config.clone()),
                         )
                         .switch()
                         .map_err(|e| e.into_grpc_status())?;
@@ -461,15 +485,16 @@ impl DisputeService for Disputes {
                         connector_data,
                         request_details,
                         webhook_secrets,
-                        Some(connector_auth_details),
+                        Some(connector_config),
                     )
                     .await
                     .map_err(|e| e.into_grpc_status())?;
-                    let response = DisputeServiceTransformResponse {
+                    let response = EventServiceHandleResponse {
                         event_type: WebhookEventType::WebhookDisputeOpened.into(),
-                        content: Some(content),
+                        event_response: Some(content),
                         source_verified,
-                        response_ref_id: None,
+                        merchant_event_id: None,
+                        event_status: grpc_api_types::payments::WebhookEventStatus::Complete.into(),
                     };
                     Ok(tonic::Response::new(response))
                 }
@@ -483,11 +508,11 @@ async fn get_disputes_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
-) -> CustomResult<WebhookResponseContent, ApplicationErrorResponse> {
+    connector_config: Option<ConnectorSpecificConfig>,
+) -> CustomResult<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_dispute_webhook(request_details, webhook_secrets, connector_config)
         .switch()?;
 
     // Generate response
@@ -500,9 +525,9 @@ async fn get_disputes_webhook_content(
         }),
     )?;
 
-    Ok(WebhookResponseContent {
+    Ok(EventResponse {
         content: Some(
-            grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(response),
+            grpc_api_types::payments::event_response::Content::DisputesResponse(response),
         ),
     })
 }

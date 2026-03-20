@@ -1,7 +1,8 @@
+#![allow(unused_variables, unused_assignments)]
+
 use common_utils::errors::ErrorSwitch;
 // use api_models::errors::types::{ Extra};
 use strum::Display;
-
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
@@ -59,6 +60,44 @@ pub enum ApplicationErrorResponse {
     DomainError(ApiError),
 }
 
+impl ApplicationErrorResponse {
+    /// Returns a reference to the inner ApiError
+    pub fn get_api_error(&self) -> &ApiError {
+        match self {
+            Self::Unauthorized(err) => err,
+            Self::ForbiddenCommonResource(err) => err,
+            Self::ForbiddenPrivateResource(err) => err,
+            Self::Conflict(err) => err,
+            Self::Gone(err) => err,
+            Self::Unprocessable(err) => err,
+            Self::InternalServerError(err) => err,
+            Self::NotImplemented(err) => err,
+            Self::NotFound(err) => err,
+            Self::MethodNotAllowed(err) => err,
+            Self::BadRequest(err) => err,
+            Self::DomainError(err) => err,
+        }
+    }
+
+    pub fn missing_required_field(field_name: &'static str) -> Self {
+        Self::BadRequest(ApiError {
+            sub_code: "MISSING_REQUIRED_FIELD".to_owned(),
+            error_identifier: 400,
+            error_message: format!("Missing required param: {field_name}"),
+            error_object: None,
+        })
+    }
+
+    pub fn empty_field_error(field_name: &str) -> Self {
+        Self::BadRequest(ApiError {
+            sub_code: format!("INVALID_{}", field_name.to_uppercase()),
+            error_identifier: 400,
+            error_message: format!("{} cannot be empty", field_name),
+            error_object: None,
+        })
+    }
+}
+
 #[derive(Debug, serde::Serialize, Clone)]
 pub struct ApiError {
     pub sub_code: String,
@@ -96,31 +135,32 @@ pub enum ErrorType {
 // WE	Webhook Error	Errors related to Webhooks
 #[derive(Debug, Clone, router_derive::ApiError)]
 #[error(error_type_enum = ErrorType)]
+#[allow(unused_variables, unused_assignments)]
 pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::ConnectorError, code = "CE_00", message = "{code}: {message}", ignore = "status_code")]
     ExternalConnectorError {
         code: String,
         message: String,
-        connector: String,
-        status_code: u16,
-        reason: Option<String>,
+        _connector: String,
+        _status_code: u16,
+        _reason: Option<String>,
     },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_01", message = "Payment failed during authorization with connector. Retry payment")]
-    PaymentAuthorizationFailed { data: Option<serde_json::Value> },
+    PaymentAuthorizationFailed { _data: Option<serde_json::Value> },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_02", message = "Payment failed during authentication with connector. Retry payment")]
-    PaymentAuthenticationFailed { data: Option<serde_json::Value> },
+    PaymentAuthenticationFailed { _data: Option<serde_json::Value> },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_03", message = "Capture attempt failed while processing with connector")]
-    PaymentCaptureFailed { data: Option<serde_json::Value> },
+    PaymentCaptureFailed { _data: Option<serde_json::Value> },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_04", message = "The card data is invalid")]
-    InvalidCardData { data: Option<serde_json::Value> },
+    InvalidCardData { _data: Option<serde_json::Value> },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_05", message = "The card has expired")]
-    CardExpired { data: Option<serde_json::Value> },
+    CardExpired { _data: Option<serde_json::Value> },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_06", message = "Refund failed while processing with connector. Retry refund")]
-    RefundFailed { data: Option<serde_json::Value> },
+    RefundFailed { _data: Option<serde_json::Value> },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_07", message = "Verification failed while processing with connector. Retry operation")]
-    VerificationFailed { data: Option<serde_json::Value> },
+    VerificationFailed { _data: Option<serde_json::Value> },
     #[error(error_type = ErrorType::ProcessingError, code = "CE_08", message = "Dispute operation failed while processing with connector. Retry operation")]
-    DisputeFailed { data: Option<serde_json::Value> },
+    DisputeFailed { _data: Option<serde_json::Value> },
 
     #[error(error_type = ErrorType::LockTimeout, code = "HE_00", message = "Resource is busy. Please try again later.")]
     ResourceBusy,
@@ -148,7 +188,7 @@ pub enum ApiErrorResponse {
     DuplicatePaymentMethod,
     #[error(error_type = ErrorType::DuplicateRequest, code = "HE_01", message = "The payment with the specified payment_id already exists in our records")]
     DuplicatePayment {
-        payment_id: common_utils::id_type::PaymentId,
+        _payment_id: common_utils::id_type::PaymentId,
     },
     #[error(error_type = ErrorType::DuplicateRequest, code = "HE_01", message = "The payout with the specified payout_id '{payout_id}' already exists in our records")]
     DuplicatePayout { payout_id: String },
@@ -169,7 +209,7 @@ pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Merchant account does not exist in our records")]
     MerchantAccountNotFound,
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Merchant connector account does not exist in our records")]
-    MerchantConnectorAccountNotFound { id: String },
+    MerchantConnectorAccountNotFound { _id: String },
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Business profile with the given id  '{id}' does not exist in our records")]
     ProfileNotFound { id: String },
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Profile acquirer with id '{profile_acquirer_id}' not found for profile '{profile_id}'.")]
@@ -184,7 +224,7 @@ pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Mandate does not exist in our records")]
     MandateNotFound,
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Authentication does not exist in our records")]
-    AuthenticationNotFound { id: String },
+    AuthenticationNotFound { _id: String },
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "Failed to update mandate")]
     MandateUpdateFailed,
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_02", message = "API Key does not exist in our records")]
@@ -202,7 +242,7 @@ pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::ValidationError, code = "HE_03", message = "This refund is not possible through Hyperswitch. Please raise the refund through {connector} dashboard")]
     RefundNotPossible { connector: String },
     #[error(error_type = ErrorType::ValidationError, code = "HE_03", message = "Mandate Validation Failed" )]
-    MandateValidationFailed { reason: String },
+    MandateValidationFailed { _reason: String },
     #[error(error_type= ErrorType::ValidationError, code = "HE_03", message = "The payment has not succeeded yet. Please pass a successful payment to initiate refund")]
     PaymentNotSucceeded,
     #[error(error_type = ErrorType::ValidationError, code = "HE_03", message = "The specified merchant connector account is disabled")]
@@ -211,13 +251,13 @@ pub enum ApiErrorResponse {
     PaymentBlockedError {
         code: u16,
         message: String,
-        status: String,
-        reason: String,
+        _status: String,
+        _reason: String,
     },
     #[error(error_type = ErrorType::ValidationError, code = "HE_03", message = "File validation failed")]
-    FileValidationFailed { reason: String },
+    FileValidationFailed { _reason: String },
     #[error(error_type = ErrorType::ValidationError, code = "HE_03", message = "Dispute status validation failed")]
-    DisputeStatusValidationFailed { reason: String },
+    DisputeStatusValidationFailed { _reason: String },
     #[error(error_type= ErrorType::ObjectNotFound, code = "HE_04", message = "Successful payment not found for the given payment id")]
     SuccessfulPaymentNotFound,
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_04", message = "The connector provided in the request is incorrect or not available")]
@@ -225,7 +265,7 @@ pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_04", message = "Address does not exist in our records")]
     AddressNotFound,
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_04", message = "Dispute does not exist in our records")]
-    DisputeNotFound { dispute_id: String },
+    DisputeNotFound { _dispute_id: String },
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_04", message = "File does not exist in our records")]
     FileNotFound,
     #[error(error_type = ErrorType::ObjectNotFound, code = "HE_04", message = "File not available")]
@@ -303,7 +343,7 @@ pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_20", message = "{flow} flow not supported by the {connector} connector")]
     FlowNotSupported { flow: String, connector: String },
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_21", message = "Missing required params")]
-    MissingRequiredFields { field_names: Vec<&'static str> },
+    MissingRequiredFields { _field_names: Vec<&'static str> },
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_22", message = "Access forbidden. Not authorized to access this resource {resource}")]
     AccessForbidden { resource: String },
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_23", message = "{message}")]
@@ -349,7 +389,7 @@ pub enum ApiErrorResponse {
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_40", message = "{message}")]
     LinkConfigurationError { message: String },
     #[error(error_type = ErrorType::InvalidRequestError, code = "IR_41", message = "Payout validation failed")]
-    PayoutFailed { data: Option<serde_json::Value> },
+    PayoutFailed { _data: Option<serde_json::Value> },
     #[error(
         error_type = ErrorType::InvalidRequestError, code = "IR_42",
         message = "Cookies are not found in the request"
@@ -377,7 +417,7 @@ pub enum ApiErrorResponse {
     IntegrityCheckFailed {
         reason: String,
         field_names: String,
-        connector_transaction_id: Option<String>,
+        _connector_transaction_id: Option<String>,
     },
 }
 
@@ -781,7 +821,7 @@ impl From<ApiErrorResponse> for crate::router_data::ErrorResponse {
             message: error.error_message(),
             reason: None,
             status_code: match error {
-                ApiErrorResponse::ExternalConnectorError { status_code, .. } => status_code,
+                ApiErrorResponse::ExternalConnectorError { _status_code, .. } => _status_code,
                 _ => 500,
             },
             attempt_status: None,
@@ -842,6 +882,8 @@ pub enum ConnectorError {
     FailedToObtainCertificateKey,
     #[error("Failed to verify source of the response")]
     SourceVerificationFailed,
+    #[error("Failed to decode message: {0:?}")]
+    DecodingFailed(Option<String>),
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
@@ -867,6 +909,8 @@ pub enum ConnectorError {
     WebhooksNotImplemented,
     #[error("Failed to decode webhook event body")]
     WebhookBodyDecodingFailed,
+    #[error("Failed to decode webhook")]
+    WebhookDecodingFailed,
     #[error("Signature not found for incoming webhook")]
     WebhookSignatureNotFound,
     #[error("Failed to verify webhook source")]
@@ -887,7 +931,7 @@ pub enum ConnectorError {
     InvalidDateFormat,
     #[error("Date Formatting Failed")]
     DateFormattingFailed,
-    #[error("Invalid Data format")]
+    #[error("Invalid Data format: {field_name}")]
     InvalidDataFormat { field_name: &'static str },
     #[error("Payment Method data / Payment Method Type / Payment Experience Mismatch ")]
     MismatchedPaymentData,
@@ -912,7 +956,7 @@ pub enum ConnectorError {
         message: String,
         connector: &'static str,
     },
-    #[error("Invalid Configuration")]
+    #[error("Invalid Configuration: {config}")]
     InvalidConnectorConfig { config: &'static str },
     #[error("Failed to convert amount to required type")]
     AmountConversionFailed,
@@ -923,6 +967,13 @@ pub enum ConnectorError {
     },
     #[error("Field {fields} doesn't match with the ones used during mandate creation")]
     MandatePaymentDataMismatch { fields: String },
+    #[error("Field '{field_name}' is too long for connector '{connector}'")]
+    MaxFieldLengthViolated {
+        connector: String,
+        field_name: String,
+        max_length: usize,
+        received_length: usize,
+    },
 }
 
 impl ConnectorError {

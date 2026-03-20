@@ -1,10 +1,13 @@
 use std::collections::HashSet;
 
+use crate::config_patch::Patch;
 use bytes::Bytes;
 use hyperswitch_masking::{Maskable, Secret};
+use serde::ser::SerializeStruct;
+use serde::{Deserialize, Serialize};
 
 /// Configuration for header masking in gRPC metadata.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeaderMaskingConfig {
     unmasked_keys: HashSet<String>,
 }
@@ -19,7 +22,19 @@ impl HeaderMaskingConfig {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for HeaderMaskingConfig {
+impl Serialize for HeaderMaskingConfig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("HeaderMaskingConfig", 1)?;
+        let keys: Vec<String> = self.unmasked_keys.iter().cloned().collect();
+        state.serialize_field("keys", &keys)?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for HeaderMaskingConfig {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -50,6 +65,22 @@ impl Default for HeaderMaskingConfig {
     }
 }
 
+#[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct HeaderMaskingConfigPatch {
+    #[serde(rename = "keys")]
+    pub keys: Option<Vec<String>>,
+}
+
+impl Patch<HeaderMaskingConfigPatch> for HeaderMaskingConfig {
+    fn apply(&mut self, patch: HeaderMaskingConfigPatch) {
+        if let Some(keys) = patch.keys {
+            let set: HashSet<String> = keys.into_iter().map(|key| key.to_lowercase()).collect();
+            *self = Self::new(set);
+        }
+    }
+}
+
 /// Secure wrapper for gRPC metadata with configurable masking.
 /// ASCII headers:
 /// - get(key) -> Secret<String> - Forces explicit .expose() call
@@ -73,6 +104,15 @@ impl std::fmt::Debug for MaskedMetadata {
             .field("masked_headers", &self.get_all_masked())
             .field("masking_config", &self.masking_config)
             .finish()
+    }
+}
+
+impl Default for MaskedMetadata {
+    fn default() -> Self {
+        Self {
+            raw_metadata: tonic::metadata::MetadataMap::new(),
+            masking_config: HeaderMaskingConfig::default(),
+        }
     }
 }
 
@@ -167,4 +207,15 @@ impl MaskedMetadata {
             })
             .collect()
     }
+}
+
+/// Return the merchant ID if present, or generate a default.
+///
+/// Shared fallback logic used by both the gRPC path (raw `MetadataMap`)
+/// and the FFI path (`MaskedMetadata`).
+pub fn merchant_id_or_default(value: Option<&str>) -> String {
+    value.map(|s| s.to_string()).unwrap_or_else(|| {
+        tracing::warn!("x-merchant-id header missing, using default merchant ID");
+        "DefaultMerchantId".to_string()
+    })
 }

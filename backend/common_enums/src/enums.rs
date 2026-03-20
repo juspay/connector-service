@@ -442,6 +442,7 @@ impl Currency {
     pub fn to_currency_base_unit_asf64(self, amount: i64) -> Result<f64, CurrencyError> {
         let exponent = self.number_of_digits_after_decimal_point()?;
         let divisor = 10_u32.pow(exponent.into());
+        #[allow(clippy::as_conversions)]
         let amount_f64 = amount as f64 / f64::from(divisor);
         Ok(amount_f64)
     }
@@ -967,12 +968,11 @@ pub enum PaymentMethodType {
     CimbVa,
     #[serde(rename = "classic")]
     ClassicReward,
-    Credit,
+    Card,
     CryptoCurrency,
     Cashapp,
     Dana,
     DanamonVa,
-    Debit,
     DuitNow,
     Efecty,
     Eft,
@@ -1007,6 +1007,7 @@ pub enum PaymentMethodType {
     PagoEfectivo,
     PermataBankTransfer,
     OpenBankingUk,
+    OpenBanking,
     PayBright,
     Paypal,
     Paze,
@@ -1018,6 +1019,7 @@ pub enum PaymentMethodType {
     RedCompra,
     RedPagos,
     SamsungPay,
+    Satispay,
     Sepa,
     SepaBankTransfer,
     Sofort,
@@ -1027,11 +1029,13 @@ pub enum PaymentMethodType {
     Twint,
     UpiCollect,
     UpiIntent,
+    UpiQr,
     Vipps,
     VietQr,
     Venmo,
     Walley,
     WeChatPay,
+    Wero,
     SevenEleven,
     Lawson,
     MiniStop,
@@ -1047,11 +1051,13 @@ pub enum PaymentMethodType {
     InstantBankTransferFinland,
     InstantBankTransferPoland,
     RevolutPay,
+    SepaGuaranteedDebit,
+    IndonesianBankTransfer,
 }
 
 impl PaymentMethodType {
     pub fn should_check_for_customer_saved_payment_method_type(self) -> bool {
-        matches!(self, Self::Credit | Self::Debit)
+        matches!(self, Self::Card)
     }
 
     pub fn to_display_name(&self) -> String {
@@ -1132,12 +1138,16 @@ pub enum AttemptStatus {
     AuthenticationPending,
     AuthenticationSuccessful,
     Authorized,
+    PartiallyAuthorized,
     AuthorizationFailed,
     Charged,
     Authorizing,
     CodInitiated,
+    Expired,
     Voided,
+    VoidedPostCapture,
     VoidInitiated,
+    VoidPostCaptureInitiated,
     CaptureInitiated,
     CaptureFailed,
     VoidFailed,
@@ -1145,6 +1155,7 @@ pub enum AttemptStatus {
     PartialCharged,
     PartialChargedAndChargeable,
     Unresolved,
+    Unspecified,
     #[default]
     Pending,
     Failure,
@@ -1160,31 +1171,34 @@ impl TryFrom<u32> for AttemptStatus {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         Ok(match value {
-            1 => AttemptStatus::Started,
-            2 => AttemptStatus::AuthenticationFailed,
-            3 => AttemptStatus::RouterDeclined,
-            4 => AttemptStatus::AuthenticationPending,
-            5 => AttemptStatus::AuthenticationSuccessful,
-            6 => AttemptStatus::Authorized,
-            7 => AttemptStatus::AuthorizationFailed,
-            8 => AttemptStatus::Charged,
-            9 => AttemptStatus::Authorizing,
-            10 => AttemptStatus::CodInitiated,
-            11 => AttemptStatus::Voided,
-            12 => AttemptStatus::VoidInitiated,
-            13 => AttemptStatus::CaptureInitiated,
-            14 => AttemptStatus::CaptureFailed,
-            15 => AttemptStatus::VoidFailed,
-            16 => AttemptStatus::AutoRefunded,
-            17 => AttemptStatus::PartialCharged,
-            18 => AttemptStatus::PartialChargedAndChargeable,
-            19 => AttemptStatus::Unresolved,
-            20 => AttemptStatus::Pending,
-            21 => AttemptStatus::Failure,
-            22 => AttemptStatus::PaymentMethodAwaited,
-            23 => AttemptStatus::ConfirmationAwaited,
-            24 => AttemptStatus::DeviceDataCollectionPending,
-            _ => AttemptStatus::Unknown,
+            1 => Self::Started,
+            2 => Self::AuthenticationFailed,
+            3 => Self::RouterDeclined,
+            4 => Self::AuthenticationPending,
+            5 => Self::AuthenticationSuccessful,
+            6 => Self::Authorized,
+            7 => Self::AuthorizationFailed,
+            8 => Self::Charged,
+            9 => Self::Authorizing,
+            10 => Self::CodInitiated,
+            11 => Self::Voided,
+            12 => Self::VoidedPostCapture,
+            13 => Self::VoidInitiated,
+            14 => Self::VoidPostCaptureInitiated,
+            15 => Self::CaptureInitiated,
+            16 => Self::CaptureFailed,
+            17 => Self::VoidFailed,
+            18 => Self::AutoRefunded,
+            19 => Self::PartialCharged,
+            20 => Self::PartialChargedAndChargeable,
+            21 => Self::Unresolved,
+            22 => Self::Pending,
+            23 => Self::Failure,
+            24 => Self::PaymentMethodAwaited,
+            25 => Self::ConfirmationAwaited,
+            26 => Self::DeviceDataCollectionPending,
+            27 => Self::Unspecified,
+            _ => Self::Unknown,
         })
     }
 }
@@ -1196,6 +1210,7 @@ impl AttemptStatus {
             Self::Charged
                 | Self::AutoRefunded
                 | Self::Voided
+                | Self::VoidedPostCapture
                 | Self::PartialCharged
                 | Self::AuthenticationFailed
                 | Self::AuthorizationFailed
@@ -1365,6 +1380,7 @@ pub enum PaymentMethod {
     GiftCard,
     OpenBanking,
     MobilePayment,
+    NetworkToken,
 }
 
 /// Specifies the type of cardholder authentication to be applied for a payment.
@@ -1455,6 +1471,28 @@ pub enum CountryAlpha2 {
     VE, VN, VG, VI, WF, EH, YE, ZM, ZW,
     #[default]
     US
+}
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, strum::Display)]
+#[rustfmt::skip]
+pub enum CountryAlpha3 {
+    AFG, ALA, ALB, DZA, ASM, AND, AGO, AIA, ATA, ATG, ARG, ARM, ABW, AUS, AUT,
+    AZE, BHS, BHR, BGD, BRB, BLR, BEL, BLZ, BEN, BMU, BTN, BOL, BES, BIH, BWA,
+    BVT, BRA, IOT, BRN, BGR, BFA, BDI, CPV, KHM, CMR, CAN, CYM, CAF, TCD, CHL,
+    CHN, CXR, CCK, COL, COM, COG, COD, COK, CRI, CIV, HRV, CUB, CUW, CYP, CZE,
+    DNK, DJI, DMA, DOM, ECU, EGY, SLV, GNQ, ERI, EST, ETH, FLK, FRO, FJI, FIN,
+    FRA, GUF, PYF, ATF, GAB, GMB, GEO, DEU, GHA, GIB, GRC, GRL, GRD, GLP, GUM,
+    GTM, GGY, GIN, GNB, GUY, HTI, HMD, VAT, HND, HKG, HUN, ISL, IND, IDN, IRN,
+    IRQ, IRL, IMN, ISR, ITA, JAM, JPN, JEY, JOR, KAZ, KEN, KIR, PRK, KOR, KWT,
+    KGZ, LAO, LVA, LBN, LSO, LBR, LBY, LIE, LTU, LUX, MAC, MKD, MDG, MWI, MYS,
+    MDV, MLI, MLT, MHL, MTQ, MRT, MUS, MYT, MEX, FSM, MDA, MCO, MNG, MNE, MSR,
+    MAR, MOZ, MMR, NAM, NRU, NPL, NLD, NCL, NZL, NIC, NER, NGA, NIU, NFK, MNP,
+    NOR, OMN, PAK, PLW, PSE, PAN, PNG, PRY, PER, PHL, PCN, POL, PRT, PRI, QAT,
+    REU, ROU, RUS, RWA, BLM, SHN, KNA, LCA, MAF, SPM, VCT, WSM, SMR, STP, SAU,
+    SEN, SRB, SYC, SLE, SGP, SXM, SVK, SVN, SLB, SOM, ZAF, SGS, SSD, ESP, LKA,
+    SDN, SUR, SJM, SWZ, SWE, CHE, SYR, TWN, TJK, TZA, THA, TLS, TGO, TKL, TON,
+    TTO, TUN, TUR, TKM, TCA, TUV, UGA, UKR, ARE, GBR, USA, UMI, URY, UZB, VUT,
+    VEN, VNM, VGB, VIR, WLF, ESH, YEM, ZMB, ZWE
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
@@ -1557,13 +1595,13 @@ pub enum RoutableConnectors {
     // Amazonpay,
     Archipel,
     Authorizedotnet,
+    Bamboraapac,
     Bluecode,
     Bankofamerica,
     Barclaycard,
     Billwerk,
     Bitpay,
     Bambora,
-    Bamboraapac,
     Bluesnap,
     Boku,
     Braintree,
@@ -1649,6 +1687,7 @@ pub enum RoutableConnectors {
     Worldpayxml,
     Xendit,
     Zen,
+    Ppro,
     Plaid,
     Zsl,
 }
@@ -1696,7 +1735,55 @@ pub enum TransactionStatus {
     InformationOnly,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExemptionIndicator {
+    /// Low-value payment exemption (below regulatory threshold).
+    LowValue,
+    /// Secure corporate payment (SCP) exemption.
+    SecureCorporatePayment,
+    /// Trusted beneficiary or whitelist exemption.
+    TrustedListing,
+    /// Transaction Risk Analysis (TRA) exemption.
+    TransactionRiskAssessment,
+    /// 3DS server or ACS outage exemption.
+    ThreeDsOutage,
+    /// SCA delegation exemption (authentication delegated to another party).
+    ScaDelegation,
+    /// Out of SCA scope (e.g., one-leg-out transactions).
+    OutOfScaScope,
+    /// Other exemption reason not covered by known types.
+    Other,
+    /// Low-risk program exemption (network-initiated low-risk flag).
+    LowRiskProgram,
+    /// Recurring transaction exemption (subsequent payment in a series).
+    RecurringOperation,
+}
+
+/// This is typically provided by the card network or Access Control Server (ACS)
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Eq, PartialEq, ToSchema)]
+pub enum CavvAlgorithm {
+    /// `00` — Reserved or unspecified algorithm.
+    #[serde(rename = "00")]
+    Zero,
+    /// `01` — HMAC-based algorithm.
+    #[serde(rename = "01")]
+    One,
+    /// `02` — RSA-based algorithm (standard 3DS cryptographic method).
+    #[serde(rename = "02")]
+    Two,
+    /// `03` — Elliptic Curve algorithm.
+    #[serde(rename = "03")]
+    Three,
+    /// `04` — Proprietary algorithm defined by the card network.
+    #[serde(rename = "04")]
+    Four,
+    /// `A` — Custom or network-defined algorithm indicator.
+    #[serde(rename = "A")]
+    A,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum GooglePayAuthMethod {
     /// Contain pan data only
@@ -1799,4 +1886,268 @@ pub enum DecoupledAuthenticationType {
     #[default]
     Challenge,
     Frictionless,
+}
+
+/// Enum representing the different content types that can be dynamically selected
+/// for connector requests based on runtime conditions (e.g., payment method).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DynamicContentType {
+    Json,
+    FormUrlEncoded,
+    FormData,
+}
+
+/// US States Abbreviations (2-letter codes)
+/// Used for converting full state names to abbreviations for connectors that require 2-letter codes
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString,
+)]
+pub enum UsStatesAbbreviation {
+    AL, // Alabama
+    AK, // Alaska
+    AS, // American Samoa
+    AZ, // Arizona
+    AR, // Arkansas
+    CA, // California
+    CO, // Colorado
+    CT, // Connecticut
+    DE, // Delaware
+    DC, // District of Columbia
+    FM, // Federated States of Micronesia
+    FL, // Florida
+    GA, // Georgia
+    GU, // Guam
+    HI, // Hawaii
+    ID, // Idaho
+    IL, // Illinois
+    IN, // Indiana
+    IA, // Iowa
+    KS, // Kansas
+    KY, // Kentucky
+    LA, // Louisiana
+    ME, // Maine
+    MH, // Marshall Islands
+    MD, // Maryland
+    MA, // Massachusetts
+    MI, // Michigan
+    MN, // Minnesota
+    MS, // Mississippi
+    MO, // Missouri
+    MT, // Montana
+    NE, // Nebraska
+    NV, // Nevada
+    NH, // New Hampshire
+    NJ, // New Jersey
+    NM, // New Mexico
+    NY, // New York
+    NC, // North Carolina
+    ND, // North Dakota
+    MP, // Northern Mariana Islands
+    OH, // Ohio
+    OK, // Oklahoma
+    OR, // Oregon
+    PW, // Palau
+    PA, // Pennsylvania
+    PR, // Puerto Rico
+    RI, // Rhode Island
+    SC, // South Carolina
+    SD, // South Dakota
+    TN, // Tennessee
+    TX, // Texas
+    UT, // Utah
+    VT, // Vermont
+    VI, // Virgin Islands
+    VA, // Virginia
+    WA, // Washington
+    WV, // West Virginia
+    WI, // Wisconsin
+    WY, // Wyoming
+}
+
+impl UsStatesAbbreviation {
+    /// Convert full state name to abbreviation
+    /// Supports common variations like "New York" -> "NY", "newyork" -> "NY", etc.
+    pub fn from_state_name(state_name: &str) -> Option<Self> {
+        let normalized = state_name
+            .to_lowercase()
+            .replace(|c: char| !c.is_alphanumeric(), "");
+
+        match normalized.as_str() {
+            "alabama" => Some(Self::AL),
+            "alaska" => Some(Self::AK),
+            "americansamoa" => Some(Self::AS),
+            "arizona" => Some(Self::AZ),
+            "arkansas" => Some(Self::AR),
+            "california" => Some(Self::CA),
+            "colorado" => Some(Self::CO),
+            "connecticut" => Some(Self::CT),
+            "delaware" => Some(Self::DE),
+            "districtofcolumbia" => Some(Self::DC),
+            "federatedstatesofmicronesia" => Some(Self::FM),
+            "florida" => Some(Self::FL),
+            "georgia" => Some(Self::GA),
+            "guam" => Some(Self::GU),
+            "hawaii" => Some(Self::HI),
+            "idaho" => Some(Self::ID),
+            "illinois" => Some(Self::IL),
+            "indiana" => Some(Self::IN),
+            "iowa" => Some(Self::IA),
+            "kansas" => Some(Self::KS),
+            "kentucky" => Some(Self::KY),
+            "louisiana" => Some(Self::LA),
+            "maine" => Some(Self::ME),
+            "marshallislands" => Some(Self::MH),
+            "maryland" => Some(Self::MD),
+            "massachusetts" => Some(Self::MA),
+            "michigan" => Some(Self::MI),
+            "minnesota" => Some(Self::MN),
+            "mississippi" => Some(Self::MS),
+            "missouri" => Some(Self::MO),
+            "montana" => Some(Self::MT),
+            "nebraska" => Some(Self::NE),
+            "nevada" => Some(Self::NV),
+            "newhampshire" => Some(Self::NH),
+            "newjersey" => Some(Self::NJ),
+            "newmexico" => Some(Self::NM),
+            "newyork" => Some(Self::NY),
+            "northcarolina" => Some(Self::NC),
+            "northdakota" => Some(Self::ND),
+            "northernmarianaislands" => Some(Self::MP),
+            "ohio" => Some(Self::OH),
+            "oklahoma" => Some(Self::OK),
+            "oregon" => Some(Self::OR),
+            "palau" => Some(Self::PW),
+            "pennsylvania" => Some(Self::PA),
+            "puertorico" => Some(Self::PR),
+            "rhodeisland" => Some(Self::RI),
+            "southcarolina" => Some(Self::SC),
+            "southdakota" => Some(Self::SD),
+            "tennessee" => Some(Self::TN),
+            "texas" => Some(Self::TX),
+            "utah" => Some(Self::UT),
+            "vermont" => Some(Self::VT),
+            "virginislands" => Some(Self::VI),
+            "virginia" => Some(Self::VA),
+            "washington" => Some(Self::WA),
+            "westvirginia" => Some(Self::WV),
+            "wisconsin" => Some(Self::WI),
+            "wyoming" => Some(Self::WY),
+            _ => None,
+        }
+    }
+}
+
+/// Canada States/Provinces Abbreviations (2-letter codes)
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, strum::Display, strum::EnumString,
+)]
+pub enum CanadaStatesAbbreviation {
+    AB, // Alberta
+    BC, // British Columbia
+    MB, // Manitoba
+    NB, // New Brunswick
+    NL, // Newfoundland and Labrador
+    NS, // Nova Scotia
+    NT, // Northwest Territories
+    NU, // Nunavut
+    ON, // Ontario
+    PE, // Prince Edward Island
+    QC, // Quebec
+    SK, // Saskatchewan
+    YT, // Yukon
+}
+
+impl CanadaStatesAbbreviation {
+    /// Convert full province name to abbreviation
+    pub fn from_province_name(province_name: &str) -> Option<Self> {
+        let normalized = province_name
+            .to_lowercase()
+            .replace(|c: char| !c.is_alphanumeric(), "");
+
+        match normalized.as_str() {
+            "alberta" => Some(Self::AB),
+            "britishcolumbia" => Some(Self::BC),
+            "manitoba" => Some(Self::MB),
+            "newbrunswick" => Some(Self::NB),
+            "newfoundlandandlabrador" | "newfoundland" | "labrador" => Some(Self::NL),
+            "novascotia" => Some(Self::NS),
+            "northwestterritories" => Some(Self::NT),
+            "nunavut" => Some(Self::NU),
+            "ontario" => Some(Self::ON),
+            "princeedwardisland" => Some(Self::PE),
+            "quebec" => Some(Self::QC),
+            "saskatchewan" => Some(Self::SK),
+            "yukon" => Some(Self::YT),
+            _ => None,
+        }
+    }
+}
+
+/// Describes the channel through which the payment was initiated.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum PaymentChannel {
+    #[default]
+    Ecommerce,
+    MailOrder,
+    TelephoneOrder,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MitCategory {
+    /// A fixed purchase amount split into multiple scheduled payments until the total is paid.
+    Installment,
+    /// Merchant-initiated transaction using stored credentials, but not tied to a fixed schedule
+    Unscheduled,
+    /// Merchant-initiated payments that happen at regular intervals (usually the same amount each time).
+    Recurring,
+    /// A retried MIT after a previous transaction failed or was declined.
+    Resubmission,
+}
+
+/// Padding schemes used for cryptographic operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CryptoPadding {
+    /// PKCS7 padding - adds bytes equal to the number of padding bytes needed
+    PKCS7,
+    /// Zero padding - pads with null bytes
+    ZeroPadding,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, strum::Display)]
+#[serde(rename_all = "snake_case")]
+pub enum MandateStatus {
+    #[default]
+    Active,
+    Inactive,
+    Pending,
+    Revoked,
+}
+
+/// The type of tokenization to use for the payment method
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    Deserialize,
+    Serialize,
+    strum::Display,
+    strum::EnumString,
+    ToSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum Tokenization {
+    /// Skip PSP-level tokenization
+    SkipPsp,
+    /// Tokenize at PSP Level
+    TokenizeAtPsp,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum TaxStatus {
+    Taxable,
+    Exempt,
 }

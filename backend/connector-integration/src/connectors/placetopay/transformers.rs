@@ -6,14 +6,14 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -26,15 +26,17 @@ pub struct PlacetopayAuthType {
     pub(super) tran_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for PlacetopayAuthType {
-    type Error = domain_types::errors::ConnectorError;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+impl TryFrom<&ConnectorSpecificConfig> for PlacetopayAuthType {
+    type Error = ConnectorError;
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                login: api_key.to_owned(),
-                tran_key: key1.to_owned(),
+            ConnectorSpecificConfig::Placetopay {
+                login, tran_key, ..
+            } => Ok(Self {
+                login: login.to_owned(),
+                tran_key: tran_key.to_owned(),
             }),
-            _ => Err(domain_types::errors::ConnectorError::FailedToObtainAuthType),
+            _ => Err(ConnectorError::FailedToObtainAuthType),
         }
     }
 }
@@ -48,14 +50,14 @@ pub struct PlacetopayAuth {
     seed: String,
 }
 
-impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+impl TryFrom<&ConnectorSpecificConfig> for PlacetopayAuth {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         let placetopay_auth = PlacetopayAuthType::try_from(auth_type)?;
 
-        let nonce_bytes = domain_types::utils::generate_random_bytes(16);
+        let nonce_bytes = utils::generate_random_bytes(16);
         let now = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::RequestEncodingFailed)?;
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
         let nonce_b64 = base64::Engine::encode(
@@ -84,12 +86,7 @@ impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacetopayPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     auth: PlacetopayAuth,
     payment: PlacetopayPayment,
@@ -116,39 +113,20 @@ pub struct PlacetopayAmount {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacetopayInstrument<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
 > {
     card: PlacetopayCard<T>,
 }
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct PlacetopayCard<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct PlacetopayCard<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     number: RawCardNumber<T>,
     expiration: Secret<String>,
     cvv: Secret<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PlacetopayRouterData<
             RouterDataV2<
@@ -176,7 +154,7 @@ impl<
         let browser_info = item.router_data.request.get_browser_info()?;
         let ip_address = browser_info.get_ip_address()?;
         let user_agent = browser_info.get_user_agent()?;
-        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
         let payment = PlacetopayPayment {
             reference: item
                 .router_data
@@ -227,7 +205,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Placetopay"),
                 )
                 .into())
@@ -236,14 +214,7 @@ impl<
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PlacetopayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -258,13 +229,13 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
         let internal_reference = item
             .router_data
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Void;
         Ok(Self {
             auth,
@@ -314,7 +285,7 @@ pub struct PlacetopayStatusResponse {
 pub struct PlacetopayPaymentsResponse {
     status: PlacetopayStatusResponse,
     internal_reference: u64,
-    authorization: Option<String>,
+    authorization: Option<Secret<String>>,
 }
 
 // Authorize flow uses the unified payment response handling with capture method consideration
@@ -358,14 +329,7 @@ pub struct PlacetopayPsyncRequest {
     internal_reference: u64,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PlacetopayRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -380,14 +344,14 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
 
         let internal_reference = item
             .router_data
             .request
             .get_connector_transaction_id()?
             .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::RequestEncodingFailed)?;
 
         Ok(Self {
             auth,
@@ -414,14 +378,7 @@ pub enum PlacetopayNextAction {
     Checkout,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PlacetopayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -436,14 +393,13 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
         let internal_reference = item
             .router_data
             .request
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?
+            .get_connector_transaction_id()?
             .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Checkout;
         Ok(Self {
             auth,
@@ -460,23 +416,15 @@ pub struct PlacetopayRefundRequest {
     auth: PlacetopayAuth,
     internal_reference: u64,
     action: PlacetopayNextAction,
-    authorization: Option<String>,
+    authorization: Option<Secret<String>>,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for PlacetopayRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -486,27 +434,27 @@ impl<
         if item.router_data.request.minor_refund_amount
             == item.router_data.request.minor_payment_amount
         {
-            let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+            let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
 
             let internal_reference = item
                 .router_data
                 .request
                 .connector_transaction_id
                 .parse::<u64>()
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                .change_context(ConnectorError::RequestEncodingFailed)?;
             let action = PlacetopayNextAction::Reverse;
-            let authorization = match item.router_data.request.connector_metadata.clone() {
-                Some(metadata) => metadata.as_str().map(|auth| auth.to_string()),
+            let authorization = match item.router_data.request.connector_feature_data.clone() {
+                Some(metadata) => metadata.expose().as_str().map(|auth| auth.to_string()),
                 None => None,
             };
             Ok(Self {
                 auth,
                 internal_reference,
                 action,
-                authorization,
+                authorization: authorization.map(Secret::new),
             })
         } else {
-            Err(errors::ConnectorError::NotSupported {
+            Err(ConnectorError::NotSupported {
                 message: "Partial Refund".to_string(),
                 connector: "placetopay",
             }
@@ -583,14 +531,7 @@ pub struct PlacetopayRsyncRequest {
     internal_reference: u64,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         PlacetopayRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -605,13 +546,13 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
         let internal_reference = item
             .router_data
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             auth,
             internal_reference,

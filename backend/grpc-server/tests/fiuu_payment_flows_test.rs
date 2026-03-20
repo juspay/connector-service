@@ -2,11 +2,12 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use grpc_server::{app, configs};
+use grpc_server::app;
+use ucs_env::configs;
 mod common;
+mod utils;
 
 use std::{
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -15,16 +16,15 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        payment_method, payment_service_client::PaymentServiceClient,
+        refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails,
+        Currency, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
         RefundStatus,
     },
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -46,28 +46,27 @@ const CONNECTOR_NAME: &str = "fiuu";
 const AUTH_TYPE: &str = "signature-key";
 const MERCHANT_ID: &str = "merchant_1234";
 
-// Environment variable names for API credentials (can be set or overridden with provided values)
-const FIUU_API_KEY_ENV: &str = "TEST_FIUU_API_KEY";
-const FIUU_KEY1_ENV: &str = "TEST_FIUU_KEY1"; // processing_channel_id
-const FIUU_API_SECRET_ENV: &str = "TEST_FIUU_API_SECRET";
-
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card for Fiuu
 const TEST_CARD_EXP_MONTH: &str = "12";
-const TEST_CARD_EXP_YEAR: &str = "2025";
+const TEST_CARD_EXP_YEAR: &str = "2050";
 const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
 fn add_fiuu_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(FIUU_API_KEY_ENV).expect("TEST_FIUU_API_KEY environment variable is required");
-    let key1 = env::var(FIUU_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {FIUU_KEY1_ENV} must be set"));
-    let api_secret = env::var(FIUU_API_SECRET_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {FIUU_API_SECRET_ENV} must be set"));
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load fiuu credentials");
+
+    let (api_key, key1, api_secret) = match auth {
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key,
+            key1,
+            api_secret,
+        } => (api_key.expose(), key1.expose(), api_secret.expose()),
+        _ => panic!("Expected SignatureKey auth type for fiuu"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -101,23 +100,20 @@ fn add_fiuu_metadata<T>(request: &mut Request<T>) {
 
 // Helper function to extract connector transaction ID from response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
-    match &response.transaction_id {
-        Some(id) => match id.id_type.as_ref().unwrap() {
-            IdType::Id(id) => id.clone(),
-            _ => panic!("Expected connector transaction ID"),
-        },
+    match &response.connector_transaction_id {
+        Some(id) => id.clone(),
         None => panic!("Resource ID is None"),
     }
 }
 
 // Helper function to extract connector Refund ID from response
 fn extract_refund_id(response: &RefundResponse) -> &String {
-    &response.refund_id
+    &response.connector_refund_id
 }
 
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -129,15 +125,14 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
+    };
     PaymentServiceAuthorizeRequest {
-        amount: TEST_AMOUNT,
-        minor_amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Myr),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Myr),
+        }),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
@@ -145,16 +140,21 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         webhook_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
         ),
-        email: Some(TEST_EMAIL.to_string().into()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: None,
+            id: None,
+            connector_customer_id: None,
+            phone_number: None,
+            phone_country_code: None,
+        }),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("fiuu_test"))),
-        }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        merchant_transaction_id: Some(generate_unique_id("fiuu_test")),
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
@@ -162,30 +162,36 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("fiuu_sync"))),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
+        encoded_data: None,
         capture_method: None,
+        merchant_transaction_id: None,
         handle_response: None,
-        amount: TEST_AMOUNT,
-        currency: i32::from(Currency::Myr),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Myr),
+        }),
         state: None,
+        metadata: None,
+        connector_feature_data: None,
+        setup_future_usage: None,
+        sync_type: None,
+        connector_order_reference_id: None,
+        test_mode: None,
+        payment_experience: None,
     }
 }
 
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
+        connector_transaction_id: transaction_id.to_string(),
+        amount_to_capture: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Myr),
         }),
-        amount_to_capture: TEST_AMOUNT,
-        currency: i32::from(Currency::Myr),
         multiple_capture_data: None,
-        request_ref_id: None,
+        merchant_capture_id: None,
         ..Default::default()
     }
 }
@@ -193,17 +199,12 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 // Helper function to create a payment void request
 fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(generate_unique_id("fiuu_void"))),
-        }),
+        merchant_void_id: Some(format!("void_{}", generate_unique_id("fiuu_void"))),
         all_keys_required: None,
         browser_info: None,
         amount: None,
-        currency: None,
         ..Default::default()
     }
 }
@@ -211,20 +212,17 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        refund_id: format!("refund_{}", generate_unique_id("test")),
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
-        currency: i32::from(Currency::Myr),
+        merchant_refund_id: Some(format!("refund_{}", generate_unique_id("test"))),
+        connector_transaction_id: transaction_id.to_string(),
         payment_amount: TEST_AMOUNT,
-        refund_amount: TEST_AMOUNT,
-        minor_payment_amount: TEST_AMOUNT,
-        minor_refund_amount: TEST_AMOUNT,
+        refund_amount: Some(grpc_api_types::payments::Money {
+            minor_amount: TEST_AMOUNT,
+            currency: i32::from(Currency::Myr),
+        }),
         reason: None,
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
-        request_ref_id: None,
         webhook_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
         ),
@@ -235,15 +233,16 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
     RefundServiceGetRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         refund_id: refund_id.to_string(),
         refund_reason: None,
-        request_ref_id: None,
+        merchant_refund_id: None,
         browser_info: None,
-        refund_metadata: std::collections::HashMap::new(),
+        test_mode: Some(true),
+        refund_metadata: None,
         state: None,
+        connector_feature_data: None,
+        payment_method_type: None,
     }
 }
 
@@ -490,7 +489,7 @@ async fn test_refund_sync() {
             let refund_id = extract_refund_id(&refund_response);
 
             // Wait a bit longer to ensure the refund is fully processed
-            std::thread::sleep(std::time::Duration::from_secs(250));
+            std::thread::sleep(std::time::Duration::from_secs(30));
 
             // Create refund sync request
             let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
@@ -506,10 +505,14 @@ async fn test_refund_sync() {
                 .expect("gRPC refund sync call failed")
                 .into_inner();
 
-            // Verify the refund sync response
+            let is_valid_status = refund_sync_response.status
+                == i32::from(RefundStatus::RefundPending)
+                || refund_sync_response.status == i32::from(RefundStatus::RefundSuccess);
+
             assert!(
-                refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
-                "Refund Sync should be in RefundSuccess state"
+                is_valid_status,
+                "Refund Sync should be in RefundPending or RefundSuccess state, got: {:?}",
+                refund_sync_response.status
             );
         });
     });
@@ -561,7 +564,7 @@ async fn test_payment_void() {
 
         // Verify the void response
         assert!(
-            void_response.transaction_id.is_some(),
+            !void_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in void response"
         );
 

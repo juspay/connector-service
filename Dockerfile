@@ -13,6 +13,7 @@ RUN apt-get update \
        libssl-dev \
        g++ \
        make \
+       perl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

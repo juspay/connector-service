@@ -1,0 +1,9 @@
+# GitBook Configuration
+# This file controls what appears in the published GitBook at docs.hyperswitch.io
+
+# Ignore patterns - these files/directories won't appear in GitBook
+ignore:
+  - rules/**
+  - plans/**
+  - CODE_OF_CONDUCT.md
+  - specs-self-managing-documentation-system.md

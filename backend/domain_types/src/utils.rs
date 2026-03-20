@@ -7,7 +7,6 @@ use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
 use common_utils::{consts, metadata::MaskedMetadata, AmountConvertor, CustomResult, MinorUnit};
 use error_stack::{report, Result, ResultExt};
-use hyperswitch_masking::ExposeInterface;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
@@ -44,7 +43,7 @@ pub trait ValueExt {
         T: serde::de::DeserializeOwned;
 }
 
-impl ValueExt for serde_json::Value {
+impl ValueExt for Value {
     fn parse_value<T>(self, type_name: &'static str) -> Result<T, ParsingError>
     where
         T: serde::de::DeserializeOwned,
@@ -63,7 +62,7 @@ pub trait Encode<'e>
 where
     Self: 'e + std::fmt::Debug,
 {
-    fn encode_to_value(&'e self) -> Result<serde_json::Value, ParsingError>
+    fn encode_to_value(&'e self) -> Result<Value, ParsingError>
     where
         Self: Serialize;
 }
@@ -72,7 +71,7 @@ impl<'e, A> Encode<'e> for A
 where
     Self: 'e + std::fmt::Debug,
 {
-    fn encode_to_value(&'e self) -> Result<serde_json::Value, ParsingError>
+    fn encode_to_value(&'e self) -> Result<Value, ParsingError>
     where
         Self: Serialize,
     {
@@ -85,14 +84,14 @@ where
 pub fn handle_json_response_deserialization_failure(
     res: Response,
     _: &'static str,
-) -> CustomResult<ErrorResponse, crate::errors::ConnectorError> {
+) -> CustomResult<ErrorResponse, errors::ConnectorError> {
     let response_data = String::from_utf8(res.response.to_vec())
-        .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)?;
+        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(crate::errors::ConnectorError::ResponseDeserializationFailed)?,
+        Ok(_) => Err(errors::ConnectorError::ResponseDeserializationFailed)?,
         // in case of unexpected response but in html or string format
         Err(_) => Ok(ErrorResponse {
             status_code: res.status_code,
@@ -152,11 +151,11 @@ pub fn get_timestamp_in_milliseconds(datetime: &PrimitiveDateTime) -> i64 {
 
 pub fn get_amount_as_string(
     currency_unit: &CurrencyUnit,
-    amount: i64,
+    amount: MinorUnit,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
     let amount = match currency_unit {
-        CurrencyUnit::Minor => amount.to_string(),
+        CurrencyUnit::Minor => amount.get_amount_as_i64().to_string(),
         CurrencyUnit::Base => to_currency_base_unit(amount, currency)?,
     };
     Ok(amount)
@@ -170,12 +169,12 @@ pub fn base64_decode(
         .change_context(errors::ConnectorError::ResponseDeserializationFailed)
 }
 
-pub(crate) fn to_currency_base_unit(
-    amount: i64,
+pub fn to_currency_base_unit(
+    amount: MinorUnit,
     currency: common_enums::Currency,
 ) -> core::result::Result<String, error_stack::Report<errors::ConnectorError>> {
     currency
-        .to_currency_base_unit(amount)
+        .to_currency_base_unit(amount.get_amount_as_i64())
         .change_context(errors::ConnectorError::ParsingFailed)
 }
 
@@ -219,6 +218,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::AuthorizationFailed
         | common_enums::AttemptStatus::CaptureFailed
         | common_enums::AttemptStatus::VoidFailed
+        | common_enums::AttemptStatus::Expired
         | common_enums::AttemptStatus::Failure => true,
         common_enums::AttemptStatus::Started
         | common_enums::AttemptStatus::RouterDeclined
@@ -229,12 +229,16 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::Authorizing
         | common_enums::AttemptStatus::CodInitiated
         | common_enums::AttemptStatus::Voided
+        | common_enums::AttemptStatus::VoidedPostCapture
         | common_enums::AttemptStatus::VoidInitiated
+        | common_enums::AttemptStatus::VoidPostCaptureInitiated
+        | common_enums::AttemptStatus::PartiallyAuthorized
         | common_enums::AttemptStatus::CaptureInitiated
         | common_enums::AttemptStatus::AutoRefunded
         | common_enums::AttemptStatus::PartialCharged
         | common_enums::AttemptStatus::PartialChargedAndChargeable
         | common_enums::AttemptStatus::Unresolved
+        | common_enums::AttemptStatus::Unspecified
         | common_enums::AttemptStatus::Pending
         | common_enums::AttemptStatus::PaymentMethodAwaited
         | common_enums::AttemptStatus::ConfirmationAwaited
@@ -318,6 +322,12 @@ pub enum CardIssuer {
     JCB,
     CarteBlanche,
     CartesBancaires,
+    UnionPay,
+}
+
+// Helper function for extracting connector request reference ID
+pub(crate) fn extract_connector_request_reference_id(identifier: &Option<String>) -> String {
+    identifier.clone().unwrap_or_default()
 }
 
 #[track_caller]
@@ -360,23 +370,16 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
         map
     });
 
-/// Helper function for extracting merchant ID from metadata
+/// Helper function for extracting merchant ID from metadata.
+///
+/// Uses the shared `merchant_id_or_default` fallback: if the `x-merchant-id`
+/// header is missing, a default ID is auto-generated.
 pub fn extract_merchant_id_from_metadata(
     metadata: &MaskedMetadata,
 ) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
-    let merchant_id_secret = metadata
-        .get(common_utils::consts::X_MERCHANT_ID)
-        .ok_or_else(|| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                error_identifier: 400,
-                error_message: "Missing merchant ID in request metadata".to_owned(),
-                error_object: None,
-            })
-        })?;
-
-    let merchant_id_str = merchant_id_secret.expose();
-
+    let merchant_id_str = common_utils::metadata::merchant_id_or_default(
+        metadata.get_raw(consts::X_MERCHANT_ID).as_deref(),
+    );
     Ok(merchant_id_str
         .parse::<common_utils::id_type::MerchantId>()
         .map_err(|e| {
@@ -459,5 +462,127 @@ pub fn convert_us_state_to_code(state: &str) -> String {
         "wyoming" => "WY".to_string(),
         // If no match found, return original (might be international or invalid)
         _ => state.to_string(),
+    }
+}
+
+/// Convert Canadian province/territory names to their 2-letter abbreviations
+pub fn convert_canada_state_to_code(state: &str) -> String {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return state.to_uppercase();
+    }
+
+    // Convert full province/territory names to abbreviations (case-insensitive)
+    match state.to_lowercase().trim() {
+        "alberta" => "AB".to_string(),
+        "british columbia" => "BC".to_string(),
+        "manitoba" => "MB".to_string(),
+        "new brunswick" => "NB".to_string(),
+        "newfoundland and labrador" | "newfoundland" => "NL".to_string(),
+        "northwest territories" => "NT".to_string(),
+        "nova scotia" => "NS".to_string(),
+        "nunavut" => "NU".to_string(),
+        "ontario" => "ON".to_string(),
+        "prince edward island" => "PE".to_string(),
+        "quebec" | "québec" => "QC".to_string(),
+        "saskatchewan" => "SK".to_string(),
+        "yukon" => "YT".to_string(),
+        // If no match found, return original
+        _ => state.to_string(),
+    }
+}
+
+/// Convert Spanish autonomous community/province names to their 2-letter ISO 3166-2:ES codes
+///
+/// # Arguments
+/// * `state` - The state/province name or code to convert
+///
+/// # Returns
+/// * `Ok(String)` - The 2-letter state code
+/// * `Err(ConnectorError)` - If the state cannot be mapped
+pub fn convert_spain_state_to_code(state: &str) -> Result<String, crate::errors::ConnectorError> {
+    // If already 2 characters, assume it's already an abbreviation
+    if state.len() == 2 {
+        return Ok(state.to_uppercase());
+    }
+
+    match state.to_lowercase().trim() {
+        "acoruna" | "lacoruna" | "esc" => Ok("C".to_string()),
+        "alacant" | "esa" | "alicante" => Ok("A".to_string()),
+        "albacete" | "esab" => Ok("AB".to_string()),
+        "almeria" | "esal" => Ok("AL".to_string()),
+        "andalucia" | "esan" => Ok("AN".to_string()),
+        "araba" | "esvi" => Ok("VI".to_string()),
+        "aragon" | "esar" => Ok("AR".to_string()),
+        "asturias" | "eso" => Ok("O".to_string()),
+        "asturiasprincipadode" | "principadodeasturias" | "esas" => Ok("AS".to_string()),
+        "badajoz" | "esba" => Ok("BA".to_string()),
+        "barcelona" | "esb" => Ok("B".to_string()),
+        "bizkaia" | "esbi" => Ok("BI".to_string()),
+        "burgos" | "esbu" => Ok("BU".to_string()),
+        "canarias" | "escn" => Ok("CN".to_string()),
+        "cantabria" | "ess" => Ok("S".to_string()),
+        "castello" | "escs" => Ok("CS".to_string()),
+        "castellon" => Ok("C".to_string()),
+        "castillayleon" | "escl" => Ok("CL".to_string()),
+        "castillalamancha" | "escm" => Ok("CM".to_string()),
+        "cataluna" | "catalunya" | "esct" => Ok("CT".to_string()),
+        "ceuta" | "esce" => Ok("CE".to_string()),
+        "ciudadreal" | "escr" | "ciudad" => Ok("CR".to_string()),
+        "cuenca" | "escu" => Ok("CU".to_string()),
+        "caceres" | "escc" => Ok("CC".to_string()),
+        "cadiz" | "esca" => Ok("CA".to_string()),
+        "cordoba" | "esco" => Ok("CO".to_string()),
+        "euskalherria" | "espv" => Ok("PV".to_string()),
+        "extremadura" | "esex" => Ok("EX".to_string()),
+        "galicia" | "esga" => Ok("GA".to_string()),
+        "gipuzkoa" | "esss" => Ok("SS".to_string()),
+        "girona" | "esgi" | "gerona" => Ok("GI".to_string()),
+        "granada" | "esgr" => Ok("GR".to_string()),
+        "guadalajara" | "esgu" => Ok("GU".to_string()),
+        "huelva" | "esh" => Ok("H".to_string()),
+        "huesca" | "eshu" => Ok("HU".to_string()),
+        "illesbalears" | "islasbaleares" | "espm" => Ok("PM".to_string()),
+        "esib" => Ok("IB".to_string()),
+        "jaen" | "esj" => Ok("J".to_string()),
+        "larioja" | "eslo" => Ok("LO".to_string()),
+        "esri" => Ok("RI".to_string()),
+        "laspalmas" | "palmas" | "esgc" => Ok("GC".to_string()),
+        "leon" => Ok("LE".to_string()),
+        "lleida" | "lerida" | "esl" => Ok("L".to_string()),
+        "lugo" | "eslu" => Ok("LU".to_string()),
+        "madrid" | "esm" => Ok("M".to_string()),
+        "comunidaddemadrid" | "madridcomunidadde" | "esmd" => Ok("MD".to_string()),
+        "melilla" | "esml" => Ok("ML".to_string()),
+        "murcia" | "esmu" => Ok("MU".to_string()),
+        "murciaregionde" | "regiondemurcia" | "esmc" => Ok("MC".to_string()),
+        "malaga" | "esma" => Ok("MA".to_string()),
+        "nafarroa" | "esnc" => Ok("NC".to_string()),
+        "nafarroakoforukomunitatea" | "esna" => Ok("NA".to_string()),
+        "navarra" => Ok("NA".to_string()),
+        "navarracomunidadforalde" | "comunidadforaldenavarra" => Ok("NC".to_string()),
+        "ourense" | "orense" | "esor" => Ok("OR".to_string()),
+        "palencia" | "esp" => Ok("P".to_string()),
+        "paisvasco" => Ok("PV".to_string()),
+        "pontevedra" | "espo" => Ok("PO".to_string()),
+        "salamanca" | "essa" => Ok("SA".to_string()),
+        "santacruzdetenerife" | "estf" => Ok("TF".to_string()),
+        "segovia" | "essg" => Ok("SG".to_string()),
+        "sevilla" | "esse" => Ok("SE".to_string()),
+        "soria" | "esso" => Ok("SO".to_string()),
+        "tarragona" | "est" => Ok("T".to_string()),
+        "teruel" | "este" => Ok("TE".to_string()),
+        "toledo" | "esto" => Ok("TO".to_string()),
+        "valencia" | "esv" => Ok("V".to_string()),
+        "valencianacomunidad" | "esvc" => Ok("VC".to_string()),
+        "valencianacomunitat" => Ok("V".to_string()),
+        "valladolid" | "esva" => Ok("VA".to_string()),
+        "zamora" | "esza" => Ok("ZA".to_string()),
+        "zaragoza" | "esz" => Ok("Z".to_string()),
+        "alava" => Ok("VI".to_string()),
+        "avila" | "esav" => Ok("AV".to_string()),
+        _ => Err(errors::ConnectorError::InvalidDataFormat {
+            field_name: "address.state",
+        })?,
     }
 }

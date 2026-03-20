@@ -10,12 +10,12 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
@@ -82,17 +82,10 @@ pub struct MifinityClient {
 pub struct MifinityAddress {
     address_line1: Secret<String>,
     country_code: enums::CountryAlpha2,
-    city: String,
+    city: Secret<String>,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         MifinityRouterData<
             RouterDataV2<
@@ -120,7 +113,7 @@ impl<
         let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
             item.router_data
                 .resource_common_data
-                .connector_meta_data
+                .connector_feature_data
                 .clone(),
         )
         .change_context(ConnectorError::InvalidConnectorConfig {
@@ -233,7 +226,10 @@ impl<
                 | WalletData::WeChatPayQr(_)
                 | WalletData::CashappQr(_)
                 | WalletData::SwishQr(_)
-                | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
+                | WalletData::RevolutPay(_)
+                | WalletData::MbWay(_)
+                | WalletData::Satispay(_)
+                | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Mifinity"),
                 )
                 .into()),
@@ -270,12 +266,12 @@ pub struct MifinityAuthType {
     pub(super) key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for MifinityAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                key: api_key.to_owned(),
+            ConnectorSpecificConfig::Mifinity { key, .. } => Ok(Self {
+                key: key.to_owned(),
             }),
             _ => Err(ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -291,18 +287,11 @@ pub struct MifinityPaymentsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct MifinityPayload {
     trace_id: String,
-    initialization_token: String,
+    initialization_token: Secret<String>,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -318,7 +307,7 @@ impl<
                     response: Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(trace_id.clone()),
                         redirection_data: Some(Box::new(RedirectForm::Mifinity {
-                            initialization_token,
+                            initialization_token: initialization_token.expose(),
                         })),
                         mandate_reference: None,
                         connector_metadata: None,
@@ -455,7 +444,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
-                    status: item.router_data.resource_common_data.status,
+                    status: enums::AttemptStatus::Unspecified,
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data

@@ -1,4 +1,9 @@
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
+#[allow(clippy::panic)]
+#[allow(clippy::indexing_slicing)]
+#[allow(clippy::print_stdout)]
 mod tests {
     pub mod authorize {
         use std::{borrow::Cow, marker::PhantomData, str::FromStr};
@@ -10,7 +15,7 @@ mod tests {
                 ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             },
             payment_method_data::{DefaultPCIHolder, PaymentMethodData, RawCardNumber},
-            router_data::{ConnectorAuthType, ErrorResponse},
+            router_data::{ConnectorSpecificConfig, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
         };
@@ -31,7 +36,7 @@ mod tests {
                 PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
             > = RouterDataV2 {
-                flow: PhantomData::<domain_types::connector_flow::Authorize>,
+                flow: PhantomData::<Authorize>,
                 resource_common_data: PaymentFlowData {
                     merchant_id: common_utils::id_type::MerchantId::default(),
                     customer_id: None,
@@ -42,13 +47,15 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Card,
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("www.google.com".to_string()),
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
                     auth_type: common_enums::AuthenticationType::ThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
+                    minor_amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: None,
@@ -62,6 +69,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -72,12 +80,20 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_config: ConnectorSpecificConfig::Adyen {
                     api_key: Secret::new(api_key),
-                    key1: Secret::new(key1),
+                    merchant_account: Secret::new(key1),
+                    review_key: None,
+                    base_url: None,
+                    dispute_base_url: None,
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
+                    authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
                             card_number: RawCardNumber(cards::CardNumber::from_str(
@@ -90,7 +106,7 @@ mod tests {
                             ..Default::default()
                         },
                     ),
-                    amount: 1000,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: Some(
                         Email::try_from("test@example.com".to_string())
@@ -99,8 +115,6 @@ mod tests {
                     customer_name: None,
                     currency: common_enums::Currency::USD,
                     confirm: true,
-                    statement_descriptor_suffix: None,
-                    statement_descriptor: None,
                     capture_method: None,
                     integrity_object: None,
                     router_return_url: Some("www.google.com".to_string()),
@@ -111,7 +125,7 @@ mod tests {
                     off_session: None,
                     browser_info: Some(
                         domain_types::router_request_types::BrowserInformation {
-                            color_depth: None,
+                            color_depth: Some(24),
                             java_enabled: Some(false),
                             screen_height: Some(1080),
                             screen_width: Some(1920),
@@ -124,7 +138,7 @@ mod tests {
                             ),
                             java_script_enabled: Some(false),
                             language: Some("en-US".to_string()),
-                            time_zone: None,
+                            time_zone: Some(-480),
                             referer: None,
                             ip_address: None,
                             os_type: None,
@@ -135,20 +149,20 @@ mod tests {
                     ),
                     order_category: None,
                     session_token: None,
-                    enrolled_for_3ds: true,
+                    enrolled_for_3ds: Some(true),
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(common_enums::PaymentMethodType::Credit),
+                    payment_method_type: Some(common_enums::PaymentMethodType::Card),
                     customer_id: Some(
                         common_utils::id_type::CustomerId::try_from(Cow::from(
                             "cus_123456789".to_string(),
                         ))
                         .unwrap(),
                     ),
-                    request_incremental_authorization: false,
+                    request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(1000),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -159,7 +173,14 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
+                    billing_descriptor: None,
+                    enable_partial_authorization: None,
+                    locale: None,
+                    continue_redirection_url: None,
+                    redirect_response: None,
+                    threeds_method_comp_ind: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -221,13 +242,15 @@ mod tests {
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
+                    order_details: None,
                     address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
                     auth_type: common_enums::AuthenticationType::ThreeDs,
-                    connector_meta_data: None,
+                    connector_feature_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
+                    minor_amount_authorized: None,
                     access_token: None,
                     session_token: None,
                     reference_id: None,
@@ -241,6 +264,7 @@ mod tests {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            ..Default::default()
                         },
                         ..Default::default()
                     },
@@ -251,21 +275,27 @@ mod tests {
                     raw_connector_request: None,
                     minor_amount_capturable: None,
                     connector_response: None,
+                    recurring_mandate_payment_data: None,
+                    l2_l3_data: None,
                 },
-                connector_auth_type: ConnectorAuthType::BodyKey {
+                connector_config: ConnectorSpecificConfig::Adyen {
                     api_key: Secret::new(api_key),
-                    key1: Secret::new(key1),
+                    merchant_account: Secret::new(key1),
+                    review_key: None,
+                    base_url: None,
+                    dispute_base_url: None,
                 },
                 request: PaymentsAuthorizeData {
+                    payment_channel: None,
+                    authentication_data: None,
+                    connector_testing_data: None,
                     payment_method_data: PaymentMethodData::Card(Default::default()),
-                    amount: 0,
+                    amount: MinorUnit::new(1000),
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,
                     currency: common_enums::Currency::USD,
                     confirm: true,
-                    statement_descriptor_suffix: None,
-                    statement_descriptor: None,
                     capture_method: None,
                     router_return_url: None,
                     webhook_url: None,
@@ -277,15 +307,15 @@ mod tests {
                     integrity_object: None,
                     order_category: None,
                     session_token: None,
-                    enrolled_for_3ds: false,
+                    enrolled_for_3ds: Some(false),
                     related_transaction_id: None,
                     payment_experience: None,
                     payment_method_type: None,
                     customer_id: None,
-                    request_incremental_authorization: false,
+                    request_incremental_authorization: Some(false),
                     metadata: None,
                     minor_amount: MinorUnit::new(0),
-                    merchant_order_reference_id: None,
+                    merchant_order_id: None,
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
@@ -296,7 +326,14 @@ mod tests {
                     request_extended_authorization: None,
                     setup_mandate_details: None,
                     enable_overcapture: None,
-                    merchant_account_metadata: None,
+                    connector_feature_data: None,
+                    billing_descriptor: None,
+                    enable_partial_authorization: None,
+                    locale: None,
+                    continue_redirection_url: None,
+                    redirect_response: None,
+                    threeds_method_comp_ind: None,
+                    tokenization: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -368,9 +405,10 @@ mod tests {
         //             },
         //             external_latency: None,
         //         },
-        //         connector_auth_type: ConnectorAuthType::BodyKey {
+        //         connector_config: ConnectorSpecificConfig::BodyKey {
         //             api_key: Secret::new(api_key.into()),
         //             key1: Secret::new(key1.into()),
+        //,
         //         },
         //         request: PaymentsAuthorizeData {
         //             payment_method_data: PaymentMethodData::Card(
@@ -405,15 +443,15 @@ mod tests {
         //             browser_info: None,
         //             order_category: None,
         //             session_token: None,
-        //             enrolled_for_3ds: false,
+        //             enrolled_for_3ds: Some(false),
         //             related_transaction_id: None,
         //             payment_experience: None,
         //             payment_method_type: None,
         //             customer_id: None,
-        //             request_incremental_authorization: false,
+        //             request_incremental_authorization: Some(false),
         //             metadata: None,
         //             minor_amount: MinorUnit::new(100),
-        //             merchant_order_reference_id: None,
+        //             merchant_order_id: None,
         //             shipping_cost: None,
         //             merchant_account_id: None,
         //             merchant_config_currency: None,

@@ -15,13 +15,13 @@ use url::Url;
 
 use domain_types::{
     payment_method_data::PaymentMethodData,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
 
-use domain_types::errors::{self, ConnectorError};
+use domain_types::errors::ConnectorError;
 
 use common_utils::consts;
 
@@ -43,14 +43,7 @@ pub struct CryptopayPaymentsRequest {
     custom_id: String,
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<
         CryptopayRouterData<
             RouterDataV2<
@@ -117,7 +110,7 @@ impl<
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(errors::ConnectorError::NotImplemented(
+                Err(ConnectorError::NotImplemented(
                     get_unimplemented_payment_method_error_message("CryptoPay"),
                 ))
             }
@@ -132,16 +125,21 @@ pub struct CryptopayAuthType {
     pub(super) api_secret: Secret<String>,
 }
 
-impl TryFrom<&ConnectorAuthType> for CryptopayAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
-        if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
+impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Cryptopay {
+            api_key,
+            api_secret,
+            ..
+        } = auth_type
+        {
             Ok(Self {
                 api_key: api_key.to_owned(),
-                api_secret: key1.to_owned(),
+                api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(errors::ConnectorError::FailedToObtainAuthType.into())
+            Err(ConnectorError::FailedToObtainAuthType.into())
         }
     }
 }
@@ -174,15 +172,8 @@ pub struct CryptopayPaymentsResponse {
     pub data: CryptopayPaymentResponseData,
 }
 
-impl<
-        F,
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
+impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;

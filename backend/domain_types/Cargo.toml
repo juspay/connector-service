@@ -8,20 +8,22 @@ grpc-api-types = { path = "../grpc-api-types" }
 common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 cards = { path = "../cards", package = "ucs_cards" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
+config_patch_derive = { path = "../config_patch_derive" }
 
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0", package = "masking" }
-router_derive = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.24.0" }
+hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
+# TODO! update to latest Hyperswitch Tag once hyperswitch_masking crate changes are merged to hyperswitch main
+router_derive = { git = "https://github.com/juspay/hyperswitch", branch = "solve-injector-masking-cyclic-dependency" }
 
 #third party dependencies
-thiserror = "1.0.49"
+thiserror = { workspace = true }
 strum = { version = "0.26", features = ["derive"] }
-serde = {version = "1.0.189" ,features = ["derive"]}
-serde_json = "1.0.107"
+serde = { workspace = true }
+serde_json = { workspace = true }
 serde_urlencoded = "0.7"
 error-stack = "0.4.1"
 base64 = "0.21"
 rand = "0.8.5"
-bytes = "1.6.0"
+bytes = { workspace = true }
 regex = "1.11.1"
 
 
@@ -30,8 +32,8 @@ time = { version = "0.3.41", features = ["serde", "serde-well-known", "std"] }
 url = { version = "2.5.4", features = ["serde"] }
 http = "0.2.12"
 actix-web = { version = "4.11.0", optional = true }
-tracing = "0.1"
-tonic = "0.13.1"
+tracing = { workspace = true }
+tonic = { workspace = true }
 
 
 [features]

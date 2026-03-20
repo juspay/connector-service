@@ -4,7 +4,7 @@
 // ID Generation and Length Constants
 // =============================================================================
 
-use serde::{de::IntoDeserializer, Deserialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 
 pub const ID_LENGTH: usize = 20;
 
@@ -41,6 +41,8 @@ pub const X_CONNECTOR_NAME: &str = "x-connector";
 pub const X_MERCHANT_ID: &str = "x-merchant-id";
 /// Header key for reference identification
 pub const X_REFERENCE_ID: &str = "x-reference-id";
+/// Header key for resource identification
+pub const X_RESOURCE_ID: &str = "x-resource-id";
 
 pub const X_SOURCE_NAME: &str = "x-source";
 
@@ -49,6 +51,35 @@ pub const X_CONNECTOR_SERVICE: &str = "connector-service";
 pub const X_FLOW_NAME: &str = "x-flow";
 /// Header key for shadow mode
 pub const X_SHADOW_MODE: &str = "x-shadow-mode";
+
+// =============================================================================
+// Base64 engine
+// =============================================================================
+
+/// General purpose base64 engine
+pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+/// General purpose base64 engine standard nopad
+pub const BASE64_ENGINE_STD_NO_PAD: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::STANDARD_NO_PAD;
+
+/// URL Safe base64 engine
+pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::URL_SAFE;
+
+/// URL Safe base64 engine without padding
+pub const BASE64_ENGINE_URL_SAFE_NO_PAD: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::URL_SAFE_NO_PAD;
+
+// =============================================================================
+// Test Environment Headers
+// =============================================================================
+
+/// Header key for session ID (test mode)
+pub const X_SESSION_ID: &str = "x-session-id";
+/// Header key for API URL (test mode)
+pub const X_API_URL: &str = "x-api-url";
+/// Header key for API tag (test mode)
+pub const X_API_TAG: &str = "x-api-tag";
 
 // =============================================================================
 // Authentication Headers (Internal)
@@ -66,6 +97,8 @@ pub const X_KEY2: &str = "x-key2";
 pub const X_API_SECRET: &str = "x-api-secret";
 /// Auth Key Map header
 pub const X_AUTH_KEY_MAP: &str = "x-auth-key-map";
+/// Typed connector config header (JSON-serialized ConnectorSpecificConfig proto)
+pub const X_CONNECTOR_CONFIG: &str = "x-connector-config";
 /// Header key for external vault metadata
 pub const X_EXTERNAL_VAULT_METADATA: &str = "x-external-vault-metadata";
 
@@ -85,7 +118,10 @@ pub const NO_ERROR_MESSAGE: &str = "No error message";
 pub const NO_ERROR_CODE: &str = "No error code";
 /// A string constant representing a redacted or masked value
 pub const REDACTED: &str = "Redacted";
+/// Unsupported response type error message
 pub const UNSUPPORTED_ERROR_MESSAGE: &str = "Unsupported response type";
+/// Error message when Refund request has been voided
+pub const REFUND_VOIDED: &str = "Refund request has been voided.";
 
 // =============================================================================
 // Card Validation Constants
@@ -137,7 +173,7 @@ pub const CONST_PRODUCTION: &str = "production";
 
 pub const ENV_PREFIX: &str = "CS";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, config_patch_derive::Patch)]
 #[serde(rename_all = "snake_case")]
 pub enum Env {
     Development,
@@ -157,21 +193,15 @@ impl Env {
     /// that cannot be deserialized into one of the valid environment variants.
     #[allow(clippy::panic)]
     pub fn current_env() -> Self {
-        let default_env = if cfg!(debug_assertions) {
-            Self::Development
-        } else {
-            Self::Production
-        };
         let env_key = format!("{ENV_PREFIX}__COMMON__ENVIRONMENT");
-        let res = std::env::var(&env_key).map_or_else(
-            |_| default_env,
+        std::env::var(&env_key).map_or_else(
+            |_| Self::Development,
             |v| {
                 Self::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
                     panic!("Invalid value found in environment variable {env_key}: {err}")
                 })
             },
-        );
-        res
+        )
     }
 
     pub const fn config_path(self) -> &'static str {

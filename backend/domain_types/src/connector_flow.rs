@@ -55,6 +55,21 @@ pub struct Authenticate;
 #[derive(Debug, Clone)]
 pub struct PostAuthenticate;
 
+#[derive(Debug, Clone)]
+pub struct VoidPC;
+
+#[derive(Debug, Clone)]
+pub struct SdkSessionToken;
+
+#[derive(Debug, Clone)]
+pub struct IncrementalAuthorization;
+
+#[derive(Debug, Clone)]
+pub struct MandateRevoke;
+
+#[derive(Debug, Clone)]
+pub struct VerifyWebhookSource;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -63,6 +78,7 @@ pub enum FlowName {
     Rsync,
     Psync,
     Void,
+    VoidPc,
     SetupMandate,
     RepeatPayment,
     Capture,
@@ -79,4 +95,7 @@ pub enum FlowName {
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,
+    SdkSessionToken,
+    IncrementalAuthorization,
+    MandateRevoke,
 }

@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "declaration": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "./",
+    "paths": {
+      "@generated/*": ["src/payments/generated/*"],
+      "@src/*": ["src/*"],
+      "hs-playlib": ["./src/index"],
+      "hs-playlib/dist/src/payments/generated/proto": ["./src/payments/generated/proto"]
+    }
+  },
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist", "smoke-test"]
+}

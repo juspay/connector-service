@@ -1,6 +1,7 @@
 //! definition of the new connector integration trait
 
 use common_utils::{
+    events,
     request::{Method, Request, RequestBuilder, RequestContent},
     CustomResult,
 };
@@ -8,11 +9,7 @@ use domain_types::{router_data::ErrorResponse, router_data_v2::RouterDataV2};
 use hyperswitch_masking::Maskable;
 use serde_json::json;
 
-use crate::{
-    api::{self},
-    events::connector_api_logs::ConnectorEvent,
-    verification::SourceVerification,
-};
+use crate::api;
 
 /// alias for Box of a type that implements trait ConnectorIntegrationV2
 pub type BoxedConnectorIntegrationV2<'a, Flow, ResourceCommonData, Req, Resp> =
@@ -42,10 +39,7 @@ where
 
 /// The new connector integration trait with an additional ResourceCommonData generic parameter
 pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
-    ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp>
-    + Sync
-    + api::ConnectorCommon
-    + SourceVerification<Flow, ResourceCommonData, Req, Resp>
+    ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp> + Sync + api::ConnectorCommon
 {
     /// returns a vec of tuple of header key and value
     fn get_headers(
@@ -114,7 +108,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
         _res: domain_types::router_response_types::Response,
     ) -> CustomResult<
         RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
@@ -127,7 +121,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         Resp: Clone,
     {
         if let Some(e) = event_builder {
-            e.set_error(json!({"error": "Not Implemented"}))
+            e.set_connector_response(&json!({"error": "Not Implemented"}))
         }
         Ok(data.clone())
     }
@@ -136,10 +130,10 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_error_response_v2(
         &self,
         res: domain_types::router_response_types::Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
         if let Some(event) = event_builder {
-            event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+            event.set_connector_response(&json!({"error": "Error response parsing not implemented", "status_code": res.status_code}))
         }
         Ok(ErrorResponse::get_not_implemented())
     }
@@ -148,11 +142,8 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_5xx_error_response(
         &self,
         res: domain_types::router_response_types::Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
-        if let Some(event) = event_builder {
-            event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
-        }
         let error_message = match res.status_code {
             500 => "internal_server_error",
             501 => "not_implemented",
@@ -167,6 +158,13 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
             511 => "network_authentication_required",
             _ => "unknown_error",
         };
+
+        if let Some(event) = event_builder {
+            event.set_connector_response(
+                &json!({"error": error_message, "status_code": res.status_code}),
+            )
+        }
+
         Ok(ErrorResponse {
             code: res.status_code.to_string(),
             message: error_message.to_string(),

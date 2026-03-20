@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::str::FromStr;
 
 use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodType};
 use common_utils::{CustomResult, SecretSerdeValue};
@@ -6,24 +7,33 @@ use domain_types::{
     connector_flow,
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
-        ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
+        ConnectorCustomerResponse, ConnectorEnum, ConnectorSpecifications, ConnectorWebhookSecrets,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        EventType, MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
+        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
+        PaymentsSyncData, RedirectDetailsResponse, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorAuthType,
+    router_data::ConnectorSpecificConfig,
+    router_request_types::VerifyWebhookSourceRequestData,
+    router_response_types::VerifyWebhookSourceResponseData,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
 
-use crate::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
+use crate::{
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    decode::BodyDecoding,
+    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
+};
 
 pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
@@ -36,11 +46,12 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + CreateConnectorCustomer
     + PaymentTokenV2<T>
     + PaymentVoidV2
+    + PaymentVoidPostCaptureV2
     + IncomingWebhook
     + RefundV2
     + PaymentCapture
     + SetupMandateV2<T>
-    + RepeatPaymentV2
+    + RepeatPaymentV2<T>
     + AcceptDispute
     + RefundSyncV2
     + DisputeDefend
@@ -48,6 +59,11 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentPreAuthenticateV2<T>
     + PaymentAuthenticateV2<T>
     + PaymentPostAuthenticateV2<T>
+    + SdkSessionTokenV2
+    + PaymentIncrementalAuthorization
+    + MandateRevokeV2
+    + VerifyWebhookSourceV2
+    + VerifyRedirectResponse
 {
 }
 
@@ -56,9 +72,19 @@ pub trait PaymentVoidV2:
 {
 }
 
+pub trait PaymentVoidPostCaptureV2:
+    ConnectorIntegrationV2<
+    connector_flow::VoidPC,
+    PaymentFlowData,
+    PaymentsCancelPostCaptureData,
+    PaymentsResponseData,
+>
+{
+}
+
 pub type BoxedConnector<T> = Box<&'static (dyn ConnectorServiceTrait<T> + Sync)>;
 
-pub trait ValidationTrait {
+pub trait ValidationTrait: ConnectorCommon {
     fn should_do_order_create(&self) -> bool {
         false
     }
@@ -67,7 +93,7 @@ pub trait ValidationTrait {
         false
     }
 
-    fn should_do_access_token(&self) -> bool {
+    fn should_do_access_token(&self, _payment_method: Option<PaymentMethod>) -> bool {
         false
     }
 
@@ -75,8 +101,28 @@ pub trait ValidationTrait {
         false
     }
 
-    fn should_do_payment_method_token(&self) -> bool {
+    fn should_do_payment_method_token(
+        &self,
+        _payment_method: PaymentMethod,
+        _payment_method_type: Option<PaymentMethodType>,
+    ) -> bool {
         false
+    }
+
+    /// Returns true if this connector is in the config set of connectors that require
+    /// an external API call for webhook source verification (e.g. PayPal).
+    fn requires_external_webhook_verification(
+        &self,
+        connectors_requiring_external_verification: Option<&HashSet<ConnectorEnum>>,
+    ) -> bool {
+        connectors_requiring_external_verification
+            .map(|connector_set| {
+                ConnectorEnum::from_str(self.id())
+                    .ok()
+                    .map(|connector_enum| connector_set.contains(&connector_enum))
+                    .unwrap_or(false)
+            })
+            .unwrap_or(false)
     }
 }
 
@@ -96,6 +142,16 @@ pub trait PaymentSessionToken:
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData,
+>
+{
+}
+
+pub trait SdkSessionTokenV2:
+    ConnectorIntegrationV2<
+    connector_flow::SdkSessionToken,
+    PaymentFlowData,
+    PaymentsSdkSessionTokenData,
+    PaymentsResponseData,
 >
 {
 }
@@ -180,12 +236,22 @@ pub trait SetupMandateV2<T: PaymentMethodDataTypes>:
 {
 }
 
-pub trait RepeatPaymentV2:
+pub trait RepeatPaymentV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::RepeatPayment,
     PaymentFlowData,
-    RepeatPaymentData,
+    RepeatPaymentData<T>,
     PaymentsResponseData,
+>
+{
+}
+
+pub trait MandateRevokeV2:
+    ConnectorIntegrationV2<
+    connector_flow::MandateRevoke,
+    PaymentFlowData,
+    MandateRevokeRequestData,
+    MandateRevokeResponseData,
 >
 {
 }
@@ -250,12 +316,32 @@ pub trait PaymentPostAuthenticateV2<T: PaymentMethodDataTypes>:
 {
 }
 
+pub trait PaymentIncrementalAuthorization:
+    ConnectorIntegrationV2<
+    connector_flow::IncrementalAuthorization,
+    PaymentFlowData,
+    PaymentsIncrementalAuthorizationData,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait VerifyWebhookSourceV2:
+    ConnectorIntegrationV2<
+    connector_flow::VerifyWebhookSource,
+    VerifyWebhookSourceFlowData,
+    VerifyWebhookSourceRequestData,
+    VerifyWebhookSourceResponseData,
+>
+{
+}
+
 pub trait IncomingWebhook {
     fn verify_webhook_source(
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
         Ok(false)
     }
@@ -282,7 +368,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
         Err(
             domain_types::errors::ConnectorError::NotImplemented("get_event_type".to_string())
@@ -294,7 +380,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>>
     {
         Err(domain_types::errors::ConnectorError::NotImplemented(
@@ -307,7 +393,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         RefundWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorError>,
@@ -321,7 +407,7 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         DisputeWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorError>,
@@ -342,6 +428,40 @@ pub trait IncomingWebhook {
     > {
         Err(domain_types::errors::ConnectorError::NotImplemented(
             "get_webhook_resource_object".to_string(),
+        )
+        .into())
+    }
+}
+
+pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
+    /// fn decode_redirect_response_body
+    fn decode_redirect_response_body(
+        &self,
+        request: &RequestDetails,
+        secrets: Option<ConnectorSourceVerificationSecrets>,
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+        self.decode(secrets, &request.body)
+    }
+
+    fn verify_redirect_response_source(
+        &self,
+        request: &RequestDetails,
+        secrets: Option<ConnectorSourceVerificationSecrets>,
+    ) -> CustomResult<bool, domain_types::errors::ConnectorError> {
+        let connector_source_verifacation_secrets =
+            secrets.ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
+                field_name: "redirect response secrets",
+            })?;
+
+        self.verify(connector_source_verifacation_secrets, &request.body)
+    }
+
+    fn process_redirect_response(
+        &self,
+        _request: &RequestDetails,
+    ) -> CustomResult<RedirectDetailsResponse, domain_types::errors::ConnectorError> {
+        Err(domain_types::errors::ConnectorError::NotImplemented(
+            "process_redirect_response".to_string(),
         )
         .into())
     }

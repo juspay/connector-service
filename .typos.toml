@@ -1,13 +1,42 @@
 [default]
 check-filename = true
+extend-ignore-re = [
+    "[0-9a-f]{7,40}", # ignore git commit hashes
+]
+
+[files]
+extend-exclude = [
+    "backend/ucs-connector-tests/report.json",
+    "backend/ucs-connector-tests/test_report/**",
+    "backend/ucs-connector-tests/test_report.md",
+    "backend/ucs-connector-tests/test_result.md",
+    "docs-generated/**",
+]
+
+[default.extend-words]
+ede = "ede" # Encrypt-Decrypt-Encrypt (Triple DES EDE mode)
+Hashi = "Hashi" # HashiCorp brand name token
+HashiCorp = "HashiCorp" # HashiCorp company name
+caf = "caf" # part of café (URL-encoding / Unicode examples)
 
 [default.extend-identifiers]
 ACI = "ACI" # Name of a connector
 BA = "BA" # Bosnia and Herzegovina country code
+ACTIVITE = "ACTIVITE" # French translation of activity
+AUTORISATION = "AUTORISATION" # French translation of authorization
+CAF = "CAF" # Central African Republic (ISO 3166-1 alpha-3)
 FO = "FO" # Faroe Islands (the) country code
 JOD = "JOD" # Jordan
 Jod = "Jod" # Jordan
 iin = "iin" # iin
+LSO = "LSO" # Lesotho (ISO 3166-1 alpha-3)
+NAM = "NAM" # Namibia (ISO 3166-1 alpha-3)
 PN = "PN" # Pitcairn Islands
+SOM = "SOM" # Somalia (ISO 3166-1 alpha-3)
+SUR = "SUR" # Suriname (ISO 3166-1 alpha-3)
+THA = "THA" # Thailand (ISO 3166-1 alpha-3)
+TTO = "TTO" # Trinidad and Tobago (ISO 3166-1 alpha-3)
 jus = "jus" # Juspay
 FPR = "FPR" # Fraud Prevention Rules
+Eto = "Eto" # Gigadat transaction type
+Cpi = "Cpi" # Gigadat transaction type

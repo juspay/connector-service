@@ -265,14 +265,26 @@ impl Deref for NetworkToken {
 impl<'de> Deserialize<'de> for CardNumber {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Self::from_str(&s).map_err(serde::de::Error::custom)
+        Self::from_str(&s).map_err(de::Error::custom)
     }
 }
 
 impl<'de> Deserialize<'de> for NetworkToken {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let s = String::deserialize(d)?;
-        Self::from_str(&s).map_err(serde::de::Error::custom)
+        Self::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
+impl std::hash::Hash for CardNumber {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.peek().hash(state);
+    }
+}
+
+impl std::hash::Hash for NetworkToken {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.peek().hash(state);
     }
 }
 
@@ -314,7 +326,7 @@ impl prost::Message for CardNumber {
         if tag == 1 {
             let mut temp_string = String::new();
             prost::encoding::string::merge(wire_type, &mut temp_string, buf, ctx)?;
-            *self = CardNumber(StrongSecret::new(temp_string));
+            *self = Self(StrongSecret::new(temp_string));
             Ok(())
         } else {
             prost::encoding::skip_field(wire_type, tag, buf, ctx)
@@ -330,7 +342,44 @@ impl prost::Message for CardNumber {
     }
 
     fn clear(&mut self) {
-        *self = CardNumber::default();
+        *self = Self::default();
+    }
+}
+
+impl prost::Message for NetworkToken {
+    fn encode_raw(&self, buf: &mut impl bytes::BufMut) {
+        if !self.0.peek().is_empty() {
+            prost::encoding::string::encode(1, self.0.peek(), buf);
+        }
+    }
+
+    fn merge_field(
+        &mut self,
+        tag: u32,
+        wire_type: prost::encoding::WireType,
+        buf: &mut impl bytes::Buf,
+        ctx: prost::encoding::DecodeContext,
+    ) -> Result<(), prost::DecodeError> {
+        if tag == 1 {
+            let mut temp_string = String::new();
+            prost::encoding::string::merge(wire_type, &mut temp_string, buf, ctx)?;
+            *self = Self(StrongSecret::new(temp_string));
+            Ok(())
+        } else {
+            prost::encoding::skip_field(wire_type, tag, buf, ctx)
+        }
+    }
+
+    fn encoded_len(&self) -> usize {
+        if !self.0.peek().is_empty() {
+            prost::encoding::string::encoded_len(1, self.0.peek())
+        } else {
+            0
+        }
+    }
+
+    fn clear(&mut self) {
+        *self = Self::default();
     }
 }
 
@@ -382,7 +431,7 @@ mod tests {
     fn card_number_no_whitespace() {
         let s = "3714    4963  5398 431";
         assert_eq!(
-            CardNumber::from_str(s).unwrap().to_string(),
+            format!("{:?}", CardNumber::from_str(s).unwrap().0),
             "371449*********"
         );
     }
@@ -410,8 +459,8 @@ mod tests {
     #[test]
     fn test_valid_card_number_deserialization() {
         let card_number = serde_json::from_str::<CardNumber>(r#""3714 4963 5398 431""#).unwrap();
-        let secret = card_number.to_string();
-        assert_eq!(r#""371449*********""#, format!("{secret:?}"));
+        let secret = &(*card_number);
+        assert_eq!("371449*********", format!("{secret:?}"));
     }
 
     #[test]
@@ -431,6 +480,14 @@ impl CardExpirationMonth {
     }
 }
 
+impl PartialEq for CardExpirationMonth {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.peek() == other.0.peek()
+    }
+}
+
+impl Eq for CardExpirationMonth {}
+
 impl TryFrom<u8> for CardExpirationMonth {
     type Error = error_stack::Report<ValidationError>;
     fn try_from(month: u8) -> Result<Self, Self::Error> {
@@ -447,7 +504,7 @@ impl TryFrom<u8> for CardExpirationMonth {
 impl<'de> Deserialize<'de> for CardExpirationMonth {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         let month = u8::deserialize(deserializer)?;
         month.try_into().map_err(de::Error::custom)
@@ -462,6 +519,14 @@ impl CardExpirationYear {
         *self.0.peek()
     }
 }
+
+impl PartialEq for CardExpirationYear {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.peek() == other.0.peek()
+    }
+}
+
+impl Eq for CardExpirationYear {}
 
 impl TryFrom<u16> for CardExpirationYear {
     type Error = error_stack::Report<ValidationError>;
@@ -485,7 +550,7 @@ impl TryFrom<u16> for CardExpirationYear {
 impl<'de> Deserialize<'de> for CardExpirationYear {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         let year = u16::deserialize(deserializer)?;
         year.try_into().map_err(de::Error::custom)

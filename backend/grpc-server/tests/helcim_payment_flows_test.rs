@@ -2,13 +2,14 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use grpc_server::{app, configs};
-use hyperswitch_masking::Secret;
+use grpc_server::app;
+use hyperswitch_masking::{ExposeInterface, Secret};
+use ucs_env::configs;
 mod common;
+mod utils;
 
 use std::{
     collections::HashMap,
-    env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -17,12 +18,11 @@ use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, Address, AuthenticationType,
-        BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2,
-        Currency, Identifier, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-        PaymentServiceVoidRequest, PaymentStatus,
+        payment_method, payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+        BrowserInformation, CaptureMethod, CardDetails, CountryAlpha2, Currency, PaymentAddress,
+        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceVoidRequest,
+        PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -30,9 +30,6 @@ use tonic::{transport::Channel, Request};
 // Constants for Helcim connector
 const CONNECTOR_NAME: &str = "helcim";
 const AUTH_TYPE: &str = "header-key";
-
-// Environment variable names for API credentials
-const HELCIM_API_KEY_ENV: &str = "TEST_HELCIM_API_KEY";
 
 // Test card data
 const TEST_CARD_NUMBER: &str = "5413330089099130"; // Valid test card for Helcim
@@ -61,9 +58,13 @@ fn get_timestamp() -> u64 {
 
 // Helper function to add Helcim metadata headers to a request
 fn add_helcim_metadata<T>(request: &mut Request<T>) {
-    // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(HELCIM_API_KEY_ENV).expect("TEST_HELCIM_API_KEY environment variable is required");
+    let auth = utils::credential_utils::load_connector_auth(CONNECTOR_NAME)
+        .expect("Failed to load helcim credentials");
+
+    let api_key = match auth {
+        domain_types::router_data::ConnectorAuthType::HeaderKey { api_key } => api_key.expose(),
+        _ => panic!("Expected HeaderKey auth type for helcim"),
+    };
 
     request.metadata_mut().append(
         "x-connector",
@@ -98,23 +99,26 @@ fn add_helcim_metadata<T>(request: &mut Request<T>) {
 
 // Helper function to extract connector transaction ID from authorize response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
-    match &response.transaction_id {
-        Some(id) => match &id.id_type {
-            Some(IdType::Id(id)) => id.clone(),
-            Some(IdType::EncodedData(id)) => id.clone(),
-            Some(IdType::NoResponseIdMarker(_)) => {
-                // For manual capture, extract the transaction ID from connector metadata
-                if let Some(preauth_id) = response.connector_metadata.get("preauth_transaction_id")
-                {
-                    return preauth_id.clone();
-                }
-                panic!(
-                    "NoResponseIdMarker found but no preauth_transaction_id in connector metadata"
-                )
+    match &response.connector_transaction_id {
+        Some(id) => {
+            if id.is_empty() {
+                panic!("Transaction ID is None")
+            } else {
+                id.clone()
             }
-            None => panic!("ID type is None in transaction_id"),
-        },
-        None => panic!("Transaction ID is None"),
+        }
+        None => {
+            if let Some(connector_meta) = &response.connector_feature_data {
+                if let Ok(meta_map) = serde_json::from_str::<HashMap<String, String>>(
+                    connector_meta.as_ref().expose(),
+                ) {
+                    if let Some(preauth_id) = meta_map.get("preauth_transaction_id") {
+                        return preauth_id.clone();
+                    }
+                }
+            }
+            panic!("NoResponseIdMarker found but no preauth_transaction_id in connector metadata")
+        }
     }
 }
 
@@ -122,24 +126,17 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 fn extract_void_transaction_id(
     response: &grpc_api_types::payments::PaymentServiceVoidResponse,
 ) -> String {
-    match &response.transaction_id {
-        Some(id) => match &id.id_type {
-            Some(IdType::Id(id)) => id.clone(),
-            Some(IdType::EncodedData(id)) => id.clone(),
-            Some(_) => panic!("Unexpected ID type in transaction_id"),
-            None => panic!("ID type is None in transaction_id"),
-        },
-        None => panic!("Transaction ID is None"),
+    if response.connector_transaction_id.is_empty() {
+        panic!("Transaction ID is None")
+    } else {
+        response.connector_transaction_id.clone()
     }
 }
 
 // Helper function to extract connector request ref ID from response
 fn extract_request_ref_id(response: &PaymentServiceAuthorizeResponse) -> String {
-    match &response.response_ref_id {
-        Some(id) => match id.id_type.as_ref().unwrap() {
-            IdType::Id(id) => id.clone(),
-            _ => panic!("Expected connector response_ref_id"),
-        },
+    match &response.merchant_transaction_id {
+        Some(id) => id.clone(),
         None => panic!("Resource ID is None"),
     }
 }
@@ -205,7 +202,7 @@ fn create_payment_authorize_request_with_amount(
     capture_method: CaptureMethod,
     amount: i64,
 ) -> PaymentServiceAuthorizeRequest {
-    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
         card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
@@ -217,35 +214,41 @@ fn create_payment_authorize_request_with_amount(
         card_issuing_country_alpha2: None,
         bank_code: None,
         nick_name: None,
-    });
-    let mut metadata = HashMap::new();
-    metadata.insert(
+    };
+    let mut metadata_map = HashMap::new();
+    metadata_map.insert(
         "description".to_string(),
         "Its my first payment request".to_string(),
     );
+    let metadata_json = serde_json::to_string(&metadata_map).unwrap();
+
     PaymentServiceAuthorizeRequest {
-        amount,
-        minor_amount: amount,
-        currency: i32::from(Currency::Usd),
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: amount,
+            currency: i32::from(Currency::Usd),
+        }),
         payment_method: Some(PaymentMethod {
-            payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
-                card_type: Some(card_details),
-            })),
+            payment_method: Some(payment_method::PaymentMethod::Card(card_details)),
         }),
         return_url: Some("https://duck.com".to_string()),
-        email: Some(TEST_EMAIL.to_string().into()),
+        customer: Some(grpc_api_types::payments::Customer {
+            email: Some(TEST_EMAIL.to_string().into()),
+            name: None,
+            id: None,
+            connector_customer_id: None,
+            phone_number: None,
+            phone_country_code: None,
+        }),
         address: Some(create_test_billing_address()),
         browser_info: Some(create_test_browser_info()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("helcim_test_{}", get_timestamp()))),
-        }),
-        enrolled_for_3ds: false,
-        request_incremental_authorization: false,
+        merchant_transaction_id: Some(format!("helcim_test_{}", get_timestamp())),
+        enrolled_for_3ds: Some(false),
+        request_incremental_authorization: Some(false),
         capture_method: Some(i32::from(capture_method)),
         order_category: Some("PAY".to_string()),
-        metadata,
-        // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        metadata: Some(Secret::new(metadata_json)),
+        // payment_method_type: Some(i32::from(PaymentMethodType::Card)),
         ..Default::default()
     }
 }
@@ -253,21 +256,27 @@ fn create_payment_authorize_request_with_amount(
 // Helper function to create a payment sync request
 fn create_payment_sync_request(
     transaction_id: &str,
-    request_ref_id: &str,
+    _request_ref_id: &str,
     amount: i64,
 ) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(request_ref_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
+        encoded_data: None,
         capture_method: None,
         handle_response: None,
-        amount,
-        currency: i32::from(Currency::Usd),
+        merchant_transaction_id: None,
+        amount: Some(grpc_api_types::payments::Money {
+            minor_amount: amount,
+            currency: i32::from(Currency::Usd),
+        }),
         state: None,
+        metadata: None,
+        connector_feature_data: None,
+        setup_future_usage: None,
+        sync_type: None,
+        connector_order_reference_id: None,
+        test_mode: None,
+        payment_experience: None,
     }
 }
 
@@ -277,15 +286,12 @@ fn create_payment_capture_request(
     amount: i64,
 ) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
+        connector_transaction_id: transaction_id.to_string(),
+        amount_to_capture: Some(grpc_api_types::payments::Money {
+            minor_amount: amount,
+            currency: i32::from(Currency::Usd),
         }),
-        amount_to_capture: amount,
-        currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("capture_ref_{}", get_timestamp()))),
-        }),
         browser_info: Some(create_test_browser_info()),
         ..Default::default()
     }
@@ -294,17 +300,12 @@ fn create_payment_capture_request(
 // Helper function to create a payment void request
 fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
     PaymentServiceVoidRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
+        connector_transaction_id: transaction_id.to_string(),
         cancellation_reason: None,
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
-        }),
+        merchant_void_id: Some(format!("void_ref_{}", get_timestamp())),
         all_keys_required: None,
         browser_info: Some(create_test_browser_info()),
         amount: None,
-        currency: None,
         ..Default::default()
     }
 }
@@ -345,14 +346,16 @@ async fn test_payment_authorization_auto_capture() {
             .into_inner();
         // Verify the response
         assert!(
-            response.transaction_id.is_some(),
+            response.connector_transaction_id.is_some(),
             "Resource ID should be present"
         );
+
+        let error = response.error.and_then(|e| e.connector_details);
 
         assert!(
             response.status == i32::from(PaymentStatus::Charged),
             "Payment should be in Charged state. Got status: {}, error_code: {:?}, error_message: {:?}",
-            response.status, response.error_code, response.error_message
+            response.status, error.as_ref().and_then(|d| d.code.clone()), error.as_ref().and_then(|d| d.message.clone())
         );
     });
 }
@@ -378,8 +381,8 @@ async fn test_payment_authorization_manual_capture() {
             .into_inner();
 
         assert!(
-            auth_response.transaction_id.is_some(),
-            "Transaction ID should be present"
+            auth_response.connector_transaction_id.is_none(),
+            "Transaction ID should not be present"
         );
 
         // Extract the transaction ID
@@ -435,8 +438,11 @@ async fn test_payment_void() {
         let request_ref_id = extract_request_ref_id(&auth_response);
 
         // After authentication, sync the payment to get updated status
-        let sync_request =
-            create_payment_sync_request(&transaction_id, &request_ref_id, auth_request.amount);
+        let sync_request = create_payment_sync_request(
+            &transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
         let mut sync_grpc_request = Request::new(sync_request);
         add_helcim_metadata(&mut sync_grpc_request);
 
@@ -455,7 +461,7 @@ async fn test_payment_void() {
 
         // Verify the void response
         assert!(
-            void_response.transaction_id.is_some(),
+            !void_response.connector_transaction_id.is_empty(),
             "Transaction ID should be present in void response"
         );
 
@@ -468,8 +474,11 @@ async fn test_payment_void() {
         let void_transaction_id = extract_void_transaction_id(&void_response);
 
         // Verify the payment status with a sync operation using the void transaction ID
-        let sync_request =
-            create_payment_sync_request(&void_transaction_id, &request_ref_id, auth_request.amount);
+        let sync_request = create_payment_sync_request(
+            &void_transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
         let mut sync_grpc_request = Request::new(sync_request);
         add_helcim_metadata(&mut sync_grpc_request);
 
@@ -516,8 +525,11 @@ async fn test_payment_sync() {
         std::thread::sleep(std::time::Duration::from_secs(2));
 
         // Create sync request with the specific transaction ID
-        let sync_request =
-            create_payment_sync_request(&transaction_id, &request_ref_id, auth_request.amount);
+        let sync_request = create_payment_sync_request(
+            &transaction_id,
+            &request_ref_id,
+            auth_request.amount.unwrap().minor_amount,
+        );
 
         // Add metadata headers for sync request
         let mut sync_grpc_request = Request::new(sync_request);
