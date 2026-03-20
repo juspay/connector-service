@@ -42,8 +42,14 @@ use grpc_api_types::payments::{
     RefundResponse,
 };
 use grpc_api_types::payouts::{
-    PayoutServiceCreateRequest,
-    PayoutServiceCreateResponse,
+    PayoutServiceCreateRequest, PayoutServiceCreateResponse,
+    PayoutServiceTransferRequest, PayoutServiceTransferResponse,
+    PayoutServiceGetRequest, PayoutServiceGetResponse,
+    PayoutServiceVoidRequest, PayoutServiceVoidResponse,
+    PayoutServiceStageRequest, PayoutServiceStageResponse,
+    PayoutServiceCreateLinkRequest, PayoutServiceCreateLinkResponse,
+    PayoutServiceCreateRecipientRequest, PayoutServiceCreateRecipientResponse,
+    PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse,
 };
 use crate::services::payments::{
     accept_req_transformer, accept_res_transformer,
@@ -68,6 +74,13 @@ use crate::services::payments::{
 };
 use crate::services::payouts::{
     payout_create_req_transformer, payout_create_res_transformer,
+    payout_transfer_req_transformer, payout_transfer_res_transformer,
+    payout_get_req_transformer, payout_get_res_transformer,
+    payout_void_req_transformer, payout_void_res_transformer,
+    payout_stage_req_transformer, payout_stage_res_transformer,
+    payout_create_link_req_transformer, payout_create_link_res_transformer,
+    payout_create_recipient_req_transformer, payout_create_recipient_res_transformer,
+    payout_enroll_disburse_account_req_transformer, payout_enroll_disburse_account_res_transformer,
 };
 
 // accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
@@ -111,3 +124,24 @@ impl_flow_handlers!(void, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
 
 // create_payout: PayoutService.Create — Create a payout.
 impl_flow_handlers!(create_payout, PayoutServiceCreateRequest, PayoutServiceCreateResponse, payout_create_req_transformer, payout_create_res_transformer);
+
+// transfer_payout: PayoutService.Transfer — Transfer a payout.
+impl_flow_handlers!(transfer_payout, PayoutServiceTransferRequest, PayoutServiceTransferResponse, payout_transfer_req_transformer, payout_transfer_res_transformer);
+
+// get_payout: PayoutService.Get — Get a payout.
+impl_flow_handlers!(get_payout, PayoutServiceGetRequest, PayoutServiceGetResponse, payout_get_req_transformer, payout_get_res_transformer);
+
+// void_payout: PayoutService.Void — Void a payout.
+impl_flow_handlers!(void_payout, PayoutServiceVoidRequest, PayoutServiceVoidResponse, payout_void_req_transformer, payout_void_res_transformer);
+
+// stage_payout: PayoutService.Stage — Stage a payout.
+impl_flow_handlers!(stage_payout, PayoutServiceStageRequest, PayoutServiceStageResponse, payout_stage_req_transformer, payout_stage_res_transformer);
+
+// create_link_payout: PayoutService.CreateLink — Create a payout link.
+impl_flow_handlers!(create_link_payout, PayoutServiceCreateLinkRequest, PayoutServiceCreateLinkResponse, payout_create_link_req_transformer, payout_create_link_res_transformer);
+
+// create_recipient_payout: PayoutService.CreateRecipient — Create a payout recipient.
+impl_flow_handlers!(create_recipient_payout, PayoutServiceCreateRecipientRequest, PayoutServiceCreateRecipientResponse, payout_create_recipient_req_transformer, payout_create_recipient_res_transformer);
+
+// enroll_disburse_account_payout: PayoutService.EnrollDisburseAccount — Enroll disburse account for a payout.
+impl_flow_handlers!(enroll_disburse_account_payout, PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse, payout_enroll_disburse_account_req_transformer, payout_enroll_disburse_account_res_transformer);
