@@ -190,7 +190,10 @@ fn fetch_payment_instrument<
             | WalletDataPaymentMethod::WeChatPayQr(_)
             | WalletDataPaymentMethod::Mifinity(_)
             | WalletDataPaymentMethod::RevolutPay(_)
-            | WalletDataPaymentMethod::BluecodeRedirect {} => {
+            | WalletDataPaymentMethod::BluecodeRedirect {}
+            | WalletDataPaymentMethod::MbWay(_)
+            | WalletDataPaymentMethod::Satispay(_)
+            | WalletDataPaymentMethod::Wero(_) => {
                 Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("worldpay"),
                 )

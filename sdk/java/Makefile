@@ -104,7 +104,7 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 generate-flows: install-codegen-deps
 	@echo "Generating Kotlin flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang kotlin
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang kotlin
 	@echo "Kotlin flow methods generated."
 
 # ---------------------------------------------------------------------------

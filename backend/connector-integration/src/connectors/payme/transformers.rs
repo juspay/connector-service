@@ -209,7 +209,7 @@ fn create_payment_request_from_router_data<T: PaymentMethodDataTypes>(
         .customer_name
         .as_ref()
         .ok_or(errors::ConnectorError::MissingRequiredField {
-            field_name: "customer_name",
+            field_name: "customer.name",
         })?
         .clone();
 

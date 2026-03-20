@@ -1,12 +1,26 @@
 {
   "connector": "worldpay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
       "ApplePay": {
         "status": "supported",
-        "required_fields": [
-          "Apple pay encrypted data"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -16,80 +30,51 @@
           "payment_method": {
             "apple_pay": {
               "payment_data": {
-                "encrypted_data": "<base64_encoded_apple_pay_payment_token>"
+                "encrypted_data": "eyJ2ZXJzaW9uIjoiRUNfdjEiLCJkYXRhIjoicHJvYmUiLCJzaWduYXR1cmUiOiJwcm9iZSJ9"
               },
               "payment_method": {
                 "display_name": "Visa 1111",
                 "network": "Visa",
                 "type": "debit"
               },
-              "transaction_identifier": "<apple_pay_transaction_identifier>"
+              "transaction_identifier": "probe_txn_id"
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
-            "via": "HyperSwitch",
-            "content-type": "application/json",
             "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
           "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"applepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"version\\\":\\\"EC_v1\\\",\\\"data\\\":\\\"probe\\\",\\\"signature\\\":\\\"probe\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
         }
+      },
+      "ApplePayDecrypted": {
+        "status": "error",
+        "error": "Stuck on field: Apple pay encrypted data — Missing required field: Apple pay encrypted data"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
       },
       "Card": {
         "status": "supported",
@@ -109,75 +94,27 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "wp-api-version": "2024-06-01",
-            "accept": "application/json",
-            "via": "HyperSwitch"
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
-          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"plain\",\"cardNumber\":\"4111111111111111\",\"expiryDate\":{\"month\":3,\"year\":2030},\"cvc\":\"737\",\"cardHolderName\":\"John Doe\",\"billingAddress\":{\"address1\":\"123 Main St\",\"city\":\"Seattle\",\"state\":\"WA\",\"postalCode\":\"98101\",\"countryCode\":\"US\"}},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
+          "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"plain\",\"cardNumber\":\"4111111111111111\",\"expiryDate\":{\"month\":3,\"year\":2030},\"cvc\":\"737\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
         }
       },
       "GooglePay": {
         "status": "supported",
-        "required_fields": [
-          "gpay wallet_token"
-        ],
         "proto_request": {
           "merchant_transaction_id": "probe_txn_001",
           "amount": {
@@ -194,76 +131,59 @@
               },
               "tokenization_data": {
                 "encrypted_data": {
-                  "token": "{\"version\":\"ECv2\",\"signature\":\"<sig>\",\"intermediateSigningKey\":{\"signedKey\":\"<signed_key>\",\"signatures\":[\"<sig>\"]},\"signedMessage\":\"<signed_message>\"}",
-                  "token_type": "PAYMENT_GATEWAY"
+                  "token_type": "PAYMENT_GATEWAY",
+                  "token": "{\"id\":\"tok_probe_gpay\",\"object\":\"token\",\"type\":\"card\"}"
                 }
               }
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
-            "wp-api-version": "2024-06-01",
-            "via": "HyperSwitch",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "accept": "application/json"
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
           "body": "{\"transactionReference\":\"probe_txn_001\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"googlepay\",\"paymentInstrument\":{\"type\":\"encrypted\",\"walletToken\":\"{\\\"id\\\":\\\"tok_probe_gpay\\\",\\\"object\\\":\\\"token\\\",\\\"type\\\":\\\"card\\\"}\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":null}}"
         }
+      },
+      "GooglePayDecrypted": {
+        "status": "error",
+        "error": "Stuck on field: gpay wallet_token — Missing required field: gpay wallet_token"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "SamsungPay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Selected payment method through worldpay"
       }
     },
     "capture": {
@@ -282,8 +202,8 @@
           "method": "Post",
           "headers": {
             "accept": "application/json",
-            "content-type": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch",
             "wp-api-version": "2024-06-01"
           },
@@ -291,10 +211,46 @@
         }
       }
     },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -305,14 +261,26 @@
           "url": "https://try.access.worldpay.com/api/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
             "via": "HyperSwitch",
-            "wp-api-version": "2024-06-01",
-            "accept": "application/json"
+            "wp-api-version": "2024-06-01"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Failed to deserialize connector response"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "error",
+        "error": "Failed to deserialize connector response"
       }
     },
     "recurring_charge": {
@@ -321,7 +289,7 @@
         "proto_request": {
           "connector_recurring_payment_id": {
             "mandate_id_type": {
-              "connector_mandate_id": "probe_mandate_123"
+              "connector_mandate_id": "probe-mandate-123"
             }
           },
           "amount": {
@@ -332,7 +300,7 @@
             "token": "probe_pm_token"
           },
           "return_url": "https://example.com/recurring-return",
-          "connector_customer_id": "probe_cust_connector_001",
+          "connector_customer_id": "cust_probe_123",
           "payment_method_type": "PAY_PAL",
           "off_session": true
         },
@@ -340,13 +308,13 @@
           "url": "https://try.access.worldpay.com/api/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
+            "accept": "application/json",
             "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
-            "wp-api-version": "2024-06-01",
-            "accept": "application/json"
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
-          "body": "{\"transactionReference\":\"\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"token\",\"href\":\"probe_mandate_123\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":{\"type\":\"subscription\",\"storedCardUsage\":\"subsequent\"}}}"
+          "body": "{\"transactionReference\":\"\",\"merchant\":{\"entity\":\"probe_id\"},\"instruction\":{\"settlement\":{\"auto\":true},\"method\":\"card\",\"paymentInstrument\":{\"type\":\"token\",\"href\":\"probe-mandate-123\"},\"narrative\":{\"line1\":\"Probe Merchant\"},\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"tokenCreation\":null,\"customerAgreement\":{\"type\":\"subscription\",\"storedCardUsage\":\"subsequent\"}}}"
         }
       }
     },
@@ -367,14 +335,29 @@
           "url": "https://try.access.worldpay.com/api/payments/probe_connector_txn_001/partialRefunds",
           "method": "Post",
           "headers": {
-            "wp-api-version": "2024-06-01",
-            "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "accept": "application/json",
-            "content-type": "application/json"
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
+            "content-type": "application/json",
+            "via": "HyperSwitch",
+            "wp-api-version": "2024-06-01"
           },
           "body": "{\"value\":{\"amount\":1000,\"currency\":\"USD\"},\"reference\":\"probe-refund-001\"}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {
@@ -388,11 +371,11 @@
           "url": "https://try.access.worldpay.com/api/payments/probe_connector_txn_001/cancellations",
           "method": "Post",
           "headers": {
-            "wp-api-version": "2024-06-01",
             "accept": "application/json",
+            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz",
             "content-type": "application/json",
             "via": "HyperSwitch",
-            "authorization": "Basic cHJvYmVfdXNlcjpwcm9iZV9wYXNz"
+            "wp-api-version": "2024-06-01"
           },
           "body": null
         }

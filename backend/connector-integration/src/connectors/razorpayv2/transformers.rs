@@ -409,7 +409,7 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .or_else(|_| {
                     Email::from_str("customer@example.com").map_err(|_| {
                         error_stack::Report::new(errors::ConnectorError::InvalidDataFormat {
-                            field_name: "email",
+                            field_name: "billing.email",
                         })
                     })
                 })?,

@@ -361,7 +361,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .reference_id
             .as_ref()
             .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                field_name: "reference_id",
+                field_name: "merchant_order_id",
             })?
             .clone();
         let converted_amount = self

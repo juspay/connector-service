@@ -583,7 +583,8 @@ pub struct StripeBillingAddressCardToken {
     #[serde(rename = "billing_details[address][city]")]
     pub city: Option<Secret<String>>,
 }
-// Struct to call the Stripe tokens API to create a PSP token for the card details provided
+
+// Struct to call the Stripe tokens API to create a PSP token for the card details provided.
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripeCardToken<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "type")]
@@ -912,7 +913,9 @@ impl TryFrom<common_enums::PaymentMethodType> for StripePaymentMethodType {
             | common_enums::PaymentMethodType::DuitNow
             | common_enums::PaymentMethodType::PromptPay
             | common_enums::PaymentMethodType::VietQr
-            | common_enums::PaymentMethodType::Mifinity => Err(ConnectorError::NotImplemented(
+            | common_enums::PaymentMethodType::Mifinity
+            | common_enums::PaymentMethodType::Satispay
+            | common_enums::PaymentMethodType::Wero => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -1196,7 +1199,10 @@ fn get_stripe_payment_method_type_from_wallet_data(
         | WalletData::TouchNGoRedirect(_)
         | WalletData::SwishQr(_)
         | WalletData::WeChatPayRedirect(_)
-        | WalletData::Mifinity(_) => Err(ConnectorError::NotImplemented(
+        | WalletData::Mifinity(_)
+        | WalletData::MbWay(_)
+        | WalletData::Satispay(_)
+        | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
             get_unimplemented_payment_method_error_message("stripe"),
         )),
     }
@@ -1668,7 +1674,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | WalletData::TouchNGoRedirect(_)
             | WalletData::SwishQr(_)
             | WalletData::WeChatPayRedirect(_)
-            | WalletData::Mifinity(_) => Err(ConnectorError::NotImplemented(
+            | WalletData::Mifinity(_)
+            | WalletData::MbWay(_)
+            | WalletData::Satispay(_)
+            | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
                 get_unimplemented_payment_method_error_message("stripe"),
             )
             .into()),
@@ -5206,7 +5215,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .get_optional_billing_state(),
         };
 
-        // Card flow for tokenization is handled separately because of API contact difference
+        // Card flow for tokenization is handled separately because of API contact difference.
+        // /v1/tokens only accepts card[*] fields — do NOT include `type` or `billing_details[*]`.
         let request_payment_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_details) => {
                 StripePaymentMethodData::CardToken(StripeCardToken {

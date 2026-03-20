@@ -334,3 +334,30 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
         }
     }
 }
+
+/// Convert ApplicationErrorResponse to proto IntegrationError
+impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApplicationErrorResponse {
+    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::IntegrationError {
+            error_message: api_error.error_message.clone(),
+            error_code: api_error.sub_code.clone(),
+            suggested_action: None,
+            doc_url: None,
+        }
+    }
+}
+
+/// Convert ApplicationErrorResponse to proto ConnectorResponseTransformationError
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ApplicationErrorResponse
+{
+    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::ConnectorResponseTransformationError {
+            error_message: api_error.error_message.clone(),
+            error_code: api_error.sub_code.clone(),
+            http_status_code: Some(api_error.error_identifier.into()),
+        }
+    }
+}

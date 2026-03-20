@@ -1,7 +1,44 @@
 {
   "connector": "authipay",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -20,70 +57,57 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "message-signature": "qJQCaH0NtaUFtsI+C1hLuRi5zsf8J+EoZN4WjFrp/T8=",
-            "client-request-id": "d659997a-6691-43ba-a5c7-4b253d090f27",
+            "api-key": "probe_key",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "timestamp": "1773360634012",
-            "api-key": "probe_key"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"PaymentCardSaleTransaction\",\"merchantTransactionId\":\"probe_txn_001\",\"transactionAmount\":{\"total\":10.0,\"currency\":\"USD\"},\"order\":{\"orderId\":\"probe_txn_001\"},\"paymentMethod\":{\"paymentCard\":{\"number\":\"4111111111111111\",\"expiryDate\":{\"month\":\"03\",\"year\":\"30\"},\"securityCode\":\"737\"}}}"
         }
+      },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "SamsungPay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
       }
     },
     "capture": {
@@ -101,21 +125,57 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "client-request-id": "87594fed-358e-431d-8de5-f168de829e59",
-            "message-signature": "ANKOp1zT+hKjKsr7gtYydGkGqLLFt0DplHcUKyp6r5k=",
-            "content-type": "application/json",
             "api-key": "probe_key",
-            "via": "HyperSwitch",
-            "timestamp": "1773360634016"
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
+            "content-type": "application/json",
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"PostAuthTransaction\",\"transactionAmount\":{\"total\":10.0,\"currency\":\"USD\"}}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -126,15 +186,30 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "via": "HyperSwitch",
-            "client-request-id": "915dde22-8bed-46b3-8550-14847cbb8385",
-            "message-signature": "oHF+QVBfThf6i3cBQKBbp26acggnl5u77COtQ9ETQiI=",
             "api-key": "probe_key",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "timestamp": "1773360634016"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -154,15 +229,30 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "api-key": "probe_key",
-            "timestamp": "1773360634016",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "message-signature": "DkyKVftBFt6sV5laLgVSqoZD2cE4wAlKJvH4Qz6lgc0=",
-            "client-request-id": "ab1e108c-47f8-4b80-a275-134de3b1d731"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"ReturnTransaction\",\"transactionAmount\":{\"total\":10.0,\"currency\":\"USD\"},\"comments\":\"customer_request\"}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {
@@ -176,12 +266,12 @@
           "url": "https://prod.emea.api.fiservapps.com/sandbox/ipp/payments-gateway/v2/payments/probe_connector_txn_001",
           "method": "Post",
           "headers": {
-            "message-signature": "KxXh/mUEGqxHQryCgQ0qECb+uapGKUA8thtiJL3A4zI=",
             "api-key": "probe_key",
+            "client-request-id": "00000000-0000-0000-0000-000000000000",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "client-request-id": "8e603d70-80b9-4798-8860-c14481617581",
-            "timestamp": "1773360634016"
+            "message-signature": "cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "timestamp": "0000000000",
+            "via": "HyperSwitch"
           },
           "body": "{\"requestType\":\"VoidPreAuthTransactions\"}"
         }
