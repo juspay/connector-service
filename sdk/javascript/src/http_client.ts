@@ -29,7 +29,7 @@ export const NetworkErrorCode = types.NetworkErrorCode;
 
 /**
  * Network error for HTTP transport failures (timeouts, connection errors, config).
- * Uses proto-generated NetworkErrorCode for cross-SDK parity with RequestError/ResponseError.
+ * Uses proto-generated NetworkErrorCode for cross-SDK parity with IntegrationError/ConnectorResponseTransformationError.
  */
 export class NetworkError extends Error {
   constructor(
@@ -44,7 +44,7 @@ export class NetworkError extends Error {
   }
 
   /**
-   * String error code for parity with RequestError/ResponseError (e.g. "CONNECT_TIMEOUT").
+   * String error code for parity with IntegrationError/ConnectorResponseTransformationError (e.g. "CONNECT_TIMEOUT").
    * Use for logging, display, and simple comparisons.
    */
   get errorCode(): string {
