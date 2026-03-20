@@ -211,12 +211,7 @@ You are the Foundation Setup Subagent. Your ONLY responsibility is to establish 
 - Verify generic struct pattern: ConnectorName<T>
 
 
-#### STEP 8: URLs STORAGE 
-```bash
-# Execute: ./extract_source_urls_simple.sh
-```
-
-#### STEP 7: Completion Confirmation
+#### STEP 6: Completion Confirmation
 ```bash
 # Report: "Foundation Setup COMPLETED"
 # Provide: List of files created/modified
