@@ -1,7 +1,76 @@
 {
   "connector": "payu",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "ApplePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Card": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "GooglePay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "PaypalRedirect": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method not supported by PayU. Only UPI payments are supported is not supported by PayU"
+      },
       "UpiCollect": {
         "status": "supported",
         "proto_request": {
@@ -16,34 +85,9 @@
             }
           },
           "capture_method": "AUTOMATIC",
-          "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
-          },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
             "billing_address": {
               "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
               "email": "test@example.com",
               "phone_number": "4155552671",
               "phone_country_code": "+1"
@@ -51,19 +95,7 @@
           },
           "auth_type": "NO_THREE_DS",
           "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
           "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
             "ip_address": "1.2.3.4"
           }
         },
@@ -71,18 +103,59 @@
           "url": "https://test.payu.in//_payment",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
             "accept": "application/json",
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded",
+            "via": "HyperSwitch"
           },
-          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&lastname=Doe&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=UPI&vpa=test%40upi&txn_s2s_flow=2&s2s_client_ip=1.2.3.4&s2s_device_info=web&api_version=2.0&hash=3a83eae726770b2e3fd9b46f863e5a98e774f1fe17076345f581ba6ced4582779ac63312e113b7bb57afbaddd78bfa92d1a72c743130f02da24c07e49375b5e0&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId&upi_app_name=test%40upi"
+          "body": "key=probe_key&txnid=probe_txn_001&amount=10.00&currency=USD&productinfo=Payment&firstname=John&email=test%40example.com&phone=%2B14155552671&surl=https%3A%2F%2Fexample.com%2Freturn&furl=https%3A%2F%2Fexample.com%2Freturn&pg=UPI&bankcode=UPI&vpa=test%40upi&txn_s2s_flow=2&s2s_client_ip=1.2.3.4&s2s_device_info=web&api_version=2.0&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3&udf1=IRRELEVANT_PAYMENT_ID&udf2=DefaultMerchantId&upi_app_name=test%40upi"
         }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -97,8 +170,48 @@
             "content-type": "application/x-www-form-urlencoded",
             "via": "HyperSwitch"
           },
-          "body": "key=probe_key&command=verify_payment&var1=probe_connector_txn_001&hash=7efeea8ca348ca9870aab47cd0e415af7469ef66ab71221bff4e54ad06fab76fa6abd33536d728a10fc5f4ed51cac9252ad5d4b337df03163a404a251b02a790"
+          "body": "key=probe_key&command=verify_payment&var1=probe_connector_txn_001&hash=a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "not_implemented"
       }
     }
   }

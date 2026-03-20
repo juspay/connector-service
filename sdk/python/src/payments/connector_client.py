@@ -167,15 +167,14 @@ class _ConnectorClientBase:
         """
         Per-request override falls back to client default (stored at init).
         """
-        environment = self.config.environment
+        environment = self.config.options.environment
         override_http = options.http if (options and options.HasField("http")) else None
         http_config = merge_http_config(self._default_http, override_http)
 
         # Resolve FFI Context
         ffi = FfiOptions(
             environment=environment,
-            connector=self.config.connector,
-            auth=self.config.auth,
+            connector_config=self.config.connector_config,
         )
 
         return ffi, http_config
@@ -246,7 +245,12 @@ class _ConnectorClientBase:
         # 5. Parse connector response via FFI
         #    Parse result bytes as response_cls; if that fails, parse as ResponseError.
         result_bytes_res = res_transformer(res_bytes, request_bytes, options_bytes)
-        return check_res(result_bytes_res)
+        http_response = check_res(result_bytes_res)
+        
+        # Deserialize the domain response from the body
+        domain_response = response_cls()
+        domain_response.ParseFromString(http_response.body)
+        return domain_response
 
 
     def _execute_direct(
@@ -284,8 +288,13 @@ class _ConnectorClientBase:
 
         result_bytes = transformer(request_bytes, options_bytes)
 
-        # Parse result bytes as response_cls; if that fails, parse as ResponseError.
-        return check_res(result_bytes)
+        # Parse result bytes - check_res returns FfiConnectorHttpResponse, extract body
+        http_response = check_res(result_bytes)
+        
+        # Deserialize the domain response from the body
+        domain_response = response_cls()
+        domain_response.ParseFromString(http_response.body)
+        return domain_response
 
     async def close(self):
         """Close the underlying asynchronous connection pool."""

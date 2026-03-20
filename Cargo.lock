@@ -1766,6 +1766,7 @@ dependencies = [
  "toml 0.8.23",
  "tonic 0.14.5",
  "ucs_cards",
+ "ucs_common_enums",
  "ucs_common_utils",
  "ucs_env",
 ]
@@ -3365,6 +3366,18 @@ dependencies = [
  "ucs_cards",
  "ucs_common_utils",
  "ucs_env",
+]
+
+[[package]]
+name = "hyperswitch-smoke-test"
+version = "0.1.0"
+dependencies = [
+ "grpc-api-types",
+ "hyperswitch-payments-client",
+ "hyperswitch_masking",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
