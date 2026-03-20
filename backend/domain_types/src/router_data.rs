@@ -422,6 +422,10 @@ pub enum ConnectorSpecificConfig {
     Truelayer {
         client_id: Secret<String>,
         client_secret: Secret<String>,
+        merchant_account_id: Option<Secret<String>>,
+        account_holder_name: Option<Secret<String>>,
+        private_key: Option<Secret<String>>,
+        kid: Option<Secret<String>>,
         base_url: Option<String>,
         secondary_base_url: Option<String>,
     },
@@ -1804,6 +1808,16 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 payer_id: paypal.payer_id,
                 base_url: paypal.base_url,
             }),
+            AuthType::Truelayer(truelayer) => Ok(Self::Truelayer {
+                client_id: truelayer.client_id.ok_or_else(err)?,
+                client_secret: truelayer.client_secret.ok_or_else(err)?,
+                merchant_account_id: truelayer.merchant_account_id,
+                account_holder_name: truelayer.account_holder_name,
+                private_key: truelayer.private_key,
+                kid: truelayer.kid,
+                base_url: truelayer.base_url,
+                secondary_base_url: truelayer.secondary_base_url,
+            }),
         }
     }
 }
@@ -2097,6 +2111,10 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Truelayer {
                     client_id: api_key.clone(),
                     client_secret: key1.clone(),
+                    account_holder_name: None,
+                    merchant_account_id: None,
+                    private_key: None,
+                    kid: None,
                     base_url: None,
                     secondary_base_url: None,
                 }),

@@ -265,6 +265,10 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             client_secret: s(),
             base_url: None,
             secondary_base_url: None,
+            merchant_account_id: None,
+            account_holder_name: None,
+            private_key: None,
+            kid: None,
         },
         ConnectorEnum::Worldpay => ConnectorSpecificConfig::Worldpay {
             username: u(),
