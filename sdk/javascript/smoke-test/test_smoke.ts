@@ -10,11 +10,11 @@
  *   node test_smoke.js --creds-file creds.json --all --dry-run
  */
 
-import { PaymentClient, types, NetworkError } from "hs-playlib";
+import { PaymentClient, types, NetworkError, IntegrationError, ConnectorResponseTransformationError } from "hs-playlib";
 import * as fs from "fs";
 import * as path from "path";
 
-const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment, RequestError, ResponseError } = types;
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = types;
 
 // ── ANSI color helpers ──────────────────────────────────────────────────────
 const _NO_COLOR = !process.stdout.isTTY || !!process.env["NO_COLOR"];
@@ -185,12 +185,24 @@ async function testConnectorScenarios(
                 result.scenarios[scenarioKey] = { passed: true, result: response };
             }
         } catch (e: any) {
-            const isConnectorError =
-                e instanceof (RequestError as any) || e instanceof (ResponseError as any) ||
-                e?.constructor?.name === "RequestError" || e?.constructor?.name === "ResponseError" ||
-                // FFI-level panics (e.g. HandlerError, InvalidWalletToken) surface as a plain
-                // Error with a "Rust panic: ..." message — treat them as connector errors.
-                (typeof e?.message === "string" && e.message.startsWith("Rust panic:"));
+            const errorName = e?.constructor?.name;
+            const errorMessage = e?.message;
+            
+            let isConnectorError = false;
+            switch (errorName) {
+                case "IntegrationError":
+                case "ConnectorResponseTransformationError":
+                    isConnectorError = true;
+                    break;
+                default:
+                    // FFI-level panics (e.g. HandlerError, InvalidWalletToken) surface as a plain
+                    // Error with a "Rust panic: ..." message — treat them as connector errors.
+                    if (typeof errorMessage === "string" && errorMessage.startsWith("Rust panic:")) {
+                        isConnectorError = true;
+                    }
+                    break;
+            }
+            
             if (isConnectorError) {
                 const msg = e.errorMessage || e.message || String(e);
                 const code = e.errorCode;

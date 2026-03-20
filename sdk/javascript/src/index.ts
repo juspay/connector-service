@@ -5,6 +5,9 @@ export type { RustBuffer, RustCallStatus } from "./payments/uniffi_client";
 export * from "./http_client";
 export * from './payments/generated/proto';
 
+// Export error classes
+export { IntegrationError, ConnectorResponseTransformationError } from './payments/connector_client';
+
 // ---------------------------------------------------------------------------
 // Domain namespaces — runtime values
 // Usage: import { payments, payment_methods, configs } from '@juspay/connector-service-sdk';
