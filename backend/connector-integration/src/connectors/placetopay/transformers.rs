@@ -397,8 +397,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let internal_reference = item
             .router_data
             .request
-            .get_connector_transaction_id()
-            .change_context(ConnectorError::RequestEncodingFailed)?
+            .get_connector_transaction_id()?
             .parse::<u64>()
             .change_context(ConnectorError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Checkout;

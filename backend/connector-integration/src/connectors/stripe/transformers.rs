@@ -583,7 +583,8 @@ pub struct StripeBillingAddressCardToken {
     #[serde(rename = "billing_details[address][city]")]
     pub city: Option<Secret<String>>,
 }
-// Struct to call the Stripe tokens API to create a PSP token for the card details provided
+
+// Struct to call the Stripe tokens API to create a PSP token for the card details provided.
 #[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct StripeCardToken<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
     #[serde(rename = "type")]
@@ -5214,7 +5215,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .get_optional_billing_state(),
         };
 
-        // Card flow for tokenization is handled separately because of API contact difference
+        // Card flow for tokenization is handled separately because of API contact difference.
+        // /v1/tokens only accepts card[*] fields — do NOT include `type` or `billing_details[*]`.
         let request_payment_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card_details) => {
                 StripePaymentMethodData::CardToken(StripeCardToken {

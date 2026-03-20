@@ -110,8 +110,8 @@ export class ConnectorClient {
     const { ffi, http } = this._resolveConfig(options);
     const optionsBytes = Buffer.from(v2.FfiOptions.encode(ffi).finish());
 
-    // 2. Serialize domain request
-    const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
+    // 2. Serialize domain request (fromObject resolves string enum names → integers)
+    const requestBytes = Buffer.from(reqType.encode(reqType.fromObject(requestMsg)).finish());
 
     // 3. Build connector HTTP request via FFI
     const resultBytes = this.uniffi.callReq(flow, requestBytes, optionsBytes);
@@ -141,7 +141,10 @@ export class ConnectorClient {
 
     // 6. Parse connector response via FFI and decode
     const resultBytesRes = this.uniffi.callRes(flow, resBytes, requestBytes, optionsBytes);
-    return resType.decode(resultBytesRes);
+    // callRes returns FfiConnectorHttpResponse, extract domain response from body
+    const httpResponse = v2.FfiConnectorHttpResponse.decode(resultBytesRes);
+    // Convert to plain object with enum names as strings (not numbers)
+    return resType.toObject(resType.decode(httpResponse.body) as any, { enums: String });
   }
 
   /**
@@ -162,8 +165,8 @@ export class ConnectorClient {
       throw new Error(`Unknown flow: '${flow}' or missing type names.`);
     }
 
-    // 1. Serialize request
-    const requestBytes = Buffer.from(reqType.encode(requestMsg).finish());
+    // 1. Serialize request (fromObject resolves string enum names → integers)
+    const requestBytes = Buffer.from(reqType.encode(reqType.fromObject(requestMsg)).finish());
 
     // 2. Resolve FFI options from identity + defaults + request override
     const { ffi } = this._resolveConfig(options);
