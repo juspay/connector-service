@@ -703,72 +703,22 @@ impl Payments {
             PaymentsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        // Resolve connector URLs from superposition config ONLY when x-environment header is explicitly provided
-        // If no header is provided, fall back to static config (development.toml/sandbox.toml/production.toml)
-        let connectors = if let Some(env) = metadata_payload.environment.as_deref() {
-            utils::validate_environment(env).map_err(|e| {
-                PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Failure,
-                    Some(e),
-                    Some("INVALID_ENVIRONMENT".to_string()),
-                    Some(400),
-                )
-            })?;
-
-            if let Some(urls) = utils::resolve_connector_urls(
-                config.superposition_config.as_ref().map(|arc| arc.as_ref()),
-                &connector,
-                env,
-            ) {
-                tracing::info!(
-                    "AUTHORIZE: resolved URLs from superposition for environment: {}",
-                    env
-                );
-                let patched_connectors = config
-                    .connectors
-                    .patch_connector_urls(&connector.to_string().to_lowercase(), &urls);
-                utils::connectors_with_connector_config_overrides_on_connectors(
-                    &connector_config,
-                    patched_connectors,
-                )
-                .map_err(|err| {
-                    tracing::error!("Failed to resolve connector overrides: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to resolve connector overrides".to_string()),
-                        Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
-                        None,
-                    )
-                })?
-            } else {
-                tracing::info!("AUTHORIZE: superposition resolution failed, using static config with overrides");
-                utils::connectors_with_connector_config_overrides(&connector_config, config)
-                    .map_err(|err| {
-                        tracing::error!("Failed to resolve connector overrides: {:?}", err);
-                        PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
-                            Some("Failed to resolve connector overrides".to_string()),
-                            Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
-                            None,
-                        )
-                    })?
-            }
-        } else {
-            tracing::info!(
-                "AUTHORIZE: no x-environment header, using static config with overrides"
-            );
-            utils::connectors_with_connector_config_overrides(&connector_config, config).map_err(
-                |err| {
-                    tracing::error!("Failed to resolve connector overrides: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to resolve connector overrides".to_string()),
-                        Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
-                        None,
-                    )
-                },
-            )?
-        };
+        let connectors = utils::get_resolved_connectors(
+            config,
+            &connector,
+            &connector_config,
+            metadata_payload.environment.as_deref(),
+            "AUTHORIZE",
+        )
+        .map_err(|e| {
+            tracing::error!("Failed to resolve connector overrides: {:?}", e);
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(e.message().to_string()),
+                Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
+                None,
+            )
+        })?;
 
         // Create common request data
         let payment_flow_data =
@@ -1618,44 +1568,13 @@ impl PaymentService for Payments {
                     let payments_sync_data =
                         PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
-                    // Resolve connector URLs from superposition config ONLY when x-environment header is explicitly provided
-                    // If no header is provided, fall back to static config (development.toml/sandbox.toml/production.toml)
-                    let connectors = if let Some(env) = metadata_payload.environment.as_deref() {
-                        // Validate environment value - reject invalid values with an error
-                        utils::validate_environment(env).map_err(|e| {
-                            tonic::Status::invalid_argument(e)
-                        })?;
-
-                        if let Some(urls) = utils::resolve_connector_urls(
-                            config.superposition_config.as_ref().map(|arc| arc.as_ref()),
-                            &connector,
-                            env,
-                        ) {
-                            tracing::info!("PSYNC: resolved URLs from superposition for environment: {}", env);
-                            let patched_connectors = config
-                                .connectors
-                                .patch_connector_urls(&connector.to_string().to_lowercase(), &urls);
-                            utils::connectors_with_connector_config_overrides_on_connectors(
-                                &metadata_payload.connector_config,
-                                patched_connectors,
-                            )
-                            .into_grpc_status()?
-                        } else {
-                            tracing::info!("PSYNC: superposition resolution failed, using static config with overrides");
-                            utils::connectors_with_connector_config_overrides(
-                                &metadata_payload.connector_config,
-                                &config,
-                            )
-                            .into_grpc_status()?
-                        }
-                    } else {
-                        tracing::info!("PSYNC: no x-environment header, using static config with overrides");
-                        utils::connectors_with_connector_config_overrides(
-                            &metadata_payload.connector_config,
-                            &config,
-                        )
-                        .into_grpc_status()?
-                    };
+                    let connectors = utils::get_resolved_connectors(
+                        &config,
+                        &connector,
+                        &metadata_payload.connector_config,
+                        metadata_payload.environment.as_deref(),
+                        "PSYNC",
+                    )?;
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((

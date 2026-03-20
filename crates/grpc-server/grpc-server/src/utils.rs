@@ -68,6 +68,61 @@ pub fn validate_environment(environment: &str) -> Result<Env, String> {
     })
 }
 
+/// Resolves connector configuration with optional superposition URL patching.
+///
+/// This function handles the complete flow for connector configuration:
+/// 1. If environment header is provided, validate and try to resolve URLs from superposition
+/// 2. If URLs are resolved, patch the connector config with them
+/// 3. Apply connector-specific config overrides
+/// 4. Fall back to static config if no environment or superposition resolution fails
+pub fn get_resolved_connectors(
+    config: &configs::Config,
+    connector: &connector_types::ConnectorEnum,
+    connector_config: &ConnectorSpecificConfig,
+    environment: Option<&str>,
+    flow_name: &str,
+) -> Result<domain_types::types::Connectors, tonic::Status> {
+    if let Some(env) = environment {
+        validate_environment(env).map_err(tonic::Status::invalid_argument)?;
+
+        if let Some(urls) = resolve_connector_urls(
+            config.superposition_config.as_ref().map(|arc| arc.as_ref()),
+            connector,
+            env,
+        ) {
+            tracing::info!(
+                "{}: resolved URLs from superposition for environment: {}",
+                flow_name,
+                env
+            );
+            let patched_connectors = config.connectors.patch_connector_urls(connector, &urls);
+            connectors_with_connector_config_overrides_on_connectors(
+                connector_config,
+                patched_connectors,
+            )
+            .map_err(|e| {
+                tonic::Status::internal(format!("Failed to resolve connector overrides: {}", e))
+            })
+        } else {
+            tracing::info!(
+                "{}: superposition resolution failed, using static config with overrides",
+                flow_name
+            );
+            connectors_with_connector_config_overrides(connector_config, config).map_err(|e| {
+                tonic::Status::internal(format!("Failed to resolve connector overrides: {}", e))
+            })
+        }
+    } else {
+        tracing::info!(
+            "{}: no x-environment header, using static config with overrides",
+            flow_name
+        );
+        connectors_with_connector_config_overrides(connector_config, config).map_err(|e| {
+            tonic::Status::internal(format!("Failed to resolve connector overrides: {}", e))
+        })
+    }
+}
+
 /// Resolve connector URLs from superposition configuration.
 ///
 /// This function attempts to resolve connector URLs dynamically based on the
@@ -75,12 +130,18 @@ pub fn validate_environment(environment: &str) -> Result<Env, String> {
 ///
 /// # Arguments
 /// * `superposition_config` - Optional reference to the loaded superposition configuration
-/// * `connector` - The connector name (e.g., "stripe", "adyen")
+/// * `connector` - The connector enum (e.g., "stripe", "adyen")
 /// * `environment` - The environment dimension (must be one of: "production", "sandbox", "development")
 ///
 /// # Returns
-/// * `Some(ConnectorUrls)` - Successfully resolved URLs from superposition
+/// * `Some(ConnectorUrls)` - Successfully resolved URLs from superposition (dynamic config)
 /// * `None` - Superposition not configured or resolution failed (caller should fallback to static config)
+///
+/// # Static vs Dynamic Config
+/// - **Static config**: Connector URLs defined in TOML files (development.toml, sandbox.toml, production.toml)
+///   that are loaded at application startup and remain constant for the deployment environment.
+/// - **Dynamic config**: URLs resolved at runtime from the Superposition service, which can vary per-request
+///   based on the `x-environment` header, allowing different URLs for the same connector across requests.
 ///
 /// # Note
 /// This function does NOT validate the environment. Call `validate_environment()` first if you need
@@ -552,40 +613,14 @@ macro_rules! implement_connector_operation {
             let specific_request_data = $request_data_constructor(payload.clone())
                 .into_grpc_status()?;
 
-            // Resolve connector URLs from superposition config ONLY when x-environment header is explicitly provided
-            // If no header is provided, fall back to static config (development.toml/sandbox.toml/production.toml)
-            let connectors = if let Some(env) = metadata_payload.environment.as_deref() {
-                $crate::utils::validate_environment(env)
-                    .map_err(|e| tonic::Status::invalid_argument(e))?;
 
-                if let Some(urls) = $crate::utils::resolve_connector_urls(
-                    config.superposition_config.as_ref().map(|arc| arc.as_ref()),
-                    &metadata_payload.connector,
-                    env,
-                ) {
-                    tracing::info!("{} resolved URLs from superposition for environment: {}", $log_prefix, env);
-                    let patched_connectors = config.connectors.patch_connector_urls(
-                        &metadata_payload.connector.to_string().to_lowercase(),
-                        &urls,
-                    );
-                    $crate::utils::connectors_with_connector_config_overrides_on_connectors(
-                        &connector_config,
-                        patched_connectors,
-                    ).into_grpc_status()?
-                } else {
-                    tracing::info!(concat!($log_prefix, "superposition resolution failed, using static config with overrides"));
-                    $crate::utils::connectors_with_connector_config_overrides(
-                        &connector_config,
-                        &config,
-                    ).into_grpc_status()?
-                }
-            } else {
-                tracing::info!(concat!($log_prefix, "no x-environment header, using static config with overrides"));
-                $crate::utils::connectors_with_connector_config_overrides(
-                    &connector_config,
-                    &config,
-                ).into_grpc_status()?
-            };
+            let connectors = $crate::utils::get_resolved_connectors(
+                &config,
+                &metadata_payload.connector,
+                &connector_config,
+                metadata_payload.environment.as_deref(),
+                $log_prefix,
+            )?;
 
             // Create common request data
             let common_flow_data = $common_flow_data_constructor((payload.clone(), connectors, &masked_metadata))

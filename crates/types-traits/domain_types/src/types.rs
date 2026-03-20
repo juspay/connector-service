@@ -2,7 +2,8 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use crate::{
-    connector_types, payment_method_data::SamsungPayWalletCredentials,
+    connector_types::{self, ConnectorEnum},
+    payment_method_data::SamsungPayWalletCredentials,
     utils::extract_connector_request_reference_id,
 };
 use common_enums::{
@@ -449,12 +450,11 @@ impl Connectors {
     /// `ConnectorParams` updated with the resolved URLs. All other connectors remain unchanged.
     ///
     /// # Arguments
-    /// * `connector_name` - The lowercase name of the connector (e.g., "stripe", "adyen")
+    /// * `connector` - The connector enum variant
     /// * `urls` - The resolved URLs from superposition configuration
     ///
     /// # Returns
     /// A new `Connectors` instance with the patched connector params.
-    /// If the connector name doesn't match any known connector, returns self unchanged.
     ///
     /// # Example
     /// ```ignore
@@ -462,18 +462,17 @@ impl Connectors {
     ///     base_url: Some("https://api.stripe.com/".to_string()),
     ///     ..Default::default()
     /// };
-    /// let patched = connectors.patch_connector_urls("stripe", &urls);
+    /// let patched = connectors.patch_connector_urls(&ConnectorEnum::Stripe, &urls);
     /// ```
     pub fn patch_connector_urls(
         &self,
-        connector_name: &str,
+        connector: &ConnectorEnum,
         urls: &common_utils::superposition_config::ConnectorUrls,
     ) -> Self {
         let mut patched = self.clone();
-        // Map connector names to their respective field in the Connectors struct
-        // Note: connector_name is expected to be lowercase
-        match connector_name {
-            "stripe" => {
+        // Map connector enum variants to their respective field in the Connectors struct
+        match connector {
+            ConnectorEnum::Stripe => {
                 patched.stripe = self.stripe.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -481,7 +480,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "adyen" => {
+            ConnectorEnum::Adyen => {
                 patched.adyen = self.adyen.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -489,7 +488,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "paypal" => {
+            ConnectorEnum::Paypal => {
                 patched.paypal = self.paypal.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -497,7 +496,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "braintree" => {
+            ConnectorEnum::Braintree => {
                 patched.braintree = self.braintree.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -505,7 +504,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "checkout" => {
+            ConnectorEnum::Checkout => {
                 patched.checkout = self.checkout.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -513,7 +512,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "cybersource" => {
+            ConnectorEnum::Cybersource => {
                 patched.cybersource = self.cybersource.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -521,7 +520,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "revolut" => {
+            ConnectorEnum::Revolut => {
                 patched.revolut = self.revolut.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -529,7 +528,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "worldpay" => {
+            ConnectorEnum::Worldpay => {
                 patched.worldpay = self.worldpay.patch_with_resolved_urls(
                     urls.base_url.clone(),
                     urls.dispute_base_url.clone(),
@@ -537,7 +536,7 @@ impl Connectors {
                     urls.third_base_url.clone(),
                 );
             }
-            "trustpay" => {
+            ConnectorEnum::Trustpay => {
                 // TrustPay uses ConnectorParamsWithMoreUrls which has base_url_bank_redirects
                 // We patch base_url and keep bank_redirects unchanged (no superposition support for it yet)
                 if urls.base_url.is_some() {
@@ -553,9 +552,9 @@ impl Connectors {
             // Add more connectors as needed - for now, we handle common ones
             // Other connectors can be added similarly
             _ => {
-                // Unknown connector - no patching, return as-is
+                // Connector not yet supported for URL patching
                 tracing::debug!(
-                    connector = %connector_name,
+                    connector = ?connector,
                     "No URL patching available for connector, using static config"
                 );
             }
