@@ -3833,10 +3833,10 @@ pub fn generate_mandate_revoke_response(
                     grpc_api_types::payments::MandateStatus::Active
                 }
                 common_enums::MandateStatus::Inactive => {
-                    grpc_api_types::payments::MandateStatus::MandateInactive
+                    grpc_api_types::payments::MandateStatus::Inactive
                 }
                 common_enums::MandateStatus::Pending => {
-                    grpc_api_types::payments::MandateStatus::MandatePending
+                    grpc_api_types::payments::MandateStatus::Pending
                 }
                 common_enums::MandateStatus::Revoked => {
                     grpc_api_types::payments::MandateStatus::Revoked
@@ -3852,7 +3852,7 @@ pub fn generate_mandate_revoke_response(
             raw_connector_request,
         }),
         Err(e) => Ok(RecurringPaymentServiceRevokeResponse {
-            status: grpc_api_types::payments::MandateStatus::MandateRevokeFailed.into(), // Default status for failed revoke
+            status: grpc_api_types::payments::MandateStatus::RevokeFailed.into(), // Default status for failed revoke
             error: Some(grpc_api_types::payments::ErrorInfo {
                 unified_details: None,
                 connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {

@@ -638,12 +638,13 @@ message PaypalSdkWallet {
 
 // UPI Source types for UPI payments
 enum UpiSource {
-  UPI_CC = 0;    // UPI Credit Card (RuPay credit on UPI)
-  UPI_CL = 1;    // UPI Credit Line
-  UPI_ACCOUNT = 2; // UPI Bank Account (Savings)
-  UPI_CC_CL = 3; // UPI Credit Card + Credit Line
-  UPI_PPI = 4;   // UPI Prepaid Payment Instrument
-  UPI_VOUCHER = 5; // UPI Voucher
+  UPI_SOURCE_UNSPECIFIED = 0; // Default value
+  UPI_SOURCE_CC = 1;    // UPI Credit Card (RuPay credit on UPI)
+  UPI_SOURCE_CL = 2;    // UPI Credit Line
+  UPI_SOURCE_ACCOUNT = 3; // UPI Bank Account (Savings)
+  UPI_SOURCE_CC_CL = 4; // UPI Credit Card + Credit Line
+  UPI_SOURCE_PPI = 5;   // UPI Prepaid Payment Instrument
+  UPI_SOURCE_VOUCHER = 6; // UPI Voucher
 }
 
 // UPI (Unified Payments Interface) - Indian instant real-time payment system

@@ -719,12 +719,20 @@ impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data
         value: grpc_api_types::payments::UpiSource,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::UpiSource::UpiCc => Ok(Self::UpiCc),
-            grpc_api_types::payments::UpiSource::UpiCl => Ok(Self::UpiCl),
-            grpc_api_types::payments::UpiSource::UpiAccount => Ok(Self::UpiAccount),
-            grpc_api_types::payments::UpiSource::UpiCcCl => Ok(Self::UpiCcCl),
-            grpc_api_types::payments::UpiSource::UpiPpi => Ok(Self::UpiPpi),
-            grpc_api_types::payments::UpiSource::UpiVoucher => Ok(Self::UpiVoucher),
+            grpc_api_types::payments::UpiSource::Unspecified => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_UPISOURCE".to_string(),
+                    error_identifier: 400,
+                    error_message: "UpiSource is unspecified".to_string(),
+                    error_object: None,
+                })))
+            }
+            grpc_api_types::payments::UpiSource::Cc => Ok(Self::UpiCc),
+            grpc_api_types::payments::UpiSource::Cl => Ok(Self::UpiCl),
+            grpc_api_types::payments::UpiSource::Account => Ok(Self::UpiAccount),
+            grpc_api_types::payments::UpiSource::CcCl => Ok(Self::UpiCcCl),
+            grpc_api_types::payments::UpiSource::Ppi => Ok(Self::UpiPpi),
+            grpc_api_types::payments::UpiSource::Voucher => Ok(Self::UpiVoucher),
         }
     }
 }
@@ -732,12 +740,12 @@ impl ForeignTryFrom<grpc_api_types::payments::UpiSource> for payment_method_data
 impl ForeignFrom<payment_method_data::UpiSource> for grpc_api_types::payments::UpiSource {
     fn foreign_from(value: payment_method_data::UpiSource) -> Self {
         match value {
-            payment_method_data::UpiSource::UpiCc => Self::UpiCc,
-            payment_method_data::UpiSource::UpiCl => Self::UpiCl,
-            payment_method_data::UpiSource::UpiAccount => Self::UpiAccount,
-            payment_method_data::UpiSource::UpiCcCl => Self::UpiCcCl,
-            payment_method_data::UpiSource::UpiPpi => Self::UpiPpi,
-            payment_method_data::UpiSource::UpiVoucher => Self::UpiVoucher,
+            payment_method_data::UpiSource::UpiCc => Self::Cc,
+            payment_method_data::UpiSource::UpiCl => Self::Cl,
+            payment_method_data::UpiSource::UpiAccount => Self::Account,
+            payment_method_data::UpiSource::UpiCcCl => Self::CcCl,
+            payment_method_data::UpiSource::UpiPpi => Self::Ppi,
+            payment_method_data::UpiSource::UpiVoucher => Self::Voucher,
         }
     }
 }
