@@ -9,10 +9,11 @@ Feature: Create Access Token
 
   @default @scenario:create_access_token
   Scenario: Create access token successfully
-    Given a merchant access token ID is auto-generated
-    And the connector is "STRIPE"
-    And test mode is enabled
-    When I send a create access token request
-    Then the response status should be one of "OPERATION_STATUS_SUCCESS"
-    And the response should contain an "access_token"
-    And the response should not contain an "error"
+    Given a create access token request is loaded from "create_access_token" suite scenario "create_access_token"
+    And the request field "connector" is set to the connector name
+    And auto-generated fields are resolved
+    When the "create_access_token" request is sent via gRPC method "types.MerchantAuthenticationService/CreateAccessToken"
+    Then the response field "status" should be one of:
+      | OPERATION_STATUS_SUCCESS |
+    And the response field "access_token" should exist
+    And the response field "error" should not exist

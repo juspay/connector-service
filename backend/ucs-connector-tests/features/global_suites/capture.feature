@@ -4,50 +4,58 @@ Feature: Payment Capture
   I want to capture authorized payments either fully or partially
   So that I can complete the payment settlement process
 
-  Background:
-    Given the "create_access_token" suite has been executed successfully
-    And the "create_customer" suite has been executed successfully
-    And a payment has been authorized with scenario "no3ds_manual_capture_credit_card"
+  The capture suite depends on create_access_token, create_customer, and
+  authorize (specifically the no3ds_manual_capture_credit_card scenario).
+  Dependencies run per-scenario (scenario-level scope), meaning each
+  scenario gets a fresh authorization.
 
-  # Note: Dependencies are per-scenario (dependency_scope: scenario)
-  # Each scenario gets its own fresh authorization
+  Background:
+    Given the dependency "create_access_token" suite default scenario has been executed
+    And the dependency "create_customer" suite default scenario has been executed
+    And the dependency "authorize" suite scenario "no3ds_manual_capture_credit_card" has been executed
+    And dependency context is propagated to the current request
 
   @default @scenario:capture_full_amount
   Scenario: Capture the full authorized amount
-    Given a capture request with:
-      | field                    | value          |
-      | connector_transaction_id | auto_generate  |
-      | amount_to_capture        | 6000 minor units USD |
-      | merchant_capture_id      | auto_generate  |
-    And the state includes connector customer ID and access token
-    When I send a capture payment request
-    Then the response status should be one of "CHARGED", "PENDING"
-    And the response should contain a "connector_transaction_id"
-    And the response should not contain an "error"
+    Given a request is loaded from "capture" suite scenario "capture_full_amount"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "capture"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "capture" request is sent via gRPC method "types.PaymentService/Capture"
+    Then the response field "status" should be one of:
+      | CHARGED |
+      | PENDING |
+    And the response field "connector_transaction_id" should exist
+    And the response field "error" should not exist
 
   @scenario:capture_partial_amount
   Scenario: Capture a partial amount of the authorized payment
-    Given a capture request with:
-      | field                    | value          |
-      | connector_transaction_id | auto_generate  |
-      | amount_to_capture        | 3000 minor units USD |
-      | merchant_capture_id      | auto_generate  |
-    And the state includes connector customer ID and access token
-    When I send a capture payment request
-    Then the response status should be one of "CHARGED", "PENDING"
-    And the response should contain a "connector_transaction_id"
-    And the response should not contain an "error"
+    Given a request is loaded from "capture" suite scenario "capture_partial_amount"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "capture"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "capture" request is sent via gRPC method "types.PaymentService/Capture"
+    Then the response field "status" should be one of:
+      | CHARGED |
+      | PENDING |
+    And the response field "connector_transaction_id" should exist
+    And the response field "error" should not exist
 
   @scenario:capture_with_merchant_order_id
   Scenario: Capture with a merchant order ID
-    Given a capture request with:
-      | field                    | value          |
-      | connector_transaction_id | auto_generate  |
-      | amount_to_capture        | 6000 minor units USD |
-      | merchant_capture_id      | auto_generate  |
-      | merchant_order_id        | auto_generate  |
-    And the state includes connector customer ID and access token
-    When I send a capture payment request
-    Then the response status should be one of "CHARGED", "PENDING"
-    And the response should contain a "connector_transaction_id"
-    And the response should not contain an "error"
+    Given a request is loaded from "capture" suite scenario "capture_with_merchant_order_id"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "capture"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "capture" request is sent via gRPC method "types.PaymentService/Capture"
+    Then the response field "status" should be one of:
+      | CHARGED |
+      | PENDING |
+    And the response field "connector_transaction_id" should exist
+    And the response field "error" should not exist

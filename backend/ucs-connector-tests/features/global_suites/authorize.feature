@@ -4,151 +4,87 @@ Feature: Payment Authorization
   I want to authorize payments using various card types and capture methods
   So that I can process payments through the connector
 
+  The authorize suite depends on create_access_token and create_customer.
+  Both dependencies run once (suite-level scope) and their responses
+  provide implicit context (access_token, connector_customer_id) to
+  the authorize request.
+
   Background:
-    Given the "create_access_token" suite has been executed successfully
-    And the "create_customer" suite has been executed successfully
+    Given the dependency "create_access_token" suite default scenario has been executed
+    And the dependency "create_customer" suite default scenario has been executed
+    And dependency context is propagated to the current request
 
   @scenario:no3ds_auto_capture_credit_card
   Scenario: No3DS auto capture with credit card
-    Given a payment request with:
-      | field                | value                    |
-      | merchant_transaction_id | auto_generate         |
-      | amount               | 6000 minor units USD     |
-      | capture_method       | AUTOMATIC                |
-      | auth_type            | NO_THREE_DS              |
-      | enrolled_for_3ds     | false                    |
-      | setup_future_usage   | ON_SESSION               |
-      | off_session          | false                    |
-      | order_category       | physical                 |
-      | payment_channel      | ECOMMERCE                |
-      | description          | No3DS auto capture card payment (credit) |
-    And the payment method is a credit card:
-      | field           | value            |
-      | card_number     | 4111111111111111 |
-      | card_exp_month  | 08               |
-      | card_exp_year   | 30               |
-      | card_cvc        | 999              |
-      | card_holder_name| auto_generate    |
-      | card_type       | credit           |
-    And the customer details are auto-generated
-    And the shipping and billing addresses are provided
-    When I send an authorize payment request
-    Then the response status should be one of "CHARGED", "AUTHORIZED"
-    And the response should contain a "connector_transaction_id"
-    And the response should not contain an "error"
+    Given a request is loaded from "authorize" suite scenario "no3ds_auto_capture_credit_card"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "authorize"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "authorize" request is sent via gRPC method "types.PaymentService/Authorize"
+    Then the response field "status" should be one of:
+      | CHARGED    |
+      | AUTHORIZED |
+    And the response field "connector_transaction_id" should exist
+    And the response field "error" should not exist
 
   @scenario:no3ds_auto_capture_debit_card
   Scenario: No3DS auto capture with debit card
-    Given a payment request with:
-      | field                | value                    |
-      | merchant_transaction_id | auto_generate         |
-      | amount               | 6000 minor units USD     |
-      | capture_method       | AUTOMATIC                |
-      | auth_type            | NO_THREE_DS              |
-      | enrolled_for_3ds     | false                    |
-      | setup_future_usage   | ON_SESSION               |
-      | off_session          | false                    |
-      | order_category       | physical                 |
-      | payment_channel      | ECOMMERCE                |
-      | description          | No3DS auto capture card payment (debit) |
-    And the payment method is a debit card:
-      | field           | value            |
-      | card_number     | 4111111111111111 |
-      | card_exp_month  | 08               |
-      | card_exp_year   | 30               |
-      | card_cvc        | 999              |
-      | card_holder_name| auto_generate    |
-      | card_type       | debit            |
-    And the customer details are auto-generated
-    And the shipping and billing addresses are provided
-    When I send an authorize payment request
-    Then the response status should be one of "CHARGED", "AUTHORIZED"
-    And the response should contain a "connector_transaction_id"
-    And the response should not contain an "error"
+    Given a request is loaded from "authorize" suite scenario "no3ds_auto_capture_debit_card"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "authorize"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "authorize" request is sent via gRPC method "types.PaymentService/Authorize"
+    Then the response field "status" should be one of:
+      | CHARGED    |
+      | AUTHORIZED |
+    And the response field "connector_transaction_id" should exist
+    And the response field "error" should not exist
 
   @default @scenario:no3ds_manual_capture_credit_card
   Scenario: No3DS manual capture with credit card
-    Given a payment request with:
-      | field                | value                    |
-      | merchant_transaction_id | auto_generate         |
-      | amount               | 6000 minor units USD     |
-      | capture_method       | MANUAL                   |
-      | auth_type            | NO_THREE_DS              |
-      | enrolled_for_3ds     | false                    |
-      | setup_future_usage   | ON_SESSION               |
-      | off_session          | false                    |
-      | order_category       | physical                 |
-      | payment_channel      | ECOMMERCE                |
-      | description          | No3DS manual capture card payment (credit) |
-    And the payment method is a credit card:
-      | field           | value            |
-      | card_number     | 4111111111111111 |
-      | card_exp_month  | 08               |
-      | card_exp_year   | 30               |
-      | card_cvc        | 999              |
-      | card_holder_name| auto_generate    |
-      | card_type       | credit           |
-    And the customer details are auto-generated
-    And the shipping and billing addresses are provided
-    When I send an authorize payment request
-    Then the response status should be one of "AUTHORIZED"
-    And the response should contain a "connector_transaction_id"
-    And the response should not contain an "error"
+    Given a request is loaded from "authorize" suite scenario "no3ds_manual_capture_credit_card"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "authorize"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "authorize" request is sent via gRPC method "types.PaymentService/Authorize"
+    Then the response field "status" should be one of:
+      | AUTHORIZED |
+    And the response field "connector_transaction_id" should exist
+    And the response field "error" should not exist
 
   @scenario:no3ds_manual_capture_debit_card
   Scenario: No3DS manual capture with debit card
-    Given a payment request with:
-      | field                | value                    |
-      | merchant_transaction_id | auto_generate         |
-      | amount               | 6000 minor units USD     |
-      | capture_method       | MANUAL                   |
-      | auth_type            | NO_THREE_DS              |
-      | enrolled_for_3ds     | false                    |
-      | setup_future_usage   | ON_SESSION               |
-      | off_session          | false                    |
-      | order_category       | physical                 |
-      | payment_channel      | ECOMMERCE                |
-      | description          | No3DS manual capture card payment (debit) |
-    And the payment method is a debit card:
-      | field           | value            |
-      | card_number     | 4111111111111111 |
-      | card_exp_month  | 08               |
-      | card_exp_year   | 30               |
-      | card_cvc        | 999              |
-      | card_holder_name| auto_generate    |
-      | card_type       | debit            |
-    And the customer details are auto-generated
-    And the shipping and billing addresses are provided
-    When I send an authorize payment request
-    Then the response status should be one of "AUTHORIZED"
-    And the response should contain a "connector_transaction_id"
-    And the response should not contain an "error"
+    Given a request is loaded from "authorize" suite scenario "no3ds_manual_capture_debit_card"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "authorize"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "authorize" request is sent via gRPC method "types.PaymentService/Authorize"
+    Then the response field "status" should be one of:
+      | AUTHORIZED |
+    And the response field "connector_transaction_id" should exist
+    And the response field "error" should not exist
 
   @scenario:no3ds_fail_payment
   Scenario: No3DS payment failure with declined card
-    Given a payment request with:
-      | field                | value                    |
-      | merchant_transaction_id | auto_generate         |
-      | amount               | 6000 minor units USD     |
-      | capture_method       | AUTOMATIC                |
-      | auth_type            | NO_THREE_DS              |
-      | enrolled_for_3ds     | false                    |
-      | setup_future_usage   | ON_SESSION               |
-      | off_session          | false                    |
-      | order_category       | physical                 |
-      | payment_channel      | ECOMMERCE                |
-      | description          | No3DS fail payment flow  |
-    And the payment method is a credit card:
-      | field           | value            |
-      | card_number     | 4000000000000002 |
-      | card_exp_month  | 01               |
-      | card_exp_year   | 35               |
-      | card_cvc        | 123              |
-      | card_holder_name| auto_generate    |
-      | card_type       | credit           |
-    And the customer details are auto-generated
-    And the shipping and billing addresses are provided
-    When I send an authorize payment request
-    Then the response status should be one of "FAILURE", "AUTHORIZATION_FAILED", "ROUTER_DECLINED", "UNRESOLVED"
-    And the response should contain an "error"
-    And the error connector details message should contain "decline"
+    Given a request is loaded from "authorize" suite scenario "no3ds_fail_payment"
+    And connector overrides are applied for the current connector
+    And context placeholders are prepared for suite "authorize"
+    And implicit context from dependency requests and responses is applied
+    And auto-generated fields are resolved
+    And unresolved context fields are pruned
+    When the "authorize" request is sent via gRPC method "types.PaymentService/Authorize"
+    Then the response field "status" should be one of:
+      | FAILURE              |
+      | AUTHORIZATION_FAILED |
+      | ROUTER_DECLINED      |
+      | UNRESOLVED           |
+    And the response field "error" should exist
+    And the response field "error.connector_details.message" should contain "decline"

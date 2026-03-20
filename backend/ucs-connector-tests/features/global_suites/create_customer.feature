@@ -9,27 +9,12 @@ Feature: Create Customer
 
   @default @scenario:create_customer
   Scenario: Create customer with full address details
-    Given a merchant customer ID is auto-generated with prefix "cust_"
-    And a customer name is auto-generated
-    And a customer email is auto-generated
-    And a customer phone number is auto-generated
-    And a shipping address is provided:
-      | field              | value          |
-      | first_name         | auto_generate  |
-      | last_name          | auto_generate  |
-      | line1              | auto_generate  |
-      | line2              | auto_generate  |
-      | line3              | auto_generate  |
-      | city               | auto_generate  |
-      | state              | CA             |
-      | zip_code           | auto_generate  |
-      | country_alpha2_code| US             |
-      | email              | auto_generate  |
-      | phone_number       | auto_generate  |
-      | phone_country_code | +91            |
-    And a billing address is provided with the same structure
-    And test mode is enabled
-    When I send a create customer request
-    Then the response should contain a "connector_customer_id"
-    And the response should not contain an "error"
-    And the response status code should be one of 200, 201
+    Given a create customer request is loaded from "create_customer" suite scenario "create_customer"
+    And connector overrides are applied for the current connector
+    And auto-generated fields are resolved
+    When the "create_customer" request is sent via gRPC method "types.CustomerService/Create"
+    Then the response field "connector_customer_id" should exist
+    And the response field "error" should not exist
+    And the response field "status_code" should be one of:
+      | 200 |
+      | 201 |
