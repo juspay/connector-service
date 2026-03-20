@@ -73,7 +73,8 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
+    PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
@@ -2705,6 +2706,15 @@ impl PaymentMethodService for PaymentMethod {
             },
         )
         .await
+    }
+
+    async fn eligibility(
+        &self,
+        _request: tonic::Request<PayoutMethodEligibilityRequest>,
+    ) -> Result<tonic::Response<PayoutMethodEligibilityResponse>, tonic::Status> {
+        Err(tonic::Status::unimplemented(
+            "Eligibility check not implemented yet",
+        ))
     }
 }
 
