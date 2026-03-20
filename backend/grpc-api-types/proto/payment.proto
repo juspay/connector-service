@@ -135,7 +135,7 @@ enum HttpMethod {
 
 // Status of a payment attempt
 enum PaymentStatus {
-  ATTEMPT_STATUS_UNSPECIFIED = 0; // Default value
+  PAYMENT_STATUS_UNSPECIFIED = 0; // Default value
 
   // Initial states
   STARTED = 1;
@@ -1364,56 +1364,56 @@ message PaymentServiceAuthorizeRequest {
   optional string merchant_order_id = 19;
 
   // Behavioral Flags and Preferences
-  optional FutureUsage setup_future_usage = 21;
-  optional bool off_session = 22;
-  optional bool request_incremental_authorization = 23;
-  optional bool request_extended_authorization = 24;
-  optional bool enable_partial_authorization = 25;
+  optional FutureUsage setup_future_usage = 20;
+  optional bool off_session = 21;
+  optional bool request_incremental_authorization = 22;
+  optional bool request_extended_authorization = 23;
+  optional bool enable_partial_authorization = 24;
 
   // Contextual Information
-  optional CustomerAcceptance customer_acceptance = 26;
-  optional BrowserInformation browser_info = 27;
-  optional PaymentExperience payment_experience = 28;
-  optional string description = 29;
-  optional PaymentChannel payment_channel = 30;
+  optional CustomerAcceptance customer_acceptance = 25;
+  optional BrowserInformation browser_info = 26;
+  optional PaymentExperience payment_experience = 27;
+  optional string description = 28;
+  optional PaymentChannel payment_channel = 29;
 
   // Environment Configuration
-  optional bool test_mode = 31;
+  optional bool test_mode = 30;
 
   // Mandate Setup Details
-  optional SetupMandateDetails setup_mandate_details = 32;
+  optional SetupMandateDetails setup_mandate_details = 31;
 
-  optional string statement_descriptor_name = 33; // Complete description that appears on customers' statements
+  optional string statement_descriptor_name = 32; // Complete description that appears on customers' statements
   
-  optional string statement_descriptor_suffix = 34; // Provides information about a card payment that customers see on their statements
+  optional string statement_descriptor_suffix = 33; // Provides information about a card payment that customers see on their statements
 
   // Statement Descriptor
-  optional BillingDescriptor billing_descriptor = 35;
+  optional BillingDescriptor billing_descriptor = 34;
   // State Information
-  optional ConnectorState state = 36;
+  optional ConnectorState state = 35;
   // Order Details
-  repeated OrderDetailsWithAmount order_details = 37;
+  repeated OrderDetailsWithAmount order_details = 36;
 
   // Locale Information
-  optional string locale = 38;
+  optional string locale = 37;
 
   // Tokenization configuration
-  optional Tokenization tokenization_strategy = 39;
+  optional Tokenization tokenization_strategy = 38;
 
   // Indicates if 3DS method data was successfully completed or not
-  optional ThreeDsCompletionIndicator threeds_completion_indicator = 40;
+  optional ThreeDsCompletionIndicator threeds_completion_indicator = 39;
 
   // Redirection Information after DDC step
-  optional RedirectionResponse redirection_response = 41; // Redirection Response from client browser
+  optional RedirectionResponse redirection_response = 40; // Redirection Response from client browser
 
   // URL for Redirection
-  optional string continue_redirection_url = 42; // URL to complete authorization
+  optional string continue_redirection_url = 41; // URL to complete authorization
 
   // Payment Method Token
-  optional SecretString payment_method_token = 43;
+  optional SecretString payment_method_token = 42;
 
   // Level 2 / Level 3 data for enhanced payment processing
-  optional L2L3Data l2_l3_data = 44; 
+  optional L2L3Data l2_l3_data = 43; 
 }
 
 // Response message for a payment authorization
