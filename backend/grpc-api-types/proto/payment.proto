@@ -2869,6 +2869,8 @@ message HelcimConfig {
 message MifinityConfig {
   SecretString key = 1;
   optional string base_url = 50;
+  optional SecretString brand_id = 51;
+  optional SecretString destination_account_number = 52;
 }
 
 message MultisafepayConfig {
@@ -2894,6 +2896,14 @@ message BraintreeConfig {
   optional string base_url = 50;
   optional SecretString merchant_account_id = 51;
   optional string merchant_config_currency = 52;
+  repeated string apple_pay_supported_networks = 53;
+  repeated string apple_pay_merchant_capabilities = 54;
+  optional string apple_pay_label = 55;
+  optional string gpay_merchant_name = 56;
+  optional string gpay_merchant_id = 57;
+  repeated string gpay_allowed_auth_methods = 58;
+  repeated string gpay_allowed_card_networks = 59;
+  optional string paypal_client_id = 60;
 }
 
 message AirwallexConfig {
@@ -3031,6 +3041,7 @@ message AdyenConfig {
   optional SecretString review_key = 3;
   optional string base_url = 50;
   optional string dispute_base_url = 51;
+  optional string endpoint_prefix = 52;
 }
 
 message BankOfAmericaConfig {
@@ -3192,6 +3203,7 @@ message GigadatConfig {
   SecretString access_token = 2;
   SecretString security_token = 3;
   optional string base_url = 50;
+  optional string site = 51;
 }
 
 message PhonepeConfig {
@@ -3311,6 +3323,8 @@ message PeachpaymentsConfig {
   SecretString api_key = 1;
   SecretString tenant_id = 2;
   optional string base_url = 50;
+  optional SecretString client_merchant_reference_id = 51;
+  optional SecretString merchant_payment_method_route_id = 52;
 }
 
 message PaypalConfig {
