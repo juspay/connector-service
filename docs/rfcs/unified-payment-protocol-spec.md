@@ -3,8 +3,8 @@
 | Field       | Value                                    |
 |-------------|------------------------------------------|
 | **Status**  | Draft                                    |
-| **Created** | 2026-03-15                               |
-| **Authors** | Connector Service Team                   |
+| **Created** | 2026-05-15                               |
+| **Authors** | Natarajan Kannan, Arun Raj               |
 
 ---
 

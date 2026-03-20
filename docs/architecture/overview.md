@@ -3,7 +3,7 @@
 ## <!--
 
 title: Architecture Overview
-description: How Connector Service library is architected for multi-language SDKs and unified payment processing
+description: How Prism library is architected for multi-language SDKs and unified payment processing
 last_updated: 2026-03-03
 generated_from: N/A
 auto_generated: false
@@ -17,7 +17,7 @@ approved: true
 
 ## Architecture Components
 
-The Connector Service supports a three layered architecture, each solving a purpose
+The Prism supports a three layered architecture, each solving a purpose
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -78,7 +78,7 @@ The Connector Service supports a three layered architecture, each solving a purp
 |-----------|---------------|-------------------|--------------|
 | **SDK Interface** | Developers can think in their language's patterns whicle using the unified payments grammar provided by the library | You use `client.payments.authorize()` with idiomatic types in your codebase | Node.js, Python, Java, .NET, Go, Haskell |
 | **FFI / Binding Layer** | Each language needs native-performance gRPC | Seamless transport without language bridges; handles serialization, HTTP/2, streaming | tonic, grpcio, grpc-dotnet, go-grpc |
-| **gRPC Server** | Single source of truth for payment logic. Also offers freedom to use connector service as a separate microservice | One implementation of payment services serves all languages; unified errors, routing, types | Rust, tonic, protocol buffers |
+| **gRPC Server** | Single source of truth for payment logic. Also offers freedom to use Prism as a separate microservice | One implementation of payment services serves all languages; unified errors, routing, types | Rust, tonic, protocol buffers |
 | **Connector Adapters** | Each connector has unique APIs and formats | You use one `AuthorizeRequest`; the library maps to Stripe's `PaymentIntent` or Adyen's `payments` | Rust, 100+ connector implementations |
 
 ## Data Flow
@@ -114,7 +114,7 @@ sequenceDiagram
 
 ## Connector Transformation
 
-The core value: Connector Service transforms unified requests to connector-specific formats.
+The core value: Prism transforms unified requests to connector-specific formats.
 
 **Authorization Mapping:**
 

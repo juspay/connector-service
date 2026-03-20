@@ -1,7 +1,7 @@
 <div align="center">
 
 
-# Connector Service
+# Hyperswitch Prism
 
 
 **One integration. Any payment processor. Zero lock-in.**
@@ -22,16 +22,16 @@
 ---
 
 
-## 🎯 Why Connector Service?
+## 🎯 Why Prism?
 
 
 Integrating multiple payment processors shouldn't require months of engineering effort. Yet every PSP has different APIs, error codes, authentication methods, and idiosyncrasies.
 
 
-**Connector Service solves this with a unified schema that works across all payment providers.**
+**Prism solves this with a unified schema that works across all payment providers.**
 
 
-| ❌ Without Connector Service | ✅ With Connector Service |
+| ❌ Without Prism | ✅ With Prism |
 |------------------------------|----------------------------|
 | 🗂️ 50+ different API schemas | 📋 Single unified schema |
 | ⏳ Months of integration work | ⚡ Hours to integrate |
@@ -64,9 +64,9 @@ Integrating multiple payment processors shouldn't require months of engineering 
                                  │
                                  ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Connector Service SDK                      │
+│                         Prism Library                           │
 │                 (Type-safe, idiomatic interface)                │
-└─────────────────────────────────┬───────────────────────────────┘
+└────────────────────────────────┬────────────────────────────────┘
                                  │
                                  ▼
          ┌───────────────────────┼───────────────────────┬───────────────────────┐
@@ -84,7 +84,7 @@ Integrating multiple payment processors shouldn't require months of engineering 
 sequenceDiagram
    autonumber
    participant App as Your App
-   participant SDK as Connector Service SDK
+   participant SDK as Prism SDK
    participant PSP as Payment Service Provider (PSP)
    
    Note over App,PSP: Payment Authorization
@@ -204,7 +204,7 @@ public class Example {
 ## 🔄 Switching Providers
 
 
-One of Connector Service's core benefits: switch payment providers by changing **one line**.
+One of Prism's core benefits: switch payment providers by changing **one line**.
 
 
 ```javascript
@@ -232,7 +232,7 @@ No rewriting. No re-architecting. Just swap the connector.
 ## 🌊 Abstracted Payment Flows
 
 
-Connector Service unifies complex payment operations across all processors:
+Prism unifies complex payment operations across all processors:
 
 
 ### Core Payment Operations
