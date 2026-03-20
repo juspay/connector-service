@@ -39,7 +39,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
 | ❌ Without Prism | ✅ With Prism |
 |------------------------------|----------------------------|
 | 🗂️ 100+ different API schemas | 📋 Single unified schema |
-| ⏳ NEver ending agent loops/ months of integration work | ⚡ Hours to integrate, Agent driven |
+| ⏳ Never ending agent loops/ months of integration work | ⚡ Hours to integrate, Agent driven |
 | 🔗 Brittle, provider-specific code | 🔓 Portable, provider-agnostic code |
 | 🚫 Hard to switch providers | 🔄 Change providers in 1 line |
 
@@ -234,8 +234,7 @@ public class Example {
 
 ## 🔄 Switching Providers
 
-
-One of Prism's core benefits: switch payment providers by changing **one line**.
+Once the basic plumbing is implemented you can leverage Prism's core benefit - **switch payment providers by changing one line**.
 
 
 ```javascript
@@ -269,19 +268,12 @@ const order = await client.payments.createOrder({
 });
 ```
 
+**One integration pattern. Any service category.**
 
 No rewriting. No re-architecting. Just swap the connector.
 Each flow uses the same unified schema regardless of the underlying processor's API differences. No custom code per provider.
 
-
 ---
-
-
-**One integration pattern. Any service category.**
-
-
----
-
 
 ## 🛠️ Development
 
