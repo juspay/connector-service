@@ -234,8 +234,7 @@ public class Example {
 
 ## 🔄 Switching Providers
 
-
-One of Prism's core benefits: switch payment providers by changing **one line**.
+Once the basic plumbing is implemented you can leverage Prism's core benefit - **switch payment providers by changing one line**.
 
 
 ```javascript
