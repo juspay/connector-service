@@ -114,7 +114,7 @@ function checkCallStatus(ffi: FfiFunctions, status: RustCallStatus): void {
   if (status.code === 0) return;
 
   // Only Rust panics should reach here now (status.code === 2)
-  // Normal errors are encoded as protobuf RequestError/ResponseError in returned bytes
+  // Normal errors are encoded as protobuf IntegrationError/ConnectorResponseTransformationError in returned bytes
   if (status.error_buf.len > 0n) {
     const msg = liftString(status.error_buf);
     freeRustBuffer(ffi, status.error_buf);
@@ -209,16 +209,16 @@ export class UniffiClient {
             throw new Error("Expected httpRequest in FfiResult, but got null/undefined");
           }
           return Buffer.from(types.FfiConnectorHttpRequest.encode(resultMsg.httpRequest).finish());
-        case types.FfiResult.Type.REQUEST_ERROR:
-          if (!resultMsg.requestError) {
-            throw new Error("Expected requestError in FfiResult, but got null/undefined");
+        case types.FfiResult.Type.INTEGRATION_ERROR:
+          if (!resultMsg.integrationError) {
+            throw new Error("Expected integrationError in FfiResult, but got null/undefined");
           }
-          throw resultMsg.requestError;
-        case types.FfiResult.Type.RESPONSE_ERROR:
-          if (!resultMsg.responseError) {
-            throw new Error("Expected responseError in FfiResult, but got null/undefined");
+          throw resultMsg.integrationError;
+        case types.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
+          if (!resultMsg.connectorResponseTransformationError) {
+            throw new Error("Expected connectorResponseTransformationError in FfiResult, but got null/undefined");
           }
-          throw resultMsg.responseError;
+          throw resultMsg.connectorResponseTransformationError;
         default:
           throw new Error(`Unknown result type: ${resultMsg.type}`);
       }
@@ -260,16 +260,16 @@ export class UniffiClient {
             throw new Error("Expected httpResponse in FfiResult, but got null/undefined");
           }
           return Buffer.from(types.FfiConnectorHttpResponse.encode(resultMsg.httpResponse).finish());
-        case types.FfiResult.Type.RESPONSE_ERROR:
-          if (!resultMsg.responseError) {
-            throw new Error("Expected responseError in FfiResult, but got null/undefined");
+        case types.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
+          if (!resultMsg.connectorResponseTransformationError) {
+            throw new Error("Expected connectorResponseTransformationError in FfiResult, but got null/undefined");
           }
-          throw resultMsg.responseError;
-        case types.FfiResult.Type.REQUEST_ERROR:
-          if (!resultMsg.requestError) {
-            throw new Error("Expected requestError in FfiResult, but got null/undefined");
+          throw resultMsg.connectorResponseTransformationError;
+        case types.FfiResult.Type.INTEGRATION_ERROR:
+          if (!resultMsg.integrationError) {
+            throw new Error("Expected integrationError in FfiResult, but got null/undefined");
           }
-          throw resultMsg.requestError;
+          throw resultMsg.integrationError;
         default:
           throw new Error(`Unknown result type: ${resultMsg.type}`);
       }
@@ -309,16 +309,16 @@ export class UniffiClient {
             throw new Error("Expected httpResponse in FfiResult, but got null/undefined");
           }
           return Buffer.from(types.FfiConnectorHttpResponse.encode(resultMsg.httpResponse).finish());
-        case types.FfiResult.Type.RESPONSE_ERROR:
-          if (!resultMsg.responseError) {
-            throw new Error("Expected responseError in FfiResult, but got null/undefined");
+        case types.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR:
+          if (!resultMsg.connectorResponseTransformationError) {
+            throw new Error("Expected connectorResponseTransformationError in FfiResult, but got null/undefined");
           }
-          throw resultMsg.responseError;
-        case types.FfiResult.Type.REQUEST_ERROR:
-          if (!resultMsg.requestError) {
-            throw new Error("Expected requestError in FfiResult, but got null/undefined");
+          throw resultMsg.connectorResponseTransformationError;
+        case types.FfiResult.Type.INTEGRATION_ERROR:
+          if (!resultMsg.integrationError) {
+            throw new Error("Expected integrationError in FfiResult, but got null/undefined");
           }
-          throw resultMsg.requestError;
+          throw resultMsg.integrationError;
         default:
           throw new Error(`Unknown result type: ${resultMsg.type}`);
       }
