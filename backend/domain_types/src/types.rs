@@ -7769,13 +7769,12 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                                         ))
                                     })
                                 },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))?,
+                                _ => Err(Box::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_RESPONSE".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Invalid response from connector".to_owned(),
+                                    error_object: None,
+                                }))).map_err(|e| *e)?,
                             }
                         }
                     ).transpose()?,
