@@ -7719,30 +7719,33 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
     let minor_captured_amount = captured_amount;
 
     let response = match transaction_response {
-        Ok(response) => match response {
-            PaymentsResponseData::TransactionResponse {
-                resource_id,
-                redirection_data,
-                connector_metadata,
-                network_txn_id,
-                connector_response_reference_id,
-                incremental_authorization_allowed,
-                mandate_reference,
-                status_code,
-            } => {
-                let mandate_reference_grpc =
-                    mandate_reference.map(|m| grpc_api_types::payments::MandateReference {
-                        mandate_id: m.connector_mandate_id,
-                        payment_method_id: m.payment_method_id,
-                        connector_mandate_request_reference_id: m
-                            .connector_mandate_request_reference_id,
-                    });
+        Ok(response) => {
+            match response {
+                PaymentsResponseData::TransactionResponse {
+                    resource_id,
+                    redirection_data,
+                    connector_metadata,
+                    network_txn_id,
+                    connector_response_reference_id,
+                    incremental_authorization_allowed,
+                    mandate_reference,
+                    status_code,
+                } => {
+                    let mandate_reference_grpc =
+                        mandate_reference.map(|m| grpc_api_types::payments::MandateReference {
+                            mandate_id: m.connector_mandate_id,
+                            payment_method_id: m.payment_method_id,
+                            connector_mandate_request_reference_id: m
+                                .connector_mandate_request_reference_id,
+                        });
 
-                PaymentServiceRegisterResponse {
-                    registration_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
-                    redirection_data: {
-                        if let Some(form) = redirection_data {
-                            Some(match *form {
+                    PaymentServiceRegisterResponse {
+                        registration_id: Some(
+                            grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?,
+                        ),
+                        redirection_data: {
+                            if let Some(form) = redirection_data {
+                                Some(match *form {
                                 router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
                                     grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
@@ -7777,39 +7780,44 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                                     .into())
                                 }
                             })
-                        } else {
-                            None
-                        }
-                    },
-                    network_txn_id,
-                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                    }),
-                    status: grpc_status as i32,
-                    mandate_reference: mandate_reference_grpc,
-                    incremental_authorization_allowed,
-                    error_message: None,
-                    error_code: None,
-                    error_reason: None,
-                    status_code: status_code as u32,
-                    response_headers: router_data_v2
-                        .resource_common_data
-                        .get_connector_response_headers_as_map(),
-                    state,
-                    raw_connector_request,
-                    connector_response,
-                    connector_metadata: convert_connector_metadata_to_secret_string(connector_metadata),
-                    captured_amount,
-                    minor_captured_amount,
+                            } else {
+                                None
+                            }
+                        },
+                        network_txn_id,
+                        response_ref_id: connector_response_reference_id.map(|id| {
+                            grpc_api_types::payments::Identifier {
+                                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                            }
+                        }),
+                        status: grpc_status as i32,
+                        mandate_reference: mandate_reference_grpc,
+                        incremental_authorization_allowed,
+                        error_message: None,
+                        error_code: None,
+                        error_reason: None,
+                        status_code: status_code as u32,
+                        response_headers: router_data_v2
+                            .resource_common_data
+                            .get_connector_response_headers_as_map(),
+                        state,
+                        raw_connector_request,
+                        connector_response,
+                        connector_metadata: convert_connector_metadata_to_secret_string(
+                            connector_metadata,
+                        ),
+                        captured_amount,
+                        minor_captured_amount,
+                    }
                 }
+                _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_RESPONSE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid response from connector".to_owned(),
+                    error_object: None,
+                }))?,
             }
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
-        },
+        }
         Err(err) => {
             let status = match err.get_attempt_status_for_grpc(
                 err.status_code,
