@@ -353,7 +353,7 @@ if status == "PASS":
 
 **95-100: Excellent ✨**
 - 0-1 suggestions only
-- No warnings or criticals
+- No warnings or critical
 - Exemplary implementation
 - Auto-approve, document success patterns
 

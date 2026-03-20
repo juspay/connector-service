@@ -103,7 +103,7 @@ If resuming partial implementation:
 #### Step 1.2: Create/Update Technical Specification
 ```bash
 # For new implementation:
-# Use: grace-ucs/connector_integration/template/tech_spec.md //chnage
+# Use: grace-ucs/connector_integration/template/tech_spec.md //change
 
 # For continuing implementation:
 # AI will update existing spec with missing components
