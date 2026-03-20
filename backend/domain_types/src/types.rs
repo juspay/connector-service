@@ -7740,11 +7740,11 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
 
                 PaymentServiceRegisterResponse {
                     registration_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
-                    redirection_data: redirection_data.map(
-                        |form| {
-                            match *form {
+                    redirection_data: {
+                        if let Some(form) = redirection_data {
+                            Some(match *form {
                                 router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
+                                    grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
@@ -7758,27 +7758,29 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                                                 form_fields: HashMap::default(), //TODO
                                             }
                                         ))
-                                    })
+                                    }
                                 },
                                 router_response_types::RedirectForm::Html { html_data } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
+                                    grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
-                                            grpc_api_types::payments::HtmlData {
-                                                html_data,
-                                            }
+                                            grpc_api_types::payments::HtmlData { html_data }
                                         ))
-                                    })
+                                    }
                                 },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
+                                _ => {
+                                    return Err(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_RESPONSE".to_owned(),
                                         error_identifier: 400,
                                         error_message: "Invalid response from connector".to_owned(),
                                         error_object: None,
-                                    }))?,
-                            }
+                                    })
+                                    .into())
+                                }
+                            })
+                        } else {
+                            None
                         }
-                    ).transpose()?,
+                    },
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
