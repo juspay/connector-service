@@ -21,3 +21,5 @@ backend/grpc-api-types/ @juspay/connector-service-proto-maintainers
 backend/grpc-server/ @juspay/connector-service-framework
 backend/examples/ @juspay/connector-service-framework
 config/ @juspay/connector-service-framework
+
+grace/ @juspay/connector-service-grace
