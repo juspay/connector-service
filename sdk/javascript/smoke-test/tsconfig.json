@@ -12,5 +12,5 @@
       "hs-playlib/dist/src/payments/generated/proto": ["./node_modules/hs-playlib/dist/src/payments/generated/proto"]
     }
   },
-  "include": ["test_smoke.ts", "test_smoke_composite.ts"]
+  "include": ["test_smoke.ts", "test_smoke_composite.ts", "test_streaming_trace.ts"]
 }

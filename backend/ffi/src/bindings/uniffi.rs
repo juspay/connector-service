@@ -140,6 +140,7 @@ mod uniffi_bindings_inner {
     fn run_req_transformer<Req>(
         request_bytes: Vec<u8>,
         options_bytes: Vec<u8>,
+        flow_name: &str,
         handler: impl Fn(
             crate::types::FfiRequestData<Req>,
             Option<Environment>,
@@ -148,11 +149,15 @@ mod uniffi_bindings_inner {
     where
         Req: Message + Default,
     {
+        let span = tracing::info_span!("ffi.request", flow = flow_name);
+        let _guard = span.enter();
+
         let payload = Req::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
         let ffi_metadata = parse_metadata(&ffi_options)?;
+        tracing::info!(connector = ?ffi_metadata.connector, "resolved connector");
 
         let request = crate::types::FfiRequestData {
             payload,
@@ -162,10 +167,14 @@ mod uniffi_bindings_inner {
 
         let environment = Some(ffi_options.environment());
 
-        let result = handler(request, environment).map_err(|e| UniffiError::HandlerError {
-            msg: format!("{e:?}"),
+        let result = handler(request, environment).map_err(|e| {
+            tracing::error!(error = %format!("{e:?}"), "request transformation failed");
+            UniffiError::HandlerError {
+                msg: format!("{e:?}"),
+            }
         })?;
         let connector_request = result.ok_or(UniffiError::NoConnectorRequest)?;
+        tracing::info!(url = %connector_request.url, method = %connector_request.method, "built connector request");
         build_ffi_request_bytes(&connector_request)
     }
 
@@ -175,6 +184,7 @@ mod uniffi_bindings_inner {
         response_bytes: Vec<u8>,
         request_bytes: Vec<u8>,
         options_bytes: Vec<u8>,
+        flow_name: &str,
         handler: impl Fn(
             crate::types::FfiRequestData<Req>,
             Response,
@@ -185,13 +195,18 @@ mod uniffi_bindings_inner {
         Req: Message + Default,
         Res: Message,
     {
+        let span = tracing::info_span!("ffi.response", flow = flow_name);
+        let _guard = span.enter();
+
         let domain_response = build_domain_response(response_bytes)?;
+        tracing::info!(status_code = %domain_response.status_code, "decoded HTTP response");
 
         let payload = Req::decode(Bytes::from(request_bytes))
             .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
         let ffi_metadata = parse_metadata(&ffi_options)?;
+        tracing::info!(connector = ?ffi_metadata.connector, "resolved connector");
 
         let request = crate::types::FfiRequestData {
             payload,
@@ -202,10 +217,12 @@ mod uniffi_bindings_inner {
         let environment = Some(ffi_options.environment());
 
         let proto_response = handler(request, domain_response, environment).map_err(|e| {
+            tracing::error!(error = %format!("{e:?}"), "response transformation failed");
             UniffiError::HandlerError {
                 msg: format!("{e:?}"),
             }
         })?;
+        tracing::info!("processed connector response");
         Ok(proto_response.encode_to_vec())
     }
 
@@ -230,6 +247,7 @@ mod uniffi_bindings_inner {
                     run_req_transformer::<$req_type>(
                         request_bytes,
                         options_bytes,
+                        stringify!($flow),
                         $req_handler,
                     )
                 }
@@ -244,6 +262,7 @@ mod uniffi_bindings_inner {
                         response_bytes,
                         request_bytes,
                         options_bytes,
+                        stringify!($flow),
                         $res_handler,
                     )
                 }
@@ -259,23 +278,61 @@ mod uniffi_bindings_inner {
 
     // ── Hand-written exports (not auto-generated) ─────────────────────────────
 
-    /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
+    /// Initialize the FFI streaming tracing subscriber.
     ///
-    /// Unlike req/res flows there is no split: the caller passes raw
-    /// `EventServiceHandleRequest` proto bytes and receives encoded
-    /// `EventServiceHandleResponse` bytes directly.
+    /// Accepts protobuf-encoded `FfiTracingConfig`. Installs a JSON-formatted
+    /// tracing subscriber that writes to stdout, stderr, or a file. Subsequent
+    /// calls are safe no-ops (guarded by `OnceLock`).
+    #[uniffi::export]
+    pub fn init_tracing(config_bytes: Vec<u8>) -> Result<(), UniffiError> {
+        use grpc_api_types::payments::ffi_tracing_config::Output;
+        use grpc_api_types::payments::FfiTracingConfig;
+        use prost::Message as _;
+
+        let config = FfiTracingConfig::decode(Bytes::from(config_bytes))
+            .map_err(|e| UniffiError::DecodeError {
+                msg: format!("FfiTracingConfig decode failed: {e}"),
+            })?;
+
+        let writer = match config.output {
+            Some(Output::Stdout(_)) => crate::tracing_writer::FfiWriter::Stdout,
+            Some(Output::Stderr(_)) => crate::tracing_writer::FfiWriter::Stderr,
+            Some(Output::FilePath(ref path)) => {
+                crate::tracing_writer::FfiWriter::file(path).map_err(|e| {
+                    UniffiError::HandlerError {
+                        msg: format!("Failed to open trace file '{path}': {e}"),
+                    }
+                })?
+            }
+            None => {
+                return Err(UniffiError::HandlerError {
+                    msg: "FfiTracingConfig.output must be set (stdout, stderr, or file_path)".to_string(),
+                });
+            }
+        };
+
+        crate::tracing_init::init_ffi_tracing(writer, config.level_filter.as_deref())
+            .map_err(|e| UniffiError::HandlerError { msg: e })
+    }
+
+    /// handle_event — synchronous webhook processing (single-step, no outgoing HTTP).
     #[uniffi::export]
     pub fn handle_event_transformer(
         request_bytes: Vec<u8>,
         options_bytes: Vec<u8>,
     ) -> Result<Vec<u8>, UniffiError> {
         use prost::Message as _;
+
+        let span = tracing::info_span!("ffi.event", flow = "handle_event");
+        let _guard = span.enter();
+
         let payload =
             grpc_api_types::payments::EventServiceHandleRequest::decode(Bytes::from(request_bytes))
                 .map_err(|e| UniffiError::DecodeError { msg: e.to_string() })?;
 
         let ffi_options = parse_ffi_options(options_bytes)?;
         let ffi_metadata = parse_metadata(&ffi_options)?;
+        tracing::info!(connector = ?ffi_metadata.connector, "resolved connector");
 
         let request = crate::types::FfiRequestData {
             payload,
@@ -286,9 +343,13 @@ mod uniffi_bindings_inner {
         let environment = Some(ffi_options.environment());
 
         let response = crate::handlers::payments::handle_event_handler(request, environment)
-            .map_err(|e| UniffiError::HandlerError {
-                msg: format!("{e:?}"),
+            .map_err(|e| {
+                tracing::error!(error = %format!("{e:?}"), "event handling failed");
+                UniffiError::HandlerError {
+                    msg: format!("{e:?}"),
+                }
             })?;
+        tracing::info!("event processed");
 
         Ok(response.encode_to_vec())
     }

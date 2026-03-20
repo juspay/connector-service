@@ -25,3 +25,4 @@ typealias FfiOptions = SdkConfig.FfiOptions
 typealias FfiConnectorHttpRequest = SdkConfig.FfiConnectorHttpRequest
 typealias FfiConnectorHttpResponse = SdkConfig.FfiConnectorHttpResponse
 typealias HttpDefault = SdkConfig.HttpDefault
+typealias FfiTracingConfig = SdkConfig.FfiTracingConfig

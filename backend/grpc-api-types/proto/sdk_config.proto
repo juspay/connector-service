@@ -126,6 +126,27 @@ message FfiOptions {
 }
 
 // ============================================================
+// Streaming Tracing Configuration (FFI-side)
+// ============================================================
+
+// Configuration for initializing the FFI streaming tracing subscriber.
+// Passed once during client construction; subsequent calls are no-ops.
+message FfiTracingConfig {
+  // Output destination — exactly one must be set.
+  oneof output {
+    // Write JSON log lines to stdout
+    bool stdout = 1;
+    // Write JSON log lines to stderr
+    bool stderr = 2;
+    // Write JSON log lines to a file at this path (created/appended)
+    string file_path = 3;
+  }
+
+  // EnvFilter directive, e.g. "info", "debug", "ffi=trace,warn"
+  optional string level_filter = 4;
+}
+
+// ============================================================
 // Constants
 // ============================================================
 

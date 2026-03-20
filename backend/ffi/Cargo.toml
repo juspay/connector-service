@@ -31,6 +31,8 @@ http = "0.2.12"
 tonic = { workspace = true }
 paste = "1.0"
 tracing = { workspace = true }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "registry"] }
+log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = ["tracing"] }
 uniffi = { version = "0.28", optional = true }
 prost = { workspace = true }
 bytes = { workspace = true }

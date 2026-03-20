@@ -152,6 +152,10 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	@echo "Running composite flow test..."
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.ts /tmp/test-hyperswitch-js/
 	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke_composite.ts
+	@echo "Running streaming trace test..."
+	@cp $(SDK_ROOT)/smoke-test/test_streaming_trace.ts /tmp/test-hyperswitch-js/
+	@cd /tmp/test-hyperswitch-js && npx ts-node test_streaming_trace.ts \
+		--connector $(firstword $(subst ,, $(CONNECTORS)))
 	@rm -rf /tmp/test-hyperswitch-js
 	@echo "Package test passed."
 

@@ -92,6 +92,14 @@ function loadLib(libPath?: string): FfiFunctions {
     );
   }
 
+  // Load init_tracing symbol (streaming tracing initialization).
+  // Returns void — Result<(), UniffiError> maps to void in UniFFI C ABI.
+  fns.init_tracing = lib.func(
+    "uniffi_connector_service_ffi_fn_func_init_tracing",
+    "void",
+    [RustBufferStruct, koffi.out(koffi.pointer(RustCallStatusStruct))]
+  );
+
   // Load single-step transformer symbols (no HTTP round-trip, e.g. webhook processing).
   for (const flow of SINGLE_FLOW_NAMES) {
     fns[`${flow}_direct`] = lib.func(
@@ -177,6 +185,17 @@ export class UniffiClient {
 
   constructor(libPath?: string) {
     this._ffi = loadLib(libPath);
+  }
+
+  /**
+   * Initialize the FFI streaming tracing subscriber.
+   * Accepts protobuf-encoded FfiTracingConfig bytes. Subsequent calls are no-ops.
+   */
+  initTracing(configBytes: Buffer | Uint8Array): void {
+    const rbConfig = lowerBytes(this._ffi, configBytes);
+    const status = makeCallStatus();
+    this._ffi.init_tracing(rbConfig, status);
+    checkCallStatus(this._ffi, status);
   }
 
   /**

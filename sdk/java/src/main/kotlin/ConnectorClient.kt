@@ -16,15 +16,22 @@ package payments
 import com.google.protobuf.ByteString
 import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
+import types.SdkConfig
 
 open class ConnectorClient(
     val config: ConnectorConfig,
     val defaults: RequestConfig = RequestConfig.getDefaultInstance(),
-    libPath: String? = null
+    libPath: String? = null,
+    tracingConfig: SdkConfig.FfiTracingConfig? = null
 ) {
     private val httpClient: okhttp3.OkHttpClient
 
     init {
+        // Initialize streaming tracing if requested (before any flows)
+        if (tracingConfig != null) {
+            uniffi.connector_service_ffi.initTracing(tracingConfig.toByteArray())
+        }
+
         // Instance-level cache: create the primary connection pool at startup
         val httpConfig = if (defaults.hasHttp()) defaults.http else null
         this.httpClient = HttpClient.createClient(httpConfig)

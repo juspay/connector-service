@@ -20,23 +20,26 @@ import { types } from "./generated/proto";
 
 const v2 = types;
 
+/**
+ * Streaming tracing configuration for the FFI layer.
+ */
+export interface TracingConfig {
+  output: 'stdout' | 'stderr' | 'file';
+  filePath?: string;
+  levelFilter?: string;
+}
+
 export class ConnectorClient {
   private uniffi: UniffiClient;
   private config: types.ConnectorConfig;
   private defaults: types.IRequestConfig;
   private dispatcher: Dispatcher;
 
-  /**
-   * Initialize the client with mandatory config and optional request defaults.
-   *
-   * @param config - Immutable connector config and environment (ConnectorSpecificConfig, SdkOptions).
-   * @param defaults - Optional per-request defaults (Http, Vault).
-   * @param libPath - optional path to the UniFFI shared library.
-   */
   constructor(
     config: types.IConnectorConfig,
     defaults: types.IRequestConfig = {},
-    libPath?: string
+    libPath?: string,
+    tracing?: TracingConfig
   ) {
     this.uniffi = new UniffiClient(libPath);
     this.config = types.ConnectorConfig.create(config);
@@ -51,6 +54,21 @@ export class ConnectorClient {
         400,
         "CLIENT_INITIALIZATION"
       );
+    }
+
+    // Initialize streaming tracing if requested (before any flows)
+    if (tracing) {
+      const outputField: Record<string, any> =
+        tracing.output === 'file' ? { filePath: tracing.filePath }
+        : tracing.output === 'stderr' ? { stderr: true }
+        : { stdout: true };
+
+      const tracingConfig = v2.FfiTracingConfig.create({
+        ...outputField,
+        levelFilter: tracing.levelFilter,
+      });
+      const configBytes = Buffer.from(v2.FfiTracingConfig.encode(tracingConfig).finish());
+      this.uniffi.initTracing(configBytes);
     }
 
     // Instance-level cache: create the primary connection pool at startup

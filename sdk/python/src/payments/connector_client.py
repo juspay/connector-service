@@ -36,6 +36,7 @@ from .generated.sdk_config_pb2 import (
     FfiOptions,
     FfiConnectorHttpRequest,
     FfiConnectorHttpResponse,
+    FfiTracingConfig,
     HttpConfig,
     RequestError as RequestErrorProto,
     ResponseError as ResponseErrorProto,
@@ -157,6 +158,7 @@ class _ConnectorClientBase:
         config: ConnectorConfig,
         defaults: Optional[RequestConfig] = None,
         lib_path: Optional[str] = None,
+        tracing_config: Optional[dict] = None,
     ):
         """
         Initialize the client.
@@ -165,9 +167,27 @@ class _ConnectorClientBase:
             config: Immutable connector identity and environment (connector, auth, environment).
             defaults: Optional per-request defaults (http, vault).
             lib_path: Optional path to the shared library.
+            tracing_config: Optional streaming tracing config dict with keys:
+                ``output`` ('stdout'|'stderr'|'file'), ``file_path``, ``level_filter``.
         """
         self.config = config
         self.defaults = defaults or RequestConfig()
+
+        # Initialize streaming tracing if requested (before any flows)
+        if tracing_config:
+            output = tracing_config.get("output", "")
+            kwargs = {}
+            if output == "file":
+                kwargs["file_path"] = tracing_config.get("file_path")
+            elif output == "stderr":
+                kwargs["stderr"] = True
+            else:
+                kwargs["stdout"] = True
+            if tracing_config.get("level_filter"):
+                kwargs["level_filter"] = tracing_config["level_filter"]
+            proto = FfiTracingConfig(**kwargs)
+            _ffi.init_tracing(proto.SerializeToString())
+
         # Instance-level cache: create the primary asynchronous connection pool at startup
         self.client = create_client(
             self.defaults.http if self.defaults.HasField("http") else None
