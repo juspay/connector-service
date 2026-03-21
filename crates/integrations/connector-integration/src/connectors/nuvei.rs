@@ -40,10 +40,11 @@ use std::fmt::Debug;
 pub mod transformers;
 
 use transformers::{
-    NuveiCaptureRequest, NuveiCaptureResponse, NuveiErrorResponse, NuveiPaymentRequest,
-    NuveiPaymentResponse, NuveiRefundRequest, NuveiRefundResponse, NuveiRefundSyncRequest,
-    NuveiRefundSyncResponse, NuveiSessionTokenRequest, NuveiSessionTokenResponse, NuveiSyncRequest,
-    NuveiSyncResponse, NuveiVoidRequest, NuveiVoidResponse,
+    NuveiCaptureRequest, NuveiCaptureResponse, NuveiCreateOrderRequest, NuveiCreateOrderResponse,
+    NuveiErrorResponse, NuveiPaymentRequest, NuveiPaymentResponse, NuveiRefundRequest,
+    NuveiRefundResponse, NuveiRefundSyncRequest, NuveiRefundSyncResponse, NuveiSessionTokenRequest,
+    NuveiSessionTokenResponse, NuveiSyncRequest, NuveiSyncResponse, NuveiVoidRequest,
+    NuveiVoidResponse,
 };
 
 use super::macros;
@@ -203,6 +204,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ),
         (
+            flow: CreateOrder,
+            request_body: NuveiCreateOrderRequest,
+            response_body: NuveiCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
             flow: Authorize,
             request_body: NuveiPaymentRequest<T>,
             response_body: NuveiPaymentResponse,
@@ -295,6 +302,35 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/getSessionToken.do", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+// Implement CreateOrder flow using macro
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Nuvei,
+    curl_request: Json(NuveiCreateOrderRequest),
+    curl_response: NuveiCreateOrderResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/openOrder.do", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -530,16 +566,6 @@ macros::macro_connector_implementation!(
 );
 
 // Implementation for empty stubs - these will need to be properly implemented later
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Nuvei<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
