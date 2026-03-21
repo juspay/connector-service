@@ -11,16 +11,16 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, IncrementalAuthorization, PaymentMethodToken,
-        RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateConnectorCustomer, CreateOrder, IncrementalAuthorization,
+        PaymentMethodToken, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::AcceptanceType,
@@ -2187,6 +2187,58 @@ pub struct StripeSplitPaymentRequest {
 #[derive(Debug, Serialize)]
 pub struct PaymentIncrementalAuthRequest {
     pub amount: MinorUnit,
+}
+
+// OrderCreate flow - Creates a PaymentIntent without confirming
+#[derive(Debug, Eq, PartialEq, Serialize)]
+pub struct StripeOrderCreateRequest<
+    T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize,
+> {
+    pub amount: MinorUnit,
+    pub currency: String,
+    pub statement_descriptor_suffix: Option<String>,
+    pub statement_descriptor: Option<String>,
+    #[serde(flatten)]
+    pub meta_data: HashMap<String, String>,
+    pub return_url: Option<String>,
+    pub confirm: bool,
+    pub customer: Option<Secret<String>>,
+    #[serde(flatten)]
+    pub setup_mandate_details: Option<StripeMandateRequest>,
+    pub description: Option<String>,
+    #[serde(flatten)]
+    pub shipping: Option<StripeShippingAddress>,
+    #[serde(flatten)]
+    pub billing: StripeBillingAddress,
+    pub capture_method: StripeCaptureMethod,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
+    #[serde(rename = "payment_method_types[0]")]
+    pub payment_method_types: Option<StripePaymentMethodType>,
+    #[serde(rename = "expand[0]")]
+    pub expand: Option<ExpandableObjects>,
+    #[serde(flatten)]
+    pub browser_info: Option<StripeBrowserInformation>,
+    #[serde(flatten)]
+    pub payment_data: Option<StripePaymentMethodData<T>>,
+}
+
+#[derive(Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeOrderCreateResponse {
+    pub id: String,
+    pub object: String,
+    pub amount: MinorUnit,
+    pub currency: String,
+    pub status: StripePaymentStatus,
+    pub client_secret: Option<Secret<String>>,
+    #[serde(default, with = "common_utils::custom_serde::timestamp::option")]
+    pub created: Option<PrimitiveDateTime>,
+    pub customer: Option<Secret<String>>,
+    pub payment_method: Option<Secret<String>>,
+    pub description: Option<String>,
+    pub statement_descriptor: Option<String>,
+    pub statement_descriptor_suffix: Option<String>,
+    pub metadata: StripeMetadata,
+    pub capture_method: Option<String>,
 }
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -5263,6 +5315,125 @@ impl<F, T> TryFrom<ResponseRouterData<StripeTokenResponse, Self>>
         let token = item.response.id.clone().expose();
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse { token }),
+            ..item.router_data
+        })
+    }
+}
+
+// OrderCreate flow TryFrom implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for StripeOrderCreateRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        value: StripeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = value.router_data;
+
+        let amount = StripeAmountConvertor::convert(item.request.amount, item.request.currency)?;
+        let order_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let shipping_address = StripeShippingAddress {
+            city: item.resource_common_data.get_optional_shipping_city(),
+            country: item.resource_common_data.get_optional_shipping_country(),
+            line1: item.resource_common_data.get_optional_shipping_line1(),
+            line2: item.resource_common_data.get_optional_shipping_line2(),
+            zip: item.resource_common_data.get_optional_shipping_zip(),
+            state: item.resource_common_data.get_optional_shipping_state(),
+            name: item.resource_common_data.get_optional_shipping_full_name(),
+            phone: item
+                .resource_common_data
+                .get_optional_shipping_phone_number(),
+        };
+
+        let billing_address = StripeBillingAddress {
+            city: item.resource_common_data.get_optional_billing_city(),
+            country: item.resource_common_data.get_optional_billing_country(),
+            address_line1: item.resource_common_data.get_optional_billing_line1(),
+            address_line2: item.resource_common_data.get_optional_billing_line2(),
+            zip_code: item.resource_common_data.get_optional_billing_zip(),
+            state: item.resource_common_data.get_optional_billing_state(),
+            name: item.resource_common_data.get_optional_billing_full_name(),
+            email: item.resource_common_data.get_optional_billing_email(),
+            phone: item
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+        };
+
+        let meta_data = get_transaction_metadata(item.request.metadata.clone(), order_id);
+
+        let payment_method_types = item
+            .request
+            .payment_method_type
+            .and_then(|pmt| StripePaymentMethodType::try_from(pmt).ok());
+
+        Ok(Self {
+            amount,
+            currency: item.request.currency.to_string(),
+            statement_descriptor_suffix: None,
+            statement_descriptor: None,
+            meta_data,
+            return_url: None,
+            confirm: false, // Create order without confirming
+            customer: item
+                .resource_common_data
+                .connector_customer
+                .clone()
+                .map(Secret::new),
+            setup_mandate_details: None,
+            description: None,
+            shipping: Some(shipping_address),
+            billing: billing_address,
+            capture_method: StripeCaptureMethod::Automatic,
+            setup_future_usage: None,
+            payment_method_types,
+            expand: None,
+            browser_info: None,
+            payment_data: None,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<StripeOrderCreateResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<StripeOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = PaymentCreateOrderResponse {
+            order_id: item.response.id,
+            session_token: None, // OrderCreate doesn't need session token
+        };
+
+        Ok(Self {
+            response: Ok(response),
             ..item.router_data
         })
     }
