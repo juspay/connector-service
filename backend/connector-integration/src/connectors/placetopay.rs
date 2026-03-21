@@ -43,7 +43,8 @@ use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
     self as placetopay, PlacetopayNextActionRequest,
-    PlacetopayNextActionRequest as PlacetopayVoidRequest, PlacetopayPaymentsRequest,
+    PlacetopayNextActionRequest as PlacetopayVoidRequest, PlacetopayOrderCreateRequest,
+    PlacetopayOrderCreateResponse, PlacetopayPaymentsRequest,
     PlacetopayPaymentsResponse as PlacetopayPSyncResponse, PlacetopayPaymentsResponse,
     PlacetopayPaymentsResponse as PlacetopayCaptureResponse,
     PlacetopayPaymentsResponse as PlacetopayVoidResponse, PlacetopayPsyncRequest,
@@ -68,6 +69,12 @@ macros::create_all_prerequisites!(
             request_body: PlacetopayPaymentsRequest<T>,
             response_body: PlacetopayPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: PlacetopayOrderCreateRequest,
+            response_body: PlacetopayOrderCreateResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ),
         (
             flow: PSync,
@@ -386,6 +393,35 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Macro implementation for CreateOrder flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Placetopay,
+    curl_request: Json(PlacetopayOrderCreateRequest),
+    curl_response: PlacetopayOrderCreateResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/api/session", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
 // Macro implementation for PSync flow
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -532,16 +568,6 @@ macros::macro_connector_implementation!(
 );
 
 // Stub implementations for unsupported flows
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Placetopay<T>
-{
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Placetopay<T>

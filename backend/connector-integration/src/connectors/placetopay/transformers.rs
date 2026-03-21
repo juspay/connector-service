@@ -1,10 +1,10 @@
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Void},
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -597,4 +597,189 @@ pub struct PlacetopayError {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PlacetopayErrorStatus {
     Failed,
+}
+
+// OrderCreate flow types and implementations
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayOrderCreateRequest {
+    pub locale: String,
+    pub auth: PlacetopayAuth,
+    pub payment: PlacetopayOrderPayment,
+    pub expiration: String,
+    pub return_url: String,
+    pub cancel_url: String,
+    pub skip_result: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayOrderPayment {
+    pub reference: String,
+    pub description: String,
+    pub amount: PlacetopayOrderAmount,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayOrderAmount {
+    pub currency: common_enums::Currency,
+    pub total: f64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayOrderCreateResponse {
+    pub status: PlacetopayOrderStatus,
+    pub request_id: u64,
+    pub process_url: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayOrderStatus {
+    pub status: String,
+    pub reason: Option<String>,
+    pub message: Option<String>,
+    pub date: String,
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PlacetopayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for PlacetopayOrderCreateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: PlacetopayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_config)?;
+
+        let now = common_utils::date_time::now();
+        let expiration = now
+            + time::Duration::minutes(
+                item.router_data
+                    .request
+                    .metadata
+                    .as_ref()
+                    .and_then(|m| {
+                        m.clone()
+                            .expose()
+                            .get("expiration_minutes")
+                            .and_then(|v| v.as_u64())
+                    })
+                    .unwrap_or(30) as i64,
+            );
+        let expiration_str = expiration.to_string();
+
+        let total = item.router_data.request.amount.get_amount_as_i64() as f64 / 100.0; // Convert minor unit to major unit
+
+        let payment = PlacetopayOrderPayment {
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            description: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            amount: PlacetopayOrderAmount {
+                currency: item.router_data.request.currency,
+                total,
+            },
+        };
+
+        let return_url = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|m| {
+                m.clone()
+                    .expose()
+                    .get("return_url")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
+            .unwrap_or_else(|| "https://example.com/return".to_string());
+
+        let cancel_url = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|m| {
+                m.clone()
+                    .expose()
+                    .get("cancel_url")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
+            .unwrap_or_else(|| "https://example.com/cancel".to_string());
+
+        Ok(Self {
+            locale: "en_US".to_string(),
+            auth,
+            payment,
+            expiration: expiration_str,
+            return_url,
+            cancel_url,
+            skip_result: false,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<PlacetopayOrderCreateResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PlacetopayOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let order_id = item.response.request_id.to_string();
+        let _process_url = item.response.process_url.clone();
+
+        let status = match item.response.status.status.as_str() {
+            "OK" => common_enums::AttemptStatus::Pending,
+            "APPROVED" => common_enums::AttemptStatus::Pending,
+            "PENDING" => common_enums::AttemptStatus::Pending,
+            _ => common_enums::AttemptStatus::Failure,
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentCreateOrderResponse {
+                order_id,
+                session_token: None,
+            }),
+            ..item.router_data
+        })
+    }
 }
