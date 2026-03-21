@@ -39,7 +39,8 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as datatrans, DatatransCaptureRequest, DatatransCaptureResponse, DatatransPaymentsRequest,
+    self as datatrans, DatatransCaptureRequest, DatatransCaptureResponse,
+    DatatransCreateOrderRequest, DatatransCreateOrderResponse, DatatransPaymentsRequest,
     DatatransPaymentsResponse, DatatransRefundRequest, DatatransRefundResponse,
     DatatransRefundSyncResponse, DatatransSyncResponse, DatatransVoidRequest,
     DatatransVoidResponse,
@@ -225,6 +226,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
+            flow: CreateOrder,
+            request_body: DatatransCreateOrderRequest,
+            response_body: DatatransCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
             flow: PSync,
             response_body: DatatransSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -330,17 +337,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         RepeatPaymentData<T>,
         PaymentsResponseData,
-    > for Datatrans<T>
-{
-}
-
-// Order Create
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
     > for Datatrans<T>
 {
 }
@@ -556,6 +552,34 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}/v1/transactions/authorize", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Datatrans,
+    curl_request: Json(DatatransCreateOrderRequest),
+    curl_response: DatatransCreateOrderResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/v1/transactions", self.connector_base_url_payments(req)))
         }
     }
 );

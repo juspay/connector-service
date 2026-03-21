@@ -3,11 +3,11 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -769,6 +769,126 @@ impl TryFrom<ResponseRouterData<DatatransVoidResponse, Self>>
             },
             response: Ok(payments_response_data),
             ..item.router_data.clone()
+        })
+    }
+}
+
+// ===== CREATE ORDER FLOW STRUCTURES =====
+
+// CreateOrder Request structure based on tech spec POST /v1/transactions (init)
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransCreateOrderRequest {
+    pub currency: Currency,
+    pub refno: String,
+    pub amount: MinorUnit,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_methods: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auto_settle: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect: Option<DatatransRedirectUrls>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransRedirectUrls {
+    pub success_url: String,
+    pub cancel_url: String,
+    pub error_url: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::DatatransRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for DatatransCreateOrderRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::DatatransRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Build redirect URLs from webhook_url or use defaults
+        let webhook_url = router_data
+            .request
+            .webhook_url
+            .clone()
+            .unwrap_or_else(|| "https://example.com/webhook".to_string());
+        let redirect = DatatransRedirectUrls {
+            success_url: webhook_url.clone(),
+            cancel_url: webhook_url.clone(),
+            error_url: webhook_url,
+        };
+
+        Ok(Self {
+            currency: router_data.request.currency,
+            refno: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            amount: router_data.request.amount,
+            payment_methods: None, // Let Datatrans use default payment methods
+            auto_settle: Some(false), // Create order without auto-settle (manual capture)
+            redirect: Some(redirect),
+        })
+    }
+}
+
+// CreateOrder Response structure based on tech spec
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransCreateOrderResponse {
+    pub transaction_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "3D")]
+    pub three_d: Option<DatatransThreeDInfo>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatatransThreeDInfo {
+    pub enrolled: bool,
+}
+
+impl TryFrom<ResponseRouterData<DatatransCreateOrderResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<DatatransCreateOrderResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let create_order_response = PaymentCreateOrderResponse {
+            order_id: item.response.transaction_id.clone(),
+            session_token: None, // Datatrans init doesn't return session token
+        };
+
+        Ok(Self {
+            response: Ok(create_order_response),
+            ..item.router_data
         })
     }
 }
