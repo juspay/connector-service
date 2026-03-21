@@ -127,3 +127,15 @@ pub struct JpmorganRefundRequest {
 pub struct JpmorganMerchantRefund {
     pub merchant_software: JpmorganMerchantSoftware,
 }
+
+/// CreateOrder request - creates a payment without immediate authorization
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganCreateOrderRequest<T: PaymentMethodDataTypes> {
+    pub amount: MinorUnit,
+    pub currency: common_enums::Currency,
+    pub merchant: JpmorganMerchant,
+    pub payment_method_type: JpmorganPaymentMethodType<T>,
+    pub account_holder: JpmorganAccountHolder,
+    pub statement_descriptor: Secret<String>,
+}

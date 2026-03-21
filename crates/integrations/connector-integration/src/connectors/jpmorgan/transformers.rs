@@ -1,11 +1,12 @@
 use common_enums::{AttemptStatus, CaptureMethod};
 use common_utils::pii::SecretSerdeValue;
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateAccessToken, Refund, Void},
+    connector_flow::{Authorize, Capture, CreateAccessToken, CreateOrder, Refund, Void},
     connector_types::{
-        AccessTokenRequestData, AccessTokenResponseData, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
@@ -668,6 +669,114 @@ impl<F> TryFrom<ResponseRouterData<responses::JpmorganRefundResponse, Self>>
                 status,
                 ..item.router_data.resource_common_data
             },
+            ..item.router_data
+        })
+    }
+}
+
+// CreateOrder transformers - order creation without immediate authorization
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        JpmorganRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for requests::JpmorganCreateOrderRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        item: JpmorganRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = JpmorganAuthType::try_from(&router_data.connector_config)?;
+
+        let merchant = requests::JpmorganMerchant {
+            merchant_software: requests::JpmorganMerchantSoftware {
+                company_name: auth.company_name.clone().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "company_name",
+                    },
+                )?,
+                product_name: auth.product_name.clone().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "product_name",
+                    },
+                )?,
+            },
+            soft_merchant: requests::JpmorganSoftMerchant {
+                merchant_purchase_description: auth.merchant_purchase_description.clone().ok_or(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "merchant_purchase_description",
+                    },
+                )?,
+            },
+        };
+
+        let amount = JpmorganAmountConvertor::convert(
+            router_data.request.amount,
+            router_data.request.currency,
+        )?;
+
+        // For orderCreate, we don't have payment_method_data yet, so use placeholder
+        // The actual payment method will be provided during authorization
+        let payment_method_type = requests::JpmorganPaymentMethodType {
+            card: None,
+            ach: None,
+        };
+
+        let account_holder = requests::JpmorganAccountHolder {
+            first_name: Secret::new("NA".to_string()),
+            last_name: Secret::new("NA".to_string()),
+        };
+
+        let statement_descriptor = auth
+            .statement_descriptor
+            .clone()
+            .unwrap_or_else(|| Secret::new("Payment".to_string()));
+
+        Ok(Self {
+            amount,
+            currency: router_data.request.currency,
+            merchant,
+            payment_method_type,
+            account_holder,
+            statement_descriptor,
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<responses::JpmorganCreateOrderResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = Error;
+    fn try_from(
+        item: ResponseRouterData<responses::JpmorganCreateOrderResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = PaymentCreateOrderResponse {
+            order_id: item.response.transaction_id.clone(),
+            session_token: None,
+        };
+
+        Ok(Self {
+            response: Ok(response),
             ..item.router_data
         })
     }
