@@ -1,14 +1,13 @@
-# Python SDK
+# PHP SDK
 
 <!--
 ---
-title: Python SDK
-description: Python SDK for the Hyperswitch Prism payment orchestration platform
+title: PHP SDK
+description: PHP SDK for the Hyperswitch Prism payment orchestration platform
 last_updated: 2026-03-21
-sdk_language: python
+sdk_language: php
 ---
 -->
-
 ## 🎯 What is Prism?
 
 Today, integrating multiple payment processors either makes developers running in circles with AI agents to recreate integrations from specs, or developers spending months of engineering effort. 
@@ -32,40 +31,43 @@ Because every payment processor has diverse APIs, error codes, authentication me
 ## Installation
 
 ```bash
-pip install hyperswitch_prism
+composer require hyperswitch/prism
 ```
 
 ## Quick Start
 
-```python
-from hyperswitch_prism import PaymentClient
+```php
+<?php
+require_once 'vendor/autoload.php';
 
-payment_client = PaymentClient(
-    connector='stripe',
-    api_key='YOUR_API_KEY',
-    environment='SANDBOX'
-)
+use HyperswitchPrism\PaymentClient;
 
-# Authorize a payment
-response = await payment_client.authorize({
-    "merchant_transaction_id": "txn_order_001",
-    "amount": {
-        "minor_amount": 1000,
-        "currency": "USD"
-    },
-    "payment_method": {
-        "card": {
-            "card_number": {"value": "4242424242424242"},
-            "card_exp_month": {"value": "12"},
-            "card_exp_year": {"value": "2027"},
-            "card_cvc": {"value": "123"},
-            "card_holder_name": {"value": "John Doe"}
-        }
-    },
-    "auth_type": "NO_THREE_DS"
-})
+$paymentClient = new PaymentClient([
+    'connector' => 'stripe',
+    'apiKey' => 'YOUR_API_KEY',
+    'environment' => 'SANDBOX'
+]);
 
-print(response["status"])  # AUTHORIZED
+// Authorize a payment
+$response = $paymentClient->authorize([
+    'merchantTransactionId' => 'txn_order_001',
+    'amount' => [
+        'minorAmount' => 1000,
+        'currency' => 'USD'
+    ],
+    'paymentMethod' => [
+        'card' => [
+            'cardNumber' => ['value' => '4242424242424242'],
+            'cardExpMonth' => ['value' => '12'],
+            'cardExpYear' => ['value' => '2027'],
+            'cardCvc' => ['value' => '123'],
+            'cardHolderName' => ['value' => 'John Doe']
+        ]
+    ],
+    'authType' => 'NO_THREE_DS'
+]);
+
+echo $response['status']; // AUTHORIZED
 ```
 
 ## Services
@@ -87,27 +89,26 @@ print(response["status"])  # AUTHORIZED
 
 | Option | Type | Required | Description |
 |--------|------|----------|-------------|
-| `connector` | str | Yes | Payment connector name (stripe, adyen, etc.) |
-| `api_key` | str | Yes | Your API key |
-| `environment` | str | Yes | SANDBOX or PRODUCTION |
+| `connector` | string | Yes | Payment connector name (stripe, adyen, etc.) |
+| `apiKey` | string | Yes | Your API key |
+| `environment` | string | Yes | SANDBOX or PRODUCTION |
 | `timeout` | int | No | Request timeout in seconds (default: 30) |
 
 ## Error Handling
 
-```python
-from hyperswitch_prism.exceptions import PaymentDeclined, ValidationError
-
-try:
-    response = await payment_client.authorize(request)
-except PaymentDeclined as e:
-    # Handle declined payment
-    print(f"Payment declined: {e.message}")
-except ValidationError as e:
-    # Handle validation error
-    print(f"Validation error: {e.errors}")
-except HyperswitchError as e:
-    # Handle other errors
-    print(f"Error: {e.message}")
+```php
+try {
+    $response = $paymentClient->authorize($request);
+} catch (PaymentDeclinedException $e) {
+    // Handle declined payment
+    echo $e->getMessage();
+} catch (ValidationException $e) {
+    // Handle validation error
+    echo $e->getErrors();
+} catch (HyperswitchException $e) {
+    // Handle other errors
+    echo $e->getMessage();
+}
 ```
 
 ## Support
