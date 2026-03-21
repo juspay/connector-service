@@ -17,7 +17,7 @@ MAJOR.MINOR.PATCH
 
 ## Pinning for Automatic Bug Fixes
 
-It is stongly recommended You want security patches and critical fixes without manual updates. Pin your dependency to accept patch increments automatically.
+It is strongly recommended You want security patches and critical fixes without manual updates. Pin your dependency to accept patch increments automatically.
 
 <!-- tabs:start -->
 

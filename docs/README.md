@@ -25,7 +25,7 @@
 ## 🎯 Why Prism?
 
 
-Today, integrating multiple payment processors either makes developers running in cicles with AI agents to recreate integrations from specs, or developers spending months of engineering effort. 
+Today, integrating multiple payment processors either makes developers running in circles with AI agents to recreate integrations from specs, or developers spending months of engineering effort. 
 
 Because every payment processor has diverse APIs, error codes, authentication methods, pdf documents to read, and above all - different behaviour in the actual environment when compared to documented specs. All this rests as tribal or undocumented knowledge making it harder AI agents which are very good at implementing clearly documented specification.
 
@@ -33,7 +33,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 **Prism offers hardened transformation through testing on payment processor environment & iterative bug fixing**
 
-**Prism can be embedded in you server application with its wide range of mulit-language SDKs, or run as a rRPC microservice**
+**Prism can be embedded in you server application with its wide range of multi-language SDKs, or run as a rRPC microservice**
 
 
 | ❌ Without Prism | ✅ With Prism |

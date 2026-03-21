@@ -129,7 +129,7 @@ echo "Client Secret: " . $order->getSessionToken()->getClientSecret() . "\n";
 
 ## What Just Happened
 
-The library helped you create a PaymentIntent on Stripe. You will recieve a `client_secret` in the response.
+The library helped you create a PaymentIntent on Stripe. You will receive a `client_secret` in the response.
 
 The order is in `STARTED` state, ready for payment.
 

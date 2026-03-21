@@ -33,7 +33,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 **Prism offers hardened transformation through testing on payment processor environment & iterative bug fixing**
 
-**Prism can be embedded in you server application with its wide range of mulit-language SDKs, or run as a rRPC microservice**
+**Prism can be embedded in you server application with its wide range of multi-language SDKs, or run as a rRPC microservice**
 
 
 | ❌ Without Prism | ✅ With Prism |
