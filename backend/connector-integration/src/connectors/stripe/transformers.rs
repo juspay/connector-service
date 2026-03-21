@@ -11,16 +11,16 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateConnectorCustomer, IncrementalAuthorization, PaymentMethodToken,
-        RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateConnectorCustomer, CreateOrder, IncrementalAuthorization,
+        PaymentMethodToken, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         ConnectorCustomerData, ConnectorCustomerResponse, MandateReference, MandateReferenceId,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     mandates::AcceptanceType,
@@ -371,7 +371,49 @@ pub struct CreateConnectorCustomerResponse {
     pub name: Option<Secret<String>>,
 }
 
-#[derive(Debug, Eq, PartialEq, Serialize)]
+// CreateOrder flow structs for Stripe Checkout Sessions API
+#[derive(Debug, Serialize)]
+pub struct StripeCreateCheckoutSessionRequest {
+    pub mode: String,
+    #[serde(flatten)]
+    pub line_items: StripeLineItems,
+    pub success_url: String,
+    pub cancel_url: Option<String>,
+    pub client_reference_id: Option<String>,
+    pub customer: Option<Secret<String>>,
+    pub customer_email: Option<Email>,
+    #[serde(flatten)]
+    pub metadata: Option<HashMap<String, String>>,
+    pub currency: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct StripeLineItems {
+    #[serde(rename = "line_items[0][price_data][currency]")]
+    pub currency: String,
+    #[serde(rename = "line_items[0][price_data][unit_amount]")]
+    pub amount: MinorUnit,
+    #[serde(rename = "line_items[0][price_data][product_data][name]")]
+    pub product_name: String,
+    #[serde(rename = "line_items[0][quantity]")]
+    pub quantity: i32,
+}
+
+#[derive(Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+pub struct StripeCreateCheckoutSessionResponse {
+    pub id: String,
+    pub object: String,
+    pub mode: String,
+    pub url: Option<String>,
+    pub status: String,
+    pub client_reference_id: Option<String>,
+    pub customer: Option<Secret<String>>,
+    pub currency: Option<String>,
+    pub amount_total: Option<MinorUnit>,
+    pub metadata: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ChargesRequest {
     pub amount: MinorUnit,
     pub currency: String,
@@ -5261,6 +5303,97 @@ impl<F, T> TryFrom<ResponseRouterData<StripeTokenResponse, Self>>
         let token = item.response.id.clone().expose();
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse { token }),
+            ..item.router_data
+        })
+    }
+}
+
+// CreateOrder flow implementations for Stripe Checkout Sessions API
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        StripeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for StripeCreateCheckoutSessionRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: StripeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let amount = StripeAmountConvertor::convert(
+            item.router_data.request.amount,
+            item.router_data.request.currency,
+        )?;
+
+        let currency = item.router_data.request.currency.to_string().to_lowercase();
+        let reference_id = item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let webhook_url = item.router_data.request.webhook_url.clone();
+
+        Ok(Self {
+            mode: "payment".to_string(),
+            line_items: StripeLineItems {
+                currency: currency.clone(),
+                amount,
+                product_name: "Order".to_string(),
+                quantity: 1,
+            },
+            success_url: webhook_url
+                .clone()
+                .unwrap_or_else(|| "https://example.com/success".to_string()),
+            cancel_url: Some(
+                webhook_url
+                    .clone()
+                    .unwrap_or_else(|| "https://example.com/cancel".to_string()),
+            ),
+            client_reference_id: Some(reference_id),
+            customer: None,
+            customer_email: None,
+            metadata: None,
+            currency: Some(currency),
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<StripeCreateCheckoutSessionResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<StripeCreateCheckoutSessionResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let session_id = item.response.id.clone();
+
+        Ok(Self {
+            response: Ok(PaymentCreateOrderResponse {
+                order_id: session_id,
+                session_token: None,
+            }),
             ..item.router_data
         })
     }
