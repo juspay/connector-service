@@ -40,9 +40,9 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as multisafepay, MultisafepayPaymentsRequest, MultisafepayPaymentsResponse,
-    MultisafepayPaymentsSyncResponse, MultisafepayRefundRequest, MultisafepayRefundResponse,
-    MultisafepayRefundSyncResponse,
+    self as multisafepay, MultisafepayCreateOrderRequest, MultisafepayCreateOrderResponse,
+    MultisafepayPaymentsRequest, MultisafepayPaymentsResponse, MultisafepayPaymentsSyncResponse,
+    MultisafepayRefundRequest, MultisafepayRefundResponse, MultisafepayRefundSyncResponse,
 };
 
 use super::macros;
@@ -221,6 +221,12 @@ macros::create_all_prerequisites!(
     generic_type: T,
     api: [
         (
+            flow: CreateOrder,
+            request_body: MultisafepayCreateOrderRequest,
+            response_body: MultisafepayCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
             flow: Authorize,
             request_body: MultisafepayPaymentsRequest<T>,
             response_body: MultisafepayPaymentsResponse,
@@ -273,6 +279,38 @@ macros::create_all_prerequisites!(
 );
 
 // ===== MAIN CONNECTOR INTEGRATION IMPLEMENTATIONS =====
+// CreateOrder flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Multisafepay,
+    curl_request: Json(MultisafepayCreateOrderRequest),
+    curl_response: MultisafepayCreateOrderResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let auth = multisafepay::MultisafepayAuthType::try_from(&req.connector_config)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            Ok(format!("{}/orders?api_key={}", self.connector_base_url_payments(req), auth.api_key.expose()))
+        }
+    }
+);
+
 // Authorize flow implementation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -465,17 +503,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         RepeatPaymentData<T>,
         PaymentsResponseData,
-    > for Multisafepay<T>
-{
-}
-
-// Order Create
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
     > for Multisafepay<T>
 {
 }

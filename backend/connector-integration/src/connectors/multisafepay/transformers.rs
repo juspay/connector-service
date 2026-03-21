@@ -2,10 +2,11 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync},
+    connector_flow::{Authorize, CreateOrder, PSync, RSync},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
@@ -1033,3 +1034,141 @@ impl TryFrom<ResponseRouterData<MultisafepayRefundResponse, Self>>
 // ===== VOID FLOW STRUCTURES =====
 // Void flow not implemented - MultiSafepay doesn't support void
 // (requires manual capture support which MultiSafepay doesn't provide)
+
+// ===== CREATE ORDER FLOW STRUCTURES =====
+
+#[derive(Debug, Serialize)]
+pub struct MultisafepayCreateOrderRequest {
+    #[serde(rename = "type")]
+    pub order_type: Type,
+    pub order_id: String,
+    pub currency: common_enums::Currency,
+    pub amount: MinorUnit,
+    pub description: String,
+    pub payment_options: PaymentOptions,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub days_active: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seconds_active: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MultisafepayCreateOrderResponse {
+    pub success: bool,
+    pub data: MultisafepayCreateOrderData,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MultisafepayCreateOrderData {
+    #[serde(default)]
+    pub order_id: Option<String>,
+    #[serde(default)]
+    pub payment_url: Option<String>,
+    #[serde(deserialize_with = "deserialize_transaction_id", default)]
+    pub transaction_id: Option<String>,
+    #[serde(default)]
+    pub status: MultisafepayPaymentStatus,
+    pub amount: Option<MinorUnit>,
+    pub currency: Option<common_enums::Currency>,
+}
+
+// CreateOrder Request conversion
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        crate::connectors::multisafepay::MultisafepayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for MultisafepayCreateOrderRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        wrapper: crate::connectors::multisafepay::MultisafepayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = &wrapper.router_data;
+
+        let order_id = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let description = format!("Order {}", order_id);
+
+        let return_url = item
+            .resource_common_data
+            .get_return_url()
+            .unwrap_or_else(|| "https://example.com/return".to_string());
+
+        let payment_options = PaymentOptions {
+            redirect_url: return_url.clone(),
+            cancel_url: return_url,
+        };
+
+        Ok(Self {
+            order_type: Type::Redirect,
+            order_id,
+            currency: item.request.currency,
+            amount: item.request.amount,
+            description,
+            payment_options,
+            days_active: Some(30),
+            seconds_active: Some(259200),
+        })
+    }
+}
+
+// CreateOrder Response conversion
+impl TryFrom<ResponseRouterData<MultisafepayCreateOrderResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<MultisafepayCreateOrderResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response_data = &item.response.data;
+
+        let order_id = response_data
+            .order_id
+            .clone()
+            .or_else(|| response_data.transaction_id.clone())
+            .unwrap_or_else(|| item.router_data.resource_common_data.payment_id.clone());
+
+        let status = if item.response.success {
+            response_data.status.clone().into()
+        } else {
+            AttemptStatus::Failure
+        };
+
+        Ok(Self {
+            response: Ok(PaymentCreateOrderResponse {
+                order_id,
+                session_token: None,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
