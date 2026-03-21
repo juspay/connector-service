@@ -3,10 +3,140 @@
 <!--
 This file is auto-generated. Do not edit by hand.
 Source: data/field_probe/revolv3.json
-Regenerate: python3 scripts/generate-connector-docs.py revolv3
+Regenerate: python3 scripts/generators/docs/generate.py revolv3
 -->
 
-## Implemented Flows
+## SDK Configuration
+
+Use this config for all flows in this connector. Replace `YOUR_API_KEY` with your actual credentials.
+
+<table>
+<tr><td><b>Python</b></td><td><b>JavaScript</b></td><td><b>Kotlin</b></td><td><b>Rust</b></td></tr>
+<tr>
+<td valign="top">
+
+<details><summary>Python</summary>
+
+```python
+from payments.generated import sdk_config_pb2, payment_pb2
+
+config = sdk_config_pb2.ConnectorConfig(
+    options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
+)
+# Set credentials before running (field names depend on connector auth type):
+# config.connector_config.CopyFrom(payment_pb2.ConnectorSpecificConfig(
+#     revolv3=payment_pb2.Revolv3Config(api_key=...),
+# ))
+
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>JavaScript</summary>
+
+```javascript
+const { ConnectorClient } = require('connector-service-node-ffi');
+
+// Reuse this client for all flows
+const client = new ConnectorClient({
+    connector: 'Revolv3',
+    environment: 'sandbox',
+    connector_auth_type: {
+        header_key: { api_key: 'YOUR_API_KEY' },
+    },
+});
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Kotlin</summary>
+
+```kotlin
+val config = ConnectorConfig.newBuilder()
+    .setConnector("Revolv3")
+    .setEnvironment(Environment.SANDBOX)
+    .setAuth(
+        ConnectorAuthType.newBuilder()
+            .setHeaderKey(HeaderKey.newBuilder().setApiKey("YOUR_API_KEY"))
+    )
+    .build()
+```
+
+</details>
+
+</td>
+<td valign="top">
+
+<details><summary>Rust</summary>
+
+```rust
+use connector_service_sdk::{ConnectorClient, ConnectorConfig};
+
+let config = ConnectorConfig {
+    connector: "Revolv3".to_string(),
+    environment: Environment::Sandbox,
+    auth: ConnectorAuth::HeaderKey { api_key: "YOUR_API_KEY".into() },
+    ..Default::default()
+};
+```
+
+</details>
+
+</td>
+</tr>
+</table>
+
+## Integration Scenarios
+
+Complete, runnable examples for common integration patterns. Each example shows the full flow with status handling. Copy-paste into your app and replace placeholder values.
+
+### Card Payment (Authorize + Capture)
+
+Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Funds reserved — proceed to Capture to settle |
+| `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L74) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L67) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L91) · [Rust](../../examples/revolv3/rust/revolv3.rs#L87)
+
+### Card Payment (Automatic Capture)
+
+Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
+
+**Response status handling:**
+
+| Status | Recommended action |
+|--------|-------------------|
+| `AUTHORIZED` | Payment authorized and captured — funds will be settled automatically |
+| `PENDING` | Payment processing — await webhook for final status before fulfilling |
+| `FAILED` | Payment declined — surface error to customer, do not retry without new details |
+
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L99) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L93) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L113) · [Rust](../../examples/revolv3/rust/revolv3.rs#L110)
+
+### Refund a Payment
+
+Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
+
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L118) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L112) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L129) · [Rust](../../examples/revolv3/rust/revolv3.rs#L126)
+
+### Void a Payment
+
+Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
+
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L155) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L147) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L151) · [Rust](../../examples/revolv3/rust/revolv3.rs#L149)
+
+## API Reference
 
 | Flow (Service.RPC) | Category | gRPC Request Message |
 |--------------------|----------|----------------------|
@@ -15,8 +145,6 @@ Regenerate: python3 scripts/generate-connector-docs.py revolv3
 | [PaymentService.Refund](#paymentservicerefund) | Payments | `PaymentServiceRefundRequest` |
 | [PaymentService.SetupRecurring](#paymentservicesetuprecurring) | Payments | `PaymentServiceSetupRecurringRequest` |
 | [PaymentService.Void](#paymentservicevoid) | Payments | `PaymentServiceVoidRequest` |
-
-## Flow Details
 
 ### Payments
 
@@ -34,78 +162,38 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 | Payment Method | Supported |
 |----------------|:---------:|
 | Card | ✓ |
+| Google Pay | ⚠ |
+| Apple Pay | ⚠ |
+| SEPA | ⚠ |
+| BACS | ⚠ |
+| ACH | ⚠ |
+| BECS | ⚠ |
+| iDEAL | ⚠ |
+| PayPal | ⚠ |
+| BLIK | ⚠ |
+| Klarna | ⚠ |
+| Afterpay | ⚠ |
+| UPI | ⚠ |
+| Affirm | ⚠ |
+| Samsung Pay | ⚠ |
 
-**Card (Raw PAN)**
+**Payment method objects** — use these in the `payment_method` field of the Authorize request.
 
-```json
-{
-  "merchant_transaction_id": "probe_txn_001",
-  "amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "card": {
-      "card_number": "4111111111111111",
-      "card_exp_month": "03",
-      "card_exp_year": "2030",
-      "card_cvc": "737",
-      "card_holder_name": "John Doe"
+##### Card (Raw PAN)
+
+```python
+"payment_method": {
+    "card": {  # Generic card payment
+        "card_number": {"value": "4111111111111111"},  # Card Identification
+        "card_exp_month": {"value": "03"},
+        "card_exp_year": {"value": "2030"},
+        "card_cvc": {"value": "737"},
+        "card_holder_name": {"value": "John Doe"}  # Cardholder Information
     }
-  },
-  "capture_method": "AUTOMATIC",
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "shipping_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    },
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "return_url": "https://example.com/return",
-  "webhook_url": "https://example.com/webhook",
-  "complete_authorize_url": "https://example.com/complete",
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
 }
 ```
+
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L177) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L168) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L169) · [Rust](../../examples/revolv3/rust/revolv3.rs#L167)
 
 #### PaymentService.Capture
 
@@ -116,18 +204,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_capture_id": "probe_capture_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "amount_to_capture": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  }
-}
-```
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L186) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L177) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L181) · [Rust](../../examples/revolv3/rust/revolv3.rs#L179)
 
 #### PaymentService.Refund
 
@@ -138,20 +215,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_refund_id": "probe_refund_001",
-  "connector_transaction_id": "probe_connector_txn_001",
-  "payment_amount": 1000,
-  "refund_amount": {
-    "minor_amount": 1000,
-    "currency": "USD"
-  },
-  "reason": "customer_request"
-}
-```
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L118) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L112) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L191) · [Rust](../../examples/revolv3/rust/revolv3.rs#L186)
 
 #### PaymentService.SetupRecurring
 
@@ -162,69 +226,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_recurring_payment_id": "probe_mandate_001",
-  "amount": {
-    "minor_amount": 0,
-    "currency": "USD"
-  },
-  "payment_method": {
-    "card": {
-      "card_number": "4111111111111111",
-      "card_exp_month": "03",
-      "card_exp_year": "2030",
-      "card_cvc": "737",
-      "card_holder_name": "John Doe"
-    }
-  },
-  "customer": {
-    "name": "John Doe",
-    "email": "test@example.com",
-    "id": "cust_probe_123",
-    "phone_number": "4155552671",
-    "phone_country_code": "+1"
-  },
-  "address": {
-    "billing_address": {
-      "first_name": "John",
-      "last_name": "Doe",
-      "line1": "123 Main St",
-      "city": "Seattle",
-      "state": "WA",
-      "zip_code": "98101",
-      "country_alpha2_code": "US",
-      "email": "test@example.com",
-      "phone_number": "4155552671",
-      "phone_country_code": "+1"
-    }
-  },
-  "auth_type": "NO_THREE_DS",
-  "enrolled_for_3ds": false,
-  "return_url": "https://example.com/mandate-return",
-  "setup_future_usage": "OFF_SESSION",
-  "request_incremental_authorization": false,
-  "customer_acceptance": {
-    "acceptance_type": "OFFLINE",
-    "accepted_at": 0
-  },
-  "browser_info": {
-    "color_depth": 24,
-    "screen_height": 900,
-    "screen_width": 1440,
-    "java_enabled": false,
-    "java_script_enabled": true,
-    "language": "en-US",
-    "time_zone_offset_minutes": -480,
-    "accept_header": "application/json",
-    "user_agent": "Mozilla/5.0 (probe-bot)",
-    "accept_language": "en-US,en;q=0.9",
-    "ip_address": "1.2.3.4"
-  }
-}
-```
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L195) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L186) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L201) · [Rust](../../examples/revolv3/rust/revolv3.rs#L193)
 
 #### PaymentService.Void
 
@@ -235,11 +237,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Minimum Request**
-
-```json
-{
-  "merchant_void_id": "probe_void_001",
-  "connector_transaction_id": "probe_connector_txn_001"
-}
-```
+**Examples:** [Python](../../examples/revolv3/python/revolv3.py#L242) · [JavaScript](../../examples/revolv3/javascript/revolv3.js#L226) · [Kotlin](../../examples/revolv3/kotlin/revolv3.kt#L240) · [Rust](../../examples/revolv3/rust/revolv3.rs#L233)

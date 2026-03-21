@@ -332,7 +332,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .resource_common_data
                                     .get_billing_full_name()
                                     .map_err(|_| errors::ConnectorError::MissingRequiredField {
-                                        field_name: "shopper_name",
+                                        field_name: "billing.first_name",
                                     })?,
                                 country_code: item
                                     .router_data
@@ -355,7 +355,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .resource_common_data
                                     .get_billing_full_name()
                                     .map_err(|_| errors::ConnectorError::MissingRequiredField {
-                                        field_name: "shopper_name",
+                                        field_name: "billing.first_name",
                                     })?,
                             },
                             payment_method_type: AirwallexPaymentType::Blik,
@@ -1081,7 +1081,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .resource_common_data
                                     .get_billing_full_name()
                                     .map_err(|_| errors::ConnectorError::MissingRequiredField {
-                                        field_name: "shopper_name",
+                                        field_name: "billing.first_name",
                                     })?,
                                 country_code: item
                                     .router_data
@@ -1104,7 +1104,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                     .resource_common_data
                                     .get_billing_full_name()
                                     .map_err(|_| errors::ConnectorError::MissingRequiredField {
-                                        field_name: "shopper_name",
+                                        field_name: "billing.first_name",
                                     })?,
                             },
                             payment_method_type: AirwallexPaymentType::Blik,

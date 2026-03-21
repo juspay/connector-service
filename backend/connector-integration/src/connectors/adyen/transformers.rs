@@ -24,9 +24,9 @@ use domain_types::{
     errors,
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
-        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, PayLaterData,
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData, VoucherNextStepData,
-        WalletData,
+        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, NetworkTokenData,
+        PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
+        VoucherNextStepData, WalletData,
     },
     router_data::{
         ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse,
@@ -174,7 +174,9 @@ pub struct AdyenNetworkTokenData {
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
     holder_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     brand: Option<CardBrand>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     network_payment_reference: Option<Secret<String>>,
 }
 
@@ -1361,6 +1363,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_payment_reference: None,
         };
         Ok(Self::AdyenCard(Box::new(adyen_card)))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(&NetworkTokenData, Option<Secret<String>>)> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(
+        (token_data, card_holder_name): (&NetworkTokenData, Option<Secret<String>>),
+    ) -> Result<Self, Self::Error> {
+        let adyen_network_token = AdyenNetworkTokenData {
+            number: token_data.get_network_token(),
+            expiry_month: token_data.get_network_token_expiry_month(),
+            expiry_year: token_data.get_expiry_year_4_digit(),
+            holder_name: card_holder_name,
+            brand: None,                     // Only required for NTI mandate payments
+            network_payment_reference: None, // Only for mandate payments
+        };
+        Ok(Self::NetworkToken(Box::new(adyen_network_token)))
     }
 }
 
@@ -2959,6 +2980,146 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
+        &NetworkTokenData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &NetworkTokenData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, token_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let (recurring_processing_model, store_payment_method, shopper_reference) =
+            get_recurring_processing_model(&item.router_data)?;
+
+        let return_url = item.router_data.request.get_router_return_url()?;
+
+        let billing_address =
+            get_address_info(item.router_data.resource_common_data.get_optional_billing())
+                .and_then(Result::ok);
+
+        let card_holder_name = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_full_name();
+
+        let additional_data = get_additional_data(&item.router_data);
+
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+        let store = adyen_metadata.store.clone();
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
+
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((token_data, card_holder_name))?,
+        ));
+
+        // Cryptogram is REQUIRED for network token payments
+        let cryptogram =
+            token_data
+                .get_cryptogram()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "network_token_data.token_cryptogram",
+                })?;
+
+        let mpi_data = Some(AdyenMpiData {
+            directory_response: common_enums::TransactionStatus::Success,
+            authentication_response: common_enums::TransactionStatus::Success,
+            cavv: None,
+            token_authentication_verification_value: Some(cryptogram),
+            eci: Some("02".to_string()),
+            ds_trans_id: None,
+            three_ds_version: None,
+            challenge_cancel: None,
+            risk_score: None,
+            cavv_algorithm: None,
+        });
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: get_browser_info(&item.router_data)?,
+            additional_data,
+            mpi_data,
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            shopper_name: get_shopper_name(
+                item.router_data.resource_common_data.get_optional_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .get_optional_shipping(),
+            )
+            .and_then(Result::ok),
+            country_code,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: get_shopper_statement(&item.router_data),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
+            store,
+            splits: None,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
         &PayLaterData,
     )> for AdyenPaymentRequest<T>
 {
@@ -3322,6 +3483,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::PayLater(ref pay_later_data) => {
                     Self::try_from((item, pay_later_data))
                 }
+                PaymentMethodData::NetworkToken(ref token_data) => {
+                    Self::try_from((item, token_data))
+                }
                 PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
@@ -3329,7 +3493,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::Upi(_)
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-                | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
                     "payment method".into(),
@@ -3360,7 +3523,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .encoded_data
             .clone()
             .get_required_value("encoded_data")
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::MissingRequiredField {
+                field_name: "encoded_data: AdyenRedirectRequestTypes",
+            })?;
         let adyen_redirection_type =
             serde_urlencoded::from_str::<AdyenRedirectRequestTypes>(encoded_data.as_str())
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;

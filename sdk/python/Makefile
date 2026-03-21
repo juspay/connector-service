@@ -107,7 +107,7 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 generate-flows: install-codegen-deps
 	@echo "Generating Python flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang python
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang python
 	@echo "Python flow methods generated."
 
 # ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ test-package: generate-all pack-archive
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
 		--force-reinstall
-	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS)
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@echo "Running composite flow test..."
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.py /tmp/test-hyperswitch-py/
 	@cd /tmp/test-hyperswitch-py && python3 test_smoke_composite.py

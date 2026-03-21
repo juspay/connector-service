@@ -1,7 +1,44 @@
 {
   "connector": "barclaycard",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
+      "Ach": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Affirm": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Afterpay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Bacs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Becs": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Blik": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -21,25 +58,9 @@
           },
           "capture_method": "AUTOMATIC",
           "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
+            "email": "test@example.com"
           },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
             "billing_address": {
               "first_name": "John",
               "last_name": "Doe",
@@ -47,45 +68,59 @@
               "city": "Seattle",
               "state": "WA",
               "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
+              "country_alpha2_code": "US"
             }
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/",
           "method": "Post",
           "headers": {
-            "host": "api.smartpayfuse-test.barclaycard",
-            "digest": "SHA-256=Qbfo0Dq4zGtZf/66lea//wWCMEHcHFlHRrLHWT6vL78=",
-            "date": "2026-03-13 0:10:34.027034 +00:00:00",
-            "v-c-merchant-id": "probe_merchant",
-            "content-type": "application/json",
             "accept": "application/hal+json;charset=utf-8",
-            "via": "HyperSwitch",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"084ADCCcFxGBzBR52d4cuiNpL49si8lCQQK95fVQls0=\""
+            "content-type": "application/json",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "api.smartpayfuse-test.barclaycard",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"processingInformation\":{\"commerceIndicator\":\"internet\",\"capture\":true,\"cavvAlgorithm\":\"2\"},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":null,\"typeSelectionIndicator\":\"1\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"locality\":\"Seattle\",\"administrativeArea\":\"WA\",\"postalCode\":\"98101\",\"country\":\"US\",\"email\":\"test@example.com\"}},\"clientReferenceInformation\":{\"code\":\"probe_txn_001\"}}"
         }
+      },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Ideal": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Klarna": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "SamsungPay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "Sepa": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
+      },
+      "UpiCollect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Only card payments are supported"
       }
     },
     "capture": {
@@ -104,22 +139,58 @@
           "method": "Post",
           "headers": {
             "accept": "application/hal+json;charset=utf-8",
-            "v-c-merchant-id": "probe_merchant",
             "content-type": "application/json",
-            "via": "HyperSwitch",
-            "date": "2026-03-13 0:10:34.033428 +00:00:00",
-            "digest": "SHA-256=tOhAPHgdQGD8lGJloCadvNPCKDCu0PYVCNSw8wTDdqc=",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "host": "api.smartpayfuse-test.barclaycard",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"85k1UTr83Xuh72Nsni4R2qkclZPhU8PyYtEbllq9/9I=\""
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"}},\"clientReferenceInformation\":{\"code\":\"probe_capture_001\"}}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -130,16 +201,31 @@
           "url": "https://api.smartpayfuse-test.barclaycard/tss/v2/transactions/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json",
-            "date": "2026-03-13 0:10:34.03399 +00:00:00",
             "accept": "application/hal+json;charset=utf-8",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"fj1nqz3fL2oP+13Z+JdA0VDa3N7fXDoGqWTFvm0c36U=\"",
+            "content-type": "application/json",
+            "date": "2020-01-01T00:00:00+00:00",
             "host": "api.smartpayfuse-test.barclaycard",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
             "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -159,26 +245,37 @@
           "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/probe_connector_txn_001/refunds",
           "method": "Post",
           "headers": {
-            "content-type": "application/json",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"iAjLBu2ioLB/GdA+eVvOwz4p3atFRyHsFt1L+30bBqs=\"",
-            "host": "api.smartpayfuse-test.barclaycard",
             "accept": "application/hal+json;charset=utf-8",
+            "content-type": "application/json",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "api.smartpayfuse-test.barclaycard",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
-            "digest": "SHA-256=7BHdZNNrtfkeSE7pxmXUWdKP3ayikeOY2qn4mlBmToY=",
-            "via": "HyperSwitch",
-            "date": "2026-03-13 0:10:34.033607 +00:00:00"
+            "via": "HyperSwitch"
           },
           "body": "{\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"}},\"clientReferenceInformation\":{\"code\":\"probe_refund_001\"}}"
         }
       }
     },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "void": {
       "default": {
         "status": "supported",
-        "required_fields": [
-          "currency",
-          "cancellation_reason"
-        ],
         "proto_request": {
           "merchant_void_id": "probe_void_001",
           "connector_transaction_id": "probe_connector_txn_001",
@@ -192,14 +289,14 @@
           "url": "https://api.smartpayfuse-test.barclaycard/pts/v2/payments/probe_connector_txn_001/voids",
           "method": "Post",
           "headers": {
-            "date": "2026-03-13 0:10:34.033847 +00:00:00",
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "host": "api.smartpayfuse-test.barclaycard",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"hBqRhmrnHcpJoWLCsSuJ+wy0z3gUWGpWeG5qG8Ty1HM=\"",
-            "via": "HyperSwitch",
-            "digest": "SHA-256=rqC9ETiTNXILMTxM529U98SQAdRAmKTCnEXqs8CAz94=",
-            "v-c-merchant-id": "probe_merchant"
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"clientReferenceInformation\":{\"code\":\"probe_void_001\"},\"reversalInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"reason\":\"requested_by_customer\"}}"
         }

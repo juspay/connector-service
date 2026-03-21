@@ -54,7 +54,9 @@ name = "trustpay"
 [payment_methods]
 Card = true
 GooglePay = true
+GooglePayDecrypted = true
 ApplePay = true
+ApplePayDecrypted = true
 Sepa = true
 Bacs = true
 Ach = true
@@ -73,7 +75,7 @@ SamsungPay = true
 [connector_metadata]
 braintree = '{"merchant_account_id":"probe_merchant_acct","merchant_config_currency":"USD"}'
 mifinity = '{"brand_id":"probe_brand","destination_account_number":"probe_acct_123"}'
-worldpay = '{"merchant_name":"Probe Merchant"}'
+worldpay = '{"merchant_name":"Probe Merchant","link_data":"probe_link_data_001"}'
 paysafe = '{"account_id":{"card":{"USD":{"no_three_ds":"probe_acct_no3ds","three_ds":"probe_acct_3ds"}},"ach":{"USD":{"account_id":"probe_ach_acct"}}}}'
 fiserv = '{"terminal_id":"probe_terminal"}'
 gigadat = '{"site":"probe_site"}'
@@ -86,4 +88,26 @@ paypal = '{"authorize_id":"probe_auth_001","capture_id":"probe_cap_001","psync_f
 forte = '{"auth_id":"probe_auth_001"}'
 authorizedotnet = '{"creditCard":{"cardNumber":"4111111111111111","expirationDate":"2025-12"}}'
 hyperpg = '{"order_id":"probe_order_001"}'
+paybox  = '{"connector_request_id":"probe_req_001"}'
 default = '{}'
+
+# Per-connector request field overrides.
+# Some connectors require specific field formats that differ from the probe defaults.
+# For example, Zift and Placetopay parse connector_transaction_id as i64/u64,
+# so they need a numeric string instead of the default "probe_connector_txn_001".
+[connector_overrides.zift]
+connector_transaction_id = "12345"
+
+[connector_overrides.placetopay]
+connector_transaction_id = "12345"
+
+# Header fields whose values are always random/dynamic and should be replaced
+# with a static placeholder in sample output.
+[normalize_headers]
+replace_with_static = ["salt", "idempotency-key", "timestamp", "x-request-id", "x-nonce"]
+
+# JSON body field names whose values are always dynamic (timestamps, nonces, IDs)
+# and should be replaced with static placeholders in sample output.
+[normalize_json]
+dynamic_fields = ["nonce", "invoiceNumber", "timestamp", "requestTimestamp"]
+digit_value_fields = ["NUMQUESTION"]
