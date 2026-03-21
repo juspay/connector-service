@@ -6,12 +6,14 @@ use crate::{
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{request::MultipartData, types::StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
+    connector_flow::{
+        Authorize, Capture, CreateOrder, PSync, PaymentMethodToken, RSync, Refund, Void,
+    },
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -1044,6 +1046,205 @@ impl GetFormData for HipayVoidRequest {
 
 // GetFormData implementation for HipayRefundRequest
 impl GetFormData for HipayRefundRequest {
+    fn get_form_data(&self) -> MultipartData {
+        build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
+    }
+}
+
+// ========================================================================================
+// CreateOrder Flow Types and Implementations
+// ========================================================================================
+
+// CreateOrder Request Structure
+// Used to create an order without completing the payment
+// HiPay API requires payment_product even for order creation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HipayCreateOrderRequest {
+    pub orderid: String,
+    pub description: String,
+    pub currency: common_enums::Currency,
+    pub amount: StringMajorUnit,
+    pub payment_product: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cardtoken: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub accept_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub decline_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pending_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancel_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notify_url: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        HipayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for HipayCreateOrderRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: HipayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Convert amount to StringMajorUnit (HiPay expects string with decimals)
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
+
+        // Use description from resource_common_data or default
+        let description = item
+            .router_data
+            .resource_common_data
+            .description
+            .clone()
+            .unwrap_or_else(|| "Order Creation".to_string());
+
+        // Build callback URLs from webhook_url if present
+        let (accept_url, decline_url, pending_url, cancel_url, notify_url) =
+            item.router_data.request.webhook_url.as_ref().map_or(
+                (None, None, None, None, None),
+                |url| {
+                    let url_str = url.clone();
+                    (
+                        Some(url_str.clone()),
+                        Some(url_str.clone()),
+                        Some(url_str.clone()),
+                        Some(url_str.clone()),
+                        Some(url_str),
+                    )
+                },
+            );
+
+        // Get payment product and cardtoken from metadata if provided
+        // These are required by HiPay API even for order creation
+        let metadata = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .map(|m| m.peek().as_object().cloned())
+            .flatten();
+
+        let payment_product = metadata
+            .as_ref()
+            .and_then(|obj| obj.get("payment_product"))
+            .and_then(|v| v.as_str())
+            .map(String::from)
+            .unwrap_or_else(|| "visa".to_string()); // Default to visa as placeholder
+
+        let cardtoken = metadata
+            .as_ref()
+            .and_then(|obj| obj.get("cardtoken"))
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
+        Ok(Self {
+            orderid: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            description,
+            currency: item.router_data.request.currency,
+            amount,
+            payment_product,
+            cardtoken,
+            accept_url,
+            decline_url,
+            pending_url,
+            cancel_url,
+            notify_url,
+        })
+    }
+}
+
+// CreateOrder Response Structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HipayCreateOrderResponse {
+    pub status: HipayPaymentStatus,
+    pub message: String,
+    #[serde(rename = "orderId")]
+    pub order_id: String,
+    #[serde(rename = "transactionReference")]
+    pub transaction_reference: String,
+    #[serde(default)]
+    #[serde(rename = "forwardUrl")]
+    pub forward_url: String,
+}
+
+impl TryFrom<ResponseRouterData<HipayCreateOrderResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<HipayCreateOrderResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Convert HipayPaymentStatus enum directly to AttemptStatus using From trait
+        let status = AttemptStatus::from(item.response.status.clone());
+
+        // Check if status is failure to return error response
+        let response = if status == AttemptStatus::Failure {
+            Err(domain_types::router_data::ErrorResponse {
+                code: "ORDER_CREATION_FAILED".to_string(),
+                message: item.response.message.clone(),
+                reason: Some(item.response.message.clone()),
+                status_code: item.http_code,
+                attempt_status: None,
+                connector_transaction_id: Some(item.response.transaction_reference.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            })
+        } else {
+            Ok(PaymentCreateOrderResponse {
+                order_id: item.response.order_id.clone(),
+                session_token: None,
+            })
+        };
+
+        Ok(Self {
+            response,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// GetFormData implementation for HipayCreateOrderRequest
+impl GetFormData for HipayCreateOrderRequest {
     fn get_form_data(&self) -> MultipartData {
         build_form_from_struct(self).unwrap_or_else(|_| MultipartData::new())
     }
