@@ -7,13 +7,14 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, Void,
+        Authorize, Capture, CreateOrder, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        Void,
     },
     connector_types::{
-        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -1580,6 +1581,134 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<NexixpayPostAuthentic
                 // No need for connector_metadata - using authentication_data.ds_trans_id for PaRes
                 ..item.router_data.resource_common_data
             },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== ORDER CREATE FLOW STRUCTURES =====
+// Creates a Nexi XPay order without completing payment
+// Uses POST /orders/build endpoint
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayOrderCreateRequest {
+    pub order: NexixpayOrderCreateOrderData,
+    pub payment_session: Option<NexixpayPaymentSession>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayOrderCreateOrderData {
+    pub order_id: String,
+    pub amount: StringMinorUnit,
+    pub currency: common_enums::Currency,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayPaymentSession {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub return_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancel_url: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NexixpayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for NexixpayOrderCreateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        value: NexixpayRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = &value.router_data;
+
+        // Build order data
+        let order = NexixpayOrderCreateOrderData {
+            order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
+            amount: StringMinorUnitForConnector
+                .convert(item.request.amount, item.request.currency)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            currency: item.request.currency,
+            description: item.resource_common_data.description.clone(),
+        };
+
+        // Build payment session with return/cancel URLs from metadata if available
+        let payment_session = item.request.metadata.as_ref().map(|metadata| {
+            let meta = metadata.peek();
+            NexixpayPaymentSession {
+                return_url: meta
+                    .get("return_url")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
+                cancel_url: meta
+                    .get("cancel_url")
+                    .and_then(|v| v.as_str())
+                    .map(String::from),
+            }
+        });
+
+        Ok(Self {
+            order,
+            payment_session,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexixpayOrderCreateResponse {
+    pub order_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_url: Option<String>,
+    pub expires_at: String,
+}
+
+impl TryFrom<ResponseRouterData<NexixpayOrderCreateResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<NexixpayOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let order_id = item.response.order_id.clone();
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::Pending,
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentCreateOrderResponse {
+                order_id,
+                session_token: None,
+            }),
             ..item.router_data
         })
     }
