@@ -4,18 +4,18 @@ use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{consts, errors::CustomResult, types::MinorUnit, SecretSerdeValue};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeOptionInterface, PeekInterface, Secret};
 use serde::Serialize;
 use std::fmt::Debug;
 use time::format_description::well_known::Iso8601;
@@ -653,5 +653,83 @@ impl Default for requests::PeachpaymentsCofData {
             source: requests::CofSource::Cit,
             mode: requests::CofMode::Initial,
         }
+    }
+}
+
+// CreateOrder TryFrom implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PeachpaymentsRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for requests::PeachpaymentsOrderCreateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: PeachpaymentsRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let request = &item.router_data.request;
+
+        Ok(Self {
+            merchant_transaction_id: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            amount: request.amount.to_string(),
+            currency: request.currency.to_string(),
+            payment_type: "DB".to_string(),
+            shopper_result_url: request.webhook_url.clone(),
+            notification_url: request.webhook_url.clone(),
+            customer: None,
+            billing: None,
+            shipping: None,
+            cart: None,
+            custom_parameters: request.metadata.as_ref().map(|m| m.peek().clone()),
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<responses::PeachpaymentsOrderCreateResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<responses::PeachpaymentsOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let order_id = item.response.id.ok_or_else(|| {
+            error_stack::report!(errors::ConnectorError::MissingConnectorTransactionID)
+        })?;
+
+        let response = PaymentCreateOrderResponse {
+            order_id,
+            session_token: None,
+        };
+
+        Ok(Self {
+            response: Ok(response),
+            ..item.router_data
+        })
     }
 }

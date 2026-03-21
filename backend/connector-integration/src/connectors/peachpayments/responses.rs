@@ -215,3 +215,34 @@ pub enum FailureReason {
     OfflineDeclined,
     CustomerCancel,
 }
+
+// orderCreate response types
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsOrderCreateResponse {
+    pub result: PeachpaymentsOrderCreateResult,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub build_number: Option<String>,
+    pub timestamp: String,
+    pub ndc: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsOrderCreateResult {
+    pub code: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl PeachpaymentsOrderCreateResponse {
+    pub fn is_successful(&self) -> bool {
+        self.result.code.starts_with("000.000") || self.result.code == "000.200.100"
+    }
+
+    pub fn is_pending(&self) -> bool {
+        self.result.code.starts_with("000.200")
+    }
+}

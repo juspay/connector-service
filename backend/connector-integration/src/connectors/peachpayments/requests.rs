@@ -244,3 +244,64 @@ pub struct PeachpaymentsCofData {
 pub struct PeachpaymentsMerchantInformation {
     pub client_merchant_reference_id: Secret<String>,
 }
+
+// orderCreate types - checkout session creation
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsOrderCreateRequest {
+    pub merchant_transaction_id: String,
+    pub amount: String,
+    pub currency: String,
+    pub payment_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shopper_result_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notification_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer: Option<PeachpaymentsCustomer>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing: Option<PeachpaymentsBilling>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping: Option<PeachpaymentsShipping>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cart: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_parameters: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsCustomer {
+    pub given_name: String,
+    pub surname: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mobile: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsBilling {
+    pub street1: String,
+    pub city: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
+    pub country: String,
+    pub postcode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub company: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PeachpaymentsShipping {
+    pub street1: String,
+    pub city: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
+    pub country: String,
+    pub postcode: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub company: Option<String>,
+}
