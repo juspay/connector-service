@@ -9,9 +9,19 @@ const DEFAULT_ERROR_CODE: &str = "UNKNOWN_ERROR";
 const DEFAULT_ERROR_MESSAGE: &str = "Unknown error occurred";
 
 // Error response structure - BlueSnap API uses nested format
+// Also handles flat error format for auth failures: {"errorCode":"401","errorDescription":"..."}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BluesnapErrorResponse {
-    pub message: Vec<BluesnapErrorMessage>,
+#[serde(untagged)]
+pub enum BluesnapErrorResponse {
+    Standard {
+        message: Vec<BluesnapErrorMessage>,
+    },
+    Flat {
+        #[serde(rename = "errorCode")]
+        error_code: String,
+        #[serde(rename = "errorDescription")]
+        error_description: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,23 +36,31 @@ pub struct BluesnapErrorMessage {
 
 impl BluesnapErrorResponse {
     pub fn code(&self) -> String {
-        self.message
-            .first()
-            .and_then(|msg| msg.code.clone())
-            .unwrap_or_else(|| DEFAULT_ERROR_CODE.to_string())
+        match self {
+            BluesnapErrorResponse::Standard { message } => message
+                .first()
+                .and_then(|msg| msg.code.clone())
+                .unwrap_or_else(|| DEFAULT_ERROR_CODE.to_string()),
+            BluesnapErrorResponse::Flat { error_code, .. } => error_code.clone(),
+        }
     }
 
     pub fn message(&self) -> String {
-        self.message
-            .first()
-            .map(|msg| msg.description.clone())
-            .unwrap_or_else(|| DEFAULT_ERROR_MESSAGE.to_string())
+        match self {
+            BluesnapErrorResponse::Standard { message } => message
+                .first()
+                .map(|msg| msg.description.clone())
+                .unwrap_or_else(|| DEFAULT_ERROR_MESSAGE.to_string()),
+            BluesnapErrorResponse::Flat {
+                error_description, ..
+            } => error_description.clone(),
+        }
     }
 }
 
 impl Default for BluesnapErrorResponse {
     fn default() -> Self {
-        Self {
+        BluesnapErrorResponse::Standard {
             message: vec![BluesnapErrorMessage {
                 error_name: None,
                 code: None,
@@ -121,6 +139,7 @@ pub type BluesnapAuthorizeResponse = BluesnapPaymentsResponse;
 pub type BluesnapCaptureResponse = BluesnapPaymentsResponse;
 pub type BluesnapPSyncResponse = BluesnapPaymentsResponse;
 pub type BluesnapVoidResponse = BluesnapPaymentsResponse;
+pub type BluesnapCreateOrderResponse = BluesnapPaymentsResponse;
 
 // Refund response structure based on BlueSnap tech spec
 #[derive(Debug, Deserialize, Serialize)]

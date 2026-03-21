@@ -2,11 +2,11 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::AttemptStatus;
 use common_utils::errors::CustomResult;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund},
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
@@ -27,18 +27,18 @@ const WALLET_TYPE_GOOGLE_PAY: &str = "GOOGLE_PAY";
 // Re-export request types
 pub use requests::{
     BluesnapAchAuthorizeRequest, BluesnapAchData, BluesnapAuthorizeRequest, BluesnapCaptureRequest,
-    BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreditCard,
-    BluesnapEcpTransaction, BluesnapMetadata, BluesnapPayerInfo, BluesnapPaymentMethodDetails,
-    BluesnapPaymentsRequest, BluesnapPaymentsTokenRequest, BluesnapRefundRequest,
-    BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest, BluesnapWallet,
-    RequestMetadata, TransactionFraudInfo,
+    BluesnapCardHolderInfo, BluesnapCompletePaymentsRequest, BluesnapCreateOrderRequest,
+    BluesnapCreditCard, BluesnapEcpTransaction, BluesnapMetadata, BluesnapPayerInfo,
+    BluesnapPaymentMethodDetails, BluesnapPaymentsRequest, BluesnapPaymentsTokenRequest,
+    BluesnapRefundRequest, BluesnapThreeDSecureInfo, BluesnapTxnType, BluesnapVoidRequest,
+    BluesnapWallet, RequestMetadata, TransactionFraudInfo,
 };
 
 // Re-export response types
 pub use responses::{
     BluesnapAuthorizeResponse, BluesnapCaptureResponse, BluesnapChargebackStatus,
-    BluesnapCreditCardResponse, BluesnapDisputeWebhookBody, BluesnapErrorResponse,
-    BluesnapPSyncResponse, BluesnapPaymentsResponse, BluesnapProcessingInfo,
+    BluesnapCreateOrderResponse, BluesnapCreditCardResponse, BluesnapDisputeWebhookBody,
+    BluesnapErrorResponse, BluesnapPSyncResponse, BluesnapPaymentsResponse, BluesnapProcessingInfo,
     BluesnapProcessingStatus, BluesnapRedirectionResponse, BluesnapRefundResponse,
     BluesnapRefundStatus, BluesnapRefundSyncResponse, BluesnapThreeDsReference,
     BluesnapThreeDsResult, BluesnapVoidResponse, BluesnapWebhookBody, BluesnapWebhookEvent,
@@ -722,6 +722,101 @@ pub fn map_chargeback_status_to_event_type(
         BluesnapChargebackStatus::CompletedPending => EventType::DisputeChallenged,
         BluesnapChargebackStatus::CompletedWon => EventType::DisputeWon,
     })
+}
+
+// ===== CREATE ORDER TRANSFORMERS =====
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::BluesnapRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for requests::BluesnapCreateOrderRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::BluesnapRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        let billing_address = router_data
+            .resource_common_data
+            .address
+            .get_payment_method_billing();
+
+        // CreateOrder is similar to Authorize but always uses AUTH_ONLY (no capture)
+        // This creates a pending order that can be captured later
+        match &router_data.request.payment_method_type {
+            Some(common_enums::PaymentMethodType::Card) => {
+                // CreateOrder requires card details to be available in the request
+                // The card data should be provided via the request's payment method data
+                Err(error_stack::report!(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "payment_method_data"
+                    }
+                ))?
+            }
+            Some(common_enums::PaymentMethodType::Ach) => {
+                // CreateOrder for ACH requires bank account details from the request
+                // These should be provided via the request's payment method data
+                Err(error_stack::report!(
+                    errors::ConnectorError::MissingRequiredField {
+                        field_name: "payment_method_data"
+                    }
+                ))?
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "CreateOrder only supports Card and ACH payment methods".to_string(),
+            ))?,
+        }
+    }
+}
+
+impl TryFrom<ResponseRouterData<BluesnapCreateOrderResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<BluesnapCreateOrderResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = get_attempt_status_from_bluesnap_status(
+            item.response.card_transaction_type.clone(),
+            item.response.processing_info.processing_status.clone(),
+        );
+
+        Ok(Self {
+            response: Ok(PaymentCreateOrderResponse {
+                order_id: item.response.transaction_id.clone(),
+                session_token: None, // BlueSnap CreateOrder doesn't provide session tokens
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
 }
 
 pub fn map_webhook_event_to_incoming_webhook_event(

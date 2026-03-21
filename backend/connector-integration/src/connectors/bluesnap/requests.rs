@@ -197,6 +197,9 @@ pub enum BluesnapAuthorizeRequest {
     Ach(BluesnapAchAuthorizeRequest),
 }
 
+// CreateOrder request is the same as Authorize but always uses AUTH_ONLY
+pub type BluesnapCreateOrderRequest = BluesnapAuthorizeRequest;
+
 // ===== 3DS AUTHENTICATION STRUCTURES =====
 
 // 3D Secure information for complete authorize

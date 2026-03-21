@@ -42,7 +42,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as bluesnap, BluesnapAuthorizeRequest, BluesnapAuthorizeResponse, BluesnapCaptureRequest,
-    BluesnapCaptureResponse, BluesnapPSyncResponse, BluesnapRefundRequest, BluesnapRefundResponse,
+    BluesnapCaptureResponse, BluesnapCreateOrderRequest, BluesnapCreateOrderResponse,
+    BluesnapPSyncResponse, BluesnapRefundRequest, BluesnapRefundResponse,
     BluesnapRefundSyncResponse, BluesnapVoidRequest, BluesnapVoidResponse,
 };
 
@@ -390,6 +391,12 @@ macros::create_all_prerequisites!(
     generic_type: T,
     api: [
         (
+            flow: CreateOrder,
+            request_body: BluesnapCreateOrderRequest,
+            response_body: BluesnapCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
             flow: Authorize,
             request_body: BluesnapAuthorizeRequest,
             response_body: BluesnapAuthorizeResponse,
@@ -488,6 +495,46 @@ macros::macro_connector_implementation!(
 
             match &req.request.payment_method_data {
                 PaymentMethodData::BankDebit(_) => {
+                    // ACH uses alt-transactions endpoint
+                    Ok(format!("{}/services/2/alt-transactions", base_url))
+                },
+                _ => {
+                    // Cards and wallets use standard transactions endpoint
+                    Ok(format!("{}/services/2/transactions", base_url))
+                },
+            }
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Bluesnap,
+    curl_request: Json(BluesnapCreateOrderRequest),
+    curl_response: BluesnapCreateOrderResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req);
+
+            match req.request.payment_method_type {
+                Some(common_enums::PaymentMethodType::Ach) => {
                     // ACH uses alt-transactions endpoint
                     Ok(format!("{}/services/2/alt-transactions", base_url))
                 },
@@ -698,17 +745,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         MandateRevokeRequestData,
         MandateRevokeResponseData,
-    > for Bluesnap<T>
-{
-}
-
-// Order Create
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
     > for Bluesnap<T>
 {
 }
