@@ -9,17 +9,19 @@ use common_utils::{
     types::{MinorUnit, SemanticVersion},
     SecretSerdeValue,
 };
+use std::fmt::Debug;
+
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, DefendDispute, PSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, Refund, RepeatPayment,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        MandateReference, MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::{
@@ -6980,4 +6982,103 @@ fn get_adyen_split_request(
             (store, Some(splits))
         })
         .unwrap_or_else(|| (adyen_store.clone(), None))
+}
+
+// OrderCreate flow - Creates an order for partial payments
+// Based on Adyen Checkout API /orders endpoint
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenOrderCreateRequest {
+    pub amount: Amount,
+    pub merchant_account: Secret<String>,
+    pub reference: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<Secret<serde_json::Value>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenOrderCreateResponse {
+    pub psp_reference: String,
+    pub reference: String,
+    pub expires_at: Option<String>,
+    pub amount: Amount,
+    pub remaining_amount: Amount,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for AdyenOrderCreateRequest
+{
+    type Error = Error;
+    fn try_from(
+        value: AdyenRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = value.router_data;
+        let auth_type = AdyenAuthType::try_from(&item.connector_config)?;
+
+        let amount = Amount {
+            currency: item.request.currency,
+            value: item.request.amount,
+        };
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            reference: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            expires_at: None,
+            metadata: item
+                .request
+                .metadata
+                .clone()
+                .map(|m| Secret::new(m.expose())),
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<AdyenOrderCreateResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = Error;
+    fn try_from(
+        item: ResponseRouterData<AdyenOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = PaymentCreateOrderResponse {
+            order_id: item.response.psp_reference,
+            session_token: None,
+        };
+
+        Ok(Self {
+            response: Ok(response),
+            ..item.router_data
+        })
+    }
 }
