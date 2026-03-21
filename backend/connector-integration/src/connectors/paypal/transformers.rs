@@ -13,13 +13,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
+        Authorize, Capture, CreateOrder, PSync, PostAuthenticate, RepeatPayment,
+        VerifyWebhookSource,
     },
     connector_types::{
-        AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        AccessTokenResponseData, MandateReference, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -3396,4 +3398,112 @@ fn get_paypal_error_message(error_code: &str) -> Option<&str> {
 pub struct PaypalAccessTokenErrorResponse {
     pub error: String,
     pub error_description: String,
+}
+
+// ----------------------------------------------------------------------------
+// CreateOrder Flow - For creating PayPal orders (wallet flows)
+// ----------------------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+pub struct PaypalCreateOrderRequest {
+    intent: PaypalPaymentIntent,
+    purchase_units: Vec<PaypalCreateOrderPurchaseUnit>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaypalCreateOrderPurchaseUnit {
+    amount: OrderAmount,
+    reference_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaypalCreateOrderResponse {
+    pub id: String,
+    pub status: PaypalOrderStatus,
+    pub intent: PaypalPaymentIntent,
+    pub links: Option<Vec<PaypalLinks>>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for PaypalCreateOrderRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let value = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+
+        let amount = OrderAmount {
+            currency_code: item.router_data.request.currency,
+            value,
+        };
+
+        // Use CAPTURE as default intent for order creation
+        let intent = PaypalPaymentIntent::Capture;
+
+        let reference_id = item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        Ok(Self {
+            intent,
+            purchase_units: vec![PaypalCreateOrderPurchaseUnit {
+                amount,
+                reference_id: Some(reference_id),
+            }],
+        })
+    }
+}
+
+impl TryFrom<ResponseRouterData<PaypalCreateOrderResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<PaypalCreateOrderResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let order_id = item.response.id.clone();
+
+        Ok(Self {
+            response: Ok(PaymentCreateOrderResponse {
+                order_id,
+                session_token: None,
+            }),
+            ..item.router_data
+        })
+    }
 }
