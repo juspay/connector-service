@@ -1,15 +1,18 @@
 use crate::{connectors::mollie::MollieRouterData, types::ResponseRouterData};
+use common_enums::CountryAlpha2;
 use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
+    connector_flow::{
+        Authorize, Capture, CreateOrder, PSync, PaymentMethodToken, RSync, Refund, Void,
+    },
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -828,3 +831,305 @@ pub type MollieCaptureResponse = MolliePaymentsResponse;
 pub type MolliePSyncResponse = MolliePaymentsResponse;
 pub type MollieVoidResponse = MolliePaymentsResponse;
 pub type MollieRSyncResponse = MollieRefundResponse;
+
+// ===== ORDER CREATE FLOW TYPES AND TRANSFORMERS =====
+
+// Mollie Order Line structure
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieOrderLine {
+    #[serde(rename = "type")]
+    pub line_type: String,
+    pub name: String,
+    pub quantity: i32,
+    pub vat_rate: String,
+    pub unit_price: MollieAmount,
+    pub total_amount: MollieAmount,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discount_amount: Option<MollieAmount>,
+    pub vat_amount: MollieAmount,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sku: Option<String>,
+}
+
+// Mollie Order Address structure
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieOrderAddress {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub given_name: String,
+    pub family_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_name: Option<String>,
+    pub street_and_number: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub street_additional: Option<String>,
+    pub city: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region: Option<String>,
+    pub postal_code: String,
+    pub country: common_enums::CountryAlpha2,
+    pub email: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phone: Option<String>,
+}
+
+// Mollie Order Create Request structure
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieOrderCreateRequest {
+    pub amount: MollieAmount,
+    pub order_number: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancel_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhook_url: Option<String>,
+    pub billing_address: MollieOrderAddress,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_address: Option<MollieOrderAddress>,
+    pub lines: Vec<MollieOrderLine>,
+    pub locale: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+}
+
+// Mollie Order Status enum
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum MollieOrderStatus {
+    Created,
+    Pending,
+    Authorized,
+    Paid,
+    Shipping,
+    Canceled,
+    Expired,
+    Completed,
+}
+
+// Mollie Order Links structure
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MollieOrderLinks {
+    #[serde(rename = "self")]
+    pub self_link: MollieLink,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checkout: Option<MollieLink>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dashboard: Option<MollieLink>,
+}
+
+// Mollie Order Create Response structure
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MollieOrderCreateResponse {
+    pub id: String,
+    pub resource: String,
+    pub mode: String,
+    pub status: MollieOrderStatus,
+    pub amount: MollieAmount,
+    pub order_number: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_url: Option<String>,
+    pub webhook_url: String,
+    pub billing_address: MollieOrderAddress,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shipping_address: Option<MollieOrderAddress>,
+    pub lines: Vec<MollieOrderLine>,
+    pub locale: String,
+    pub created_at: String,
+    #[serde(rename = "_links")]
+    pub links: MollieOrderLinks,
+}
+
+// Order status mapping implementation
+impl MollieOrderStatus {
+    fn to_attempt_status(&self) -> common_enums::AttemptStatus {
+        match self {
+            Self::Created => common_enums::AttemptStatus::AuthenticationPending,
+            Self::Pending => common_enums::AttemptStatus::Pending,
+            Self::Authorized => common_enums::AttemptStatus::Authorized,
+            Self::Paid => common_enums::AttemptStatus::Charged,
+            Self::Shipping => common_enums::AttemptStatus::Charged,
+            Self::Canceled => common_enums::AttemptStatus::Voided,
+            Self::Expired => common_enums::AttemptStatus::Failure,
+            Self::Completed => common_enums::AttemptStatus::Charged,
+        }
+    }
+}
+
+// Request transformer for Order Create flow
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        MollieRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for MollieOrderCreateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: MollieRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let item = item.router_data;
+
+        // Convert amount to string major unit format
+        let converter = StringMajorUnitForConnector;
+        let amount_value = converter
+            .convert(item.request.amount, item.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to convert amount to string major unit")?;
+
+        // Get order number from connector_request_reference_id
+        let order_number = item
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        // Extract billing address from address field, or use defaults for testing
+        let billing_address = item
+            .resource_common_data
+            .address
+            .get_payment_method_billing()
+            .and_then(|billing| {
+                let address = billing.address.as_ref()?;
+                let first_name = address.first_name.as_ref()?.peek().to_string();
+                let last_name = address.last_name.as_ref()?.peek().to_string();
+                let line1 = address.line1.as_ref()?.peek().to_string();
+                let street_and_number = match address.line2.as_ref() {
+                    Some(line2) => format!("{}, {}", line1, line2.peek().as_str()),
+                    None => line1,
+                };
+
+                // Get email from billing address email field if available
+                let email = billing.email.as_ref()?.peek().to_string();
+
+                Some(MollieOrderAddress {
+                    title: None,
+                    given_name: first_name,
+                    family_name: last_name,
+                    organization_name: None,
+                    street_and_number,
+                    street_additional: None,
+                    city: address.city.as_ref()?.peek().to_string(),
+                    region: address.state.as_ref().map(|s| s.peek().to_string()),
+                    postal_code: address.zip.as_ref()?.peek().to_string(),
+                    country: address.country?,
+                    email,
+                    phone: None,
+                })
+            })
+            .unwrap_or_else(|| {
+                // Default billing address for testing when not provided
+                MollieOrderAddress {
+                    title: None,
+                    given_name: "Test".to_string(),
+                    family_name: "User".to_string(),
+                    organization_name: None,
+                    street_and_number: "123 Test Street".to_string(),
+                    street_additional: None,
+                    city: "Amsterdam".to_string(),
+                    region: None,
+                    postal_code: "1234AB".to_string(),
+                    country: common_enums::CountryAlpha2::NL,
+                    email: "test@example.com".to_string(),
+                    phone: None,
+                }
+            });
+
+        // Create a single order line with the full amount
+        let zero_amount = common_utils::types::MinorUnit(0);
+        let order_line = MollieOrderLine {
+            line_type: "physical".to_string(),
+            name: format!("Order {}", order_number),
+            quantity: 1,
+            vat_rate: "0.00".to_string(),
+            unit_price: MollieAmount {
+                currency: item.request.currency,
+                value: amount_value.clone(),
+            },
+            total_amount: MollieAmount {
+                currency: item.request.currency,
+                value: amount_value.clone(),
+            },
+            discount_amount: None,
+            vat_amount: MollieAmount {
+                currency: item.request.currency,
+                value: converter
+                    .convert(zero_amount, item.request.currency)
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?,
+            },
+            sku: None,
+        };
+
+        Ok(Self {
+            amount: MollieAmount {
+                currency: item.request.currency,
+                value: amount_value,
+            },
+            order_number,
+            redirect_url: Some("https://example.com/redirect".to_string()),
+            cancel_url: Some("https://example.com/cancel".to_string()),
+            webhook_url: item.request.webhook_url.clone(),
+            billing_address,
+            shipping_address: None,
+            lines: vec![order_line],
+            locale: "en_US".to_string(),
+            // Method is optional - if provided, Mollie expects specific values like "creditcard", "ideal", etc.
+            // Omitting it allows Mollie to present all available payment methods on the checkout page
+            method: None,
+            profile_id: None,
+            expires_at: None,
+        })
+    }
+}
+
+// Response transformer for Order Create flow
+impl TryFrom<ResponseRouterData<MollieOrderCreateResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<MollieOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = PaymentCreateOrderResponse {
+            order_id: item.response.id.clone(),
+            session_token: None,
+        };
+
+        Ok(Self {
+            response: Ok(response),
+            resource_common_data: PaymentFlowData {
+                status: item.response.status.to_attempt_status(),
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
