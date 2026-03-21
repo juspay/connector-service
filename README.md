@@ -46,8 +46,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 ---
 
-
-## ✨ Features
+## ✨ Key Features
 
 
 - **🔌 100+ Connectors** — Stripe, Adyen, Braintree, PayPal, Worldpay, and more
@@ -70,7 +69,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Prism Library                           │
-│                 (Type-safe, idiomatic interface)                │
+│                 (Idiomatic, type safe interface)                │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
                                  ▼
@@ -81,56 +80,9 @@ Because every payment processor has diverse APIs, error codes, authentication me
    └──────────┘           └──────────┘           └──────────┘           └──────────┘
 ```
 
-
-### Payment & Capture Flow Sequence
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#B3D9F2', 'primaryTextColor': '#333333', 'primaryBorderColor': '#5B9BD5', 'lineColor': '#666666', 'secondaryColor': '#C5E8C0', 'tertiaryColor': '#F9B872'}}}%%
-sequenceDiagram
-   autonumber
-   participant App as Your App
-   participant SDK as Prism
-   participant PSP as Payment Service Provider (PSP)
-   
-   Note over App,PSP: Payment Authorization
-   App->>SDK: paymentservice.authorize(amount, currency, payment_method)
-   activate SDK
-   SDK->>PSP: Provider-specific Authorize API call
-   activate PSP
-   PSP-->>SDK: Provider-specific response
-   deactivate PSP
-   SDK-->>App: Unified authorize response
-   deactivate SDK
-
-   Note over App,PSP: Payment Capture
-   App->>SDK: paymentservice.capture(payment_id, amount)
-   activate SDK
-   SDK->>PSP: Provider-specific Capture API call
-   activate PSP
-   PSP-->>SDK: Provider-specific Capture response
-   deactivate PSP
-   SDK-->>App: Unified capture response
-   deactivate SDK
-
-   Note over App,PSP: Event Service (Webhooks)
-   PSP->>App: webhook(event_payload)
-   activate App
-   App->>SDK: eventservice.handle(unified_event)
-   activate SDK
-   SDK->>App: Unified event payload
-   deactivate SDK
-   deactivate App
-
-```
-
----
-
-
 ## 🚀 Quick Start
 
-### Install the Prism Library
-
-<!-- tabs:start -->
+### Install Prism Library
 
 #### **Node.js**
 
@@ -162,15 +114,11 @@ Add to your `pom.xml`:
 composer require juspay/hyperswitch-prism
 ```
 
-<!-- tabs:end -->
-
 For detailed installation instructions, see [Installation Guide](./getting-started/installation.md).
 
 ---
 
 ### Create a Payment Order
-
-<!-- tabs:start -->
 
 #### **Node.js**
 
@@ -226,8 +174,6 @@ public class Example {
     }
 }
 ```
-<!-- tabs:end -->
-
 
 ---
 
