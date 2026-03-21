@@ -5,12 +5,12 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, RepeatPayment, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, CreateOrder, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -2361,4 +2361,116 @@ fn convert_to_additional_payment_method_connector_response(
             auth_code: None,
         }
     })
+}
+
+// ----------------------------------------------------------------------------
+// CreateOrder flow - Creates a Checkout.com payment without 3DS/completion
+// ----------------------------------------------------------------------------
+
+/// Request struct for creating a Checkout.com order without completing payment
+/// This creates a pending payment that can be completed later
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct CheckoutCreateOrderRequest {
+    pub amount: MinorUnit,
+    pub currency: String,
+    pub processing_channel_id: Secret<String>,
+    pub reference: String,
+    pub metadata: Option<Secret<serde_json::Value>>,
+    pub customer: Option<CheckoutCustomer>,
+}
+
+/// Response struct for Checkout.com order creation
+/// Returns the payment ID and status
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+pub struct CheckoutCreateOrderResponse {
+    pub id: String,
+    pub status: CheckoutPaymentStatus,
+    pub amount: Option<MinorUnit>,
+    pub currency: Option<String>,
+    pub reference: Option<String>,
+}
+
+impl TryFrom<ResponseRouterData<CheckoutCreateOrderResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<CheckoutCreateOrderResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = PaymentCreateOrderResponse {
+            order_id: item.response.id,
+            session_token: None,
+        };
+
+        Ok(Self {
+            response: Ok(response),
+            ..item.router_data
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        CheckoutRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for CheckoutCreateOrderRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: CheckoutRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let connector_auth = &item.router_data.connector_config;
+        let auth_type: CheckoutAuthType = connector_auth.try_into()?;
+        let processing_channel_id = auth_type.processing_channel_id;
+
+        let metadata = item.router_data.request.metadata.clone();
+
+        let customer = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_email()
+            .map(|email| CheckoutCustomer {
+                name: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_billing_full_name(),
+                email: Some(email),
+                phone: None,
+                tax_number: None,
+            });
+
+        Ok(Self {
+            amount: item.router_data.request.amount,
+            currency: item.router_data.request.currency.to_string(),
+            processing_channel_id,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            metadata,
+            customer,
+        })
+    }
 }
