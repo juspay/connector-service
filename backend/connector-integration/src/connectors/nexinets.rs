@@ -38,6 +38,7 @@ use serde::Serialize;
 use transformers::{
     self as nexinets, NexinetsCaptureOrVoidRequest,
     NexinetsCaptureOrVoidRequest as NexinetsVoidRequest, NexinetsErrorResponse,
+    NexinetsOrderCreateRequest, NexinetsOrderCreateResponse,
     NexinetsPaymentResponse as NexinetsCaptureResponse, NexinetsPaymentResponse,
     NexinetsPaymentResponse as NexinetsVoidResponse, NexinetsPaymentsRequest,
     NexinetsPreAuthOrDebitResponse, NexinetsRefundRequest, NexinetsRefundResponse,
@@ -278,6 +279,12 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
+            flow: CreateOrder,
+            request_body: NexinetsOrderCreateRequest,
+            response_body: NexinetsOrderCreateResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
             flow: PSync,
             response_body: NexinetsPaymentResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -372,6 +379,35 @@ macros::macro_connector_implementation!(
             format!("{}/orders/preauth", self.connector_base_url_payments(req))
         };
         Ok(url)
+        }
+    }
+);
+
+// CreateOrder flow - Creates an order without payment
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Nexinets,
+    curl_request: Json(NexinetsOrderCreateRequest),
+    curl_response: NexinetsOrderCreateResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/orders/preauth", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -564,15 +600,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Nexinets<T>
-{
-}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,

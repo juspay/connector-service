@@ -2,11 +2,11 @@ use base64::Engine;
 use common_enums::{enums, AttemptStatus};
 use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
-    connector_flow::{Authorize, Capture, Void},
+    connector_flow::{Authorize, Capture, CreateOrder, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        MandateReference, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -877,4 +877,115 @@ fn is_mandate_payment<
             .as_ref()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
             .is_some()
+}
+
+// ============================================================================
+// CreateOrder Flow - Creates a pending order without completing the payment
+// ============================================================================
+
+/// Request struct for creating a Nexinets order without payment
+/// Creates a pending order that can be completed later
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexinetsOrderCreateRequest {
+    initial_amount: i64,
+    currency: enums::Currency,
+    channel: NexinetsChannel,
+    product: NexinetsProduct,
+    #[serde(rename = "async")]
+    nexinets_async: NexinetsAsyncDetails,
+    merchant_order_id: Option<String>,
+}
+
+/// Response struct for Nexinets order creation
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NexinetsOrderCreateResponse {
+    order_id: String,
+    transaction_type: NexinetsTransactionType,
+    transactions: Vec<NexinetsTransaction>,
+    payment_instrument: PaymentInstrument,
+    redirect_url: Option<Url>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        NexinetsRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for NexinetsOrderCreateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NexinetsRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let return_url = item
+            .router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .unwrap_or_else(|| "https://example.com/return".to_string());
+        let nexinets_async = NexinetsAsyncDetails {
+            success_url: Some(return_url.clone()),
+            cancel_url: Some(return_url.clone()),
+            failure_url: Some(return_url),
+        };
+
+        // For CreateOrder, determine product based on payment_method_type from metadata
+        let product = match item.router_data.request.payment_method_type {
+            Some(common_enums::PaymentMethodType::Paypal) => NexinetsProduct::Paypal,
+            Some(common_enums::PaymentMethodType::Giropay) => NexinetsProduct::Giropay,
+            Some(common_enums::PaymentMethodType::Sofort) => NexinetsProduct::Sofort,
+            Some(common_enums::PaymentMethodType::Eps) => NexinetsProduct::Eps,
+            Some(common_enums::PaymentMethodType::Ideal) => NexinetsProduct::Ideal,
+            _ => NexinetsProduct::Creditcard,
+        };
+
+        Ok(Self {
+            initial_amount: item.router_data.request.amount.get_amount_as_i64(),
+            currency: item.router_data.request.currency,
+            channel: NexinetsChannel::Ecom,
+            product,
+            nexinets_async,
+            merchant_order_id: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<NexinetsOrderCreateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<NexinetsOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = PaymentCreateOrderResponse {
+            order_id: item.response.order_id,
+            session_token: None,
+        };
+
+        Ok(Self {
+            response: Ok(response),
+            ..item.router_data
+        })
+    }
 }
