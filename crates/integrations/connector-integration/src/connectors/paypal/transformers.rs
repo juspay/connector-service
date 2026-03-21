@@ -13,13 +13,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PostAuthenticate, RepeatPayment, VerifyWebhookSource,
+        Authorize, Capture, CreateOrder, PSync, PostAuthenticate, RepeatPayment,
+        VerifyWebhookSource,
     },
     connector_types::{
-        AccessTokenResponseData, MandateReference, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        AccessTokenResponseData, MandateReference, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -2935,6 +2937,224 @@ pub struct PaypalPaymentErrorResponse {
     pub message: String,
     pub debug_id: Option<String>,
     pub details: Option<Vec<ErrorDetails>>,
+}
+
+// ----------------------------------------------------------------------------
+// CreateOrder flow - Creates a PayPal Order without completing the payment
+// ----------------------------------------------------------------------------
+
+/// Request struct for creating a PayPal order without confirming/capturing
+/// Similar to Stripe's PaymentIntent creation with confirm=false
+#[derive(Debug, Serialize)]
+pub struct PaypalOrderCreateRequest {
+    pub intent: PaypalPaymentIntent,
+    pub purchase_units: Vec<PurchaseUnitRequest>,
+}
+
+/// Response struct for PayPal order creation
+/// Returns the order ID and status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaypalOrderCreateResponse {
+    pub id: String,
+    pub status: PaypalOrderStatus,
+    pub intent: PaypalPaymentIntent,
+    pub links: Vec<PaypalLinks>,
+}
+
+impl TryFrom<ResponseRouterData<PaypalOrderCreateResponse, Self>>
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PaypalOrderCreateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let response = PaymentCreateOrderResponse {
+            order_id: item.response.id,
+            session_token: None, // OrderCreate doesn't need session token
+        };
+
+        Ok(Self {
+            response: Ok(response),
+            ..item.router_data
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for PaypalOrderCreateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let paypal_auth: PaypalAuthType =
+            PaypalAuthType::try_from(&item.router_data.connector_config)?;
+        let payee = get_payee(&paypal_auth);
+
+        let value = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+
+        // For CreateOrder flow, default to CAPTURE intent
+        // This creates an order that can be captured later
+        let intent = PaypalPaymentIntent::Capture;
+
+        let connector_request_reference_id = item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let shipping_address = ShippingAddress::from(&item);
+        let item_details = vec![ItemDetails::try_from(&item)?];
+
+        let purchase_units = vec![PurchaseUnitRequest {
+            reference_id: Some(connector_request_reference_id.clone()),
+            custom_id: Some(connector_request_reference_id.clone()),
+            invoice_id: Some(connector_request_reference_id),
+            amount: OrderRequestAmount {
+                currency_code: item.router_data.request.currency,
+                value: value.clone(),
+                breakdown: AmountBreakdown {
+                    item_total: OrderAmount {
+                        currency_code: item.router_data.request.currency,
+                        value,
+                    },
+                    tax_total: None,
+                    shipping: None,
+                },
+            },
+            payee,
+            shipping: Some(shipping_address),
+            items: item_details,
+        }];
+
+        Ok(Self {
+            intent,
+            purchase_units,
+        })
+    }
+}
+
+// Helper implementations for CreateOrder flow
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    From<
+        &PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for ShippingAddress
+{
+    fn from(
+        item: &PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Self {
+        Self {
+            address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .get_optional_shipping(),
+            ),
+            name: Some(ShippingName {
+                full_name: item
+                    .router_data
+                    .resource_common_data
+                    .get_optional_shipping()
+                    .and_then(|inner_data| inner_data.address.as_ref())
+                    .and_then(|inner_data| inner_data.first_name.clone()),
+            }),
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        &PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    > for ItemDetails
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: &PaypalRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let value = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+        Ok(Self {
+            name: format!(
+                "Payment for invoice {}",
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+            ),
+            quantity: ORDER_QUANTITY,
+            unit_amount: OrderAmount {
+                currency_code: item.router_data.request.currency,
+                value,
+            },
+            tax: None,
+        })
+    }
 }
 
 // ----------------------------------------------------------------------------
