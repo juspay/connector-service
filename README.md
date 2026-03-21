@@ -25,7 +25,7 @@
 ## 🎯 Why Prism?
 
 
-Today, integrating multiple payment processors either makes developers running in cicles with AI agents to recreate integrations from specs, or developers spending months of engineering effort. 
+Today, integrating multiple payment processors either makes developers running in circles with AI agents to recreate integrations from specs, or developers spending months of engineering effort. 
 
 Because every payment processor has diverse APIs, error codes, authentication methods, pdf documents to read, and above all - different behaviour in the actual environment when compared to documented specs. All this rests as tribal or undocumented knowledge making it harder AI agents which are very good at implementing clearly documented specification.
 
