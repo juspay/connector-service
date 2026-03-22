@@ -1776,6 +1776,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 payer_id: paypal.payer_id,
                 base_url: paypal.base_url,
             }),
+            AuthType::Razorpay(razorpay) => Ok(Self::Razorpay {
+                api_key: razorpay.api_key.ok_or_else(err)?,
+                api_secret: razorpay.api_secret,
+                base_url: razorpay.base_url,
+            }),
         }
     }
 }

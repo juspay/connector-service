@@ -4,10 +4,12 @@ use axum::{
     Json,
 };
 use grpc_api_types::payments::{
-    composite_payment_service_server::CompositePaymentService, CompositeAuthorizeRequest,
-    CompositeAuthorizeResponse, CompositeCaptureRequest, CompositeCaptureResponse,
-    CompositeGetRequest, CompositeGetResponse, CompositeRefundRequest, CompositeRefundResponse,
-    CompositeVoidRequest, CompositeVoidResponse,
+    composite_payment_method_authentication_service_server::CompositePaymentMethodAuthenticationService,
+    composite_payment_service_server::CompositePaymentService, CompositeAuthenticateRequest,
+    CompositeAuthenticateResponse, CompositeAuthorizeRequest, CompositeAuthorizeResponse,
+    CompositeCaptureRequest, CompositeCaptureResponse, CompositeGetRequest, CompositeGetResponse,
+    CompositePreauthenticateRequest, CompositePreauthenticateResponse, CompositeRefundRequest,
+    CompositeRefundResponse, CompositeVoidRequest, CompositeVoidResponse,
 };
 use std::sync::Arc;
 
@@ -55,5 +57,21 @@ http_handler!(
     CompositeCaptureRequest,
     CompositeCaptureResponse,
     capture,
+    composite_payments_service
+);
+
+http_handler!(
+    preauthenticate,
+    CompositePreauthenticateRequest,
+    CompositePreauthenticateResponse,
+    preauthenticate,
+    composite_payments_service
+);
+
+http_handler!(
+    authenticate,
+    CompositeAuthenticateRequest,
+    CompositeAuthenticateResponse,
+    authenticate,
     composite_payments_service
 );

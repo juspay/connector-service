@@ -341,6 +341,17 @@ impl MandateIds {
         )
     }
 
+    pub fn has_mandate_reference(&self) -> bool {
+        match &self.mandate_reference_id {
+            Some(MandateReferenceId::ConnectorMandateId(cm)) => {
+                cm.get_connector_mandate_id().is_some()
+            }
+            Some(MandateReferenceId::NetworkMandateId(_))
+            | Some(MandateReferenceId::NetworkTokenWithNTI(_)) => true,
+            None => false,
+        }
+    }
+
     pub fn new(mandate_id: String) -> Self {
         Self {
             mandate_id: Some(mandate_id),
@@ -2703,6 +2714,17 @@ pub trait ConnectorSpecifications {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         None
     }
+
+    /// Check if pre-authenticate is required before authenticate
+    fn should_do_pre_authenticate_before_authenticate(
+        &self,
+        _auth_type: AuthenticationType,
+        _payment_method_data: &Option<
+            PaymentMethodData<crate::payment_method_data::DefaultPCIHolder>,
+        >,
+    ) -> bool {
+        false
+    }
 }
 
 #[macro_export]
@@ -3678,6 +3700,7 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Payu(_) => Ok(Self::Payu),
             AuthType::Powertranz(_) => Ok(Self::Powertranz),
             AuthType::Rapyd(_) => Ok(Self::Rapyd),
+            AuthType::Razorpay(_) => Ok(Self::Razorpay),
             AuthType::Redsys(_) => Ok(Self::Redsys),
             AuthType::Shift4(_) => Ok(Self::Shift4),
             AuthType::Stax(_) => Ok(Self::Stax),

@@ -816,3 +816,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Redsys<T>
 {
 }
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    domain_types::connector_types::ConnectorSpecifications for Redsys<T>
+{
+    /// For 3dsexempt: if PreAuth returns no redirect (no three_ds_method_url),
+    /// continue to AuthN in the same composite call
+    fn should_do_pre_authenticate_before_authenticate(
+        &self,
+        auth_type: common_enums::AuthenticationType,
+        payment_method_data: &Option<
+            domain_types::payment_method_data::PaymentMethodData<
+                domain_types::payment_method_data::DefaultPCIHolder,
+            >,
+        >,
+    ) -> bool {
+        auth_type.is_three_ds()
+            && payment_method_data
+                .as_ref()
+                .is_some_and(|pmd| pmd.is_card())
+    }
+}

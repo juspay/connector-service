@@ -32,6 +32,14 @@ pub fn create_router(state: AppState) -> Router {
             "/composite/payments/capture",
             post(handlers::composite::payments::capture),
         )
+        .route(
+            "/composite/payments/pre_authenticate",
+            post(handlers::composite::payments::preauthenticate),
+        )
+        .route(
+            "/composite/payments/authenticate",
+            post(handlers::composite::payments::authenticate),
+        )
         .route("/payments/authorize", post(handlers::payments::authorize))
         // .route(
         //     "/payments/authorize_only",

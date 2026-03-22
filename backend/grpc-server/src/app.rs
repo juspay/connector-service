@@ -4,10 +4,11 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        composite_payment_service_server, composite_refund_service_server, customer_service_server,
-        dispute_service_server, merchant_authentication_service_server,
-        payment_method_authentication_service_server, payment_method_service_server,
-        payment_service_server, recurring_payment_service_server, refund_service_server,
+        composite_payment_method_authentication_service_server, composite_payment_service_server,
+        composite_refund_service_server, customer_service_server, dispute_service_server,
+        merchant_authentication_service_server, payment_method_authentication_service_server,
+        payment_method_service_server, payment_service_server, recurring_payment_service_server,
+        refund_service_server,
     },
 };
 use std::{future::Future, net, sync::Arc};
@@ -104,6 +105,7 @@ pub struct Service {
         crate::server::payments::MerchantAuthentication,
         crate::server::payments::Customer,
         crate::server::refunds::Refunds,
+        crate::server::payments::PaymentMethodAuthentication,
     >,
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
@@ -133,6 +135,8 @@ impl Service {
         }
         let customer_service = crate::server::payments::Customer;
         let merchant_authentication_service = crate::server::payments::MerchantAuthentication;
+        let payment_method_authentication_service =
+            crate::server::payments::PaymentMethodAuthentication;
 
         let payments_service = crate::server::payments::Payments {
             customer_service: customer_service.clone(),
@@ -144,6 +148,7 @@ impl Service {
             merchant_authentication_service.clone(),
             customer_service.clone(),
             refunds_service.clone(),
+            payment_method_authentication_service.clone(),
         );
 
         Self {
@@ -157,8 +162,7 @@ impl Service {
             payment_method_service: crate::server::payments::PaymentMethod,
             merchant_authentication_service,
             customer_service,
-            payment_method_authentication_service:
-                crate::server::payments::PaymentMethodAuthentication,
+            payment_method_authentication_service,
         }
     }
 
@@ -274,6 +278,11 @@ impl Service {
             )
             .add_service(
                 composite_refund_service_server::CompositeRefundServiceServer::new(
+                    self.composite_payments_service.clone(),
+                ),
+            )
+            .add_service(
+                composite_payment_method_authentication_service_server::CompositePaymentMethodAuthenticationServiceServer::new(
                     self.composite_payments_service,
                 ),
             )

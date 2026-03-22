@@ -1413,6 +1413,12 @@ pub enum AuthenticationType {
     NoThreeDs,
 }
 
+impl AuthenticationType {
+    pub fn is_three_ds(&self) -> bool {
+        matches!(self, Self::ThreeDs)
+    }
+}
+
 #[derive(
     Clone,
     Copy,

@@ -1079,7 +1079,9 @@ static ADYEN_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
 
 static ADYEN_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[EventClass::Payments, EventClass::Refunds];
 
-impl ConnectorSpecifications for Adyen<DefaultPCIHolder> {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Adyen<T>
+{
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         Some(&ADYEN_CONNECTOR_INFO)
     }

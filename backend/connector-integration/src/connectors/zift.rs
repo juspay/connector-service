@@ -542,7 +542,9 @@ static ZIFT_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
 
 static ZIFT_SUPPORTED_WEBHOOK_FLOWS: [common_enums::EventClass; 0] = [];
 
-impl ConnectorSpecifications for Zift<DefaultPCIHolder> {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Zift<T>
+{
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         Some(&ZIFT_CONNECTOR_INFO)
     }

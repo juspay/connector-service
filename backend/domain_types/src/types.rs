@@ -2577,6 +2577,19 @@ impl<
                 value.payment_channel(),
             )?),
         };
+        let redirect_response = value
+            .redirection_response
+            .clone()
+            .map(|redirection_response| ContinueRedirectionResponse {
+                params: redirection_response.params.map(Secret::new),
+                payload: Some(Secret::new(serde_json::Value::Object(
+                    redirection_response
+                        .payload
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))),
+            });
         let tokenization = match value.tokenization_strategy {
             None => None,
             Some(_) => Some(common_enums::Tokenization::foreign_try_from(
@@ -2670,10 +2683,42 @@ impl<
             payment_channel,
             enable_partial_authorization: value.enable_partial_authorization,
             locale: value.locale.clone(),
-            // Below fields are set in AuthorizeOnly Flow
-            continue_redirection_url: None,
-            redirect_response: None,
-            threeds_method_comp_ind: None,
+            continue_redirection_url: value
+                .continue_redirection_url
+                .map(|url_str| {
+                    url::Url::parse(&url_str).change_context(ApplicationErrorResponse::BadRequest(
+                        ApiError {
+                            sub_code: "INVALID_URL".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid continue redirection URL".to_owned(),
+                            error_object: None,
+                        },
+                    ))
+                })
+                .transpose()?,
+            redirect_response,
+            threeds_method_comp_ind: value
+                .threeds_completion_indicator
+                .map(|value| {
+                    grpc_api_types::payments::ThreeDsCompletionIndicator::try_from(value)
+                        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_THREEDS_COMPLETION_INDICATOR".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid 3DS completion indicator value".to_owned(),
+                            error_object: None,
+                        }))
+                        .and_then(|indicator| {
+                            connector_types::ThreeDsCompletionIndicator::foreign_try_from(indicator)
+                                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_THREEDS_COMPLETION_INDICATOR".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Invalid 3DS completion indicator value"
+                                        .to_owned(),
+                                    error_object: None,
+                                }))
+                        })
+                })
+                .transpose()?,
             tokenization,
         })
     }
