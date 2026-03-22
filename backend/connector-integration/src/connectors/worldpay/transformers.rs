@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use common_enums as enums;
 use common_utils::{ext_traits::OptionExt, pii, types::MinorUnit, CustomResult};
 use domain_types::{
-    connector_flow::{Authorize, Capture, Void},
+    connector_flow::{Authorize, Capture, SetupMandate, Void},
     connector_types::{
         MandateIds, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId,
+        ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -1504,5 +1504,182 @@ fn extract_three_ds_metadata(response: &WorldpayPaymentsResponse) -> Option<serd
             }
         }
         _ => None,
+    }
+}
+
+// SetupMandate request transformer - uses Verified Tokens API for zero-dollar auth + tokenization
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        WorldpayRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for WorldpaySetupMandateRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: WorldpayRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let worldpay_connector_metadata_object: WorldpayConnectorMetadataObject =
+            WorldpayConnectorMetadataObject::try_from(item.router_data.request.metadata.as_ref())?;
+
+        let merchant_name = worldpay_connector_metadata_object.merchant_name.ok_or(
+            ConnectorError::MissingRequiredField {
+                field_name: "metadata.merchant_name",
+            },
+        )?;
+
+        // SetupMandate is always a CIT (Customer Initiated Transaction) - first time setup
+        let token_creation = Some(TokenCreation {
+            token_type: TokenCreationType::Worldpay,
+        });
+        let customer_agreement = Some(CustomerAgreement {
+            agreement_type: CustomerAgreementType::Subscription,
+            stored_card_usage: Some(StoredCardUsageType::First),
+            scheme_reference: None,
+        });
+
+        // For zero-dollar auth, we use amount 0 and no auto settlement
+        let settlement = None;
+
+        Ok(Self {
+            instruction: Instruction {
+                settlement,
+                method: PaymentMethod::try_from((
+                    item.router_data.resource_common_data.payment_method,
+                    item.router_data.request.payment_method_type,
+                ))?,
+                payment_instrument: fetch_payment_instrument(
+                    item.router_data.request.payment_method_data.clone(),
+                    item.router_data.resource_common_data.get_optional_billing(),
+                )?,
+                narrative: InstructionNarrative {
+                    line1: merchant_name.expose(),
+                },
+                value: PaymentValue {
+                    amount: MinorUnit::zero(),
+                    currency: item.router_data.request.currency,
+                },
+                debt_repayment: None,
+                three_ds: None, // No 3DS for SetupMandate
+                token_creation,
+                customer_agreement,
+            },
+            merchant: Merchant {
+                entity: WorldpayAuthType::try_from(&item.router_data.connector_auth_type)?
+                    .entity_id,
+                ..Default::default()
+            },
+            transaction_reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            customer: None,
+        })
+    }
+}
+
+// SetupMandate response transformer
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<WorldpaySetupMandateResponse, Self>>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<WorldpaySetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        // Reuse the Authorize flow's response handling since the structure is the same
+        let (description, redirection_data, mandate_reference, network_txn_id, error) = item
+            .response
+            .other_fields
+            .as_ref()
+            .map(|other_fields| match other_fields {
+                WorldpayPaymentResponseFields::AuthorizedResponse(res) => (
+                    res.description.clone(),
+                    None,
+                    res.token.as_ref().map(|mandate_token| MandateReference {
+                        connector_mandate_id: Some(mandate_token.href.clone().expose()),
+                        payment_method_id: Some(mandate_token.token_id.clone()),
+                        connector_mandate_request_reference_id: None,
+                    }),
+                    res.scheme_reference.clone(),
+                    None,
+                ),
+                WorldpayPaymentResponseFields::RefusedResponse(res) => (
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some((
+                        res.refusal_code.clone(),
+                        res.refusal_description.clone(),
+                        res.advice
+                            .as_ref()
+                            .and_then(|advice_code| advice_code.code.clone()),
+                    )),
+                ),
+                _ => (None, None, None, None, None),
+            })
+            .unwrap_or((None, None, None, None, None));
+
+        let worldpay_status = item.response.outcome.clone();
+        let status = if worldpay_status == PaymentOutcome::Authorized {
+            enums::AttemptStatus::Charged
+        } else {
+            enums::AttemptStatus::from(worldpay_status.clone())
+        };
+
+        let response = match error {
+            None => Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::foreign_try_from((item.response.clone(), None))?,
+                redirection_data: redirection_data.map(Box::new),
+                mandate_reference: mandate_reference.map(Box::new),
+                connector_metadata: None,
+                network_txn_id: network_txn_id.map(|id| id.expose()),
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            Some((code, message, advice_code)) => Err(ErrorResponse {
+                code: code.clone(),
+                message: message.clone(),
+                reason: Some(message.clone()),
+                status_code: item.http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: None,
+                network_advice_code: advice_code,
+                network_decline_code: Some(code),
+                network_error_message: Some(message),
+            }),
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                description,
+                ..item.router_data.resource_common_data
+            },
+            response,
+            ..item.router_data
+        })
     }
 }
