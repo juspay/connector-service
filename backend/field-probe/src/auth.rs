@@ -499,5 +499,11 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             merchant_id: m(),
             base_url: None,
         },
+        ConnectorEnum::Trustly => ConnectorSpecificConfig::Trustly {
+            username: u(),
+            password: p(),
+            private_key: None,
+            base_url: None,
+        },
     }
 }

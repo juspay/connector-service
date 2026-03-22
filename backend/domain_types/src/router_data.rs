@@ -420,6 +420,12 @@ pub enum ConnectorSpecificConfig {
         base_url: Option<String>,
         merchant_name: Option<Secret<String>>,
     },
+    Trustly {
+        username: Secret<String>,
+        password: Secret<String>,
+        base_url: Option<String>,
+        private_key: Option<Secret<String>>,
+    },
 
     // --- Three-field connectors ---
     Adyen {
@@ -956,6 +962,7 @@ impl ConnectorSpecificConfig {
                 api_key,
                 merchant_id
             },
+            Trustly { username, password }
         )
     }
 
@@ -1328,7 +1335,8 @@ impl ConnectorSpecificConfig {
                 Ppro {
                     api_key,
                     merchant_id
-                }
+                },
+                Trustly { username, password }
             ),
             serde_json::Value::Object(connector_patch),
         );
@@ -1776,6 +1784,12 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 payer_id: paypal.payer_id,
                 base_url: paypal.base_url,
             }),
+            AuthType::Trustly(trustly) => Ok(Self::Trustly {
+                username: trustly.username.ok_or_else(err)?,
+                password: trustly.password.ok_or_else(err)?,
+                private_key: trustly.private_key,
+                base_url: trustly.base_url,
+            }),
         }
     }
 }
@@ -2069,6 +2083,15 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     client_secret: key1.clone(),
                     base_url: None,
                     secondary_base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Trustly => match auth {
+                ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::Trustly {
+                    username: api_key.clone(),
+                    password: key1.clone(),
+                    base_url: None,
+                    private_key: None,
                 }),
                 _ => Err(err().into()),
             },
