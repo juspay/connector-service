@@ -1,97 +1,120 @@
 <!--
 ---
-title: "Prism: How We Found Light in the Chaos of Payments"
-description: "The story behind naming Hyperswitch's payment abstraction library after Newton's legendary discovery"
+title: "Prism: The Other Side of the Rainbow"
+description: "The story behind naming Hyperswitch's payment abstraction library after Newton's discovery—seeing unity in payment diversity"
 author: "Loki"
 date: 2026-03-21
-og:image: /images/prism-header.png
+og_image: /images/prism-header.png
 tags: ["payments", "engineering", "story"]
 ---
 -->
 
-In 1665, a young Isaac Newton sat in a darkened room at Cambridge, holding a glass prism. Outside his window, a thin beam of sunlight pierced through a hole in his shutter. He placed the prism in the beam. What happened next changed how humanity understood light forever.
+In 1665, Isaac Newton performed an experiment that would echo through centuries. He passed a beam of white light through a glass prism and watched it decompose into a spectrum—red, orange, yellow, green, blue, indigo, violet—onto the wall behind him.
 
-Instead of white light emerging from the other side, a cascade of colors streamed onto the opposite wall—red, orange, yellow, green, blue, indigo, violet. A complete spectrum. The ancient Greeks believed color was a mixture of light and darkness. Newton proved something profound: **white light isn't simple. It's hidden complexity, waiting to be revealed.**
+But here's what most people forget: **Newton looked at the experiment from both sides.**
 
-That moment—the decomposition of white light into its constituent colors—became one of the most beautiful experiments in scientific history. And it's the exact metaphor that defines **Hyperswitch Prism**.
+When you stand where Newton stood, you see the rainbow. Beautiful, distinct colors, each different from the others. But when you step to the other side—when you place a SECOND prism in the path of the scattered light—you discover the profound truth: **all those colors recombine into white light again.**
 
----
-
-## The Chaos of Payments
-
-Every developer who has built payments faces the same darkness Newton confronted.
-
-You start with a simple requirement: "accept payments." Then reality explodes into fragments. Stripe has its own API. Adyen has another. PayPal, Braintree, Checkout.com—each a different language, different conventions, different quirks. The payment landscape isn't white light. It's a fractured spectrum of 70+ processors, each bending the rules differently.
-
-We at Juspay lived this chaos for years. We built integrations. We maintained them. We watched our engineers struggle with the same problems over and over: "How do I handle 3DS for this connector?" "Why does this refund work here but fail there?" "What happens when a new processor launches?"
-
-The payment world wasn't white. It was noise.
+The rainbow wasn't chaos. It was white light disguised as color.
 
 ---
 
-## The Prism Moment
+## The Rainbow of Payments
 
-Newton didn't create the colors. The colors were always there, hiding inside the white light. His prism simply revealed them—by understanding how light bends.
+Every developer who has built payments sees the rainbow first.
 
-**Hyperswitch Prism does the same for payments.**
+Stripe is one color. Adyen is another. Braintree, PayPal, Checkout.com, Worldpay, Cybersource—each distinct, each beautiful, each different. The payment landscape isn't noise. It's a **spectrum**. And each color does the same fundamental things:
 
-We're not building another payment processor. We're building the prism. A single, unified interface that takes the chaos of 70+ payment processors and refracts them into clarity. Your code doesn't need to know about Stripe's specific headers or Adyen's particular error codes. It speaks to Prism, and Prism speaks to everyone else.
+- **Authorize** — reserve funds
+- **Capture** — collect funds
+- **Refund** — return funds
+- **3DS** — authenticate the cardholder
+- **Void** — cancel before capture
 
-The colors were always there. Prism just reveals them.
+Every processor does these. Stripe. Adyen. All 70 of them. Red does what orange does. Blue does what violet does.
+
+**The colors are not the problem. They're the beauty.**
+
+---
+
+## The Other Side of the Rainbow
+
+Here's where most payment abstractions get it wrong. They see the rainbow and think: "Too many colors. Must simplify. Must reduce."
+
+But we looked from the other side.
+
+We asked a different question: **What if all these colors are just one thing?**
+
+The answer changed everything.
+
+When you unify authorization, capture, refund, void, and 3DS across every processor—you don't lose the rainbow. You gain the ability to see both the diversity AND the unity. You can work with Stripe, then switch to Adyen, without rewriting your code. The colors remain beautiful. But now you also see the white light that contains them all.
 
 ---
 
 ## What Makes a Prism
 
-A prism works because of a simple physical principle: **different wavelengths bend at different angles**. Red light bends least. Violet bends most. The glass doesn't choose the colors—it *separates* what's already present.
+A prism is magical because it works in **both directions**:
 
-Hyperswitch Prism separates the *essential* from the *incidental*:
+1. **White → Rainbow**: Decompose, see the diversity
+2. **Rainbow → White**: Recompose, see the unity
 
-- **Essential**: authorization, capture, refund, void—the universal payment verbs
-- **Incidental**: each processor's quirks, specific field names, unique error formats
+Newton's second prism proved the first. Hyperswitch Prism does the same:
 
-When you integrate with Prism, you're not learning 70 APIs. You're learning one. The prism handles the bending.
+```python
+# See the colors (diversity)
+client = PaymentClient(connector='stripe')
+
+# See the light (unity)
+# Same code works for adyen, paypal, braintree...
+```
+
+You're not choosing between the rainbow and white light. **You're seeing both.**
 
 ---
 
 ## Why Developers Need This
 
-Here's what Newton understood: **complexity isn't eliminated by ignoring it—it's understood by separating it.**
+The payment world isn't broken. It doesn't need fixing. It needs **seeing**.
 
-Every "unified payments" library makes promises. But the real test is this: Can an AI agent read your documentation and implement a new connector? Can a developer from Team A hand off to Team B without a month of knowledge transfer?
+Every processor is a valid choice. Every color is beautiful. The problem isn't diversity—it's being trapped in one color. When you're stuck on Stripe, you can't easily move to Adyen. When you're locked into Braintree, PayPal feels like a different universe.
 
-With Prism, yes.
+**Hyperswitch Prism gives you the second prism.**
 
-We designed it for **AI-first integration**. When Claude or GPT reads Prism's documentation, they understand payments. Not Stripe. Not Adyen. *Payments.* The abstraction is deep enough that intelligence—human or artificial—can reason about it.
+You can work with any processor. You can see the unity underneath. You can switch when you need to. You can use multiple at once for redundancy.
 
-That's the prism promise: **clarity through separation.**
-
----
-
-## The Light Ahead
-
-Newton's prism experiment was simple. A hole in a shutter. A glass triangle. A wall to catch the colors. Yet it unveiled the hidden structure of light itself.
-
-Hyperswitch Prism is similarly simple for developers:
-
-```python
-# One line changes everything
-client = PaymentClient(connector='stripe')  # or 'adyen', 'paypal'...
-```
-
-The payment processor changes. Your code doesn't. That's the prism effect.
+The rainbow stays. The light stays. You get both.
 
 ---
 
-## Join the Spectrum
+## The Unity Beneath
 
-Every great developer journey begins in darkness—confused by complexity, searching for pattern. Newton's insight wasn't that colors exist. It was that white light *contains* them.
+What did Newton prove? That white light **contains** all colors. They don't come from nowhere. They're always there, folded into one beam, waiting to be seen.
 
-**Your payments already work.** The processors exist. The money moves. The chaos is optional.
+The same is true for payments:
 
-Hyperswitch Prism is the prism. We're here to reveal what's already there—to turn the fractured payment spectrum into one coherent beam of light.
+| Operation | What it is | Every processor |
+|-----------|------------|-----------------|
+| Authorize | Reserve funds | All 70+ |
+| Capture | Collect reserved | All 70+ |
+| Refund | Return captured | All 70+ |
+| 3DS | Authenticate | Most |
+| Void | Cancel | Most |
 
-Welcome to the other side of the glass.
+**The unity was always there.** We just had to look from the right angle.
+
+---
+
+## Your Payment Rainbow
+
+Here's the invitation: Don't choose between beauty and simplicity. See both.
+
+When you use Hyperswitch Prism, you're not reducing the payment world. You're not forcing everyone into one color. You're seeing what Newton saw—that the diversity was always supported by unity.
+
+The rainbow is real. The white light is real. **Prism lets you work with both.**
+
+---
+
+Welcome to the other side of the rainbow.
 
 ---
 
