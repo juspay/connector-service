@@ -16,7 +16,7 @@ common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 config_patch_derive = { path = "../config_patch_derive" }
 hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
-tracing-kafka = { path = "../tracing-kafka", optional = true }
+tracing-kafka = { git = "https://github.com/juspay/framework-libs-rs", branch = "feat/kafka-writer", features = ["layer"], optional = true }
 
 # Third-party dependencies
 config = "0.14.0"
@@ -27,7 +27,7 @@ serde_path_to_error = "0.1.16"
 thiserror = { workspace = true }
 time = { version = "0.3.36", features = ["parsing"] }
 tracing = { workspace = true }
-tracing-appender = { version = "0.2.3" }
+tracing-appender = { version = "0.2.4" }
 tracing-subscriber = { version = "0.3.18", default-features = true, features = [
     "env-filter",
     "json",
@@ -42,16 +42,16 @@ tokio = { version = "1.48.0", features = [
 tonic = { workspace = true }
 tonic-reflection = "0.14.0"
 http = "1.2.0"
-log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = [
+log_utils = { git = "https://github.com/juspay/framework-libs-rs", branch = "feat/kafka-writer", package = "log_utils", features = [
     "tracing",
 ] }
-build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = [
+build_info = { git = "https://github.com/juspay/framework-libs-rs", branch = "feat/kafka-writer", package = "build_info", features = [
     "cargo-workspace",
     "framework-libs-members-env",
 ] }
 
 [build-dependencies]
-build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = [
+build_info = { git = "https://github.com/juspay/framework-libs-rs", branch = "feat/kafka-writer", package = "build_info", features = [
     "cargo-workspace-build",
     "vergen-gix-build",
     "framework-libs-members-env",

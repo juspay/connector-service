@@ -26,7 +26,7 @@ lazy_static = "1.5.0"
 once_cell = "1.19.0"
 async-trait = "0.1"
 tracing = { workspace = true }
-tracing-appender = { version = "0.2.3" }
+tracing-appender = { version = "0.2.4" }
 tracing-subscriber = { version = "0.3.18", default-features = true, features = ["env-filter", "json", "registry"] }
 tracing-attributes = "0.1.27"
 tonic = { workspace = true }
