@@ -134,7 +134,7 @@ For detailed installation instructions, see [Installation Guide](./getting-start
 const { PaymentClient } = require('hs-playlib');
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
-async function createOrder(orderId, currency, amount) {
+async function main() {
   // Configure Stripe client (Primary payment processor)
   const stripeConfig = ConnectorConfig.create({
     options: SdkOptions.create({ environment: Environment.SANDBOX }),
@@ -156,30 +156,24 @@ async function createOrder(orderId, currency, amount) {
   });
   const adyenClient = new PaymentClient(adyenConfig);
 
-  // Select client based on currency - EUR to Adyen, USD to Stripe
-  const client = currency === 'EUR' ? adyenClient : stripeClient;
+  // Example: Create USD order with Stripe
+  const client = stripeClient;
 
-  // Create order - route EUR to Adyen, USD to Stripe
   const order = await client.createOrder({
-    merchantOrderId: orderId,
+    merchantOrderId: 'order-123',
     amount: {
-      minorAmount: amount,
-      currency: currency
+      minorAmount: 1000,
+      currency: 'USD'
     },
     orderType: 'PAYMENT',
-    description: `Order ${orderId}`
+    description: 'Test order'
   });
 
-  console.log(`Order created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
+  console.log('Order created with Stripe');
   console.log('Order ID:', order.connectorOrderId);
-  return order;
 }
 
-// EUR order goes to Adyen
-createOrder('order-456', 'EUR', 2500);
-
-// USD order goes to Stripe
-createOrder('order-123', 'USD', 1000);
+main().catch(console.error);
 ```
 
 
