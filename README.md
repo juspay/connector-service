@@ -60,6 +60,11 @@ Because every payment processor has diverse APIs, error codes, authentication me
 
 ## 🏗️ Architecture
 
+The Prism library is compliant for payment processing by design. It is:
+- **Stateless** — Hence, no PII or PCI data stored
+- **Credential free** — The API keys are never logged nor exposed
+- **Payment compliance outsourcing supported** — You can continue to outsource your PCI compliance to third party vaults, or payment processor without having to handle credit card data. 
+
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -69,7 +74,7 @@ Because every payment processor has diverse APIs, error codes, authentication me
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Prism Library                           │
-│                 (Type-safe, idiomatic interface)                │
+│     (Type-safe, idiomatic interface, Multi-language SDK)        │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
                                  ▼
@@ -233,14 +238,6 @@ cargo test
 ```
 
 ---
-
-
-## 🔒 Security
-
-The Prism library is compliant by design. It is
-- **Stateless** — Hence, no PII or PCI data stored
-- **Credential free** — The API keys are never logged nor exposed
-- **Payment compliance outsourcing supported** — You can continue to outsource your PCI compliance to third party vaults, or payment processor without having to handle credit card data. 
 
 ### Reporting Vulnerabilities
 Please report security issues to [security@juspay.in](mailto:security@juspay.in).
