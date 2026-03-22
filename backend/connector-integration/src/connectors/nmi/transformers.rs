@@ -978,8 +978,18 @@ impl TryFrom<ResponseRouterData<StandardResponse, Self>>
     }
 }
 
-// ===== PREAUTHENTICATE REQUEST =====
+// ===== 3DS AUTHENTICATION FLOW STRUCTURES =====
+// NMI supports 3D Secure authentication through a three-step process:
+// 1. PreAuthenticate: Initiates 3DS authentication, returns redirect URL for challenge
+// 2. Authenticate: Processes the 3DS challenge response from the issuer
+// 3. PostAuthenticate: Completes the payment using the authenticated transaction
 
+/// Request structure for the PreAuthenticate step of 3DS flow.
+///
+/// This initiates 3D Secure authentication by sending card details to NMI.
+/// If 3DS is required, NMI returns a pending status with a redirect URL
+/// where the cardholder can complete authentication with their bank.
+/// The merchant's redirect_url and term_url are used for challenge completion.
 #[derive(Debug, Serialize)]
 pub struct NmiPreAuthenticateRequest<T: PaymentMethodDataTypes> {
     security_key: Secret<String>,
@@ -1095,8 +1105,16 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
                 form_fields.insert("authcode".to_string(), authcode.clone());
             }
 
+            // Get the base URL from connector configuration for proper environment handling
+            let base_url = &item
+                .router_data
+                .resource_common_data
+                .connectors
+                .nmi
+                .base_url;
+
             Some(Box::new(RedirectForm::Form {
-                endpoint: "https://secure.networkmerchants.com".to_string(),
+                endpoint: base_url.clone(),
                 method: Method::Post,
                 form_fields,
             }))
@@ -1122,6 +1140,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
 
 // ===== AUTHENTICATE REQUEST =====
 
+/// Request structure for the Authenticate step of 3DS flow.
+///
+/// This processes the authentication response after the cardholder completes
+/// the 3DS challenge. It sends the PaRes/params from the redirect response
+/// back to NMI to complete the authentication and obtain authentication values.
 #[derive(Debug, Serialize)]
 pub struct NmiAuthenticateRequest<T: PaymentMethodDataTypes> {
     security_key: Secret<String>,
@@ -1227,6 +1250,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
 
 // ===== POSTAUTHENTICATE REQUEST =====
 
+/// Request structure for the PostAuthenticate step of 3DS flow.
+///
+/// This completes the payment after successful 3DS authentication.
+/// It references the original transaction (from PreAuthenticate) and
+/// uses the transaction type (Sale for auto-capture, Auth for manual capture)
+/// to either charge the card immediately or authorize for later capture.
 #[derive(Debug, Serialize)]
 pub struct NmiPostAuthenticateRequest {
     security_key: Secret<String>,
@@ -1278,12 +1307,20 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .map(|s| s.to_string())
                 })
             })
-            .unwrap_or_else(|| {
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .clone()
-            });
+            .or_else(|| {
+                // Log when redirect response parsing fails to extract transactionid
+                tracing::warn!(
+                    "PostAuthenticate: Failed to extract transactionid from redirect_response params, \
+                    falling back to connector_request_reference_id"
+                );
+                Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                )
+            })
+            .expect("connector_request_reference_id is always available");
 
         Ok(Self {
             security_key: auth.api_key,
