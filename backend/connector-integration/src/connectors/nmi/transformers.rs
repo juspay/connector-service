@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -128,6 +128,13 @@ impl From<NmiStatus> for RefundStatus {
 pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
     Ach(Box<AchData>),
+    Wallet(Box<WalletPaymentData>),
+}
+
+#[derive(Debug, Serialize)]
+pub struct WalletPaymentData {
+    payment_type: &'static str,
+    token: Secret<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -241,19 +248,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let auth = NmiAuthType::try_from(&router_data.connector_config)?;
 
-        // Extract payment method data
-        // Handle ACH Bank Debit separately to access billing info for account holder name fallback
         let (payment_method, transaction_type) = match &router_data.request.payment_method_data {
             PaymentMethodData::BankDebit(bank_debit_data) => {
                 let ach_data = create_ach_data(bank_debit_data, router_data)?;
-                // ACH only supports "sale" transaction type, not "auth"
                 (
                     NmiPaymentMethod::Ach(Box::new(ach_data)),
                     TransactionType::Sale,
                 )
             }
+            PaymentMethodData::Wallet(_) => {
+                let wallet_payment =
+                    NmiPaymentMethod::try_from(&router_data.request.payment_method_data)?;
+                let txn_type = if router_data.request.is_auto_capture()? {
+                    TransactionType::Sale
+                } else {
+                    TransactionType::Auth
+                };
+                (wallet_payment, txn_type)
+            }
             _ => {
-                // Determine transaction type based on auto_capture for card payments
                 let txn_type = if router_data.request.is_auto_capture()? {
                     TransactionType::Sale
                 } else {
@@ -296,13 +309,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 // ===== PAYMENT METHOD TRANSFORMATION =====
 
+const WALLET_PAYMENT_TYPE: &str = "paypal";
+
 impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMethod<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(pm_data: &PaymentMethodData<T>) -> Result<Self, Self::Error> {
         match pm_data {
             PaymentMethodData::Card(card_data) => {
-                // Extract expiry date in MMYY format using framework utility
                 let ccexp =
                     card_data.get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?;
 
@@ -322,11 +336,44 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                     "Bank Debit type not supported for NMI".to_string()
                 )
             )),
+            PaymentMethodData::Wallet(wallet_data) => {
+                let wallet_payment_data = create_wallet_data(wallet_data)?;
+                Ok(Self::Wallet(Box::new(wallet_payment_data)))
+            }
             _ => Err(error_stack::report!(
                 errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
             )),
         }
     }
+}
+
+/// Helper function to create wallet payment data from WalletData
+fn create_wallet_data(
+    wallet_data: &WalletData,
+) -> Result<WalletPaymentData, error_stack::Report<errors::ConnectorError>> {
+    let wallet_name = match wallet_data {
+        WalletData::GooglePay(_) => "Google Pay",
+        WalletData::ApplePay(_) => "Apple Pay",
+        WalletData::PaypalSdk(_) => "PayPal",
+        _ => {
+            return Err(error_stack::report!(
+                errors::ConnectorError::NotImplemented(
+                    "Wallet type not supported for NMI".to_string()
+                )
+            ))
+        }
+    };
+
+    let token = wallet_data.get_wallet_token().change_context(
+        errors::ConnectorError::InvalidWalletToken {
+            wallet_name: wallet_name.to_string(),
+        },
+    )?;
+
+    Ok(WalletPaymentData {
+        payment_type: WALLET_PAYMENT_TYPE,
+        token,
+    })
 }
 
 /// Helper function to create ACH data from BankDebitData with access to router data for billing name fallback
