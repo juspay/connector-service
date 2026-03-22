@@ -502,7 +502,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
         ConnectorEnum::Trustly => ConnectorSpecificConfig::Trustly {
             username: u(),
             password: p(),
-            private_key: None,
+            private_key: s(),
             base_url: None,
         },
     }

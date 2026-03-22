@@ -3323,7 +3323,7 @@ message PaypalConfig {
 message TrustlyConfig {
   SecretString username = 1;
   SecretString password = 2;
-  optional SecretString private_key = 3;
+  SecretString private_key = 3;
   optional string base_url = 50;
 }
 

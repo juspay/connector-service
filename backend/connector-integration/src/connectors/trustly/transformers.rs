@@ -53,11 +53,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TrustlyAuthType {
             } => Ok(Self {
                 username: username.clone(),
                 password: password.clone(),
-                private_key: private_key.clone().ok_or(
-                    errors::ConnectorError::MissingRequiredField {
-                        field_name: "private_key",
-                    },
-                )?,
+                private_key: private_key.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -269,9 +265,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth_details = TrustlyAuthType::try_from(&item.router_data.connector_config)?;
 
-        let return_url = item.router_data.resource_common_data.return_url.clone().ok_or(errors::ConnectorError::MissingRequiredField {
-            field_name: "return_url",
-        })?;
+        let return_url = item
+            .router_data
+            .resource_common_data
+            .return_url
+            .clone()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "return_url",
+            })?;
         let uuid = uuid::Uuid::new_v4().to_string();
         let attributes = TrustlyPaymentRequestAttributes {
             amount: convert_amount(
@@ -355,10 +356,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let data = TrustlyPaymentRequestData {
             attributes,
             end_user_i_d: item.router_data.request.get_customer_id()?,
-            message_i_d: item.router_data.resource_common_data.connector_request_reference_id,
-            notification_u_r_l: item.router_data.request.webhook_url.clone().ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "webhook_url",
-            })?,
+            message_i_d: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id,
+            notification_u_r_l: item.router_data.request.webhook_url.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "webhook_url",
+                },
+            )?,
             password: auth_details.password.clone(),
             username: auth_details.username.clone(),
         };
