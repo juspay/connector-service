@@ -156,21 +156,15 @@ async function main() {
   });
   const adyenClient = new PaymentClient(adyenConfig);
 
-  // Routing rule: EUR -> Adyen, USD -> Stripe
-  const currency = 'USD';
-  const client = currency === 'EUR' ? adyenClient : stripeClient;
-
-  const order = await client.createOrder({
+  const order = await stripeClient.createOrder({
     merchantOrderId: 'order-123',
     amount: {
       minorAmount: 1000,
-      currency: currency
+      currency: "USD"
     },
     orderType: 'PAYMENT',
     description: 'Test order'
   });
-
-  console.log(`Order created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
   console.log('Order ID:', order.connectorOrderId);
 }
 
@@ -180,51 +174,28 @@ main().catch(console.error);
 ---
 
 
-## 🔄 Switching Providers
+## 🔄 Routing between Payment Providers
 
 Once the basic plumbing is implemented you can leverage Prism's core benefit - **switch payment providers by changing one line**.
 
+
 ```javascript
-const { PaymentClient } = require('hyperswitch-prism');
-const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hyperswitch-prism').types;
-
-async function createOrderWithRouting(orderId, currency, amount) {
-  // Configure both clients
-  const stripeConfig = ConnectorConfig.create({
-    options: SdkOptions.create({ environment: Environment.SANDBOX }),
-  });
-  stripeConfig.connectorConfig = ConnectorSpecificConfig.create({
-    stripe: { apiKey: { value: process.env.STRIPE_API_KEY } }
-  });
-  const stripeClient = new PaymentClient(stripeConfig);
-
-  const adyenConfig = ConnectorConfig.create({
-    options: SdkOptions.create({ environment: Environment.SANDBOX }),
-  });
-  adyenConfig.connectorConfig = ConnectorSpecificConfig.create({
-    adyen: {
-      apiKey: { value: process.env.ADYEN_API_KEY },
-      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT
-    }
-  });
-  const adyenClient = new PaymentClient(adyenConfig);
-
   // Routing rule: EUR -> Adyen, USD -> Stripe
+  const currency = 'USD';
   const client = currency === 'EUR' ? adyenClient : stripeClient;
 
-  // Same API call regardless of provider
   const order = await client.createOrder({
-    merchantOrderId: orderId,
+    merchantOrderId: 'order-123',
     amount: {
-      minorAmount: amount,
-      currency: currency
+      minorAmount: 1000,
+      currency: EUR
     },
     orderType: 'PAYMENT',
-    description: `Order ${orderId}`
+    description: 'Test order'
   });
 
-  return order;
-}
+  console.log(`Order created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
+
 
 // EUR goes to Adyen
 createOrderWithRouting('order-456', 'EUR', 2500);
@@ -235,8 +206,10 @@ createOrderWithRouting('order-123', 'USD', 1000);
 
 **One integration pattern. Any service category.**
 
-No rewriting. No re-architecting. Just swap the config.
+No rewriting. No re-architecting. Just swap the client with rules.
 Each flow uses the same unified schema regardless of the underlying processor's API differences. No custom code per provider.
+
+You can learn more about [intelligent routing](https://docs.hyperswitch.io/explore-hyperswitch/workflows/intelligent-routing) and [smart retries](https://docs.hyperswitch.io/explore-hyperswitch/workflows/smart-retries) to add more capabilities to your system.
 
 ---
 
