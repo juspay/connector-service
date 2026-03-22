@@ -160,6 +160,14 @@ pub struct Common {
     pub environment: consts::Env,
 }
 
+impl Default for Common {
+    fn default() -> Self {
+        Self {
+            environment: consts::Env::Development,
+        }
+    }
+}
+
 impl Common {
     pub fn validate(&self) -> Result<(), config::ConfigError> {
         let Self { environment } = self;
@@ -360,10 +368,23 @@ impl MetricsServer {
 
 pub fn workspace_path() -> PathBuf {
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
-        let mut path = PathBuf::from(manifest_dir);
-        path.pop();
-        path.pop();
-        path
+        let mut path = PathBuf::from(manifest_dir.clone());
+
+        // Traverse up until we find the workspace root (a Cargo.toml with [workspace])
+        while path.parent().is_some() {
+            let cargo_toml = path.join("Cargo.toml");
+            if cargo_toml.exists() {
+                if let Ok(content) = std::fs::read_to_string(&cargo_toml) {
+                    if content.contains("[workspace]") {
+                        return path;
+                    }
+                }
+            }
+            path.pop();
+        }
+
+        // Fallback: return current dir if workspace not found
+        PathBuf::from(manifest_dir)
     } else {
         PathBuf::from(".")
     }
