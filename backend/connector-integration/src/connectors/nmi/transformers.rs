@@ -1,11 +1,18 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
+use std::collections::HashMap;
+
+use common_utils::request::Method;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_flow::{
+        Authenticate, Authorize, Capture, PSync, PostAuthenticate, PreAuthenticate, RSync, Refund,
+        Void,
+    },
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
@@ -14,6 +21,7 @@ use domain_types::{
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 
 // Note: Refund and RefundsData are used for the Refund flow implementation
@@ -959,6 +967,394 @@ impl TryFrom<ResponseRouterData<StandardResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.orderid.clone()),
                 incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== 3DS AUTHENTICATION FLOW STRUCTURES =====
+// NMI supports 3D Secure authentication through a three-step process:
+// 1. PreAuthenticate: Initiates 3DS authentication, returns redirect URL for challenge
+// 2. Authenticate: Processes the 3DS challenge response from the issuer
+// 3. PostAuthenticate: Completes the payment using the authenticated transaction
+
+/// Request structure for the PreAuthenticate step of 3DS flow.
+///
+/// This initiates 3D Secure authentication by sending card details to NMI.
+/// If 3DS is required, NMI returns a pending status with a redirect URL
+/// where the cardholder can complete authentication with their bank.
+/// The merchant's redirect_url and term_url are used for challenge completion.
+#[derive(Debug, Serialize)]
+pub struct NmiPreAuthenticateRequest<T: PaymentMethodDataTypes> {
+    security_key: Secret<String>,
+    #[serde(rename = "type")]
+    transaction_type: TransactionType,
+    amount: FloatMajorUnit,
+    currency: common_enums::Currency,
+    orderid: String,
+    #[serde(flatten)]
+    payment_method: NmiPaymentMethod<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    redirecturl: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    term_url: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<
+                PreAuthenticate,
+                PaymentFlowData,
+                PaymentsPreAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NmiPreAuthenticateRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::NmiRouterData<
+            RouterDataV2<
+                PreAuthenticate,
+                PaymentFlowData,
+                PaymentsPreAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
+
+        let payment_method =
+            NmiPaymentMethod::try_from(router_data.request.payment_method_data.as_ref().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "payment_method_data",
+                },
+            )?)?;
+
+        let converter = FloatMajorUnitForConnector;
+        let amount = converter
+            .convert(
+                router_data.request.amount,
+                router_data
+                    .request
+                    .currency
+                    .unwrap_or(common_enums::Currency::USD),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        let redirect_url = router_data.request.router_return_url.clone();
+
+        Ok(Self {
+            security_key: auth.api_key,
+            transaction_type: TransactionType::Auth,
+            amount,
+            currency: router_data
+                .request
+                .currency
+                .unwrap_or(common_enums::Currency::USD),
+            orderid: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            payment_method,
+            redirecturl: redirect_url.clone().map(|url| url.to_string()),
+            term_url: redirect_url.map(|url| url.to_string()),
+        })
+    }
+}
+
+// ===== PREAUTHENTICATE RESPONSE =====
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Self>>
+    for RouterDataV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        let status = match response.response.as_str() {
+            "1" => AttemptStatus::AuthenticationSuccessful,
+            "2" | "3" => AttemptStatus::AuthenticationFailed,
+            _ => AttemptStatus::AuthenticationPending,
+        };
+
+        let redirection_data = if status == AttemptStatus::AuthenticationPending {
+            let mut form_fields = HashMap::new();
+            form_fields.insert("orderid".to_string(), response.orderid.clone());
+            form_fields.insert("response".to_string(), response.response.clone());
+            form_fields.insert("responsetext".to_string(), response.responsetext.clone());
+            form_fields.insert("transactionid".to_string(), response.transactionid.clone());
+            if let Some(authcode) = &response.authcode {
+                form_fields.insert("authcode".to_string(), authcode.clone());
+            }
+
+            // Get the base URL from connector configuration for proper environment handling
+            let base_url = &item
+                .router_data
+                .resource_common_data
+                .connectors
+                .nmi
+                .base_url;
+
+            Some(Box::new(RedirectForm::Form {
+                endpoint: base_url.clone(),
+                method: Method::Post,
+                form_fields,
+            }))
+        } else {
+            None
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::PreAuthenticateResponse {
+                redirection_data,
+                connector_response_reference_id: Some(response.orderid.clone()),
+                status_code: item.http_code,
+                authentication_data: None,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== AUTHENTICATE REQUEST =====
+
+/// Request structure for the Authenticate step of 3DS flow.
+///
+/// This processes the authentication response after the cardholder completes
+/// the 3DS challenge. It sends the PaRes/params from the redirect response
+/// back to NMI to complete the authentication and obtain authentication values.
+#[derive(Debug, Serialize)]
+pub struct NmiAuthenticateRequest<T: PaymentMethodDataTypes> {
+    security_key: Secret<String>,
+    #[serde(rename = "type")]
+    transaction_type: TransactionType,
+    #[serde(flatten)]
+    payment_method: NmiPaymentMethod<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    redirect_response: Option<String>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NmiAuthenticateRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::NmiRouterData<
+            RouterDataV2<
+                Authenticate,
+                PaymentFlowData,
+                PaymentsAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
+
+        let payment_method =
+            NmiPaymentMethod::try_from(router_data.request.payment_method_data.as_ref().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "payment_method_data",
+                },
+            )?)?;
+
+        let redirect_response = router_data
+            .request
+            .redirect_response
+            .as_ref()
+            .and_then(|resp| resp.params.as_ref())
+            .map(|params| params.peek().to_string());
+
+        Ok(Self {
+            security_key: auth.api_key,
+            transaction_type: TransactionType::Auth,
+            payment_method,
+            redirect_response,
+        })
+    }
+}
+
+// ===== AUTHENTICATE RESPONSE =====
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Self>>
+    for RouterDataV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        let status = match response.response.as_str() {
+            "1" => AttemptStatus::AuthenticationSuccessful,
+            "2" | "3" => AttemptStatus::AuthenticationFailed,
+            _ => AttemptStatus::AuthenticationPending,
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::AuthenticateResponse {
+                resource_id: Some(ResponseId::ConnectorTransactionId(
+                    response.transactionid.clone(),
+                )),
+                redirection_data: None,
+                authentication_data: None,
+                connector_response_reference_id: Some(response.orderid.clone()),
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// ===== POSTAUTHENTICATE REQUEST =====
+
+/// Request structure for the PostAuthenticate step of 3DS flow.
+///
+/// This completes the payment after successful 3DS authentication.
+/// It references the original transaction (from PreAuthenticate) and
+/// uses the transaction type (Sale for auto-capture, Auth for manual capture)
+/// to either charge the card immediately or authorize for later capture.
+#[derive(Debug, Serialize)]
+pub struct NmiPostAuthenticateRequest {
+    security_key: Secret<String>,
+    #[serde(rename = "type")]
+    transaction_type: TransactionType,
+    transactionid: String,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        super::NmiRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for NmiPostAuthenticateRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: super::NmiRouterData<
+            RouterDataV2<
+                PostAuthenticate,
+                PaymentFlowData,
+                PaymentsPostAuthenticateData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+        let auth = NmiAuthType::try_from(&router_data.connector_config)?;
+
+        let transactionid = router_data
+            .request
+            .redirect_response
+            .as_ref()
+            .and_then(|resp| resp.params.as_ref())
+            .and_then(|params| {
+                let parsed: Result<serde_json::Value, _> =
+                    serde_urlencoded::from_str(params.peek());
+                parsed.ok().and_then(|v| {
+                    v.get("transactionid")
+                        .and_then(|t| t.as_str())
+                        .map(|s| s.to_string())
+                })
+            })
+            .or_else(|| {
+                // Log when redirect response parsing fails to extract transactionid
+                tracing::warn!(
+                    "PostAuthenticate: Failed to extract transactionid from redirect_response params, \
+                    falling back to connector_request_reference_id"
+                );
+                Some(
+                    router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                )
+            })
+            .expect("connector_request_reference_id is always available");
+
+        Ok(Self {
+            security_key: auth.api_key,
+            transaction_type: TransactionType::Sale,
+            transactionid,
+        })
+    }
+}
+
+// ===== POSTAUTHENTICATE RESPONSE =====
+
+impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Self>>
+    for RouterDataV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        let status = match response.response.as_str() {
+            "1" => AttemptStatus::Charged,
+            "2" | "3" => AttemptStatus::AuthenticationFailed,
+            _ => AttemptStatus::Pending,
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::PostAuthenticateResponse {
+                authentication_data: None,
+                connector_response_reference_id: Some(response.orderid.clone()),
                 status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
