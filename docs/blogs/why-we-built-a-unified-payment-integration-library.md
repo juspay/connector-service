@@ -5,7 +5,7 @@ If you have ever integrated a payment processor, you know the drill. You read th
 We have been living in this world for years building Hyperswitch, an open-source payment orchestrator. At some point we had integrations for 50+ connectors. The integrations worked well — but they were locked inside our orchestrator, not usable by anyone who just needed to talk to Stripe or Adyen without adopting an entire platform.
 We always felt the Payment APIs are not more complicated than database drivers. It it just that the industry has not arrived at a standard (and it never will!!) for payments. Hence, we decided to build an open interface for Developer and AI agents to use, rather than recreate it every time.
 
-This post is about how we did that: unbundling those integrations into a standalone library called the **Connector Service**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
+This post is about how we did that: unbundling those integrations into a standalone library called the **Prism**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
 
 ---
 
@@ -130,7 +130,7 @@ This is where things get interesting. We wanted the library to work both as an *
         │  in-process call         │  network call
         ▼                          ▼
  ┌──────────────────────────────────────────────┐
- │          Rust Core (connector-service)       │
+ │          Rust Core (Prism)       │
  │  req_transformer → [HTTP] → res_transformer  │
  └──────────────────────────────────────────────┘
 ```
@@ -193,7 +193,7 @@ sdk/javascript/
 
 ## Code generation: the glue that holds it together
 
-Here is a problem we needed to solve: the connector service supports many payment flows (authorize, capture, void, refund, recurring charge, 3DS pre-auth, webhook handling, ...) and many SDK languages. Hand-maintaining typed client methods for each flow in each language is exactly the kind of work that introduces drift and bugs. So we do not do it.
+Here is a problem we needed to solve: the Prism supports many payment flows (authorize, capture, void, refund, recurring charge, 3DS pre-auth, webhook handling, ...) and many SDK languages. Hand-maintaining typed client methods for each flow in each language is exactly the kind of work that introduces drift and bugs. So we do not do it.
 
 The code generator at `sdk/codegen/generate.py` reads two sources of truth and emits all the SDK client boilerplate automatically.
 

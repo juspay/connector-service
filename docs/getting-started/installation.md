@@ -1,200 +1,112 @@
 # Installation
 
----
-title: Installation
-description: SDK installation, API configuration, and environment setup for Connector Service
-last_updated: 2026-03-03
-generated_from: N/A
-auto_generated: false
-reviewed_by: tech-writer
-reviewed_at: 2026-03-03
-approved: true
----
+Start by installing the library for the programming language of your choice.
 
-## Overview
+## Install library
 
-This guide walks you through installing Connector Service SDKs and configuring your environment for development and production use.
+{% tabs %}
 
-## SDK Installation
+{% tab title="Node.js" %}
 
-### Node.js
-
+{% code title="Terminal" overflow="wrap" %}
 ```bash
-# Using npm
-npm install @juspay/connector-service-sdk
-
-# Using yarn
-yarn add @juspay/connector-service-sdk
-
-# Using pnpm
-pnpm add @juspay/connector-service-sdk
+npm install @juspay/connector-service-node
 ```
+{% endcode %}
 
-### Python
+{% code title="index.js" overflow="wrap" lineNumbers="true" %}
+```javascript
+const { ConnectorClient } = require('@juspay/connector-service-node');
 
+const client = new ConnectorClient({
+    connectors: {
+        stripe: { apiKey: process.env.STRIPE_API_KEY }
+    }
+});
+```
+{% endcode %}
+
+{% endtab %}
+
+{% tab title="Python" %}
+
+{% code title="Terminal" overflow="wrap" %}
 ```bash
-# Using pip
-pip install juspay-connector-service
-
-# Using poetry
-poetry add juspay-connector-service
-
-# Using uv
-uv pip install juspay-connector-service
+pip install connector-service-python
 ```
+{% endcode %}
 
-### Java (Maven)
+{% code title="main.py" overflow="wrap" lineNumbers="true" %}
+```python
+from connector_service import ConnectorClient
 
+client = ConnectorClient(
+    connectors={
+        "stripe": {"api_key": os.environ["STRIPE_API_KEY"]}
+    }
+)
+```
+{% endcode %}
+
+{% endtab %}
+
+{% tab title="Java" %}
+
+{% code title="pom.xml" overflow="wrap" %}
 ```xml
 <dependency>
-    <groupId>in.juspay</groupId>
-    <artifactId>connector-service-sdk</artifactId>
-    <version>1.0.0</version>
+    <groupId>com.juspay</groupId>
+    <artifactId>connector-service-java</artifactId>
+    <version>1.2.0</version>
 </dependency>
 ```
+{% endcode %}
 
-### Java (Gradle)
-
-```groovy
-dependencies {
-    implementation 'in.juspay:connector-service-sdk:1.0.0'
-}
+{% code title="Main.java" overflow="wrap" lineNumbers="true" %}
+```java
+ConnectorClient client = ConnectorClient.builder()
+    .connector("stripe", StripeConfig.builder()
+        .apiKey(System.getenv("STRIPE_API_KEY"))
+        .build())
+    .build();
 ```
+{% endcode %}
 
-### .NET
+{% endtab %}
 
+{% tab title="PHP" %}
+
+{% code title="Terminal" overflow="wrap" %}
 ```bash
-# Using dotnet CLI
-dotnet add package Juspay.ConnectorService
-
-# Using NuGet Package Manager
-Install-Package Juspay.ConnectorService
+composer require juspay/connector-service-php
 ```
+{% endcode %}
 
-### Go
+{% code title="index.php" overflow="wrap" lineNumbers="true" %}
+```php
+<?php
+require_once 'vendor/autoload.php';
 
-```bash
-go get github.com/juspay/connector-service-sdk-go
+use ConnectorService\ConnectorClient;
+
+$client = new ConnectorClient([
+    'connectors' => [
+        'stripe' => ['api_key' => $_ENV['STRIPE_API_KEY']]
+    ]
+]);
 ```
+{% endcode %}
 
-### Haskell
+{% endtab %}
 
-```bash
-# Add to your cabal file
-build-depends: connector-service-sdk >= 1.0.0
+{% endtabs %}
 
-# Or using stack
-stack build connector-service-sdk
-```
+That would be all. The SDK handles native library loading automatically. Start building in the [Quick Start](./quick-start.md).
 
-## API Credentials Setup
+## Minimum version supported
 
-### 1. Obtain Credentials
-
-1. Log in to the [Juspay Dashboard](https://dashboard.juspay.in)
-2. Navigate to **Settings > API Keys**
-3. Generate a new API key (save it securely - it won't be shown again)
-4. Note your **Merchant ID** from the dashboard header
-
-### 2. Environment Variables
-
-Create a `.env` file in your project root:
-
-```bash
-# Required
-UCS_API_KEY="your-api-key-here"
-UCS_MERCHANT_ID="your-merchant-id"
-
-# Optional - defaults shown
-UCS_API_ENDPOINT="https://api.juspay.in"  # Production
-# UCS_API_ENDPOINT="https://sandbox.juspay.in"  # Sandbox
-UCS_TIMEOUT_MS="30000"
-UCS_MAX_RETRIES="3"
-```
-
-### 3. Load Environment Variables
-
-**Node.js:**
-```javascript
-require('dotenv').config();
-const apiKey = process.env.UCS_API_KEY;
-const merchantId = process.env.UCS_MERCHANT_ID;
-```
-
-**Python:**
-```python
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-api_key = os.getenv('UCS_API_KEY')
-merchant_id = os.getenv('UCS_MERCHANT_ID')
-```
-
-## Verify Installation
-
-### Health Check
-
-```bash
-# Using curl (language-agnostic)
-curl -X POST https://api.juspay.in/v2/health \
-  -H "Authorization: Bearer $UCS_API_KEY" \
-  -H "Content-Type: application/json"
-```
-
-### SDK Health Check
-
-**Node.js:**
-```javascript
-const { ConnectorClient } = require('@juspay/connector-service-sdk');
-
-const client = new ConnectorClient({
-  apiKey: process.env.UCS_API_KEY,
-  merchantId: process.env.UCS_MERCHANT_ID
-});
-
-async function verify() {
-  try {
-    const health = await client.health.check();
-    console.log('✅ Connected to Connector Service');
-    console.log('Status:', health.status);
-  } catch (error) {
-    console.error('❌ Connection failed:', error.message);
-  }
-}
-
-verify();
-```
-
-## Environment-Specific Configuration
-
-| Environment | Endpoint | Use Case |
-|-------------|----------|----------|
-| Sandbox | `https://sandbox.juspay.in` | Development, testing |
-| Production | `https://api.juspay.in` | Live transactions |
-
-### Switching Environments
-
-```javascript
-// Node.js example
-const client = new ConnectorClient({
-  apiKey: process.env.UCS_API_KEY,
-  merchantId: process.env.UCS_MERCHANT_ID,
-  environment: process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
-});
-```
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| "Authentication failed" | Verify API key is correct and not expired |
-| "Merchant not found" | Check MERCHANT_ID format (should be alphanumeric) |
-| "Connection timeout" | Check firewall settings and UCS_TIMEOUT_MS value |
-| "SSL certificate error" | Update system CA certificates |
-
-## Next Steps
-
-- [Quick Start Guide](./quick-start.md) - Process your first payment
-- [Concepts](./concepts.md) - Understand core abstractions
-- [SDK Documentation](../sdks/) - Language-specific guides
+The prerequisites are:
+- **Node.js**: 16+ (FFI bindings require native compilation)
+- **Python**: 3.9+ (uses `ctypes` for FFI)
+- **Java**: 11+ (uses JNI bindings)
+- **PHP**: 8.0+ (uses FFI extension)

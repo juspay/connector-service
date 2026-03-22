@@ -72,17 +72,17 @@ approved: {true|false}
 
 ## C3: Product Naming
 
-**Requirement:** Always refer to the product as "Connector Service". Never use "UCS", "Universal Connector Service", or other abbreviations.
+**Requirement:** Always refer to the product as "Prism". Never use "UCS", "Universal Prism", or other abbreviations.
 
 **Correct:**
-- "The Connector Service API provides..."
-- "This Domain Schema defines types used across Connector Service..."
-- "To integrate with Connector Service..."
+- "The Prism API provides..."
+- "This Domain Schema defines types used across Prism..."
+- "To integrate with Prism..."
 
 **Incorrect:**
 - "The UCS API provides..."
 - "This Domain Schema defines types used across UCS..."
-- "To integrate with Universal Connector Service..."
+- "To integrate with Universal Prism..."
 
 **Rationale:** Consistent product naming builds brand recognition and avoids confusion for developers reading the documentation.
 
@@ -203,7 +203,7 @@ Description of the business scenario.
 ```mermaid
 sequenceDiagram
     participant App as Your App
-    participant CS as Connector Service
+    participant CS as Prism
     participant PP as Payment Provider
     App->>CS: 1. OperationA
     CS-->>App: Return field
@@ -216,7 +216,7 @@ sequenceDiagram
 **Requirements:**
 - Include 3 use cases showing sequence of operations
 - Use mermaid sequence diagrams showing flow of operations
-- **Participants must be:** `App` (Your App), `CS` (Connector Service), `PP` (Payment Provider)
+- **Participants must be:** `App` (Your App), `CS` (Prism), `PP` (Payment Provider)
 - Do NOT include request/response examples
 - Always hyperlink operation names to their API reference
 
@@ -606,7 +606,7 @@ Rules for keeping GitBook configuration in sync with documentation changes.
 ```mermaid
 sequenceDiagram
     participant App as Your App
-    participant CS as Connector Service
+    participant CS as Prism
     participant PP as Payment Provider
 
     App->>CS: 1. Create customer
