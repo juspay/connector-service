@@ -8,7 +8,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, PaymentMethodToken, RSync, RepeatPayment, SdkSessionToken, Void,
+        Authorize, Capture, PSync, PaymentMethodToken, RSync, RepeatPayment, SdkSessionToken,
+        SetupMandate, Void,
     },
     connector_types::{
         self, AmountInfo, ApplePayPaymentRequest, ApplePaySessionResponse,
@@ -20,7 +21,8 @@ use domain_types::{
         PaymentsSdkSessionTokenData, PaymentsSyncData, PaypalSdkSessionTokenData,
         PaypalSessionTokenResponse, PaypalTransactionInfo, RefundFlowData, RefundSyncData,
         RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SdkNextAction,
-        SecretInfoToInitiateSdk, SessionToken, ThirdPartySdkSessionResponse,
+        SecretInfoToInitiateSdk, SessionToken, SetupMandateRequestData,
+        ThirdPartySdkSessionResponse,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
@@ -2729,6 +2731,193 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         status_code: item.http_code,
                     })
                 };
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response,
+                    ..item.router_data
+                })
+            }
+        }
+    }
+}
+
+// =============================================================================
+// SetupMandate (Zero-Dollar Authorization) Types and Implementations
+// =============================================================================
+
+pub type BraintreeSetupMandateRequest = GenericBraintreeRequest<VariableSetupMandateInput>;
+pub type VariableSetupMandateInput = GenericVariableInput<SetupMandateInputData>;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupMandateInputData {
+    payment_method_id: Secret<String>,
+    transaction: SetupMandateTransactionBody,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupMandateTransactionBody {
+    amount: StringMajorUnit,
+    merchant_account_id: Secret<String>,
+    channel: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    customer_details: Option<CustomerBody>,
+    order_id: String,
+}
+
+pub type BraintreeSetupMandateResponse = GenericBraintreeResponse<SetupMandateResponseData>;
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SetupMandateResponseData {
+    pub data: SetupMandateChargeCreditCard,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupMandateChargeCreditCard {
+    pub charge_credit_card: SetupMandateTransactionWrapper,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SetupMandateTransactionWrapper {
+    pub transaction: SetupMandateTransaction,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupMandateTransaction {
+    pub id: String,
+    pub status: BraintreePaymentStatus,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_method: Option<PaymentMethodInfo>,
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        BraintreeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for BraintreeSetupMandateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: BraintreeRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let metadata: BraintreeMeta = utils::to_connector_meta_from_secret(
+            item.router_data
+                .resource_common_data
+                .connector_meta_data
+                .clone(),
+        )
+        .change_context(ConnectorError::InvalidConnectorConfig { config: "metadata" })?;
+
+        // For zero-dollar authorization, amount is 0
+        let amount = StringMajorUnit::zero();
+
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+
+        let payment_method_token = item
+            .router_data
+            .resource_common_data
+            .get_payment_method_token()?;
+
+        let payment_method_id = match payment_method_token {
+            PaymentMethodTokenFlow::Token(token) => token,
+        };
+
+        Ok(Self {
+            query: constants::CHARGE_CREDIT_CARD_MUTATION.to_string(),
+            variables: VariableSetupMandateInput {
+                input: SetupMandateInputData {
+                    payment_method_id,
+                    transaction: SetupMandateTransactionBody {
+                        amount,
+                        merchant_account_id: metadata.merchant_account_id,
+                        channel: constants::CHANNEL_CODE.to_string(),
+                        customer_details: item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_email()
+                            .ok()
+                            .map(|email| CustomerBody { email }),
+                        order_id,
+                    },
+                },
+            },
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<ResponseRouterData<BraintreeSetupMandateResponse, Self>>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<BraintreeSetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        match item.response {
+            BraintreeSetupMandateResponse::ErrorResponse(error_response) => Ok(Self {
+                response: build_error_response(&error_response.errors.clone(), item.http_code)
+                    .map_err(|err| *err),
+                ..item.router_data
+            }),
+            BraintreeSetupMandateResponse::SuccessResponse(setup_mandate_response) => {
+                let transaction_data = setup_mandate_response.data.charge_credit_card.transaction;
+                let status = enums::AttemptStatus::from(transaction_data.status.clone());
+
+                let response = if domain_types::utils::is_payment_failure(status) {
+                    Err(create_failure_error_response(
+                        transaction_data.status,
+                        Some(transaction_data.id),
+                        item.http_code,
+                    ))
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
+                        redirection_data: None,
+                        mandate_reference: transaction_data.payment_method.as_ref().map(|pm| {
+                            Box::new(MandateReference {
+                                connector_mandate_id: Some(pm.id.clone().expose()),
+                                payment_method_id: None,
+                                connector_mandate_request_reference_id: None,
+                            })
+                        }),
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        status_code: item.http_code,
+                    })
+                };
+
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
                         status,
