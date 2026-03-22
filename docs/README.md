@@ -134,8 +134,8 @@ For detailed installation instructions, see [Installation Guide](./getting-start
 const { PaymentClient } = require('hs-playlib');
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
-async function createPayment(orderId, currency, amount) {
-  // Configure Stripe client for USD payments
+async function createOrder(orderId, currency, amount) {
+  // Configure Stripe client (Primary payment processor)
   const stripeConfig = ConnectorConfig.create({
     options: SdkOptions.create({ environment: Environment.SANDBOX }),
   });
@@ -144,7 +144,7 @@ async function createPayment(orderId, currency, amount) {
   });
   const stripeClient = new PaymentClient(stripeConfig);
 
-  // Configure Adyen client for EUR payments
+  // Configure Adyen client (Secondary payment processor)
   const adyenConfig = ConnectorConfig.create({
     options: SdkOptions.create({ environment: Environment.SANDBOX }),
   });
@@ -156,40 +156,30 @@ async function createPayment(orderId, currency, amount) {
   });
   const adyenClient = new PaymentClient(adyenConfig);
 
-  // Select client based on currency
+  // Select client based on currency - EUR to Adyen, USD to Stripe
   const client = currency === 'EUR' ? adyenClient : stripeClient;
 
-  // Create payment - route EUR to Adyen, USD to Stripe
-  const payment = await client.authorize({
-    merchantTransactionId: orderId,
+  // Create order - route EUR to Adyen, USD to Stripe
+  const order = await client.createOrder({
+    merchantOrderId: orderId,
     amount: {
       minorAmount: amount,
       currency: currency
     },
-    paymentMethod: {
-      card: {
-        cardNumber: { value: '4111111111111111' },
-        cardExpMonth: { value: '12' },
-        cardExpYear: { value: '2030' },
-        cardCvc: { value: '123' },
-        cardHolderName: { value: 'John Doe' }
-      }
-    },
-    captureMethod: 'AUTOMATIC',
-    authType: 'NO_THREE_DS',
-    returnUrl: 'https://example.com/return'
+    orderType: 'PAYMENT',
+    description: `Order ${orderId}`
   });
 
-  console.log(`Payment created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
-  console.log('Transaction ID:', payment.connectorTransactionId);
-  return payment;
+  console.log(`Order created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
+  console.log('Order ID:', order.connectorOrderId);
+  return order;
 }
 
-// EUR payment goes to Adyen
-createPayment('order-456', 'EUR', 2500);
+// EUR order goes to Adyen
+createOrder('order-456', 'EUR', 2500);
 
-// USD payment goes to Stripe
-createPayment('order-123', 'USD', 1000);
+// USD order goes to Stripe
+createOrder('order-123', 'USD', 1000);
 ```
 
 
@@ -337,6 +327,11 @@ public class Example {
 
 
 ## 🔄 Switching Providers
+
+// Select client based on currency
+const client = currency === 'EUR' ? adyenClient : stripeClient;
+
+
 
 Once the basic plumbing is implemented you can leverage Prism's core benefit - **switch payment providers by changing one line**.
 
