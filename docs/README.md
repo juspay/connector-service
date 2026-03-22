@@ -298,21 +298,32 @@ cargo test
 
 ```
 connector-service/
-├── backend/
+├── crates/
+│   ├── common/                # Shared utilities and core components
+│   │   ├── common_enums/      # Common enums
+│   │   ├── common_utils/      # Shared utilities
+│   │   ├── ucs_env/           # Environment configuration
+│   │   ├── config_patch_derive/ # Config derive macros
+│   │   ├── external-services/ # External service clients
+│   │   └── tracing-kafka/     # Kafka tracing
+│   ├── types-traits/          # Type definitions and interfaces
+│   │   ├── grpc-api-types/    # Protocol buffer definitions
+│   │   ├── domain_types/      # Domain type definitions
+│   │   ├── interfaces/        # Interface definitions
+│   │   ├── cards/             # Card types and validation
+│   │   └── ucs_interface_common/ # Common interfaces
+│   ├── integrations/          # Connector integrations
+│   │   └── connector-integration/
 │   ├── grpc-server/           # gRPC server implementation
-│   ├── grpc-api-types/        # Protocol buffer definitions
-│   ├── connector-integration/ # Connector implementations
-│   ├── composite-service/     # Composite service layer
-│   ├── common_utils/          # Shared utilities
-│   ├── common_enums/          # Common enums
-│   ├── domain_types/          # Domain type definitions
-│   ├── interfaces/            # Interface definitions
-│   ├── external-services/     # External service clients
 │   ├── ffi/                   # Foreign function interface
-│   └── ...
+│   └── internal/              # Internal tools and tests
+│       ├── composite-service/ # Composite service layer
+│       ├── ucs-connector-tests/ # Connector tests
+│       ├── uniffi-bindgen/    # UniFFI bindings generator
+│       └── field-probe/       # Field probe tool
 ├── sdk/
 │   ├── java/                  # Java SDK
-│   ├── node-ffi-client/       # Node.js FFI client
+│   ├── javascript/            # JavaScript SDK
 │   ├── rust/                  # Rust SDK
 │   ├── rust-grpc-client/      # Rust gRPC client
 │   └── python/                # Python SDK
