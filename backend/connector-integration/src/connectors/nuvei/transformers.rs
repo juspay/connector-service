@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankTransferData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -144,12 +144,40 @@ pub struct NuveiPaymentOption<
 pub struct NuveiCard<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
-    pub card_number: RawCardNumber<T>,
-    pub card_holder_name: Secret<String>,
-    pub expiration_month: Secret<String>,
-    pub expiration_year: Secret<String>,
-    #[serde(rename = "CVV")]
-    pub cvv: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_number: Option<RawCardNumber<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration_month: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expiration_year: Option<Secret<String>>,
+    #[serde(rename = "CVV", skip_serializing_if = "Option::is_none")]
+    pub cvv: Option<Secret<String>>,
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub external_token: Option<NuveiExternalToken>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NuveiExternalToken {
+    pub external_token_provider: NuveiExternalTokenProvider,
+    pub token: Secret<String>,
+    pub three_d_flow: Option<NuveiThreeDFlow>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum NuveiExternalTokenProvider {
+    ApplePay,
+    GooglePay,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum NuveiThreeDFlow {
+    Disable,
+    Enable,
 }
 
 // ACH Bank Transfer specific structures
@@ -650,11 +678,85 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 NuveiPaymentOption {
                     card: Some(NuveiCard {
-                        card_number: card_data.card_number.clone(),
-                        card_holder_name,
-                        expiration_month: card_data.card_exp_month.clone(),
-                        expiration_year: card_data.card_exp_year.clone(),
-                        cvv: card_data.card_cvc.clone(),
+                        card_number: Some(card_data.card_number.clone()),
+                        card_holder_name: Some(card_holder_name),
+                        expiration_month: Some(card_data.card_exp_month.clone()),
+                        expiration_year: Some(card_data.card_exp_year.clone()),
+                        cvv: Some(card_data.card_cvc.clone()),
+                        external_token: None,
+                    }),
+                    alternative_payment_method: None,
+                }
+            }
+            PaymentMethodData::Wallet(wallet_data) => {
+                let token = wallet_data.get_wallet_token().change_context(
+                    errors::ConnectorError::InvalidWalletToken {
+                        wallet_name: "Wallet".to_string(),
+                    },
+                )?;
+
+                let external_token_provider = match wallet_data {
+                    WalletData::GooglePay(_) => NuveiExternalTokenProvider::GooglePay,
+                    WalletData::ApplePay(_) => NuveiExternalTokenProvider::ApplePay,
+                    _ => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!(
+                                "{:?} wallet type is not supported for Nuvei",
+                                match wallet_data {
+                                    WalletData::AliPayQr(_) => "AliPayQr",
+                                    WalletData::AliPayRedirect(_) => "AliPayRedirect",
+                                    WalletData::AliPayHkRedirect(_) => "AliPayHkRedirect",
+                                    WalletData::AmazonPayRedirect(_) => "AmazonPayRedirect",
+                                    WalletData::MomoRedirect(_) => "MomoRedirect",
+                                    WalletData::KakaoPayRedirect(_) => "KakaoPayRedirect",
+                                    WalletData::GoPayRedirect(_) => "GoPayRedirect",
+                                    WalletData::GcashRedirect(_) => "GcashRedirect",
+                                    WalletData::ApplePayRedirect(_) => "ApplePayRedirect",
+                                    WalletData::ApplePayThirdPartySdk(_) => "ApplePayThirdPartySdk",
+                                    WalletData::DanaRedirect {} => "DanaRedirect",
+                                    WalletData::GooglePayRedirect(_) => "GooglePayRedirect",
+                                    WalletData::GooglePayThirdPartySdk(_) =>
+                                        "GooglePayThirdPartySdk",
+                                    WalletData::MbWayRedirect(_) => "MbWayRedirect",
+                                    WalletData::MobilePayRedirect(_) => "MobilePayRedirect",
+                                    WalletData::PaypalRedirect(_) => "PaypalRedirect",
+                                    WalletData::PaypalSdk(_) => "PaypalSdk",
+                                    WalletData::Paze(_) => "Paze",
+                                    WalletData::SamsungPay(_) => "SamsungPay",
+                                    WalletData::TwintRedirect {} => "TwintRedirect",
+                                    WalletData::VippsRedirect {} => "VippsRedirect",
+                                    WalletData::TouchNGoRedirect(_) => "TouchNGoRedirect",
+                                    WalletData::WeChatPayRedirect(_) => "WeChatPayRedirect",
+                                    WalletData::WeChatPayQr(_) => "WeChatPayQr",
+                                    WalletData::CashappQr(_) => "CashappQr",
+                                    WalletData::SwishQr(_) => "SwishQr",
+                                    WalletData::Mifinity(_) => "Mifinity",
+                                    WalletData::RevolutPay(_) => "RevolutPay",
+                                    WalletData::MbWay(_) => "MbWay",
+                                    WalletData::Satispay(_) => "Satispay",
+                                    WalletData::Wero(_) => "Wero",
+                                    WalletData::BluecodeRedirect {} => "BluecodeRedirect",
+                                    _ => "Unknown",
+                                }
+                            ),
+                            connector: "nuvei",
+                        }
+                        .into())
+                    }
+                };
+
+                NuveiPaymentOption {
+                    card: Some(NuveiCard {
+                        card_number: None,
+                        card_holder_name: None,
+                        expiration_month: None,
+                        expiration_year: None,
+                        cvv: None,
+                        external_token: Some(NuveiExternalToken {
+                            external_token_provider,
+                            token,
+                            three_d_flow: None,
+                        }),
                     }),
                     alternative_payment_method: None,
                 }
