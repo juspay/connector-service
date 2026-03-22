@@ -22,10 +22,9 @@
 ---
 
 
-## 🎯 Why Prism?
+## 🎯 What is Prism?
 
-
-Today, integrating multiple payment processors either makes developers running in circles with AI agents to recreate integrations from specs, or developers spending months of engineering effort. 
+Today, integrating multiple payment processors either makes developers running in circles with AI agents to recreate integrations from specs, or developers spending months of engineering effort.
 
 Because every payment processor has diverse APIs, error codes, authentication methods, pdf documents to read, and above all - different behaviour in the actual environment when compared to documented specs. All this rests as tribal or undocumented knowledge making it harder AI agents which are very good at implementing clearly documented specification.
 
@@ -81,48 +80,6 @@ Because every payment processor has diverse APIs, error codes, authentication me
    └──────────┘           └──────────┘           └──────────┘           └──────────┘
 ```
 
-
-### Payment & Capture Flow Sequence
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#B3D9F2', 'primaryTextColor': '#333333', 'primaryBorderColor': '#5B9BD5', 'lineColor': '#666666', 'secondaryColor': '#C5E8C0', 'tertiaryColor': '#F9B872'}}}%%
-sequenceDiagram
-   autonumber
-   participant App as Your App
-   participant SDK as Prism
-   participant PSP as Payment Service Provider (PSP)
-   
-   Note over App,PSP: Payment Authorization
-   App->>SDK: paymentservice.authorize(amount, currency, payment_method)
-   activate SDK
-   SDK->>PSP: Provider-specific Authorize API call
-   activate PSP
-   PSP-->>SDK: Provider-specific response
-   deactivate PSP
-   SDK-->>App: Unified authorize response
-   deactivate SDK
-
-   Note over App,PSP: Payment Capture
-   App->>SDK: paymentservice.capture(payment_id, amount)
-   activate SDK
-   SDK->>PSP: Provider-specific Capture API call
-   activate PSP
-   PSP-->>SDK: Provider-specific Capture response
-   deactivate PSP
-   SDK-->>App: Unified capture response
-   deactivate SDK
-
-   Note over App,PSP: Event Service (Webhooks)
-   PSP->>App: webhook(event_payload)
-   activate App
-   App->>SDK: eventservice.handle(unified_event)
-   activate SDK
-   SDK->>App: Unified event payload
-   deactivate SDK
-   deactivate App
-
-```
-
 ---
 
 
@@ -130,18 +87,19 @@ sequenceDiagram
 
 ### Install the Prism Library
 
+Start by installing the library in the language of your choice.
 <!-- tabs:start -->
 
 #### **Node.js**
 
 ```bash
-npm install @juspay-tech/hyperswitch-prism
+npm install hs-playlib
 ```
 
 #### **Python**
 
 ```bash
-pip install hyperswitch-prism
+pip install payments
 ```
 
 #### **Java**
@@ -150,8 +108,8 @@ Add to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>com.juspay</groupId>
-    <artifactId>hyperswitch-prism</artifactId>
+    <groupId>com.juspay.hyperswitch</groupId>
+    <artifactId>prism</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -161,8 +119,6 @@ Add to your `pom.xml`:
 ```bash
 composer require juspay/hyperswitch-prism
 ```
-
-<!-- tabs:end -->
 
 For detailed installation instructions, see [Installation Guide](./getting-started/installation.md).
 
@@ -175,54 +131,228 @@ For detailed installation instructions, see [Installation Guide](./getting-start
 #### **Node.js**
 
 ```javascript
-const { ConnectorClient, Currency } = require('@juspay/hyperswitch-prism');
+const { PaymentClient } = require('hs-playlib');
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
 async function main() {
-  const client = new ConnectorClient({
-    connectors: {
-      stripe: { apiKey: process.env.STRIPE_API_KEY }
+  // Configure Stripe client
+  const stripeConfig = ConnectorConfig.create({
+    options: SdkOptions.create({ environment: Environment.SANDBOX }),
+  });
+  stripeConfig.connectorConfig = ConnectorSpecificConfig.create({
+    stripe: { apiKey: { value: process.env.STRIPE_API_KEY } }
+  });
+  const stripeClient = new PaymentClient(stripeConfig);
+
+  // Configure Adyen client
+  const adyenConfig = ConnectorConfig.create({
+    options: SdkOptions.create({ environment: Environment.SANDBOX }),
+  });
+  adyenConfig.connectorConfig = ConnectorSpecificConfig.create({
+    adyen: {
+      apiKey: { value: process.env.ADYEN_API_KEY },
+      merchantAccount: process.env.ADYEN_MERCHANT_ACCOUNT
     }
   });
+  const adyenClient = new PaymentClient(adyenConfig);
 
-  const order = await client.payments.createOrder({
+  // Create payment with Stripe
+  const stripePayment = await stripeClient.authorize({
+    merchantTransactionId: 'order-123',
     amount: {
       minorAmount: 1000,  // $10.00
-      currency: Currency.USD
+      currency: 'USD'
     },
-    merchantOrderId: 'order-123'
+    paymentMethod: {
+      card: {
+        cardNumber: { value: '4111111111111111' },
+        cardExpMonth: { value: '12' },
+        cardExpYear: { value: '2030' },
+        cardCvc: { value: '123' },
+        cardHolderName: { value: 'John Doe' }
+      }
+    },
+    captureMethod: 'AUTOMATIC',
+    authType: 'NO_THREE_DS'
   });
+  console.log('Stripe Transaction ID:', stripePayment.connectorTransactionId);
 
-  console.log('Order ID:', order.connectorOrderId);
-  console.log('Client Secret:', order.sessionToken.clientSecret);
+  // Create payment with Adyen
+  const adyenPayment = await adyenClient.authorize({
+    merchantTransactionId: 'order-456',
+    amount: {
+      minorAmount: 2500,  // $25.00
+      currency: 'EUR'
+    },
+    paymentMethod: {
+      card: {
+        cardNumber: { value: '4111111111111111' },
+        cardExpMonth: { value: '12' },
+        cardExpYear: { value: '2030' },
+        cardCvc: { value: '123' },
+        cardHolderName: { value: 'Jane Doe' }
+      }
+    },
+    captureMethod: 'AUTOMATIC',
+    authType: 'NO_THREE_DS',
+    returnUrl: 'https://example.com/return'
+  });
+  console.log('Adyen Transaction ID:', adyenPayment.connectorTransactionId);
 }
 
 main().catch(console.error);
 ```
 
 
+#### **Python**
+
+```python
+import asyncio
+import os
+from payments import PaymentClient
+from payments.generated import sdk_config_pb2, payment_pb2
+
+async def main():
+    # Configure Stripe client
+    stripe_config = sdk_config_pb2.ConnectorConfig(
+        options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
+    )
+    stripe_config.connector_config.stripe.api_key.value = os.getenv('STRIPE_API_KEY')
+    stripe_client = PaymentClient(stripe_config)
+
+    # Configure Adyen client
+    adyen_config = sdk_config_pb2.ConnectorConfig(
+        options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
+    )
+    adyen_config.connector_config.adyen.api_key.value = os.getenv('ADYEN_API_KEY')
+    adyen_config.connector_config.adyen.merchant_account = os.getenv('ADYEN_MERCHANT_ACCOUNT')
+    adyen_client = PaymentClient(adyen_config)
+
+    # Create payment with Stripe
+    stripe_payment = await stripe_client.authorize(payment_pb2.PaymentServiceAuthorizeRequest(
+        merchant_transaction_id='order-123',
+        amount=payment_pb2.Amount(
+            minor_amount=1000,  # $10.00
+            currency='USD'
+        ),
+        payment_method=payment_pb2.PaymentMethod(
+            card=payment_pb2.CardDetails(
+                card_number={'value': '4111111111111111'},
+                card_exp_month={'value': '12'},
+                card_exp_year={'value': '2030'},
+                card_cvc={'value': '123'},
+                card_holder_name={'value': 'John Doe'}
+            )
+        ),
+        capture_method='AUTOMATIC',
+        auth_type='NO_THREE_DS'
+    ))
+    print(f'Stripe Transaction ID: {stripe_payment.connector_transaction_id}')
+
+    # Create payment with Adyen
+    adyen_payment = await adyen_client.authorize(payment_pb2.PaymentServiceAuthorizeRequest(
+        merchant_transaction_id='order-456',
+        amount=payment_pb2.Amount(
+            minor_amount=2500,  # $25.00
+            currency='EUR'
+        ),
+        payment_method=payment_pb2.PaymentMethod(
+            card=payment_pb2.CardDetails(
+                card_number={'value': '4111111111111111'},
+                card_exp_month={'value': '12'},
+                card_exp_year={'value': '2030'},
+                card_cvc={'value': '123'},
+                card_holder_name={'value': 'Jane Doe'}
+            )
+        ),
+        capture_method='AUTOMATIC',
+        auth_type='NO_THREE_DS',
+        return_url='https://example.com/return'
+    ))
+    print(f'Adyen Transaction ID: {adyen_payment.connector_transaction_id}')
+
+asyncio.run(main())
+```
+
+
 #### **Java**
 
-
 ```java
-import com.juspay.hyperswitchprism.*;
+import com.juspay.hyperswitch.prism.PaymentClient;
+import com.juspay.hyperswitch.prism.config.ConnectorConfig;
+import com.juspay.hyperswitch.prism.config.SdkOptions;
+import com.juspay.hyperswitch.prism.config.Environment;
+import com.juspay.hyperswitch.prism.types.*;
 
 public class Example {
     public static void main(String[] args) {
-        ConnectorClient client = ConnectorClient.builder()
-            .connector("stripe", StripeConfig.builder()
-                .apiKey(System.getenv("STRIPE_API_KEY"))
+        // Configure Stripe client
+        ConnectorConfig stripeConfig = ConnectorConfig.builder()
+            .options(SdkOptions.builder()
+                .environment(Environment.SANDBOX)
+                .build())
+            .connectorSpecificConfig(ConnectorSpecificConfig.builder()
+                .stripe(StripeConfig.builder()
+                    .apiKey(SecretString.of(System.getenv("STRIPE_API_KEY")))
+                    .build())
                 .build())
             .build();
+        PaymentClient stripeClient = new PaymentClient(stripeConfig);
 
-        CreateOrderResponse order = client.payments().createOrder(
-            CreateOrderRequest.builder()
+        // Configure Adyen client
+        ConnectorConfig adyenConfig = ConnectorConfig.builder()
+            .options(SdkOptions.builder()
+                .environment(Environment.SANDBOX)
+                .build())
+            .connectorSpecificConfig(ConnectorSpecificConfig.builder()
+                .adyen(AdyenConfig.builder()
+                    .apiKey(SecretString.of(System.getenv("ADYEN_API_KEY")))
+                    .merchantAccount(System.getenv("ADYEN_MERCHANT_ACCOUNT"))
+                    .build())
+                .build())
+            .build();
+        PaymentClient adyenClient = new PaymentClient(adyenConfig);
+
+        // Create payment with Stripe
+        PaymentServiceAuthorizeResponse stripePayment = stripeClient.authorize(
+            PaymentServiceAuthorizeRequest.builder()
+                .merchantTransactionId("order-123")
                 .amount(Amount.of(1000, Currency.USD))
-                .merchantOrderId("order-123")
+                .paymentMethod(PaymentMethod.builder()
+                    .card(CardDetails.builder()
+                        .cardNumber(SecretString.of("4111111111111111"))
+                        .cardExpMonth(SecretString.of("12"))
+                        .cardExpYear(SecretString.of("2030"))
+                        .cardCvc(SecretString.of("123"))
+                        .cardHolderName("John Doe")
+                        .build())
+                    .build())
+                .captureMethod(CaptureMethod.AUTOMATIC)
+                .authType(AuthType.NO_THREE_DS)
                 .build()
         );
+        System.out.println("Stripe Transaction ID: " + stripePayment.getConnectorTransactionId());
 
-        System.out.println("Order ID: " + order.getConnectorOrderId());
-        System.out.println("Client Secret: " + order.getSessionToken().getClientSecret());
+        // Create payment with Adyen
+        PaymentServiceAuthorizeResponse adyenPayment = adyenClient.authorize(
+            PaymentServiceAuthorizeRequest.builder()
+                .merchantTransactionId("order-456")
+                .amount(Amount.of(2500, Currency.EUR))
+                .paymentMethod(PaymentMethod.builder()
+                    .card(CardDetails.builder()
+                        .cardNumber(SecretString.of("4111111111111111"))
+                        .cardExpMonth(SecretString.of("12"))
+                        .cardExpYear(SecretString.of("2030"))
+                        .cardCvc(SecretString.of("123"))
+                        .cardHolderName("Jane Doe")
+                        .build())
+                    .build())
+                .captureMethod(CaptureMethod.AUTOMATIC)
+                .authType(AuthType.NO_THREE_DS)
+                .returnUrl("https://example.com/return")
+                .build()
+        );
+        System.out.println("Adyen Transaction ID: " + adyenPayment.getConnectorTransactionId());
     }
 }
 ```
@@ -238,39 +368,68 @@ Once the basic plumbing is implemented you can leverage Prism's core benefit - *
 
 
 ```javascript
-// Before: Using Stripe
-const client = new ConnectorClient({
-    connectors: {
-        stripe: { apiKey: process.env.STRIPE_API_KEY }
-    }
-});
+const { PaymentClient } = require('hs-playlib');
+const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
-const order = await client.payments.createOrder({
-    amount: { minorAmount: 1000, currency: Currency.USD },
-    merchantOrderId: 'order-123'
+// Before: Using Stripe
+const stripeConfig = ConnectorConfig.create({
+    options: SdkOptions.create({ environment: Environment.SANDBOX }),
+});
+stripeConfig.connectorConfig = ConnectorSpecificConfig.create({
+    stripe: { apiKey: { value: process.env.STRIPE_API_KEY } }
+});
+const paymentClient = new PaymentClient(stripeConfig);
+
+const payment = await paymentClient.authorize({
+    merchantTransactionId: 'order-123',
+    amount: { minorAmount: 1000, currency: 'USD' },
+    paymentMethod: {
+        card: {
+            cardNumber: { value: '4111111111111111' },
+            cardExpMonth: { value: '12' },
+            cardExpYear: { value: '2030' },
+            cardCvc: { value: '123' },
+            cardHolderName: { value: 'John Doe' }
+        }
+    },
+    captureMethod: 'AUTOMATIC',
+    authType: 'NO_THREE_DS'
 });
 
 // After: Switching to Braintree
-const client = new ConnectorClient({
-    connectors: {
-        braintree: {
-            publicKey: process.env.BRAINTREE_PUBLIC_KEY,
-            privateKey: process.env.BRAINTREE_PRIVATE_KEY,
-            merchantAccountId: process.env.BRAINTREE_MERCHANT_ID
-        }
+const braintreeConfig = ConnectorConfig.create({
+    options: SdkOptions.create({ environment: Environment.SANDBOX }),
+});
+braintreeConfig.connectorConfig = ConnectorSpecificConfig.create({
+    braintree: {
+        publicKey: { value: process.env.BRAINTREE_PUBLIC_KEY },
+        privateKey: { value: process.env.BRAINTREE_PRIVATE_KEY },
+        merchantAccountId: process.env.BRAINTREE_MERCHANT_ID
     }
 });
+const paymentClient = new PaymentClient(braintreeConfig);
 
-// The createOrder call stays exactly the same!
-const order = await client.payments.createOrder({
-    amount: { minorAmount: 1000, currency: Currency.USD },
-    merchantOrderId: 'order-123'
+// The authorize call stays exactly the same!
+const payment = await paymentClient.authorize({
+    merchantTransactionId: 'order-123',
+    amount: { minorAmount: 1000, currency: 'USD' },
+    paymentMethod: {
+        card: {
+            cardNumber: { value: '4111111111111111' },
+            cardExpMonth: { value: '12' },
+            cardExpYear: { value: '2030' },
+            cardCvc: { value: '123' },
+            cardHolderName: { value: 'John Doe' }
+        }
+    },
+    captureMethod: 'AUTOMATIC',
+    authType: 'NO_THREE_DS'
 });
 ```
 
 **One integration pattern. Any service category.**
 
-No rewriting. No re-architecting. Just swap the connector.
+No rewriting. No re-architecting. Just swap the config.
 Each flow uses the same unified schema regardless of the underlying processor's API differences. No custom code per provider.
 
 ---
