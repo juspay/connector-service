@@ -359,7 +359,10 @@ const SCALAR_TYPES: &[&str] = &[
 pub fn parse_message_schemas() -> BTreeMap<String, MessageSchema> {
     let proto_dirs = [
         "crates/types-traits/grpc-api-types/proto",
-        concat!(env!("CARGO_MANIFEST_DIR"), "/../../types-traits/grpc-api-types/proto"),
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../types-traits/grpc-api-types/proto"
+        ),
     ];
 
     for dir in &proto_dirs {

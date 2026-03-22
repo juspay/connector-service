@@ -1,4 +1,5 @@
-pub const EMBEDDED_DEVELOPMENT_CONFIG: &str = include_str!("../../../../../config/development.toml");
+pub const EMBEDDED_DEVELOPMENT_CONFIG: &str =
+    include_str!("../../../../../config/development.toml");
 pub const EMBEDDED_PROD_CONFIG: &str = include_str!("../../../../../config/production.toml");
 
 use crate::types::FfiRequestData;
