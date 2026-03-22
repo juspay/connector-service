@@ -134,8 +134,8 @@ For detailed installation instructions, see [Installation Guide](./getting-start
 const { PaymentClient } = require('hs-playlib');
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
-async function main() {
-  // Configure Stripe client
+async function createPayment(orderId, currency, amount) {
+  // Configure Stripe client for USD payments
   const stripeConfig = ConnectorConfig.create({
     options: SdkOptions.create({ environment: Environment.SANDBOX }),
   });
@@ -144,7 +144,7 @@ async function main() {
   });
   const stripeClient = new PaymentClient(stripeConfig);
 
-  // Configure Adyen client
+  // Configure Adyen client for EUR payments
   const adyenConfig = ConnectorConfig.create({
     options: SdkOptions.create({ environment: Environment.SANDBOX }),
   });
@@ -156,12 +156,15 @@ async function main() {
   });
   const adyenClient = new PaymentClient(adyenConfig);
 
-  // Create payment with Stripe
-  const stripePayment = await stripeClient.authorize({
-    merchantTransactionId: 'order-123',
+  // Select client based on currency
+  const client = currency === 'EUR' ? adyenClient : stripeClient;
+
+  // Create payment - route EUR to Adyen, USD to Stripe
+  const payment = await client.authorize({
+    merchantTransactionId: orderId,
     amount: {
-      minorAmount: 1000,  // $10.00
-      currency: 'USD'
+      minorAmount: amount,
+      currency: currency
     },
     paymentMethod: {
       card: {
@@ -173,34 +176,20 @@ async function main() {
       }
     },
     captureMethod: 'AUTOMATIC',
-    authType: 'NO_THREE_DS'
-  });
-  console.log('Stripe Transaction ID:', stripePayment.connectorTransactionId);
-
-  // Create payment with Adyen
-  const adyenPayment = await adyenClient.authorize({
-    merchantTransactionId: 'order-456',
-    amount: {
-      minorAmount: 2500,  // $25.00
-      currency: 'EUR'
-    },
-    paymentMethod: {
-      card: {
-        cardNumber: { value: '4111111111111111' },
-        cardExpMonth: { value: '12' },
-        cardExpYear: { value: '2030' },
-        cardCvc: { value: '123' },
-        cardHolderName: { value: 'Jane Doe' }
-      }
-    },
-    captureMethod: 'AUTOMATIC',
     authType: 'NO_THREE_DS',
     returnUrl: 'https://example.com/return'
   });
-  console.log('Adyen Transaction ID:', adyenPayment.connectorTransactionId);
+
+  console.log(`Payment created with ${currency === 'EUR' ? 'Adyen' : 'Stripe'}`);
+  console.log('Transaction ID:', payment.connectorTransactionId);
+  return payment;
 }
 
-main().catch(console.error);
+// EUR payment goes to Adyen
+createPayment('order-456', 'EUR', 2500);
+
+// USD payment goes to Stripe
+createPayment('order-123', 'USD', 1000);
 ```
 
 
@@ -212,15 +201,15 @@ import os
 from payments import PaymentClient
 from payments.generated import sdk_config_pb2, payment_pb2
 
-async def main():
-    # Configure Stripe client
+async def create_payment(order_id, currency, amount):
+    # Configure Stripe client for USD payments
     stripe_config = sdk_config_pb2.ConnectorConfig(
         options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
     )
     stripe_config.connector_config.stripe.api_key.value = os.getenv('STRIPE_API_KEY')
     stripe_client = PaymentClient(stripe_config)
 
-    # Configure Adyen client
+    # Configure Adyen client for EUR payments
     adyen_config = sdk_config_pb2.ConnectorConfig(
         options=sdk_config_pb2.SdkOptions(environment=sdk_config_pb2.Environment.SANDBOX),
     )
@@ -228,12 +217,15 @@ async def main():
     adyen_config.connector_config.adyen.merchant_account = os.getenv('ADYEN_MERCHANT_ACCOUNT')
     adyen_client = PaymentClient(adyen_config)
 
-    # Create payment with Stripe
-    stripe_payment = await stripe_client.authorize(payment_pb2.PaymentServiceAuthorizeRequest(
-        merchant_transaction_id='order-123',
+    # Select client based on currency
+    client = adyen_client if currency == 'EUR' else stripe_client
+
+    # Create payment - route EUR to Adyen, USD to Stripe
+    payment = await client.authorize(payment_pb2.PaymentServiceAuthorizeRequest(
+        merchant_transaction_id=order_id,
         amount=payment_pb2.Amount(
-            minor_amount=1000,  # $10.00
-            currency='USD'
+            minor_amount=amount,
+            currency=currency
         ),
         payment_method=payment_pb2.PaymentMethod(
             card=payment_pb2.CardDetails(
@@ -245,33 +237,20 @@ async def main():
             )
         ),
         capture_method='AUTOMATIC',
-        auth_type='NO_THREE_DS'
-    ))
-    print(f'Stripe Transaction ID: {stripe_payment.connector_transaction_id}')
-
-    # Create payment with Adyen
-    adyen_payment = await adyen_client.authorize(payment_pb2.PaymentServiceAuthorizeRequest(
-        merchant_transaction_id='order-456',
-        amount=payment_pb2.Amount(
-            minor_amount=2500,  # $25.00
-            currency='EUR'
-        ),
-        payment_method=payment_pb2.PaymentMethod(
-            card=payment_pb2.CardDetails(
-                card_number={'value': '4111111111111111'},
-                card_exp_month={'value': '12'},
-                card_exp_year={'value': '2030'},
-                card_cvc={'value': '123'},
-                card_holder_name={'value': 'Jane Doe'}
-            )
-        ),
-        capture_method='AUTOMATIC',
         auth_type='NO_THREE_DS',
         return_url='https://example.com/return'
     ))
-    print(f'Adyen Transaction ID: {adyen_payment.connector_transaction_id}')
 
-asyncio.run(main())
+    provider = 'Adyen' if currency == 'EUR' else 'Stripe'
+    print(f'Payment created with {provider}')
+    print(f'Transaction ID: {payment.connector_transaction_id}')
+    return payment
+
+# EUR payment goes to Adyen
+asyncio.run(create_payment('order-456', 'EUR', 2500))
+
+# USD payment goes to Stripe
+asyncio.run(create_payment('order-123', 'USD', 1000))
 ```
 
 
@@ -285,8 +264,8 @@ import com.juspay.hyperswitch.prism.config.Environment;
 import com.juspay.hyperswitch.prism.types.*;
 
 public class Example {
-    public static void main(String[] args) {
-        // Configure Stripe client
+    public static Payment createPayment(String orderId, String currency, long amount) {
+        // Configure Stripe client for USD payments
         ConnectorConfig stripeConfig = ConnectorConfig.builder()
             .options(SdkOptions.builder()
                 .environment(Environment.SANDBOX)
@@ -299,7 +278,7 @@ public class Example {
             .build();
         PaymentClient stripeClient = new PaymentClient(stripeConfig);
 
-        // Configure Adyen client
+        // Configure Adyen client for EUR payments
         ConnectorConfig adyenConfig = ConnectorConfig.builder()
             .options(SdkOptions.builder()
                 .environment(Environment.SANDBOX)
@@ -313,11 +292,14 @@ public class Example {
             .build();
         PaymentClient adyenClient = new PaymentClient(adyenConfig);
 
-        // Create payment with Stripe
-        PaymentServiceAuthorizeResponse stripePayment = stripeClient.authorize(
+        // Select client based on currency
+        PaymentClient client = "EUR".equals(currency) ? adyenClient : stripeClient;
+
+        // Create payment - route EUR to Adyen, USD to Stripe
+        PaymentServiceAuthorizeResponse payment = client.authorize(
             PaymentServiceAuthorizeRequest.builder()
-                .merchantTransactionId("order-123")
-                .amount(Amount.of(1000, Currency.USD))
+                .merchantTransactionId(orderId)
+                .amount(Amount.of(amount, Currency.valueOf(currency)))
                 .paymentMethod(PaymentMethod.builder()
                     .card(CardDetails.builder()
                         .cardNumber(SecretString.of("4111111111111111"))
@@ -329,30 +311,22 @@ public class Example {
                     .build())
                 .captureMethod(CaptureMethod.AUTOMATIC)
                 .authType(AuthType.NO_THREE_DS)
-                .build()
-        );
-        System.out.println("Stripe Transaction ID: " + stripePayment.getConnectorTransactionId());
-
-        // Create payment with Adyen
-        PaymentServiceAuthorizeResponse adyenPayment = adyenClient.authorize(
-            PaymentServiceAuthorizeRequest.builder()
-                .merchantTransactionId("order-456")
-                .amount(Amount.of(2500, Currency.EUR))
-                .paymentMethod(PaymentMethod.builder()
-                    .card(CardDetails.builder()
-                        .cardNumber(SecretString.of("4111111111111111"))
-                        .cardExpMonth(SecretString.of("12"))
-                        .cardExpYear(SecretString.of("2030"))
-                        .cardCvc(SecretString.of("123"))
-                        .cardHolderName("Jane Doe")
-                        .build())
-                    .build())
-                .captureMethod(CaptureMethod.AUTOMATIC)
-                .authType(AuthType.NO_THREE_DS)
                 .returnUrl("https://example.com/return")
                 .build()
         );
-        System.out.println("Adyen Transaction ID: " + adyenPayment.getConnectorTransactionId());
+
+        String provider = "EUR".equals(currency) ? "Adyen" : "Stripe";
+        System.out.println("Payment created with " + provider);
+        System.out.println("Transaction ID: " + payment.getConnectorTransactionId());
+        return payment;
+    }
+
+    public static void main(String[] args) {
+        // EUR payment goes to Adyen
+        createPayment("order-456", "EUR", 2500);
+
+        // USD payment goes to Stripe
+        createPayment("order-123", "USD", 1000);
     }
 }
 ```
