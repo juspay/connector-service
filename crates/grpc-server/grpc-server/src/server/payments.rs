@@ -578,7 +578,9 @@ impl CustomerService for Customer {
                         connectors,
                         &request_data.masked_metadata,
                     ))
-                    .map_err(|e| e.into_grpc_status())?;
+                    .map_err(|e| {
+                        tonic::Status::internal(format!("Failed to resolve connectors: {e}"))
+                    })?;
 
                     // Create connector customer request data directly
                     let connector_customer_request_data = ConnectorCustomerData::foreign_try_from(
@@ -708,15 +710,15 @@ impl Payments {
             &connector,
             &connector_config,
             metadata_payload.environment.as_deref(),
-            "AUTHORIZE",
         )
         .map_err(|e| {
             tracing::error!("Failed to resolve connector overrides: {:?}", e);
+            let api_error = e.get_api_error();
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
-                Some(e.message().to_string()),
-                Some("CONNECTOR_CONFIG_OVERRIDE_ERROR".to_string()),
-                None,
+                Some(api_error.error_message.clone()),
+                Some(api_error.sub_code.clone()),
+                Some(api_error.error_identifier.into()),
             )
         })?;
 
@@ -1573,8 +1575,10 @@ impl PaymentService for Payments {
                         &connector,
                         &metadata_payload.connector_config,
                         metadata_payload.environment.as_deref(),
-                        "PSYNC",
-                    )?;
+                    )
+                    .map_err(|e| {
+                        tonic::Status::internal(format!("Failed to resolve connectors: {e}"))
+                    })?;
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((

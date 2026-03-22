@@ -80,45 +80,56 @@ pub fn get_resolved_connectors(
     connector: &connector_types::ConnectorEnum,
     connector_config: &ConnectorSpecificConfig,
     environment: Option<&str>,
-    flow_name: &str,
-) -> Result<domain_types::types::Connectors, tonic::Status> {
+) -> Result<domain_types::types::Connectors, ApplicationErrorResponse> {
     if let Some(env) = environment {
-        validate_environment(env).map_err(tonic::Status::invalid_argument)?;
+        validate_environment(env).map_err(|e| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_ENVIRONMENT".to_string(),
+                error_identifier: 400,
+                error_message: e,
+                error_object: None,
+            })
+        })?;
 
         if let Some(urls) = resolve_connector_urls(
             config.superposition_config.as_ref().map(|arc| arc.as_ref()),
             connector,
             env,
         ) {
-            tracing::info!(
-                "{}: resolved URLs from superposition for environment: {}",
-                flow_name,
-                env
-            );
+            tracing::info!("resolved URLs from superposition for environment: {}", env);
             let patched_connectors = config.connectors.patch_connector_urls(connector, &urls);
             connectors_with_connector_config_overrides_on_connectors(
                 connector_config,
                 patched_connectors,
             )
             .map_err(|e| {
-                tonic::Status::internal(format!("Failed to resolve connector overrides: {}", e))
+                ApplicationErrorResponse::InternalServerError(ApiError {
+                    sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
+                    error_identifier: 500,
+                    error_message: format!("Failed to resolve connector overrides: {}", e),
+                    error_object: None,
+                })
             })
         } else {
-            tracing::info!(
-                "{}: superposition resolution failed, using static config with overrides",
-                flow_name
-            );
+            tracing::info!("superposition resolution failed, using static config with overrides");
             connectors_with_connector_config_overrides(connector_config, config).map_err(|e| {
-                tonic::Status::internal(format!("Failed to resolve connector overrides: {}", e))
+                ApplicationErrorResponse::InternalServerError(ApiError {
+                    sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
+                    error_identifier: 500,
+                    error_message: format!("Failed to resolve connector overrides: {}", e),
+                    error_object: None,
+                })
             })
         }
     } else {
-        tracing::info!(
-            "{}: no x-environment header, using static config with overrides",
-            flow_name
-        );
+        tracing::info!("no x-environment header, using static config with overrides");
         connectors_with_connector_config_overrides(connector_config, config).map_err(|e| {
-            tonic::Status::internal(format!("Failed to resolve connector overrides: {}", e))
+            ApplicationErrorResponse::InternalServerError(ApiError {
+                sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Failed to resolve connector overrides: {}", e),
+                error_object: None,
+            })
         })
     }
 }
@@ -619,8 +630,10 @@ macro_rules! implement_connector_operation {
                 &metadata_payload.connector,
                 &connector_config,
                 metadata_payload.environment.as_deref(),
-                $log_prefix,
-            )?;
+            )
+            .map_err(|e| {
+                tonic::Status::internal(format!("Failed to resolve connector config: {e}"))
+            })?;
 
             // Create common request data
             let common_flow_data = $common_flow_data_constructor((payload.clone(), connectors, &masked_metadata))
