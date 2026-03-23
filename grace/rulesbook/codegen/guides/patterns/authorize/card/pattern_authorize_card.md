@@ -15,7 +15,7 @@ Card payments involve processing transactions using credit/debit card details in
 
 ### Card Variants in Grace-UCS
 
-Based on `backend/domain_types/src/payment_method_data.rs`:
+Based on `crates/types-traits/domain_types/src/payment_method_data.rs`:
 
 | Variant | Description | Use Case |
 |---------|-------------|----------|
@@ -49,7 +49,7 @@ Based on `backend/domain_types/src/payment_method_data.rs`:
 ### Card Data Structure
 
 ```rust
-// From backend/domain_types/src/payment_method_data.rs
+// From crates/types-traits/domain_types/src/payment_method_data.rs
 pub struct Card<CD: PCIHolder> {
     pub card_number: CD::CardNumberType,
     pub card_exp_month: Secret<String>,
@@ -186,7 +186,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ConnectorRouterData<Authorize, PaymentsA
 #### Connector Example: Nuvei
 
 ```rust
-// From backend/connector-integration/src/connectors/nuvei/transformers.rs
+// From crates/integrations/connector-integration/src/connectors/nuvei/transformers.rs
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -269,7 +269,7 @@ pub struct FormEncodedCardRequest {
 #### Connector Example: Stripe
 
 ```rust
-// From backend/connector-integration/src/connectors/stripe/transformers.rs
+// From crates/integrations/connector-integration/src/connectors/stripe/transformers.rs
 
 impl<T: PaymentMethodDataTypes> TryFrom<&Card<T>> for StripeCardData {
     type Error = error_stack::Report<ConnectorError>;
@@ -331,7 +331,7 @@ pub struct SoapRequest<T> {
 #### Connector Example: Redsys
 
 ```rust
-// From backend/connector-integration/src/connectors/redsys/transformers.rs
+// From crates/integrations/connector-integration/src/connectors/redsys/transformers.rs
 
 pub const DS_VERSION: &str = "0.0";
 pub const SIGNATURE_VERSION: &str = "HMAC_SHA256_V1";
@@ -414,7 +414,7 @@ fn build_redirect_response(
 #### Connector Example: Redsys 3DS
 
 ```rust
-// From backend/connector-integration/src/connectors/redsys/transformers.rs
+// From crates/integrations/connector-integration/src/connectors/redsys/transformers.rs
 
 fn build_threeds_form(
     ds_emv3ds: &responses::RedsysEmv3DSResponseData,
@@ -469,7 +469,7 @@ fn build_threeds_form(
 #### 3DS Data Structures
 
 ```rust
-// From backend/domain_types/src/router_request_types.rs
+// From crates/types-traits/domain_types/src/router_request_types.rs
 
 pub struct AuthenticationData {
     pub threeds_server_transaction_id: Option<String>,
@@ -500,7 +500,7 @@ pub enum TransactionStatus {
 #### Connector Example: Adyen
 
 ```rust
-// From backend/connector-integration/src/connectors/adyen/transformers.rs
+// From crates/integrations/connector-integration/src/connectors/adyen/transformers.rs
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -530,7 +530,7 @@ pub struct ThreeDS2RequestData {
 Most connectors require mapping card networks to their internal codes:
 
 ```rust
-// From backend/connector-integration/src/connectors/cybersource/transformers.rs
+// From crates/integrations/connector-integration/src/connectors/cybersource/transformers.rs
 
 fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
     match card_issuer {

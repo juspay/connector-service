@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -103,6 +103,21 @@ field-probe:
 	@echo "▶ Running field-probe to generate connector flow data…"
 	-cargo run -p field-probe
 
+## Run comprehensive pre-push validation (format, check, clippy, generate, docs)
+validate-pre-push:
+	@echo "▶ Running pre-push validation..."
+	@./scripts/validation/pre-push.sh
+
+## Run pre-push validation with tests (slower but more thorough)
+validate-pre-push-full:
+	@echo "▶ Running pre-push validation with tests..."
+	@./scripts/validation/pre-push.sh --with-tests
+
+## Fix formatting and run pre-push validation
+validate-pre-push-fix:
+	@echo "▶ Running pre-push validation with auto-fix..."
+	@./scripts/validation/pre-push.sh --fix
+
 ## Generate connector docs from source code (all connectors)
 docs: field-probe
 	@echo "▶ Generating connector docs…"
@@ -130,6 +145,11 @@ help:
 	@echo "  test     Run cargo-hack test"
 	@echo "  nextest  Run tests with nextest (faster test runner)"
 	@echo "  ci       Same as '''all''' but with CI=true (treat warnings as errors)"
+	@echo
+	@echo "Validation Targets:"
+	@echo "  validate-pre-push      Run comprehensive pre-push validation (format, check, clippy, generate, docs)"
+	@echo "  validate-pre-push-full Run pre-push validation with tests (slower)"
+	@echo "  validate-pre-push-fix  Run pre-push validation with auto-fix"
 	@echo
 	@echo "Proto Targets:"
 	@echo "  proto-format     Format proto files"

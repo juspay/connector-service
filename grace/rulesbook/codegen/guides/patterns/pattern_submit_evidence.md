@@ -66,7 +66,7 @@ This is the current recommended approach using the macro framework for maximum c
 ### File Structure Template
 
 ```
-connector-service/backend/connector-integration/src/connectors/
+connector-service/crates/integrations/connector-integration/src/connectors/
 ├── {connector_name}.rs           # Main connector implementation
 └── {connector_name}/
     └── transformers.rs           # Data transformation logic
@@ -75,7 +75,7 @@ connector-service/backend/connector-integration/src/connectors/
 ### Main Connector File Pattern
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 pub mod transformers;
 
@@ -295,7 +295,7 @@ macros::macro_connector_implementation!(
 ### Transformers File Pattern
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 use common_utils::{ext_traits::OptionExt, types::MinorUnit};
 use domain_types::{
