@@ -321,7 +321,7 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             response_bytes: Bytes,
-            status_code: u16,
+            _status_code: u16,
         ) -> Result<Bytes, ConnectorResponseError> {
             // Use the utility function to preprocess XML response bytes
             preprocess_xml_response_bytes(response_bytes)

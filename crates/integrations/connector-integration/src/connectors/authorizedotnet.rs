@@ -537,7 +537,7 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
-            status_code: u16,
+            _status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorResponseError> {
             // Check if the bytes begin with UTF-8 BOM (EF BB BF)
             let encoding = encoding_rs::UTF_8;

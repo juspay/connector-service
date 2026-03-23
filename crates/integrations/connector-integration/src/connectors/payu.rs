@@ -252,7 +252,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, FCD, PaymentsAuthorizeData<T>, Res>,
             bytes: bytes::Bytes,
-            status_code: u16,
+            _status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
             if is_upi_collect_flow(&req.request) {
                 // For UPI collect flows, we need to return base64 decoded response

@@ -668,7 +668,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Worl
         &self,
         _req: &RouterDataV2<F, FCD, Req, Res>,
         bytes: bytes::Bytes,
-        status_code: u16,
+        _status_code: u16,
     ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
         // WorldPay XML responses are kept as-is
         // The macros will handle XML deserialization using parse_xml()
