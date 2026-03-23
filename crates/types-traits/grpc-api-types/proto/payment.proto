@@ -2818,6 +2818,9 @@ message PaymentMethodAuthenticationServicePostAuthenticateRequest {
 
   // Redirection Information after DDC step
   optional RedirectionResponse redirection_response = 14;
+  
+  // Capture Settings
+  optional CaptureMethod capture_method = 15;
 }
 
 // Response message for post-authentication step
