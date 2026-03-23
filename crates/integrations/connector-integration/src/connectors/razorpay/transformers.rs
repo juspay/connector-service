@@ -145,6 +145,7 @@ pub struct BrowserInfo {
     pub language: Option<String>,
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct RazorpayPaymentRequest<
@@ -162,6 +163,8 @@ pub struct RazorpayPaymentRequest<
     pub ip: Secret<String>,
     pub referer: String,
     pub user_agent: String,
+    pub recurring: Option<String>,
+    pub customer_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -426,6 +429,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .and_then(|info| info.get_referer().ok())
             .unwrap_or_else(|| "https://example.com".to_string());
 
+        // Check if this is a mandate/recurring payment
+        let is_mandate = item.router_data.request.setup_mandate_details.is_some()
+            || item.router_data.request.setup_future_usage.is_some();
+
+        let recurring = if is_mandate {
+            Some("1".to_string())
+        } else {
+            None
+        };
+
+        // Extract customer_id from connector_customer (set by CreateConnectorCustomer flow)
+        let customer_id = item
+            .router_data
+            .resource_common_data
+            .connector_customer
+            .clone();
+
         Ok(Self {
             amount,
             currency,
@@ -439,6 +459,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ip,
             referer,
             user_agent,
+            recurring,
+            customer_id,
         })
     }
 }
@@ -1015,6 +1037,8 @@ pub struct RazorpayOrderResponse {
     pub notes: Option<RazorpayNotes>,
     pub offer_id: Option<String>,
     pub created_at: u64,
+    pub method: Option<String>,
+    pub token: Option<serde_json::Value>,
 }
 
 impl ForeignTryFrom<(RazorpayOrderResponse, Self, u16, bool)>
@@ -1651,6 +1675,28 @@ pub fn json_value_to_string(value: &serde_json::Value) -> String {
         serde_json::Value::String(s) => s.clone(),
         _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
     }
+}
+
+// =============================================================================
+// CreateConnectorCustomer types
+// =============================================================================
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct RazorpayCreateCustomerRequest {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub contact: Option<String>,
+    pub fail_existing: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RazorpayCreateCustomerResponse {
+    pub id: String,
+    pub entity: String,
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub contact: Option<String>,
 }
 
 // =============================================================================

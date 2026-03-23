@@ -1186,7 +1186,7 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
             PaymentMethod::Card,
             PaymentMethodType::Card,
             PaymentMethodDetails {
-                mandates: FeatureStatus::NotSupported,
+                mandates: FeatureStatus::Supported,
                 refunds: FeatureStatus::Supported,
                 supported_capture_methods: razorpay_supported_capture_methods.clone(),
                 specific_features: Some(PaymentMethodSpecificFeatures::Card(
@@ -1265,6 +1265,108 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         ConnectorCustomerResponse,
     > for Razorpay<T>
 {
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            CreateConnectorCustomer,
+            PaymentFlowData,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_config)?;
+        header.append(&mut api_key);
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            CreateConnectorCustomer,
+            PaymentFlowData,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        Ok(format!("{base_url}v1/customers"))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            CreateConnectorCustomer,
+            PaymentFlowData,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+        >,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let connector_req = razorpay::RazorpayCreateCustomerRequest {
+            name: req.request.name.as_ref().map(|n| n.peek().to_string()),
+            email: req
+                .request
+                .email
+                .as_ref()
+                .map(|e| e.peek().peek().to_string()),
+            contact: req.request.phone.as_ref().map(|p| p.peek().to_string()),
+            fail_existing: "0".to_string(),
+        };
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            CreateConnectorCustomer,
+            PaymentFlowData,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            CreateConnectorCustomer,
+            PaymentFlowData,
+            ConnectorCustomerData,
+            ConnectorCustomerResponse,
+        >,
+        errors::ConnectorError,
+    > {
+        let response: razorpay::RazorpayCreateCustomerResponse = res
+            .response
+            .parse_struct("RazorpayCreateCustomerResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        Ok(RouterDataV2 {
+            response: Ok(ConnectorCustomerResponse {
+                connector_customer_id: response.id,
+            }),
+            ..data.clone()
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
