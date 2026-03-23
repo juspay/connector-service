@@ -458,6 +458,7 @@ impl Connectors {
             ConnectorEnum::Truelayer => Some(&self.truelayer),
             ConnectorEnum::Peachpayments => Some(&self.peachpayments),
             ConnectorEnum::Finix => Some(&self.finix),
+            ConnectorEnum::Fiservcommercehub => Some(&self.fiservcommercehub),
         }
     }
 
