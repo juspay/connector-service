@@ -1711,7 +1711,6 @@ pub struct PayoutFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
     pub access_token: Option<AccessTokenResponseData>,
-    pub connector_feature_data: Option<SecretSerdeValue>,
     pub test_mode: Option<bool>,
 }
 

@@ -11291,7 +11291,6 @@ impl
                     expires_in: None,
                 }
             }),
-            connector_feature_data: None,
             test_mode: None,
         })
     }
@@ -11531,16 +11530,20 @@ impl ForeignTryFrom<grpc_api_types::payouts::CardPayout> for crate::payout_types
             .transpose()?;
         Ok(crate::payout_types::CardPayout {
             card_number: std::str::FromStr::from_str(
-                &card.card_number.ok_or_else(|| {
-                    error_stack::report!(ApplicationErrorResponse::BadRequest(
-                        crate::errors::ApiError {
-                            sub_code: "MISSING_CARD_NUMBER".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Card number is required for card payout".to_owned(),
-                            error_object: None,
-                        }
-                    ))
-                })?.peek().clone(),
+                &card
+                    .card_number
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_CARD_NUMBER".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card number is required for card payout".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .clone(),
             )
             .map_err(|_| {
                 error_stack::report!(ApplicationErrorResponse::BadRequest(
@@ -11906,16 +11909,20 @@ impl ForeignTryFrom<grpc_api_types::payouts::ApplePayDecrypt>
             .transpose()?;
         Ok(crate::payout_types::ApplePayDecrypt {
             dpan: std::str::FromStr::from_str(
-                &apple.dpan.ok_or_else(|| {
-                    error_stack::report!(ApplicationErrorResponse::BadRequest(
-                        crate::errors::ApiError {
-                            sub_code: "MISSING_DPAN".to_owned(),
-                            error_identifier: 400,
-                            error_message: "DPAN is required for ApplePayDecrypt".to_owned(),
-                            error_object: None,
-                        }
-                    ))
-                })?.peek().clone()
+                &apple
+                    .dpan
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_DPAN".to_owned(),
+                                error_identifier: 400,
+                                error_message: "DPAN is required for ApplePayDecrypt".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .clone(),
             )
             .map_err(|_| {
                 error_stack::report!(ApplicationErrorResponse::BadRequest(
@@ -12061,7 +12068,8 @@ impl ForeignTryFrom<grpc_api_types::payouts::OpenBankingUkPayout>
                             crate::errors::ApiError {
                                 sub_code: "MISSING_ACCOUNT_HOLDER_NAME".to_owned(),
                                 error_identifier: 400,
-                                error_message: "Account holder name is required for OpenBankingUK".to_owned(),
+                                error_message: "Account holder name is required for OpenBankingUK"
+                                    .to_owned(),
                                 error_object: None,
                             }
                         ))
