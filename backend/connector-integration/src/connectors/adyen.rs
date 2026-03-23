@@ -10,7 +10,7 @@ use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
-    errors::CustomResult, events, ext_traits::ByteSliceExt, pii::SecretSerdeValue,
+    errors::CustomResult, events, ext_traits::{ByteSliceExt, OptionExt}, pii::SecretSerdeValue,
     types::StringMinorUnit,
 };
 use domain_types::{
@@ -463,6 +463,37 @@ macros::macro_connector_implementation!(
                 &req.resource_common_data.connector_meta_data,
             )?;
             Ok(format!("{endpoint}{ADYEN_API_VERSION}/payments/details"))
+        }
+        fn build_request_v2(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+            use interfaces::connector_integration_v2::ConnectorIntegrationV2;
+
+            // For wallet redirects, encoded_data may be None
+            // In such cases, gracefully skip the psync request
+            let encoded_data = req.request.encoded_data.clone().get_required_value("encoded_data");
+
+            if encoded_data.is_ok() {
+                // Build the request normally if encoded_data is present
+                let url = self.get_url(req)?;
+                let headers = self.get_headers(req)?;
+                let body = ConnectorIntegrationV2::<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>::get_request_body(self, req)?;
+
+                Ok(Some(
+                    common_utils::request::RequestBuilder::new()
+                        .method(common_utils::request::Method::Post)
+                        .url(&url)
+                        .attach_default_headers()
+                        .headers(headers)
+                        .set_optional_body(body)
+                        .build(),
+                ))
+            } else {
+                // For wallet redirects without encoded_data, return None
+                // This allows the system to rely on webhooks for payment status
+                Ok(None)
+            }
         }
     }
 );
