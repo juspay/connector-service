@@ -554,6 +554,7 @@ enum PaymentMethodType {
   DIRECT_CARRIER_BILLING = 97;
   INSTANT_BANK_TRANSFER = 98;
   OPEN_BANKING = 99;
+  NETWORK_TOKEN = 102;
 }
 
 message PaymentMethodData {
