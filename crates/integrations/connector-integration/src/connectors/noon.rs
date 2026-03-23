@@ -174,12 +174,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: noon::NoonWebhookSignature = request
             .body
             .parse_struct("NoonWebhookSignature")
-            .change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook signature not found".to_string(),
+            ))
             .attach_printable("Missing incoming webhook signature for noon")?;
         let signature = webhook_body.signature;
         BASE64_ENGINE
             .decode(signature)
-            .change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook signature not found".to_string(),
+            ))
             .attach_printable("Missing incoming webhook signature for noon")
     }
 
@@ -191,7 +195,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: noon::NoonWebhookBody = request
             .body
             .parse_struct("NoonWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook signature not found".to_string(),
+            ))
             .attach_printable("Missing incoming webhook signature for noon")?;
         let message = format!(
             "{},{},{},{},{}",
@@ -213,14 +219,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: noon::NoonWebhookEvent = request
             .body
             .parse_struct("NoonWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook event type not found".to_string(),
+            ))
             .attach_printable("Failed to parse webhook event type from Noon webhook body")?;
 
         Ok(match &details.event_type {
             noon::NoonWebhookEventTypes::Sale | noon::NoonWebhookEventTypes::Capture => {
                 match &details.order_status {
                     noon::NoonPaymentStatus::Captured => EventType::PaymentIntentSuccess,
-                    _ => Err(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?,
+                    _ => Err(ConnectorRequestError::NotImplemented(
+                        "webhook event type not found".to_string(),
+                    ))?,
                 }
             }
             noon::NoonWebhookEventTypes::Fail => EventType::PaymentIntentFailure,
@@ -241,7 +251,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?,
+            None => Err(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?,
         };
 
         let signature =
@@ -252,7 +264,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Noon webhook signature verification failed")
     }
 
@@ -291,7 +305,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let resource: noon::NoonWebhookObject = request
             .body
             .parse_struct("NoonWebhookObject")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))
             .attach_printable("Failed to parse webhook resource object from Noon webhook body")?;
 
         Ok(Box::new(NoonPaymentsResponse::from(resource)))

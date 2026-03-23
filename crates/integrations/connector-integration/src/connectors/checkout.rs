@@ -23,13 +23,13 @@ use domain_types::{
         RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    ConnectorRequestError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
     router_response_types::Response,
     types::Connectors,
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -47,7 +47,6 @@ use transformers::{
 };
 
 use super::macros;
-use domain_types::errors::ConnectorResponseError;
 use crate::{
     types::ResponseRouterData,
     utils::{
@@ -56,6 +55,7 @@ use crate::{
     },
     with_error_response_body,
 };
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -326,9 +326,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 error_type,
             }
         } else {
-            res.response
-                .parse_struct("ErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))?
+            res.response.parse_struct("ErrorResponse").change_context(
+                ConnectorResponseError::response_deserialization_failed(None),
+            )?
         };
 
         with_error_response_body!(event_builder, response);

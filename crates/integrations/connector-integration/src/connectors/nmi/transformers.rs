@@ -17,11 +17,11 @@ use domain_types::{
 };
 
 // Note: Refund and RefundsData are used for the Refund flow implementation
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 // ===== AUTHENTICATION =====
 
@@ -318,14 +318,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 BankDebitData::SepaBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. },
-            ) => Err(error_stack::report!(
-                ConnectorRequestError::NotImplemented(
-                    "Bank Debit type not supported for NMI".to_string()
-                )
-            )),
-            _ => Err(error_stack::report!(
-                ConnectorRequestError::NotImplemented("Payment method not supported".to_string())
-            )),
+            ) => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                "Bank Debit type not supported for NMI".to_string()
+            ))),
+            _ => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                "Payment method not supported".to_string()
+            ))),
         }
     }
 }
@@ -375,11 +373,9 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
             };
             Ok(ach_data)
         }
-        _ => Err(error_stack::report!(
-            ConnectorRequestError::NotImplemented(
-                "Only ACH Bank Debit is supported for NMI".to_string()
-            )
-        )),
+        _ => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+            "Only ACH Bank Debit is supported for NMI".to_string()
+        ))),
     }
 }
 
@@ -417,7 +413,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
                 // For auth type, status is Authorized
                 // For sale type, status is Charged
                 // We need to check the original request's auto_capture flag
-                if item.router_data.request.is_auto_capture().into_response_err()? {
+                if item
+                    .router_data
+                    .request
+                    .is_auto_capture()
+                    .into_response_err()?
+                {
                     AttemptStatus::Charged
                 } else {
                     AttemptStatus::Authorized

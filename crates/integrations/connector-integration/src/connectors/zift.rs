@@ -12,6 +12,8 @@ use std::{
 };
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -51,8 +53,6 @@ use interfaces::{
     verification::SourceVerification,
 };
 use serde::Serialize;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 use transformers::{
     ZiftAuthPaymentsResponse, ZiftAuthPaymentsResponse as ZiftSetupMandateResponse,
     ZiftAuthPaymentsResponse as ZiftRepeatPaymentResponse, ZiftCaptureRequest, ZiftCaptureResponse,
@@ -482,7 +482,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: ZiftErrorResponse = serde_urlencoded::from_bytes(&res.response)
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

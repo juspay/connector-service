@@ -369,11 +369,9 @@ impl<T: PaymentMethodDataTypes>
                 PaymentMethod { payment_card }
             }
             _ => {
-                return Err(error_stack::report!(
-                    ConnectorRequestError::NotImplemented(
-                        "Only card payments are supported".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                    "Only card payments are supported".to_string()
+                )))
             }
         };
 

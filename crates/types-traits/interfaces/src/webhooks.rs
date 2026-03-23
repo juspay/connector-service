@@ -68,9 +68,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
                 connector_webhook_details,
             )
             .await
-            .change_context(
-                domain_types::errors::WebhookError::WebhookSourceVerificationFailed,
-            )?;
+            .change_context(domain_types::errors::WebhookError::WebhookSourceVerificationFailed)?;
 
         algorithm
             .decode_message(&secret.secret, message.into())
@@ -162,9 +160,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
     ) -> CustomResult<bool, domain_types::errors::WebhookError> {
         let algorithm = self
             .get_webhook_source_verification_algorithm(request)
-            .change_context(
-                domain_types::errors::WebhookError::WebhookSourceVerificationFailed,
-            )?;
+            .change_context(domain_types::errors::WebhookError::WebhookSourceVerificationFailed)?;
 
         let connector_webhook_secrets = self
             .get_webhook_source_verification_merchant_secret(
@@ -173,15 +169,11 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
                 connector_webhook_details,
             )
             .await
-            .change_context(
-                domain_types::errors::WebhookError::WebhookSourceVerificationFailed,
-            )?;
+            .change_context(domain_types::errors::WebhookError::WebhookSourceVerificationFailed)?;
 
         let signature = self
             .get_webhook_source_verification_signature(request, &connector_webhook_secrets)
-            .change_context(
-                domain_types::errors::WebhookError::WebhookSourceVerificationFailed,
-            )?;
+            .change_context(domain_types::errors::WebhookError::WebhookSourceVerificationFailed)?;
 
         let message = self
             .get_webhook_source_verification_message(
@@ -189,9 +181,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
                 merchant_id,
                 &connector_webhook_secrets,
             )
-            .change_context(
-                domain_types::errors::WebhookError::WebhookSourceVerificationFailed,
-            )?;
+            .change_context(domain_types::errors::WebhookError::WebhookSourceVerificationFailed)?;
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)

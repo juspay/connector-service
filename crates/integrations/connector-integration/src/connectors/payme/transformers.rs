@@ -1,6 +1,8 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii, types::MinorUnit};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
     connector_types::{
@@ -15,8 +17,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 
 const LANGUAGE: &str = "en";
 
@@ -487,10 +487,9 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
             })
         } else {
             // Get the first sale item from the items array
-            let sale_item = response
-                .items
-                .first()
-                .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
+            let sale_item = response.items.first().ok_or(
+                ConnectorResponseError::response_deserialization_failed(None),
+            )?;
 
             // Map PayMe sale status to AttemptStatus using SaleStatus enum
             let status = sale_item
@@ -864,10 +863,9 @@ impl TryFrom<ResponseRouterData<PaymeRSyncResponse, Self>>
         let router_data = &item.router_data;
 
         // Get the first transaction item from the items array
-        let transaction_item = response
-            .items
-            .first()
-            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
+        let transaction_item = response.items.first().ok_or(
+            ConnectorResponseError::response_deserialization_failed(None),
+        )?;
 
         // Map PayMe sale status to RefundStatus using SaleStatus enum
         let refund_status = transaction_item

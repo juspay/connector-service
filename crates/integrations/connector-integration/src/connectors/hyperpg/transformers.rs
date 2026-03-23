@@ -1,6 +1,7 @@
 use crate::{connectors::hyperpg::HyperpgRouterData, types::ResponseRouterData};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{request::Method, AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::router_response_types::RedirectForm;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
@@ -17,7 +18,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 pub const JSON: &str = "json";
 
@@ -226,11 +226,9 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
                 }));
             }
             _ => {
-                return Err(error_stack::report!(
-                    ConnectorRequestError::NotImplemented(
-                        "This payment method is not implemented".to_string(),
-                    )
-                ));
+                return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                    "This payment method is not implemented".to_string(),
+                )));
             }
         };
 

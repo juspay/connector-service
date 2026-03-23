@@ -1,6 +1,8 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{pii::Email, types::MinorUnit};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateConnectorCustomer, PSync, PaymentMethodToken, RSync, Refund, Void,
@@ -18,8 +20,6 @@ use domain_types::{
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 
 #[derive(Debug, Clone)]
 pub struct FinixAuthType {

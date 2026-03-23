@@ -554,9 +554,13 @@ fn get_payment_status(
                 _ => AttemptStatus::Charged,
             },
             StaxTransactionType::Charge => AttemptStatus::Charged,
-            _ => return Err(errors::report_response_as_request(error_stack::Report::from(
-                ConnectorResponseError::response_handling_failed(None),
-            ))),
+            _ => {
+                return Err(errors::report_response_as_request(
+                    error_stack::Report::from(ConnectorResponseError::response_handling_failed(
+                        None,
+                    )),
+                ))
+            }
         }
     };
 
@@ -695,13 +699,11 @@ fn get_refund_status(
         })
         .collect();
 
-    let mut refund_child = filtered_refunds
-        .first()
-        .ok_or_else(|| {
-            errors::report_response_as_request(error_stack::Report::from(
-                ConnectorResponseError::response_handling_failed(None),
-            ))
-        })?;
+    let mut refund_child = filtered_refunds.first().ok_or_else(|| {
+        errors::report_response_as_request(error_stack::Report::from(
+            ConnectorResponseError::response_handling_failed(None),
+        ))
+    })?;
 
     // Find most recent refund by comparing created_at timestamps
     for child in filtered_refunds.iter() {
@@ -735,13 +737,11 @@ fn extract_refund_id(
         })
         .collect();
 
-    let mut refund_child = filtered_refunds
-        .first()
-        .ok_or_else(|| {
-            errors::report_response_as_request(error_stack::Report::from(
-                ConnectorResponseError::response_handling_failed(None),
-            ))
-        })?;
+    let mut refund_child = filtered_refunds.first().ok_or_else(|| {
+        errors::report_response_as_request(error_stack::Report::from(
+            ConnectorResponseError::response_handling_failed(None),
+        ))
+    })?;
 
     // Find most recent refund by comparing created_at timestamps
     for child in filtered_refunds.iter() {

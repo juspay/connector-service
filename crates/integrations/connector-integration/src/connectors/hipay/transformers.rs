@@ -5,6 +5,7 @@ use crate::{
 };
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{request::MultipartData, types::StringMajorUnit};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -20,7 +21,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 #[derive(Debug, Clone)]
 pub struct HipayAuthType {

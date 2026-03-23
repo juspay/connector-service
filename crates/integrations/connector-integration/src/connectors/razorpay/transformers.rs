@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -19,7 +20,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use tracing::info;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 pub const NEXT_ACTION_DATA: &str = "nextActionData";
 
@@ -1161,9 +1161,9 @@ pub struct RazorpayWebhookCard {
 pub fn get_webhook_object_from_body(
     body: Vec<u8>,
 ) -> Result<Payload, error_stack::Report<ConnectorRequestError>> {
-    let webhook: RazorpayWebhook = body
-        .parse_struct("RazorpayWebhook")
-        .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+    let webhook: RazorpayWebhook = body.parse_struct("RazorpayWebhook").change_context(
+        ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+    )?;
     Ok(webhook.payload)
 }
 
@@ -1601,13 +1601,17 @@ impl<F, Req>
                     Some(payment_id) => (ResponseId::ConnectorTransactionId(payment_id), None),
                     None => {
                         // Payment ID is null, this is likely an error
-                        return Err(error_stack::report!(ConnectorResponseError::response_handling_failed(None)));
+                        return Err(error_stack::report!(
+                            ConnectorResponseError::response_handling_failed(None)
+                        ));
                     }
                 }
             }
             RazorpayUpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
-                return Err(error_stack::report!(ConnectorResponseError::response_handling_failed(None)));
+                return Err(error_stack::report!(
+                    ConnectorResponseError::response_handling_failed(None)
+                ));
             }
         };
 

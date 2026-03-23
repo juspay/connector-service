@@ -370,10 +370,10 @@ pub trait IncomingWebhook {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorRequestError>> {
-        Err(
-            domain_types::errors::ConnectorRequestError::NotImplemented("get_event_type".to_string())
-                .into(),
+        Err(domain_types::errors::ConnectorRequestError::NotImplemented(
+            "get_event_type".to_string(),
         )
+        .into())
     }
 
     fn process_payment_webhook(
@@ -381,8 +381,10 @@ pub trait IncomingWebhook {
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorRequestError>>
-    {
+    ) -> Result<
+        WebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::ConnectorRequestError>,
+    > {
         Err(domain_types::errors::ConnectorRequestError::NotImplemented(
             "process_payment_webhook".to_string(),
         )
@@ -448,10 +450,11 @@ pub trait VerifyRedirectResponse: SourceVerification + BodyDecoding {
         request: &RequestDetails,
         secrets: Option<ConnectorSourceVerificationSecrets>,
     ) -> CustomResult<bool, domain_types::errors::ConnectorRequestError> {
-        let connector_source_verifacation_secrets =
-            secrets.ok_or(domain_types::errors::ConnectorRequestError::MissingRequiredField {
+        let connector_source_verifacation_secrets = secrets.ok_or(
+            domain_types::errors::ConnectorRequestError::MissingRequiredField {
                 field_name: "redirect response secrets",
-            })?;
+            },
+        )?;
 
         self.verify(connector_source_verifacation_secrets, &request.body)
     }
@@ -540,7 +543,9 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
     ) -> CustomResult<(), domain_types::errors::ConnectorRequestError> {
         data.connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(domain_types::errors::ConnectorRequestError::MissingConnectorTransactionID)
+            .change_context(
+                domain_types::errors::ConnectorRequestError::MissingConnectorTransactionID,
+            )
             .map(|_| ())
     }
 
@@ -559,10 +564,12 @@ fn get_connector_payment_method_type_info(
     let payment_method_details =
         supported_payment_method
             .get(&payment_method)
-            .ok_or_else(|| domain_types::errors::ConnectorRequestError::NotSupported {
-                message: payment_method.to_string(),
-                connector,
-            })?;
+            .ok_or_else(
+                || domain_types::errors::ConnectorRequestError::NotSupported {
+                    message: payment_method.to_string(),
+                    connector,
+                },
+            )?;
 
     payment_method_type
         .map(|pmt| {

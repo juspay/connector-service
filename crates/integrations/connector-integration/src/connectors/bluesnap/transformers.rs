@@ -710,8 +710,9 @@ pub fn map_chargeback_status_to_event_type(
     use domain_types::connector_types::EventType;
 
     let status: BluesnapChargebackStatus =
-        serde_json::from_value(serde_json::Value::String(cb_status.to_string()))
-            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?;
+        serde_json::from_value(serde_json::Value::String(cb_status.to_string())).change_context(
+            ConnectorRequestError::NotImplemented("webhook event type not found".to_string()),
+        )?;
 
     Ok(match status {
         BluesnapChargebackStatus::New | BluesnapChargebackStatus::Working => {

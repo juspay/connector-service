@@ -61,12 +61,12 @@ use transformers::{
 };
 
 use super::macros;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 use crate::{
     types::ResponseRouterData, utils::xml_utils::flatten_json_structure, with_error_response_body,
     with_response_body,
 };
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 // Trait implementations with generic type parameters
 
@@ -387,7 +387,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: fiuu::FiuuErrorResponse = res
             .response
             .parse_struct("fiuu::FiuuErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -684,7 +686,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: FiuuPaymentResponse = res
                     .response
                     .parse_struct("fiuu::FiuuPaymentResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        None,
+                    ))?;
                 with_response_body!(event_builder, response);
 
                 RouterDataV2::try_from(ResponseRouterData {
@@ -713,19 +717,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
-        let header = request
-            .headers
-            .get("content-type")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+        let header =
+            request
+                .headers
+                .get("content-type")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook source verification failed".to_string(),
+                ))?;
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
-                .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
+                ConnectorRequestError::NotImplemented(
+                    "webhook source verification failed".to_string(),
+                ),
+            )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?
+                .change_context(ConnectorRequestError::NotImplemented(
+                    "webhook source verification failed".to_string(),
+                ))?
         };
 
         let signature = match resource {
@@ -736,8 +748,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 webhooks_refunds_response.signature
             }
         };
-        hex::decode(signature.expose())
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+        hex::decode(signature.expose()).change_context(ConnectorRequestError::NotImplemented(
+            "webhook source verification failed".to_string(),
+        ))
     }
 
     fn get_webhook_source_verification_message(
@@ -745,19 +758,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &RequestDetails,
         connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
-        let header = request
-            .headers
-            .get("content-type")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+        let header =
+            request
+                .headers
+                .get("content-type")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook source verification failed".to_string(),
+                ))?;
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
-                .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
+                ConnectorRequestError::NotImplemented(
+                    "webhook source verification failed".to_string(),
+                ),
+            )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?
+                .change_context(ConnectorRequestError::NotImplemented(
+                    "webhook source verification failed".to_string(),
+                ))?
         };
         let verification_message = match resource {
             FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhooks_payment_response) => {
@@ -773,7 +794,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let md5_key0 = hex::encode(
                     crypto::Md5
                         .generate_digest(key0.as_bytes())
-                        .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?,
+                        .change_context(ConnectorRequestError::NotImplemented(
+                            "webhook source verification failed".to_string(),
+                        ))?,
                 );
                 let key1 = format!(
                     "{}{}{}{}{}",
@@ -814,7 +837,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?,
+            None => Err(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?,
         };
 
         let signature =
@@ -825,7 +850,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
     }
 
     fn get_event_type(
@@ -834,20 +861,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
-        let header = request
-            .headers
-            .get("content-type")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+        let header =
+            request
+                .headers
+                .get("content-type")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook source verification failed".to_string(),
+                ))?;
 
         let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
-                .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
+                ConnectorRequestError::NotImplemented("webhook event type not found".to_string()),
+            )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?
+                .change_context(ConnectorRequestError::NotImplemented(
+                    "webhook event type not found".to_string(),
+                ))?
         };
 
         match resource {
@@ -865,20 +898,28 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, ConnectorRequestError>
     {
-        let header = request
-            .headers
-            .get("content-type")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+        let header =
+            request
+                .headers
+                .get("content-type")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook body decoding failed".to_string(),
+                ))?;
 
         let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
-                .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
+                ConnectorRequestError::NotImplemented(
+                    "webhook resource object not found".to_string(),
+                ),
+            )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?
+                .change_context(ConnectorRequestError::NotImplemented(
+                    "webhook resource object not found".to_string(),
+                ))?
         };
 
         match payload.clone() {
@@ -923,33 +964,42 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
-        let header = request
-            .headers
-            .get("content-type")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+        let header =
+            request
+                .headers
+                .get("content-type")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook body decoding failed".to_string(),
+                ))?;
 
         let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
             parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
-            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
-                .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body).change_context(
+                ConnectorRequestError::NotImplemented(
+                    "webhook resource object not found".to_string(),
+                ),
+            )?
         } else {
             request
                 .body
                 .parse_struct("fiuu::FiuuWebhooksResponse")
-                .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?
+                .change_context(ConnectorRequestError::NotImplemented(
+                    "webhook resource object not found".to_string(),
+                ))?
         };
 
         let notif = match payload.clone() {
-            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(_) => {
-                Err(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-            }
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(_) => Err(
+                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            ),
             FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => {
                 Ok(FiuuRefundSyncResponse::Webhook(webhook_refund_response))
             }
         }?;
 
-        let response = RefundWebhookDetailsResponse::try_from(notif)
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()));
+        let response = RefundWebhookDetailsResponse::try_from(notif).change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        );
 
         response.map(|mut response| {
             response.raw_connector_response =
@@ -1101,7 +1151,9 @@ where
 {
     let response_str = String::from_utf8(data.to_vec()).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);
-        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
+        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(
+            None,
+        ))
     })?;
 
     let mut json = serde_json::Map::new();
@@ -1124,14 +1176,18 @@ where
     if !miscellaneous.is_empty() {
         let misc_value = serde_json::to_value(miscellaneous).map_err(|e| {
             error!("Error serializing miscellaneous data: {:?}", e);
-            error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
+            error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))
         })?;
         json.insert("miscellaneous".to_string(), misc_value);
     }
 
     let response: T = serde_json::from_value(Value::Object(json)).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);
-        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
+        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(
+            None,
+        ))
     })?;
 
     Ok(response)

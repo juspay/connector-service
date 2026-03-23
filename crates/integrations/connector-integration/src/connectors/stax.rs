@@ -97,7 +97,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: StaxErrorResponse = res
             .response
             .parse_struct("StaxErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -110,7 +112,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             message: response.get_error_message(),
             reason: Some(
                 std::str::from_utf8(&res.response)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        None,
+                    ))?
                     .to_owned(),
             ),
             attempt_status: None,
@@ -127,11 +131,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 // for ConnectorServiceTrait. These implementations satisfy the trait bounds.
 
 use domain_types::connector_flow::{Authenticate, PostAuthenticate, PreAuthenticate};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 use domain_types::connector_types::{
     PaymentsAuthenticateData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
 };
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<

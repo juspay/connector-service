@@ -1,9 +1,6 @@
 use crate::{
-    connectors::braintree::BraintreeRouterData,
-    types::ResponseRouterData,
-    utils,
-    ConnectorRequestError,
-    ConnectorResponseError,
+    connectors::braintree::BraintreeRouterData, types::ResponseRouterData, utils,
+    ConnectorRequestError, ConnectorResponseError,
 };
 use common_enums::enums;
 use common_utils::{
@@ -12,6 +9,7 @@ use common_utils::{
     pii,
     types::{MinorUnit, StringMajorUnit},
 };
+use domain_types::errors::ResultRequestToResponseExt;
 use domain_types::{
     connector_flow::{
         Authorize, Capture, PSync, PaymentMethodToken, RSync, RepeatPayment, SdkSessionToken, Void,
@@ -40,7 +38,6 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use time::PrimitiveDateTime;
 use tracing::info;
-use domain_types::errors::ResultRequestToResponseExt;
 
 pub const BRAINTREE_CONNECTOR_NAME: &str = "braintree";
 
@@ -714,9 +711,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                             *client_token_data,
                             item.router_data
                                 .resource_common_data
-                                .get_payment_method_token().into_response_err()?,
+                                .get_payment_method_token()
+                                .into_response_err()?,
                             item.router_data.request.payment_method_data.clone(),
-                            item.router_data.request.get_complete_authorize_url().into_response_err()?,
+                            item.router_data
+                                .request
+                                .get_complete_authorize_url()
+                                .into_response_err()?,
                         )
                         .into_response_err()?,
                     )),
@@ -950,9 +951,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                             *client_token_data,
                             item.router_data
                                 .resource_common_data
-                                .get_payment_method_token().into_response_err()?,
+                                .get_payment_method_token()
+                                .into_response_err()?,
                             item.router_data.request.payment_method_data.clone(),
-                            item.router_data.request.get_complete_authorize_url().into_response_err()?,
+                            item.router_data
+                                .request
+                                .get_complete_authorize_url()
+                                .into_response_err()?,
                         )
                         .into_response_err()?,
                     )),
@@ -1288,11 +1293,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     merchant_config_currency,
                 }
             } else {
-                let merchant_account_id =
-                    auth.merchant_account_id
-                        .ok_or(ConnectorRequestError::InvalidConnectorConfig {
-                            config: "merchant_account_id",
-                        })?;
+                let merchant_account_id = auth.merchant_account_id.ok_or(
+                    ConnectorRequestError::InvalidConnectorConfig {
+                        config: "merchant_account_id",
+                    },
+                )?;
                 let merchant_config_currency = auth
                     .merchant_config_currency
                     .as_deref()
@@ -1957,7 +1962,9 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             Some(connector_meta) => connector_meta
                                 .expose()
                                 .parse_value("GpaySessionTokenData")
-                                .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                                .change_context(
+                                    ConnectorResponseError::response_deserialization_failed(None),
+                                )
                                 .attach_printable("Failed to parse gpay metadata")?,
                             None => Err(ConnectorRequestError::NoConnectorMetaData)
                                 .attach_printable("connector_feature_data is None")
@@ -2353,10 +2360,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_request_reference_id
                 .clone(),
         );
-        let order_id =
-            reference_id.ok_or(ConnectorRequestError::MissingConnectorRelatedTransactionID {
+        let order_id = reference_id.ok_or(
+            ConnectorRequestError::MissingConnectorRelatedTransactionID {
                 id: "order_id".to_string(),
-            })?;
+            },
+        )?;
         let amount = item
             .connector
             .amount_converter

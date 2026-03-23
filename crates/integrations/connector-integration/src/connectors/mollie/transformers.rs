@@ -3,6 +3,7 @@ use common_utils::{
     pii::Email,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
 };
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
     connector_types::{
@@ -19,7 +20,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 #[derive(Debug, Clone)]
 pub struct MollieAuthType {

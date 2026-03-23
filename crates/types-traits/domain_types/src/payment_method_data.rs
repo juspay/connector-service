@@ -6,8 +6,9 @@ use common_utils::{
     ext_traits::OptionExt, new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email,
     ValidationError,
 };
+use error_stack::report;
 use error_stack::{self, ResultExt};
-use error_stack::report;use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use time::{Date, PrimitiveDateTime};
 use utoipa::ToSchema;
@@ -187,7 +188,9 @@ impl<T: PaymentMethodDataTypes> Card<T> {
 }
 
 impl Card<DefaultPCIHolder> {
-    pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
+    pub fn get_card_issuer(
+        &self,
+    ) -> Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
         get_card_issuer(self.card_number.peek())
     }
     pub fn get_expiry_date_as_mmyyyy(&self, delimiter: &str) -> Secret<String> {
@@ -287,7 +290,9 @@ pub struct NetworkTokenData {
 }
 
 impl NetworkTokenData {
-    pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
+    pub fn get_card_issuer(
+        &self,
+    ) -> Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
         get_card_issuer(self.token_number.peek())
     }
 
@@ -712,7 +717,9 @@ impl WalletData {
                 let encoded_token = base64::engine::general_purpose::STANDARD.encode(token_as_vec);
                 Ok(encoded_token)
             }
-            _ => Err(ConnectorRequestError::NotImplemented("SELECTED PAYMENT METHOD".to_owned()).into()),
+            _ => Err(
+                ConnectorRequestError::NotImplemented("SELECTED PAYMENT METHOD".to_owned()).into(),
+            ),
         }
     }
 }
@@ -835,7 +842,9 @@ impl GooglePayWalletData {
         value: Option<Secret<String>>,
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField { field_name: "card_exp_month" })
+            report!(ConnectorRequestError::MissingRequiredField {
+                field_name: "card_exp_month"
+            })
         })
     }
 
@@ -843,7 +852,9 @@ impl GooglePayWalletData {
         value: Option<Secret<String>>,
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField { field_name: "card_exp_year" })
+            report!(ConnectorRequestError::MissingRequiredField {
+                field_name: "card_exp_year"
+            })
         })
     }
 
@@ -851,7 +862,9 @@ impl GooglePayWalletData {
         value: Option<cards::CardNumber>,
     ) -> Result<cards::CardNumber, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField { field_name: "application_primary_account_number" })
+            report!(ConnectorRequestError::MissingRequiredField {
+                field_name: "application_primary_account_number"
+            })
         })
     }
 }
@@ -1143,7 +1156,9 @@ impl ApplePayWalletData {
         value: Option<cards::CardNumber>,
     ) -> Result<cards::CardNumber, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField { field_name: "application_primary_account_number" })
+            report!(ConnectorRequestError::MissingRequiredField {
+                field_name: "application_primary_account_number"
+            })
         })
     }
 
@@ -1151,7 +1166,9 @@ impl ApplePayWalletData {
         value: Option<Secret<String>>,
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField { field_name: "application_expiration_month" })
+            report!(ConnectorRequestError::MissingRequiredField {
+                field_name: "application_expiration_month"
+            })
         })
     }
 
@@ -1159,7 +1176,9 @@ impl ApplePayWalletData {
         value: Option<Secret<String>>,
     ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField { field_name: "application_expiration_year" })
+            report!(ConnectorRequestError::MissingRequiredField {
+                field_name: "application_expiration_year"
+            })
         })
     }
 
@@ -1167,14 +1186,18 @@ impl ApplePayWalletData {
         value: Option<grpc_api_types::payments::ApplePayCryptogramData>,
     ) -> Result<ApplePayCryptogramData, error_stack::Report<ConnectorRequestError>> {
         let decrypted_payment_data = value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField { field_name: "decrypted_payment_data" })
+            report!(ConnectorRequestError::MissingRequiredField {
+                field_name: "decrypted_payment_data"
+            })
         })?;
 
         Ok(ApplePayCryptogramData {
             online_payment_cryptogram: decrypted_payment_data
                 .online_payment_cryptogram
                 .ok_or_else(|| {
-                    report!(ConnectorRequestError::MissingRequiredField { field_name: "online_payment_cryptogram" })
+                    report!(ConnectorRequestError::MissingRequiredField {
+                        field_name: "online_payment_cryptogram"
+                    })
                 })?,
             eci_indicator: decrypted_payment_data.eci_indicator,
         })
@@ -1262,7 +1285,9 @@ impl CardDetailsForNetworkTransactionId {
                 .to_string(),
         ))
     }
-    pub fn get_card_issuer(&self) -> Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
+    pub fn get_card_issuer(
+        &self,
+    ) -> Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
         get_card_issuer(self.card_number.peek())
     }
     pub fn get_card_expiry_month_year_2_digit_with_delimiter(

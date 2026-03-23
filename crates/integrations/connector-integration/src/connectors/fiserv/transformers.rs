@@ -12,11 +12,10 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError, ConnectorResponseError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
-    utils,
+    utils, ConnectorRequestError, ConnectorResponseError,
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};

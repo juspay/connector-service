@@ -10,7 +10,6 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    ConnectorRequestError,
     mandates::MandateDataType,
     payment_method_data::{
         GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -18,6 +17,7 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -278,7 +278,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 data.router_data.request.minor_amount,
                 data.router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))
             .into_request_err()?;
 
         let payment_data = match item.request.payment_method_data.clone() {
@@ -464,7 +466,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))
             .into_request_err()?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
@@ -708,7 +712,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: amount
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    None,
+                ))
                 .into_request_err()?,
             currency: item.request.currency,
             transaction_reference: None,
@@ -816,7 +822,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: refund_amount
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    None,
+                ))
                 .into_request_err()?,
             currency: item.request.currency,
             transaction_reference: Some(item.request.refund_id.clone()),
@@ -1320,14 +1328,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))
             .into_request_err()?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
         let order = NoonOrder {
             amount: amount
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    None,
+                ))
                 .into_request_err()?,
             currency,
             channel,
@@ -1482,7 +1494,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))
             .into_request_err()?;
 
         // For repeat payments, use the subscription payment method with the mandate ID

@@ -6,18 +6,19 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
+    utils, ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::dlocal::DlocalRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::dlocal::DlocalRouterData, types::ResponseRouterData, ConnectorResponseError,
+};
 
 #[derive(Debug, Default, Eq, PartialEq, Serialize)]
 pub struct Payer {

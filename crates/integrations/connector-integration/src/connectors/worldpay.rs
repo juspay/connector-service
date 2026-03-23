@@ -49,9 +49,9 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use error_stack::ResultExt;
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
+use error_stack::ResultExt;
 
 // Trait implementations with generic type parameters
 
@@ -345,7 +345,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response = if !res.response.is_empty() {
             res.response
                 .parse_struct("WorldpayErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    None,
+                ))?
         } else {
             WorldpayErrorResponse::default(res.status_code)
         };

@@ -13,7 +13,6 @@ use domain_types::{
         ResponseId, SetupMandateRequestData,
     },
     errors::ResultRequestToResponseExt,
-    ConnectorRequestError,
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
@@ -23,7 +22,7 @@ use domain_types::{
     },
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
+    utils, ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
@@ -1571,10 +1570,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             });
         }
 
-        let connector_meta = get_connector_meta(
-            item.router_data.request.capture_method.unwrap_or_default(),
-        )
-        .into_response_err()?;
+        let connector_meta =
+            get_connector_meta(item.router_data.request.capture_method.unwrap_or_default())
+                .into_response_err()?;
 
         let redirection_data = item
             .response
@@ -1685,10 +1683,9 @@ impl<
                 })
             }
             _ => {
-                let connector_meta = get_connector_meta(
-                    item.router_data.request.capture_method.unwrap_or_default(),
-                )
-                .into_response_err()?;
+                let connector_meta =
+                    get_connector_meta(item.router_data.request.capture_method.unwrap_or_default())
+                        .into_response_err()?;
 
                 let redirection_data = item
                     .response
@@ -1770,10 +1767,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 {
     type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(item: ResponseRouterData<PaymentsResponse, Self>) -> Result<Self, Self::Error> {
-        let connector_meta = get_connector_meta(
-            item.router_data.request.capture_method.unwrap_or_default(),
-        )
-        .into_response_err()?;
+        let connector_meta =
+            get_connector_meta(item.router_data.request.capture_method.unwrap_or_default())
+                .into_response_err()?;
         let redirection_data = item
             .response
             .links

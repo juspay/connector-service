@@ -127,12 +127,15 @@ pub trait BridgeRequestResponse: Send + Sync {
         Self::ResponseBody: for<'a> serde::Deserialize<'a>,
     {
         if bytes.is_empty() {
-            serde_json::from_str("{}")
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            serde_json::from_str("{}").change_context(
+                ConnectorResponseError::response_deserialization_failed(None),
+            )
         } else {
             bytes
                 .parse_struct(std::any::type_name::<Self::ResponseBody>())
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    None,
+                ))
         }
     }
 
@@ -319,7 +322,11 @@ macro_rules! expand_fn_handle_response {
             // Apply preprocessing if specified in the macro
             let response_bytes = self
                 .preprocess_response_bytes(data, res.response)
-                .change_context(macro_types::ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
+                .change_context(
+                    macro_types::ConnectorResponseError::response_handling_failed(Some(
+                        res.status_code,
+                    )),
+                )?;
 
             let response_body = bridge.response(response_bytes)?;
             event_builder.map(|i| i.set_connector_response(&response_body));

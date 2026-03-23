@@ -9,16 +9,19 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::worldpayvantiv::WorldpayvantivRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::worldpayvantiv::WorldpayvantivRouterData, types::ResponseRouterData,
+    ConnectorResponseError,
+};
 
 // Helper function to extract report group from connector metadata
 fn extract_report_group(
@@ -1472,12 +1475,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     ..item.router_data
                 })
             }
-            (_, _) => Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
-                    .attach_printable(
-                        "Only one of 'sale_response' or 'authorization_response' is expected",
-                    ),
-            ),
+            (_, _) => Err(error_stack::Report::from(
+                ConnectorResponseError::unexpected_response_error(None),
+            )
+            .attach_printable(
+                "Only one of 'sale_response' or 'authorization_response' is expected",
+            )),
         }
     }
 }

@@ -701,8 +701,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     {
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-                    .attach_printable(format!("error while decoding webhook body {err}"))
+                report!(ConnectorRequestError::NotImplemented(
+                    "webhook body decoding failed".to_string()
+                ))
+                .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
         Ok(transformers::get_adyen_webhook_event_type(notif.event_code))
     }
@@ -716,8 +718,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-                    .attach_printable(format!("error while decoding webhook body {err}"))
+                report!(ConnectorRequestError::NotImplemented(
+                    "webhook body decoding failed".to_string()
+                ))
+                .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
         let (error_code, error_message, error_reason) =
@@ -764,8 +768,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-                    .attach_printable(format!("error while decoding webhook body {err}"))
+                report!(ConnectorRequestError::NotImplemented(
+                    "webhook body decoding failed".to_string()
+                ))
+                .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
         let (error_code, error_message) = if transformers::get_adyen_refund_webhook_event(
@@ -802,8 +808,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-                    .attach_printable(format!("error while decoding webhook body {err}"))
+                report!(ConnectorRequestError::NotImplemented(
+                    "webhook body decoding failed".to_string()
+                ))
+                .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
         let (stage, status) = transformers::get_dispute_stage_and_status(
             notif.event_code,

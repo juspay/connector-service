@@ -5,6 +5,8 @@ use std::fmt::Debug;
 use crate::{types::ResponseRouterData, with_error_response_body};
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, types::FloatMajorUnit};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use domain_types::{
     connector_flow,
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
@@ -22,8 +24,6 @@ use interfaces::{
     decode::BodyDecoding,
 };
 use serde::Serialize;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 use transformers::{
     self as revolv3, validate_psync, Revolv3AuthReversalRequest, Revolv3AuthReversalResponse,
     Revolv3AuthorizeResponse, Revolv3CaptureRequest, Revolv3PaymentSyncResponse,
@@ -76,7 +76,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: revolv3::Revolv3ErrorResponse = res
             .response
             .parse_struct("Revolv3ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

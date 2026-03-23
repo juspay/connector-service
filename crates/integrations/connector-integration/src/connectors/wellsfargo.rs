@@ -79,9 +79,9 @@ impl FlowDataBase for RefundFlowData {
     }
 }
 
-use error_stack::{Report, ResultExt};
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
+use error_stack::{Report, ResultExt};
 
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>

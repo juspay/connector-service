@@ -1,6 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::MinorUnit;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync},
     connector_types::{
@@ -13,7 +14,6 @@ use domain_types::{
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 // ===== ENUMS =====
 

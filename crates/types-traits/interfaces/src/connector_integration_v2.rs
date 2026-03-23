@@ -111,10 +111,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
         event_builder: Option<&mut events::Event>,
         _res: domain_types::router_response_types::Response,
-    ) -> CustomResult<
-        RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-        ConnectorResponseError,
-    >
+    ) -> CustomResult<RouterDataV2<Flow, ResourceCommonData, Req, Resp>, ConnectorResponseError>
     where
         Flow: Clone,
         ResourceCommonData: Clone,

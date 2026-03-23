@@ -44,8 +44,6 @@ use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use url::Url;
 
 use super::AdyenRouterData;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 use crate::{
     types::ResponseRouterData,
     utils::{
@@ -54,6 +52,8 @@ use crate::{
         to_connector_meta_from_secret,
     },
 };
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -1874,7 +1874,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .get_connector_testing_data()
                     .map(AdyenTestingData::try_from)
                     .transpose()
-                    .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))?;
+                    .map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })?;
                 let test_holder_name = testing_data.and_then(|test_data| test_data.holder_name);
                 Ok(Self::BacsDirectDebit(Box::new(BacsDirectDebitData {
                     bank_account_number: account_number.clone(),
@@ -1920,13 +1922,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     .change_context(ConnectorRequestError::MissingRequiredField {
                         field_name: "billing.email",
                     })?;
-                router_data
-                    .resource_common_data
-                    .customer_id
-                    .clone()
-                    .ok_or(ConnectorRequestError::MissingRequiredField {
+                router_data.resource_common_data.customer_id.clone().ok_or(
+                    ConnectorRequestError::MissingRequiredField {
                         field_name: "customer_id",
-                    })?;
+                    },
+                )?;
                 router_data
                     .resource_common_data
                     .get_billing_country()
@@ -2908,8 +2908,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, card_redirect_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
@@ -3021,8 +3020,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, gift_card_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from(gift_card_data)?,
         ));
@@ -3129,8 +3127,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, token_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let (recurring_processing_model, store_payment_method, shopper_reference) =
             get_recurring_processing_model(&item.router_data)?;
@@ -3271,8 +3268,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let (item, pay_later_data) = value;
         let payment_method = AdyenPaymentMethod::try_from((&item.router_data, pay_later_data))?;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let additional_data = get_additional_data(&item.router_data);
@@ -3391,8 +3387,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, voucher_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((voucher_data, &item.router_data))?,
         ));
@@ -3594,39 +3589,51 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "payment_method".into(),
             ))?,
             None => match item.router_data.request.payment_method_data.clone() {
-                PaymentMethodData::Card(ref card) => Self::try_from((item, card))
-                    .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed)),
+                PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
+                    err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                }),
                 PaymentMethodData::CardRedirect(ref card_redirect_data) => {
-                    Self::try_from((item, card_redirect_data))
-                        .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))
+                    Self::try_from((item, card_redirect_data)).map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })
                 }
                 PaymentMethodData::Wallet(ref wallet_data) => Self::try_from((item, wallet_data))
-                    .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed)),
+                    .map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    }),
                 PaymentMethodData::BankRedirect(ref bank_redirect) => {
-                    Self::try_from((item, bank_redirect))
-                        .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))
+                    Self::try_from((item, bank_redirect)).map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })
                 }
                 PaymentMethodData::BankTransfer(ref bank_transfer) => {
-                    Self::try_from((item, bank_transfer.as_ref()))
-                        .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))
+                    Self::try_from((item, bank_transfer.as_ref())).map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })
                 }
                 PaymentMethodData::BankDebit(ref bank_debit) => Self::try_from((item, bank_debit))
-                    .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed)),
+                    .map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    }),
                 PaymentMethodData::GiftCard(ref gift_card) => {
-                    Self::try_from((item, gift_card.as_ref()))
-                        .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))
+                    Self::try_from((item, gift_card.as_ref())).map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })
                 }
                 PaymentMethodData::Voucher(ref voucher_data) => {
-                    Self::try_from((item, voucher_data))
-                        .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))
+                    Self::try_from((item, voucher_data)).map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })
                 }
                 PaymentMethodData::PayLater(ref pay_later_data) => {
-                    Self::try_from((item, pay_later_data))
-                        .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))
+                    Self::try_from((item, pay_later_data)).map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })
                 }
                 PaymentMethodData::NetworkToken(ref token_data) => {
-                    Self::try_from((item, token_data))
-                        .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed))
+                    Self::try_from((item, token_data)).map_err(|err| {
+                        err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                    })
                 }
                 PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
@@ -3714,8 +3721,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
             reference: item
@@ -5123,15 +5129,14 @@ pub struct AdyenIncomingWebhook {
 pub fn get_webhook_object_from_body(
     body: Vec<u8>,
 ) -> Result<AdyenNotificationRequestItemWH, error_stack::Report<ConnectorRequestError>> {
-    let mut webhook: AdyenIncomingWebhook = body
-        .parse_struct("AdyenIncomingWebhook")
-        .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+    let mut webhook: AdyenIncomingWebhook =
+        body.parse_struct("AdyenIncomingWebhook").change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        )?;
 
-    let item_object = webhook
-        .notification_items
-        .drain(..)
-        .next()
-        .ok_or(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+    let item_object = webhook.notification_items.drain(..).next().ok_or(
+        ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+    )?;
 
     Ok(item_object.notification_request_item)
 }
@@ -5499,8 +5504,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
 
         Ok(Self {
             merchant_account: auth_type.merchant_account,
@@ -5569,8 +5573,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)
-            ?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let reference = match item.router_data.request.multiple_capture_data.clone() {
             // if multiple capture request, send capture_id as our reference for the capture
             Some(multiple_capture_request_data) => multiple_capture_request_data.capture_reference,
@@ -5699,14 +5702,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let (recurring_processing_model, store_payment_method, _) =
             get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
 
-        let return_url = item
-            .router_data
-            .request
-            .router_return_url
-            .clone()
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+        let return_url = item.router_data.request.router_return_url.clone().ok_or(
+            ConnectorRequestError::MissingRequiredField {
                 field_name: "return_url",
-            })?;
+            },
+        )?;
 
         let billing_address = get_address_info(
             item.router_data
@@ -5839,8 +5839,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 "payment_method".into(),
             ))?,
             None => match item.router_data.request.payment_method_data.clone() {
-                PaymentMethodData::Card(ref card) => Self::try_from((item, card))
-                    .map_err(|err| err.change_context(ConnectorRequestError::RequestEncodingFailed)),
+                PaymentMethodData::Card(ref card) => Self::try_from((item, card)).map_err(|err| {
+                    err.change_context(ConnectorRequestError::RequestEncodingFailed)
+                }),
                 PaymentMethodData::Wallet(_)
                 | PaymentMethodData::PayLater(_)
                 | PaymentMethodData::BankRedirect(_)
@@ -6172,13 +6173,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             None => CardBrand::try_from(
                                 &card_details_for_network_transaction_id
                                     .get_card_issuer()
-                                    .change_context(
-                                        ConnectorRequestError::RequestEncodingFailed,
-                                    )?,
+                                    .change_context(ConnectorRequestError::RequestEncodingFailed)?,
                             )
-                            .change_context(
-                                ConnectorRequestError::RequestEncodingFailed,
-                            )?,
+                            .change_context(ConnectorRequestError::RequestEncodingFailed)?,
                         };
                         let card_holder_name = item
                             .router_data
@@ -6215,12 +6212,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateReferenceId::NetworkTokenWithNTI(network_mandate_id) => {
                 match &item.router_data.request.payment_method_data {
                     PaymentMethodData::NetworkToken(ref token_data) => {
-                        let card_issuer = token_data.get_card_issuer().change_context(
-                            ConnectorRequestError::RequestEncodingFailed,
-                        )?;
-                        let brand = CardBrand::try_from(&card_issuer).change_context(
-                            ConnectorRequestError::RequestEncodingFailed,
-                        )?;
+                        let card_issuer = token_data
+                            .get_card_issuer()
+                            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
+                        let brand = CardBrand::try_from(&card_issuer)
+                            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
                         let card_holder_name = item
                             .router_data
                             .resource_common_data

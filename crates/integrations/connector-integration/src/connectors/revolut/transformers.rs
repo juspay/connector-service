@@ -1,4 +1,6 @@
-use crate::{connectors::revolut::RevolutRouterData, ConnectorRequestError, ConnectorResponseError};
+use crate::{
+    connectors::revolut::RevolutRouterData, ConnectorRequestError, ConnectorResponseError,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund},
     connector_types::{
@@ -971,7 +973,9 @@ fn map_webhook_event_to_attempt_status(
         RevolutWebhookEvent::OrderAuthorised => Ok(AttemptStatus::Authorized),
         RevolutWebhookEvent::OrderCancelled => Ok(AttemptStatus::Voided),
         RevolutWebhookEvent::OrderFailed => Ok(AttemptStatus::Failure),
-        _ => Err(ConnectorRequestError::NotImplemented("webhook event type not found".to_string())),
+        _ => Err(ConnectorRequestError::NotImplemented(
+            "webhook event type not found".to_string(),
+        )),
     }
 }
 

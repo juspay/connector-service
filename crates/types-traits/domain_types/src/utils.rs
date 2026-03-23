@@ -175,7 +175,9 @@ pub fn to_currency_base_unit(
 ) -> core::result::Result<String, error_stack::Report<ConnectorRequestError>> {
     currency
         .to_currency_base_unit(amount.get_amount_as_i64())
-        .change_context(ConnectorRequestError::InvalidDataFormat { field_name: "amount" })
+        .change_context(ConnectorRequestError::InvalidDataFormat {
+            field_name: "amount",
+        })
 }
 
 pub const SELECTED_PAYMENT_METHOD: &str = "Selected payment method";
@@ -209,9 +211,11 @@ fn get_header_field(
                     field_name: "header",
                 })
         })
-        .ok_or(report!(errors::ConnectorRequestError::MissingRequiredField {
-            field_name: "header"
-        }))?
+        .ok_or(report!(
+            errors::ConnectorRequestError::MissingRequiredField {
+                field_name: "header"
+            }
+        ))?
 }
 
 pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
@@ -333,7 +337,9 @@ pub(crate) fn extract_connector_request_reference_id(identifier: &Option<String>
 }
 
 #[track_caller]
-pub fn get_card_issuer(card_number: &str) -> core::result::Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
+pub fn get_card_issuer(
+    card_number: &str,
+) -> core::result::Result<CardIssuer, error_stack::Report<ConnectorRequestError>> {
     for (k, v) in CARD_REGEX.iter() {
         let regex: Regex = v
             .clone()
@@ -384,10 +390,8 @@ pub fn extract_merchant_id_from_metadata(
     );
     Ok(merchant_id_str
         .parse::<common_utils::id_type::MerchantId>()
-        .map_err(|_| {
-            ConnectorRequestError::InvalidDataFormat {
-                field_name: "x-merchant-id",
-            }
+        .map_err(|_| ConnectorRequestError::InvalidDataFormat {
+            field_name: "x-merchant-id",
         })?)
 }
 
@@ -499,7 +503,9 @@ pub fn convert_canada_state_to_code(state: &str) -> String {
 /// # Returns
 /// * `Ok(String)` - The 2-letter state code
 /// * `Err(ConnectorRequestError)` - If the state cannot be mapped
-pub fn convert_spain_state_to_code(state: &str) -> Result<String, crate::errors::ConnectorRequestError> {
+pub fn convert_spain_state_to_code(
+    state: &str,
+) -> Result<String, crate::errors::ConnectorRequestError> {
     // If already 2 characters, assume it's already an abbreviation
     if state.len() == 2 {
         return Ok(state.to_uppercase());

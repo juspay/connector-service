@@ -37,7 +37,6 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
-    ConnectorRequestError,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -46,6 +45,7 @@ use domain_types::{
         self, ConnectorInfo, Connectors, FeatureStatus, PaymentMethodDetails,
         SupportedPaymentMethods,
     },
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
@@ -61,8 +61,8 @@ use transformers::*;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use domain_types::errors::ResultResponseToRequestExt;
 use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::ResultResponseToRequestExt;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -103,14 +103,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let security_header = request
             .headers
             .get("x-eorder-webhook-signature")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?
+            .ok_or(ConnectorRequestError::NotImplemented(
+                "webhook signature not found".to_string(),
+            ))?
             .clone();
 
-        let signature = hex::decode(security_header)
-            .change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
+        let signature = hex::decode(security_header).change_context(
+            ConnectorRequestError::NotImplemented("webhook signature not found".to_string()),
+        )?;
 
         let parsed: serde_json::Value = serde_json::from_slice(&request.body)
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))
             .into_request_err()?;
 
         let sorted_payload = sort_and_minify_json(&parsed)?;
@@ -119,7 +124,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
             .map(|_| true)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?;
 
         Ok(verify)
     }
@@ -134,7 +141,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: CalidaWebhookResponse = request
             .body
             .parse_struct("CalidaWebhookResponse")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))
             .attach_printable_lazy(|| "Failed to parse Calida payment webhook body structure")?;
 
         let transaction_id = webhook_body.order_id.clone();

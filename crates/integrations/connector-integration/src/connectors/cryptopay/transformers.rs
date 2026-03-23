@@ -21,13 +21,14 @@ use domain_types::{
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
 
-
 use common_utils::consts;
 
 use serde::{Deserialize, Serialize};
 
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
+};
 use hyperswitch_masking::Secret;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt};
 
 #[derive(Default, Debug, Serialize)]
 pub struct CryptopayPaymentsRequest {
@@ -225,10 +226,13 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
-            Some(ref amount) => Some(CryptopayAmountConvertor::convert_back(
-                amount.clone(),
-                router_data.request.currency,
-            ).into_response_err()?),
+            Some(ref amount) => Some(
+                CryptopayAmountConvertor::convert_back(
+                    amount.clone(),
+                    router_data.request.currency,
+                )
+                .into_response_err()?,
+            ),
             None => None,
         };
         match (amount_captured_in_minor_units, status) {
@@ -363,10 +367,13 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
-            Some(ref amount) => Some(CryptopayAmountConvertor::convert_back(
-                amount.clone(),
-                router_data.request.currency,
-            ).into_response_err()?),
+            Some(ref amount) => Some(
+                CryptopayAmountConvertor::convert_back(
+                    amount.clone(),
+                    router_data.request.currency,
+                )
+                .into_response_err()?,
+            ),
             None => None,
         };
         match (amount_captured_in_minor_units, status) {

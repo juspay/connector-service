@@ -51,11 +51,11 @@ use interfaces::{
 };
 
 use crate::{types::ResponseRouterData, with_error_response_body};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use serde::Serialize;
 use std::fmt::Debug;
 use std::sync::LazyLock;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -115,7 +115,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: PproErrorResponse = res
             .response
             .parse_struct("Ppro ErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -417,7 +419,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))?;
 
         EventType::try_from(event.r#type)
     }
@@ -431,12 +435,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(ConnectorRequestError::NotImplemented("webhooks not implemented".to_string()).into())
+                return Err(ConnectorRequestError::NotImplemented(
+                    "webhooks not implemented".to_string(),
+                )
+                .into())
             }
         };
 
@@ -485,12 +494,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))?;
 
         let charge = match event.data {
             PproWebhookData::Charge { charge } => charge,
             PproWebhookData::Agreement { .. } => {
-                return Err(ConnectorRequestError::NotImplemented("webhooks not implemented".to_string()).into())
+                return Err(ConnectorRequestError::NotImplemented(
+                    "webhooks not implemented".to_string(),
+                )
+                .into())
             }
         };
 
@@ -537,17 +551,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
         let connector_webhook_secrets = connector_webhook_secret
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .ok_or(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Connector webhook secret not configured")?;
 
-        let signature = request
-            .headers
-            .get("Webhook-Signature")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
+        let signature = request.headers.get("Webhook-Signature").ok_or(
+            ConnectorRequestError::NotImplemented("webhook signature not found".to_string()),
+        )?;
 
         let algorithm = crypto::HmacSha256;
-        let expected_signature =
-            hex::decode(signature).change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+        let expected_signature = hex::decode(signature).change_context(
+            ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+        )?;
 
         algorithm
             .verify_signature(
@@ -555,7 +571,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 &expected_signature,
                 &request.body,
             )
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
     }
 
     fn get_webhook_resource_object(
@@ -568,7 +586,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))?;
 
         match event.data {
             PproWebhookData::Charge { charge } => Ok(Box::new(charge)),
@@ -1119,8 +1139,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + Serialize + 'static> Inco
     fn get_webhook_resource_object(
         &self,
         request: &IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::WebhookError>
-    {
+    ) -> CustomResult<Box<dyn hyperswitch_masking::ErasedMaskSerialize>, errors::WebhookError> {
         let event: PproWebhookEvent = request
             .body
             .parse_struct("PproWebhookEvent")

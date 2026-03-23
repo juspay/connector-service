@@ -28,7 +28,9 @@ use strum::Display;
 
 // Import the wrapper type created by macros
 use super::NexixpayRouterData;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultResponseToRequestExt};
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultResponseToRequestExt,
+};
 
 const MAX_ORDER_ID_LENGTH: usize = 18;
 
@@ -135,7 +137,9 @@ pub fn get_payment_id(
     })?;
     let nexixpay_meta_data =
         serde_json::from_value::<NexixpayConnectorMetaData>(connector_metadata)
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))
             .into_request_err()?;
     let payment_flow = payment_intent.unwrap_or(nexixpay_meta_data.psync_flow);
     let payment_id = match payment_flow {

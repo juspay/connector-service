@@ -317,7 +317,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: PayloadErrorResponse = res
             .response
             .parse_struct("PayloadErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -743,7 +745,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .headers
             .get(headers::X_PAYLOAD_SIGNATURE)
             .map(|header_value| header_value.as_bytes().to_vec())
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+            .ok_or(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?;
 
         Ok(signature)
     }
@@ -773,15 +777,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let signature = self
             .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?;
 
         let message = self
             .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?;
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
     }
 
     fn get_event_type(
@@ -794,7 +804,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: transformers::PayloadWebhookEvent = request
             .body
             .parse_struct("PayloadWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
 
         Ok(transformers::get_event_type_from_trigger(
             webhook_body.trigger,
@@ -811,7 +823,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: transformers::PayloadWebhookEvent = request
             .body
             .parse_struct("PayloadWebhookEvent")
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
 
         Ok(Box::new(webhook_body))
     }

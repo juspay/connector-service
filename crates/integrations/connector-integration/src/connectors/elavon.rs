@@ -43,11 +43,11 @@ use transformers::{
 };
 
 use super::macros;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 use crate::{
     types::ResponseRouterData, utils::preprocess_xml_response_bytes, with_error_response_body,
 };
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";

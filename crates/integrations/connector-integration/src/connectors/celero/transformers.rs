@@ -1,6 +1,8 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{pii::Email, MinorUnit};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -14,8 +16,6 @@ use domain_types::{
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 
 // ===== ENUMS FOR STATUS MAPPING =====
 
@@ -613,10 +613,9 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
         }
 
         // Extract first transaction data (API returns array but we expect single transaction)
-        let transaction_data = response
-            .data
-            .first()
-            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
+        let transaction_data = response.data.first().ok_or(
+            ConnectorResponseError::response_deserialization_failed(None),
+        )?;
 
         // Extract card response for detailed checking
         let card_response = transaction_data

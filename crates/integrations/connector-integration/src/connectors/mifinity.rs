@@ -24,12 +24,12 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    ConnectorRequestError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
+    ConnectorRequestError,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
@@ -40,7 +40,6 @@ use interfaces::{
 use serde::Serialize;
 
 use super::macros;
-use domain_types::errors::ConnectorResponseError;
 use crate::{
     connectors::mifinity::transformers::{
         auth_headers, MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest,
@@ -49,6 +48,7 @@ use crate::{
     types::ResponseRouterData,
     utils,
 };
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";

@@ -8,13 +8,13 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RealTimePaymentData, UpiData,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
+    ConnectorRequestError,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -373,8 +373,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             "qr_code_url".to_string(),
                             Value::String(checkout_methods.redirect.redirect_url.clone()),
                         );
-                        let metadata_value = serde_json::to_value(metadata_map)
-                            .change_context(ConnectorResponseError::response_handling_failed(None))?;
+                        let metadata_value = serde_json::to_value(metadata_map).change_context(
+                            ConnectorResponseError::response_handling_failed(None),
+                        )?;
                         (Some(metadata_value), None)
                     }
                     false => {

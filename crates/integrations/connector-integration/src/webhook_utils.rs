@@ -1,10 +1,7 @@
 use common_enums::WebhookTransformationStatus;
 use domain_types::{
-    errors::WebhookError,
-    payment_method_data::PaymentMethodDataTypes,
-    router_data::ConnectorSpecificConfig,
-    types::CardConversionHelper,
-    utils::ForeignTryFrom,
+    errors::WebhookError, payment_method_data::PaymentMethodDataTypes,
+    router_data::ConnectorSpecificConfig, types::CardConversionHelper, utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{

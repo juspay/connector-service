@@ -13,7 +13,10 @@ use http::request::Request;
 use hyperswitch_masking;
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
-use ucs_env::{configs, error::ResultExtGrpc};
+use ucs_env::{
+    configs,
+    error::{ReportSwitchExt, ResultExtGrpc},
+};
 
 use crate::request::RequestData;
 
@@ -142,7 +145,9 @@ where
 
     let grpc_response = async {
         let request_data = RequestData::from_grpc_request(request, config.clone())?;
-        log_before_initialization(&request_data, service_name).into_grpc_status()?;
+        log_before_initialization(&request_data, service_name)
+            .switch()
+            .into_grpc_status()?;
         event_headers = request_data.masked_metadata.get_all_masked();
         event_metadata_payload = Some(request_data.extracted_metadata.clone());
 
@@ -267,7 +272,8 @@ macro_rules! implement_connector_operation {
                 .get::<String>()
                 .cloned()
                 .unwrap_or_else(|| "unknown_service".to_string());
-            let result = Box::pin(async{
+            let result = Box::pin(async {
+            use ucs_env::error::ReportSwitchExt;
             let $crate::request::RequestData {
                 payload,
                 extracted_metadata: metadata_payload,
@@ -361,10 +367,12 @@ macro_rules! implement_connector_operation {
                 api_tag,
             )
             .await
+            .switch()
             .into_grpc_status()?;
 
             // Generate response
             let final_response = $generate_response_fn(response_result)
+                .switch()
                 .into_grpc_status()?;
 
             Ok(tonic::Response::new(final_response))

@@ -17,12 +17,12 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
         SessionTokenRequestData, SessionTokenResponseData,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -550,8 +550,9 @@ impl<
                             }))
                         } else {
                             // For regular URLs, parse and convert
-                            let url = Url::parse(&deep_link_info.deep_link)
-                                .change_context(ConnectorResponseError::response_handling_failed(None))?;
+                            let url = Url::parse(&deep_link_info.deep_link).change_context(
+                                ConnectorResponseError::response_handling_failed(None),
+                            )?;
                             Some(Box::new(RedirectForm::from((url, Method::Get))))
                         }
                     } else {
@@ -852,7 +853,8 @@ pub fn generate_paytm_signature(
     // Step 1: Generate random salt bytes using ring (same logic, different implementation)
     let rng = SystemRandom::new();
     let mut salt_bytes = [0u8; constants::SALT_LENGTH];
-    rng.fill(&mut salt_bytes).map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
+    rng.fill(&mut salt_bytes)
+        .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
 
     // Step 2: Convert salt to Base64 (same logic)
     let salt_b64 = general_purpose::STANDARD.encode(salt_bytes);

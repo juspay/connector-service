@@ -2,8 +2,7 @@ use super::PaypalRouterData;
 use crate::{
     types::ResponseRouterData,
     utils::{to_connector_meta, ErrorCodeAndMessage},
-    ConnectorRequestError,
-    ConnectorResponseError,
+    ConnectorRequestError, ConnectorResponseError,
 };
 use base64::Engine;
 use cards;
@@ -38,8 +37,8 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use url::Url;
 use domain_types::errors::ResultRequestToResponseExt;
+use url::Url;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 trait GetRequestIncrementalAuthorization {
     fn get_request_incremental_authorization(&self) -> Option<bool>;
@@ -131,13 +130,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 item.router_data.request.currency,
             )
             .change_context(ConnectorRequestError::AmountConversionFailed)?;
-        let shipping_cost =
-            item.router_data
-                .request
-                .shipping_cost
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "shipping_cost",
-                })?;
+        let shipping_cost = item.router_data.request.shipping_cost.ok_or(
+            ConnectorRequestError::MissingRequiredField {
+                field_name: "shipping_cost",
+            },
+        )?;
         let shipping_value = item
             .connector
             .amount_converter
@@ -1219,10 +1216,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | BankTransferData::InstantBankTransferFinland {}
             | BankTransferData::InstantBankTransferPoland {}
             | BankTransferData::IndonesianBankTransfer { .. }
-            | BankTransferData::LocalBankTransfer { .. } => Err(ConnectorRequestError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Paypal"),
-            )
-            .into()),
+            | BankTransferData::LocalBankTransfer { .. } => {
+                Err(ConnectorRequestError::NotImplemented(
+                    utils::get_unimplemented_payment_method_error_message("Paypal"),
+                )
+                .into())
+            }
         }
     }
 }
@@ -1447,7 +1446,9 @@ pub struct PartnerFlowCredentials {
 }
 
 impl PaypalAuthType {
-    pub fn get_credentials(&self) -> CustomResult<&PaypalConnectorCredentials, ConnectorRequestError> {
+    pub fn get_credentials(
+        &self,
+    ) -> CustomResult<&PaypalConnectorCredentials, ConnectorRequestError> {
         match self {
             Self::TemporaryAuth => Err(ConnectorRequestError::InvalidConnectorConfig {
                 config: "TemporaryAuth found in connector_account_details",
@@ -1785,7 +1786,8 @@ where
             .first()
             .ok_or(ConnectorRequestError::MissingConnectorTransactionID)?;
 
-        let id = get_id_based_on_intent(&item.response.intent, purchase_units).into_response_err()?;
+        let id =
+            get_id_based_on_intent(&item.response.intent, purchase_units).into_response_err()?;
         let (connector_meta, order_id) = match item.response.intent.clone() {
             PaypalPaymentIntent::Capture => (
                 serde_json::json!(PaypalMeta {
@@ -1914,7 +1916,9 @@ where
     }
 }
 
-fn get_redirect_url(link_vec: Vec<PaypalLinks>) -> CustomResult<Option<Url>, ConnectorRequestError> {
+fn get_redirect_url(
+    link_vec: Vec<PaypalLinks>,
+) -> CustomResult<Option<Url>, ConnectorRequestError> {
     let mut link: Option<Url> = None;
     for item2 in link_vec.iter() {
         if item2.rel == "payer-action" {
@@ -2105,10 +2109,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id),
-                redirection_data: Some(Box::new(paypal_threeds_link((
-                    link,
-                    item.router_data.request.complete_authorize_url.clone(),
-                )).into_response_err()?)),
+                redirection_data: Some(Box::new(
+                    paypal_threeds_link((
+                        link,
+                        item.router_data.request.complete_authorize_url.clone(),
+                    ))
+                    .into_response_err()?,
+                )),
                 mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
@@ -2166,10 +2173,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 fn paypal_threeds_link(
     (redirect_url, complete_auth_url): (Option<Url>, Option<String>),
 ) -> CustomResult<RedirectForm, ConnectorRequestError> {
-    let mut redirect_url = redirect_url.ok_or(ConnectorResponseError::response_handling_failed(None))?;
-    let complete_auth_url = complete_auth_url.ok_or(ConnectorRequestError::MissingRequiredField {
-        field_name: "complete_authorize_url",
-    })?;
+    let mut redirect_url =
+        redirect_url.ok_or(ConnectorResponseError::response_handling_failed(None))?;
+    let complete_auth_url =
+        complete_auth_url.ok_or(ConnectorRequestError::MissingRequiredField {
+            field_name: "complete_authorize_url",
+        })?;
     let mut form_fields = std::collections::HashMap::from_iter(
         redirect_url
             .query_pairs()
@@ -2358,7 +2367,8 @@ impl TryFrom<ResponseRouterData<PaypalCaptureResponse, Self>>
                 .connector_feature_data
                 .clone()
                 .map(|m| m.expose()),
-        ).into_response_err()?;
+        )
+        .into_response_err()?;
 
         // Simplified capture_id logic to use response.id directly
         let capture_id = item.response.id.clone();
@@ -2894,13 +2904,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             items: item_details,
         }];
 
-        let payment_method_type =
-            item.router_data
-                .request
-                .payment_method_type
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "payment_method_type",
-                })?;
+        let payment_method_type = item.router_data.request.payment_method_type.ok_or(
+            ConnectorRequestError::MissingRequiredField {
+                field_name: "payment_method_type",
+            },
+        )?;
 
         let payment_source = match payment_method_type {
             common_enums::PaymentMethodType::Card => Some(PaymentSourceItem::Card(
@@ -3125,7 +3133,9 @@ impl TryFrom<&VerifyWebhookSourceRequestData> for PaypalSourceVerificationReques
         // Parse the webhook body into serde_json::Value
         // With preserve_order feature enabled, this preserves field order (uses IndexMap, not BTreeMap)
         let webhook_event = serde_json::from_slice(&req.webhook_body)
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))
             .attach_printable("Webhook body is not valid JSON")?;
 
         let headers = webhook_headers_lowercase(&req.webhook_headers);
@@ -3162,7 +3172,9 @@ impl TryFrom<&VerifyWebhookSourceRequestData> for PaypalSourceVerificationReques
                 })?
                 .clone(),
             webhook_id: String::from_utf8(req.merchant_secret.secret.to_vec())
-                .change_context(ConnectorRequestError::NotImplemented("webhook verification secret not found".to_string()))
+                .change_context(ConnectorRequestError::NotImplemented(
+                    "webhook verification secret not found".to_string(),
+                ))
                 .attach_printable("Could not convert secret to UTF-8")?,
             webhook_event,
         })

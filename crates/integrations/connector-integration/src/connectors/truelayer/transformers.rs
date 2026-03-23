@@ -162,9 +162,7 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for TruelayerMetadata {
     type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(ConnectorRequestError::InvalidConnectorConfig {
-                config: "metadata",
-            })?;
+            .change_context(ConnectorRequestError::InvalidConnectorConfig { config: "metadata" })?;
         Ok(metadata)
     }
 }
@@ -789,9 +787,9 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
                 } else {
                     Ok(RefundsResponseData {
                         connector_refund_id: webhook_response.refund_id.ok_or_else(|| {
-                            error_stack::report!(
-                                ConnectorResponseError::unexpected_response_error(None)
-                            )
+                            error_stack::report!(ConnectorResponseError::unexpected_response_error(
+                                None
+                            ))
                         })?,
                         refund_status: status,
                         status_code: item.http_code,
@@ -970,9 +968,9 @@ pub fn get_truelayer_payment_webhook_status(
         TruelayerWebhookEventType::PaymentDisputed
         | TruelayerWebhookEventType::Unknown
         | TruelayerWebhookEventType::RefundExecuted
-        | TruelayerWebhookEventType::RefundFailed => {
-            Err(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?
-        }
+        | TruelayerWebhookEventType::RefundFailed => Err(ConnectorRequestError::NotImplemented(
+            "webhook body decoding failed".to_string(),
+        ))?,
     }
 }
 
@@ -991,9 +989,9 @@ pub fn get_truelayer_refund_webhook_status(
         | TruelayerWebhookEventType::PaymentFundsReceived
         | TruelayerWebhookEventType::PaymentReversed
         | TruelayerWebhookEventType::PaymentSettlementStalled
-        | TruelayerWebhookEventType::Unknown => {
-            Err(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?
-        }
+        | TruelayerWebhookEventType::Unknown => Err(ConnectorRequestError::NotImplemented(
+            "webhook body decoding failed".to_string(),
+        ))?,
     }
 }
 
@@ -1025,7 +1023,9 @@ fn pad_to(bytes: Vec<u8>, target: usize) -> Result<Vec<u8>, ConnectorRequestErro
             padded.extend(bytes);
             Ok(padded)
         }
-        std::cmp::Ordering::Greater => Err(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string())),
+        std::cmp::Ordering::Greater => Err(ConnectorRequestError::NotImplemented(
+            "webhook source verification failed".to_string(),
+        )),
     }
 }
 
@@ -1037,29 +1037,35 @@ pub const ALLOWED_JKUS: &[&str] = &[
 fn convert_p163_signature_to_der(
     signature_b64: &str,
 ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
-    let sig_bytes = URL_SAFE_NO_PAD
-        .decode(signature_b64)
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+    let sig_bytes = URL_SAFE_NO_PAD.decode(signature_b64).change_context(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?;
     if sig_bytes.len() != SIG_BYTES_EXPECTED_LENGTH {
-        return Err(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()).into());
+        return Err(
+            ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()).into(),
+        );
     }
 
-    let r = BigNum::from_slice(
-        sig_bytes
-            .get(0..66)
-            .ok_or(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?,
-    )
-    .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
-    let s = BigNum::from_slice(
-        sig_bytes
-            .get(66..)
-            .ok_or(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?,
-    )
-    .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+    let r = BigNum::from_slice(sig_bytes.get(0..66).ok_or(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?)
+    .change_context(ConnectorRequestError::NotImplemented(
+        "webhook decoding failed".to_string(),
+    ))?;
+    let s = BigNum::from_slice(sig_bytes.get(66..).ok_or(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?)
+    .change_context(ConnectorRequestError::NotImplemented(
+        "webhook decoding failed".to_string(),
+    ))?;
     let der_sig = EcdsaSig::from_private_components(r, s)
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?
+        .change_context(ConnectorRequestError::NotImplemented(
+            "webhook decoding failed".to_string(),
+        ))?
         .to_der()
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+        .change_context(ConnectorRequestError::NotImplemented(
+            "webhook decoding failed".to_string(),
+        ))?;
     Ok(der_sig)
 }
 
@@ -1068,15 +1074,17 @@ fn verify_ecdsa_signature_and_digest(
     signing_input: &str,
     ec_key: EcKey<Public>,
 ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
-    let digest = hash(MessageDigest::sha512(), signing_input.as_bytes())
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+    let digest = hash(MessageDigest::sha512(), signing_input.as_bytes()).change_context(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?;
 
-    let ecdsa_sig = EcdsaSig::from_der(&der_sig)
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+    let ecdsa_sig = EcdsaSig::from_der(&der_sig).change_context(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?;
 
-    let valid = ecdsa_sig
-        .verify(&digest, &ec_key)
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+    let valid = ecdsa_sig.verify(&digest, &ec_key).change_context(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?;
 
     Ok(valid)
 }
@@ -1089,17 +1097,23 @@ fn build_uncompressed_ec1_point(
     sec1.extend(pad_to(x, P521_COORDINATE_BYTE_LEN)?);
     sec1.extend(pad_to(y, P521_COORDINATE_BYTE_LEN)?);
 
-    let group = EcGroup::from_curve_name(Nid::SECP521R1)
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
-    let mut ctx =
-        BigNumContext::new().change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
-    let point = EcPoint::from_bytes(&group, &sec1, &mut ctx)
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
-    let ec_key = EcKey::from_public_key(&group, &point)
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+    let group = EcGroup::from_curve_name(Nid::SECP521R1).change_context(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?;
+    let mut ctx = BigNumContext::new().change_context(ConnectorRequestError::NotImplemented(
+        "webhook decoding failed".to_string(),
+    ))?;
+    let point = EcPoint::from_bytes(&group, &sec1, &mut ctx).change_context(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?;
+    let ec_key = EcKey::from_public_key(&group, &point).change_context(
+        ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+    )?;
     ec_key
         .check_key()
-        .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+        .change_context(ConnectorRequestError::NotImplemented(
+            "webhook decoding failed".to_string(),
+        ))?;
     Ok(ec_key)
 }
 
@@ -1120,9 +1134,9 @@ fn verify_signature(
             headers.iter().map(|(k, v)| (k.to_lowercase(), v)).collect();
         for header_name in tl_headers_str.split(',') {
             let name = header_name.trim();
-            let value = lower_headers
-                .get(&name.to_lowercase())
-                .ok_or(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+            let value = lower_headers.get(&name.to_lowercase()).ok_or(
+                ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+            )?;
             payload.extend_from_slice(format!("{}: {}\n", name, value).as_bytes());
         }
     }
@@ -1154,38 +1168,52 @@ impl TryFrom<ResponseRouterData<Jwks, Self>>
         let body = item.router_data.request.webhook_body.as_ref();
         let headers = item.router_data.request.webhook_headers.clone();
 
-        let tl_signature_header = headers
-            .get("tl-signature")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
+        let tl_signature_header =
+            headers
+                .get("tl-signature")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook signature not found".to_string(),
+                ))?;
         let tl_signature = tl_signature_header.as_str();
         let parts: Vec<&str> = tl_signature.splitn(3, '.').collect();
 
-        let header_b64 = parts
-            .first()
-            .ok_or(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
-        let signature_b64 = parts
-            .get(2)
-            .ok_or(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+        let header_b64 = parts.first().ok_or(ConnectorRequestError::NotImplemented(
+            "webhook decoding failed".to_string(),
+        ))?;
+        let signature_b64 = parts.get(2).ok_or(ConnectorRequestError::NotImplemented(
+            "webhook decoding failed".to_string(),
+        ))?;
 
-        let header_json = URL_SAFE_NO_PAD
-            .decode(header_b64)
-            .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
-        let jws_header: JwsHeaderWebhooks = serde_json::from_slice(&header_json)
-            .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+        let header_json = URL_SAFE_NO_PAD.decode(header_b64).change_context(
+            ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+        )?;
+        let jws_header: JwsHeaderWebhooks = serde_json::from_slice(&header_json).change_context(
+            ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()),
+        )?;
 
         let jwk = item
             .response
             .keys
             .into_iter()
             .find(|k| k.kid == jws_header.kid && k.kty == "EC")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+            .ok_or(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?;
 
         let x_raw = URL_SAFE_NO_PAD
-            .decode(jwk.x.ok_or(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?)
-            .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+            .decode(jwk.x.ok_or(ConnectorRequestError::NotImplemented(
+                "webhook decoding failed".to_string(),
+            ))?)
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook decoding failed".to_string(),
+            ))?;
         let y_raw = URL_SAFE_NO_PAD
-            .decode(jwk.y.ok_or(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?)
-            .change_context(ConnectorRequestError::NotImplemented("webhook decoding failed".to_string()))?;
+            .decode(jwk.y.ok_or(ConnectorRequestError::NotImplemented(
+                "webhook decoding failed".to_string(),
+            ))?)
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook decoding failed".to_string(),
+            ))?;
 
         let ec_key = build_uncompressed_ec1_point(x_raw, y_raw)?;
 

@@ -5,6 +5,9 @@ use crate::{
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::request::Method;
 use common_utils::types::StringMinorUnit;
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
@@ -24,7 +27,6 @@ use hyperswitch_masking::{PeekInterface, Secret};
 use rand::distributions::DistString;
 use serde::{Deserialize, Serialize};
 use url::Url;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt};
 
 // ===== TYPE ALIASES FOR MACRO =====
 // These type aliases are needed because the create_all_prerequisites! macro
@@ -422,11 +424,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     BankRedirectData::Eps { .. } => Some(ApmProvider::Eps),
                     BankRedirectData::Ideal { .. } => Some(ApmProvider::Ideal),
                     _ => {
-                        return Err(error_stack::report!(
-                            ConnectorRequestError::NotImplemented(
-                                "Bank redirect payment method not supported".to_string()
-                            )
-                        ))
+                        return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                            "Bank redirect payment method not supported".to_string()
+                        )))
                     }
                 };
 
@@ -440,11 +440,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 }
             }
             _ => {
-                return Err(error_stack::report!(
-                    ConnectorRequestError::NotImplemented(
-                        "Payment method not supported".to_string()
-                    )
-                ))
+                return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                    "Payment method not supported".to_string()
+                )))
             }
         };
 

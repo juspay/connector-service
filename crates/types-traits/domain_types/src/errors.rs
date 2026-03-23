@@ -188,10 +188,7 @@ pub enum ConnectorRequestError {
     SourceVerificationFailed,
     /// Config/auth/metadata validation failures (e.g. invalid config override, missing header).
     #[error("{message}")]
-    ConfigurationError {
-        code: &'static str,
-        message: String,
-    },
+    ConfigurationError { code: &'static str, message: String },
 }
 
 impl ConnectorRequestError {
@@ -214,12 +211,53 @@ impl ConnectorRequestError {
 
 impl ErrorSwitch<ApplicationErrorResponse> for ConnectorRequestError {
     fn switch(&self) -> ApplicationErrorResponse {
-        ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: self.error_code().to_string(),
-            error_identifier: 400,
+        let api_err = |sub_code: &str, id: u16| ApiError {
+            sub_code: sub_code.to_string(),
+            error_identifier: id,
             error_message: self.to_string(),
             error_object: None,
-        })
+        };
+        match self {
+            Self::FailedToObtainIntegrationUrl
+            | Self::FailedToObtainAuthType
+            | Self::RequestEncodingFailed
+            | Self::HeaderMapConstructionFailed
+            | Self::BodySerializationFailed
+            | Self::UrlParsingFailed
+            | Self::UrlEncodingFailed
+            | Self::AmountConversionFailed
+            | Self::MandatePaymentDataMismatch { .. }
+            | Self::SourceVerificationFailed => {
+                ApplicationErrorResponse::InternalServerError(api_err("INTERNAL_SERVER_ERROR", 500))
+            }
+            Self::InvalidWallet
+            | Self::MissingRequiredField { .. }
+            | Self::MissingRequiredFields { .. }
+            | Self::InvalidDataFormat { .. }
+            | Self::MismatchedPaymentData
+            | Self::InvalidWalletToken { .. }
+            | Self::MissingPaymentMethodType
+            | Self::CurrencyNotSupported { .. }
+            | Self::InvalidConnectorConfig { .. }
+            | Self::NotSupported { .. }
+            | Self::FlowNotSupported { .. }
+            | Self::MissingApplePayTokenData
+            | Self::ConfigurationError { .. } => {
+                ApplicationErrorResponse::BadRequest(api_err("BAD_REQUEST", 400))
+            }
+            Self::NoConnectorMetaData
+            | Self::MaxFieldLengthViolated { .. }
+            | Self::MissingConnectorMandateID
+            | Self::MissingConnectorMandateMetadata
+            | Self::MissingConnectorTransactionID
+            | Self::MissingConnectorRefundID
+            | Self::MissingConnectorRelatedTransactionID { .. } => {
+                ApplicationErrorResponse::Unprocessable(api_err("UNPROCESSABLE_ENTITY", 422))
+            }
+            Self::NotImplemented(_) | Self::CaptureMethodNotSupported => {
+                ApplicationErrorResponse::NotImplemented(api_err("NOT_IMPLEMENTED", 501))
+            }
+        }
     }
 }
 
@@ -238,6 +276,12 @@ impl ErrorSwitch<ConnectorRequestError> for ApplicationErrorResponse {
             code: "APPLICATION_ERROR",
             message: self.get_api_error().error_message.clone(),
         }
+    }
+}
+
+impl common_utils::errors::ErrorSwitchFrom<ApplicationErrorResponse> for ApplicationErrorResponse {
+    fn switch_from(error: &ApplicationErrorResponse) -> Self {
+        error.clone()
     }
 }
 
@@ -312,6 +356,17 @@ impl ConnectorResponseError {
     }
 }
 
+impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: "INTERNAL_SERVER_ERROR".to_string(),
+            error_identifier: 500,
+            error_message: self.to_string(),
+            error_object: None,
+        })
+    }
+}
+
 /// Errors that occur during webhook processing
 #[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
@@ -353,12 +408,74 @@ pub enum ConnectorFlowError {
     Response(#[from] ConnectorResponseError),
 }
 
+impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        let (sub_code, error_identifier) = match self {
+            Self::RequestTimeoutReceived | Self::GatewayTimeoutReceived => ("REQUEST_TIMEOUT", 504),
+            _ => ("INTERNAL_SERVER_ERROR", 500),
+        };
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: sub_code.to_string(),
+            error_identifier,
+            error_message: self.to_string(),
+            error_object: None,
+        })
+    }
+}
+
+impl ErrorSwitch<ApplicationErrorResponse> for ConnectorFlowError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        match self {
+            Self::Request(e) => e.switch(),
+            Self::Client(e) => e.switch(),
+            Self::Response(e) => e.switch(),
+        }
+    }
+}
+
+impl ErrorSwitch<ApplicationErrorResponse> for WebhookError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        let api_err = |sub_code: &str, id: u16| ApiError {
+            sub_code: sub_code.to_string(),
+            error_identifier: id,
+            error_message: self.to_string(),
+            error_object: None,
+        };
+        match self {
+            Self::WebhookEventTypeNotFound
+            | Self::WebhookSignatureNotFound
+            | Self::WebhookReferenceIdNotFound
+            | Self::WebhookResourceObjectNotFound
+            | Self::WebhookVerificationSecretNotFound => {
+                ApplicationErrorResponse::NotFound(api_err("WEBHOOK_DETAILS_NOT_FOUND", 404))
+            }
+            Self::WebhookBodyDecodingFailed
+            | Self::WebhookSourceVerificationFailed
+            | Self::WebhookVerificationSecretInvalid => {
+                ApplicationErrorResponse::BadRequest(api_err("INVALID_WEBHOOK_DATA", 400))
+            }
+            Self::WebhooksNotImplemented => {
+                ApplicationErrorResponse::NotImplemented(api_err("NOT_IMPLEMENTED", 501))
+            }
+            Self::WebhookProcessingFailed | Self::WebhookResponseEncodingFailed => {
+                ApplicationErrorResponse::InternalServerError(api_err("INTERNAL_SERVER_ERROR", 500))
+            }
+        }
+    }
+}
+
 impl From<common_enums::ApiClientError> for ApiClientError {
     fn from(value: common_enums::ApiClientError) -> Self {
         match value {
-            common_enums::ApiClientError::HeaderMapConstructionFailed => Self::HeaderMapConstructionFailed,
-            common_enums::ApiClientError::InvalidProxyConfiguration => Self::InvalidProxyConfiguration,
-            common_enums::ApiClientError::ClientConstructionFailed => Self::ClientConstructionFailed,
+            common_enums::ApiClientError::HeaderMapConstructionFailed => {
+                Self::HeaderMapConstructionFailed
+            }
+            common_enums::ApiClientError::InvalidProxyConfiguration => {
+                Self::InvalidProxyConfiguration
+            }
+            common_enums::ApiClientError::ClientConstructionFailed => {
+                Self::ClientConstructionFailed
+            }
             common_enums::ApiClientError::CertificateDecodeFailed => Self::CertificateDecodeFailed,
             common_enums::ApiClientError::BodySerializationFailed => Self::BodySerializationFailed,
             common_enums::ApiClientError::UnexpectedState => Self::UnexpectedState,
@@ -374,9 +491,13 @@ impl From<common_enums::ApiClientError> for ApiClientError {
                 Self::InternalServerErrorReceived
             }
             common_enums::ApiClientError::BadGatewayReceived => Self::BadGatewayReceived,
-            common_enums::ApiClientError::ServiceUnavailableReceived => Self::ServiceUnavailableReceived,
+            common_enums::ApiClientError::ServiceUnavailableReceived => {
+                Self::ServiceUnavailableReceived
+            }
             common_enums::ApiClientError::GatewayTimeoutReceived => Self::GatewayTimeoutReceived,
-            common_enums::ApiClientError::UnexpectedServerResponse => Self::UnexpectedServerResponse,
+            common_enums::ApiClientError::UnexpectedServerResponse => {
+                Self::UnexpectedServerResponse
+            }
         }
     }
 }

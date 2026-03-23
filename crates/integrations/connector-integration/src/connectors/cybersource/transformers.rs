@@ -9,8 +9,12 @@ use common_utils::{
     types::{SemanticVersion, StringMajorUnit},
 };
 
-use crate::{connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils, ConnectorResponseError};
+use crate::{
+    connectors::cybersource::CybersourceRouterData, types::ResponseRouterData, utils,
+    ConnectorResponseError,
+};
 use cards;
+use domain_types::errors::{ResultRequestToResponseExt, ResultResponseToRequestExt};
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, PostAuthenticate, PreAuthenticate, RepeatPayment,
@@ -23,7 +27,6 @@ use domain_types::{
         PaymentsSyncData, RecurringMandateData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    ConnectorRequestError,
     payment_address::Address,
     payment_method_data::{
         self, ApplePayDecryptedData, ApplePayWalletData, CardDetailsForNetworkTransactionId,
@@ -38,11 +41,11 @@ use domain_types::{
     router_request_types,
     router_response_types::RedirectForm,
     utils::{to_currency_base_unit, CardIssuer},
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::{ResultRequestToResponseExt, ResultResponseToRequestExt};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 pub const REFUND_VOIDED: &str = "Refund request has been voided.";
 
@@ -2402,22 +2405,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             value.router_data.request.merchant_order_id.clone(),
         );
 
-        let currency =
-            value
-                .router_data
-                .request
-                .currency
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "currency",
-                })?;
-        let amount =
-            value
-                .router_data
-                .request
-                .amount
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "amount",
-                })?;
+        let currency = value.router_data.request.currency.ok_or(
+            ConnectorRequestError::MissingRequiredField {
+                field_name: "currency",
+            },
+        )?;
+        let amount = value.router_data.request.amount.ok_or(
+            ConnectorRequestError::MissingRequiredField {
+                field_name: "amount",
+            },
+        )?;
         let total_amount = value
             .connector
             .amount_converter
@@ -2764,7 +2761,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .status
                 .clone()
                 .unwrap_or(CybersourcePaymentStatus::StatusNotReceived),
-            item.router_data.request.is_auto_capture().into_response_err()?,
+            item.router_data
+                .request
+                .is_auto_capture()
+                .into_response_err()?,
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
@@ -3002,18 +3002,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 field_name: "redirect_response",
             },
         )?;
-        let total_amount =
-            item.connector
-                .amount_converter
-                .convert(
-                    item.router_data.request.amount,
-                    item.router_data.request.currency.ok_or(
-                        ConnectorRequestError::MissingRequiredField {
-                            field_name: "currency",
-                        },
-                    )?,
-                )
-                .change_context(ConnectorRequestError::AmountConversionFailed)?;
+        let total_amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency.ok_or(
+                    ConnectorRequestError::MissingRequiredField {
+                        field_name: "currency",
+                    },
+                )?,
+            )
+            .change_context(ConnectorRequestError::AmountConversionFailed)?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
@@ -3269,18 +3269,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 field_name: "redirect_response",
             },
         )?;
-        let total_amount =
-            item.connector
-                .amount_converter
-                .convert(
-                    item.router_data.request.amount,
-                    item.router_data.request.currency.ok_or(
-                        ConnectorRequestError::MissingRequiredField {
-                            field_name: "currency",
-                        },
-                    )?,
-                )
-                .change_context(ConnectorRequestError::AmountConversionFailed)?;
+        let total_amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.amount,
+                item.router_data.request.currency.ok_or(
+                    ConnectorRequestError::MissingRequiredField {
+                        field_name: "currency",
+                    },
+                )?,
+            )
+            .change_context(ConnectorRequestError::AmountConversionFailed)?;
         let amount_details = Amount {
             total_amount,
             currency: item.router_data.request.currency.ok_or(
@@ -3599,7 +3599,10 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
                 .status
                 .clone()
                 .unwrap_or(CybersourcePaymentStatus::StatusNotReceived),
-            item.router_data.request.is_auto_capture().into_response_err()?,
+            item.router_data
+                .request
+                .is_auto_capture()
+                .into_response_err()?,
         );
         let response =
             get_payment_response((&item.response, status, item.http_code)).map_err(|err| *err);
@@ -3728,7 +3731,10 @@ impl<F> TryFrom<ResponseRouterData<CybersourceTransactionResponse, Self>>
             Some(status) => {
                 let status = map_cybersource_attempt_status(
                     status,
-                    item.router_data.request.is_auto_capture().into_response_err()?,
+                    item.router_data
+                        .request
+                        .is_auto_capture()
+                        .into_response_err()?,
                 );
                 let incremental_authorization_allowed =
                     Some(status == common_enums::AttemptStatus::Authorized);

@@ -273,7 +273,8 @@ fn is_auto_capture_request<
 fn is_auto_capture_psync_response(
     data: &PaymentsSyncData,
 ) -> Result<bool, error_stack::Report<ConnectorResponseError>> {
-    is_auto_capture_psync(data).change_context(ConnectorResponseError::response_handling_failed(None))
+    is_auto_capture_psync(data)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
 }
 
 fn map_payment_response_to_attempt_status(
@@ -389,7 +390,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             },
                             cardholder_name: card_data
                                 .get_cardholder_name()
-                                .or(item.router_data.resource_common_data.get_payment_billing_full_name())
+                                .or(item
+                                    .router_data
+                                    .resource_common_data
+                                    .get_payment_billing_full_name())
                                 .change_context(ConnectorRequestError::MissingRequiredField {
                                     field_name: "billing.full_name",
                                 })?,

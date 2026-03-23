@@ -6,17 +6,19 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
+    ConnectorRequestError,
 };
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::gigadat::GigadatRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::gigadat::GigadatRouterData, types::ResponseRouterData, ConnectorResponseError,
+};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -127,7 +129,10 @@ impl TryFrom<String> for GigadatTransactionStatus {
             "STATUS_ABORTED1" => Ok(Self::StatusAborted1),
             "STATUS_PENDING" => Ok(Self::StatusPending),
             "STATUS_FAILED" => Ok(Self::StatusFailed),
-            _ => Err(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()).into()),
+            _ => Err(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            )
+            .into()),
         }
     }
 }
@@ -358,9 +363,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     mobile,
                 })
             }
-            PaymentMethodData::BankRedirect(_) => Err(Report::new(ConnectorRequestError::NotImplemented(
-                "Only Interac bank redirect is supported for Gigadat".to_string(),
-            ))),
+            PaymentMethodData::BankRedirect(_) => {
+                Err(Report::new(ConnectorRequestError::NotImplemented(
+                    "Only Interac bank redirect is supported for Gigadat".to_string(),
+                )))
+            }
             _ => Err(Report::new(ConnectorRequestError::NotImplemented(
                 "Only Interac bank redirect is supported for Gigadat".to_string(),
             ))),

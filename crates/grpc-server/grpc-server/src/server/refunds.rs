@@ -16,7 +16,7 @@ use grpc_api_types::payments::{
     EventServiceHandleResponse, RefundResponse, RefundServiceGetRequest, WebhookEventType,
 };
 
-use ucs_env::error::{IntoGrpcStatus, ResultExtGrpc};
+use ucs_env::error::{ReportSwitchExt, ResultExtGrpc};
 
 use crate::{implement_connector_operation, request::RequestData, utils};
 // Helper trait for refund operations
@@ -135,7 +135,8 @@ impl RefundService for Refunds {
                     .ok_or_else(|| {
                         tonic::Status::invalid_argument("missing request_details in the payload")
                     })?
-                    .map_err(|e| e.into_grpc_status())?;
+                    .switch()
+                    .into_grpc_status()?;
 
                 let webhook_secrets = payload
                     .webhook_secrets
@@ -143,7 +144,8 @@ impl RefundService for Refunds {
                         domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
                             details,
                         )
-                        .map_err(|e| e.into_grpc_status())
+                        .switch()
+                        .into_grpc_status()
                     })
                     .transpose()?;
 
@@ -157,7 +159,8 @@ impl RefundService for Refunds {
                         webhook_secrets.clone(),
                         Some(connector_config.clone()),
                     )
-                    .map_err(|e: error_stack::Report<ConnectorRequestError>| e.into_grpc_status())?;
+                    .switch()
+                    .into_grpc_status()?;
 
                 let content = get_refunds_webhook_content(
                     connector_data,
@@ -166,7 +169,8 @@ impl RefundService for Refunds {
                     Some(connector_config),
                 )
                 .await
-                .map_err(|e| e.into_grpc_status())?;
+                .switch()
+                .into_grpc_status()?;
 
                 let response = EventServiceHandleResponse {
                     event_type: WebhookEventType::WebhookRefundSuccess.into(),
@@ -189,16 +193,19 @@ async fn get_refunds_webhook_content(
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_config: Option<ConnectorSpecificConfig>,
 ) -> CustomResult<EventResponse, ConnectorRequestError> {
-    let webhook_details = connector_data
-        .connector
-        .process_refund_webhook(request_details, webhook_secrets, connector_config)?;
+    let webhook_details = connector_data.connector.process_refund_webhook(
+        request_details,
+        webhook_secrets,
+        connector_config,
+    )?;
 
     // Generate response
-    let response = RefundResponse::foreign_try_from(webhook_details)
-        .change_context(ConnectorRequestError::config_error(
+    let response = RefundResponse::foreign_try_from(webhook_details).change_context(
+        ConnectorRequestError::config_error(
             "RESPONSE_CONSTRUCTION_ERROR",
             "Error while constructing response",
-        ))?;
+        ),
+    )?;
 
     Ok(EventResponse {
         content: Some(grpc_api_types::payments::event_response::Content::RefundsResponse(response)),

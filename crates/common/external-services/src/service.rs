@@ -15,8 +15,8 @@ use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
     errors::{
         report_common_api_client_to_flow, report_connector_request_to_flow,
-        report_connector_response_to_flow, ApiErrorResponse,
-        ConnectorFlowError, ConnectorRequestError, ConnectorResponseError,
+        report_connector_response_to_flow, ApiErrorResponse, ConnectorFlowError,
+        ConnectorRequestError, ConnectorResponseError,
     },
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -622,7 +622,8 @@ where
                     event.add_service_name(event_params.service_name);
 
                     let result = handle_connector_response(
-                        response.change_context(ConnectorResponseError::response_handling_failed(None)),
+                        response
+                            .change_context(ConnectorResponseError::response_handling_failed(None)),
                         updated_router_data,
                         &connector,
                         Some(&mut event),

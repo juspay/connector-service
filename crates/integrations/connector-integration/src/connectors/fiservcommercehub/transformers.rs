@@ -576,7 +576,9 @@ impl TryFrom<ResponseRouterData<FiservcommercehubPSyncResponse, Self>>
         item: ResponseRouterData<FiservcommercehubPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let psync_item = item.response.0.into_iter().next().ok_or_else(|| {
-            error_stack::report!(errors::ConnectorResponseError::response_deserialization_failed(None))
+            error_stack::report!(
+                errors::ConnectorResponseError::response_deserialization_failed(None)
+            )
         })?;
         let status = AttemptStatus::from(&psync_item.gateway_response.transaction_state);
         Ok(Self {
@@ -779,7 +781,9 @@ impl TryFrom<ResponseRouterData<FiservcommercehubRSyncResponse, Self>>
         item: ResponseRouterData<FiservcommercehubRSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let rsync_item = item.response.0.into_iter().next().ok_or_else(|| {
-            error_stack::report!(errors::ConnectorResponseError::response_deserialization_failed(None))
+            error_stack::report!(
+                errors::ConnectorResponseError::response_deserialization_failed(None)
+            )
         })?;
         let refund_status = RefundStatus::from(&rsync_item.gateway_response.transaction_state);
         let connector_refund_id = rsync_item

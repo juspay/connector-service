@@ -8,18 +8,19 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors::ResultRequestToResponseExt,
-    ConnectorRequestError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
+    utils, ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::cashtocode::CashtocodeRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::cashtocode::CashtocodeRouterData, types::ResponseRouterData, ConnectorResponseError,
+};
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -170,13 +171,12 @@ impl TryFrom<(&ConnectorSpecificConfig, &common_enums::Currency)> for Cashtocode
 
         match auth_type {
             ConnectorSpecificConfig::Cashtocode { auth_key_map, .. } => {
-                let identity_auth_key =
-                    auth_key_map
-                        .get(currency)
-                        .ok_or(ConnectorRequestError::CurrencyNotSupported {
-                            message: currency.to_string(),
-                            connector: "CashToCode",
-                        })?;
+                let identity_auth_key = auth_key_map.get(currency).ok_or(
+                    ConnectorRequestError::CurrencyNotSupported {
+                        message: currency.to_string(),
+                        connector: "CashToCode",
+                    },
+                )?;
 
                 identity_auth_key
                     .to_owned()
@@ -290,8 +290,8 @@ impl<
                     .request
                     .payment_method_type
                     .ok_or(ConnectorRequestError::MissingPaymentMethodType)?;
-                let redirection_data =
-                    get_redirect_form_data(payment_method_type, response_data).into_response_err()?;
+                let redirection_data = get_redirect_form_data(payment_method_type, response_data)
+                    .into_response_err()?;
                 (
                     common_enums::AttemptStatus::AuthenticationPending,
                     Ok(PaymentsResponseData::TransactionResponse {

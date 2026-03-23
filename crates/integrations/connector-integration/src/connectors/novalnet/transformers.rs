@@ -16,7 +16,6 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
         WebhookDetailsResponse,
     },
-    ConnectorRequestError,
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
@@ -25,13 +24,16 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::{self, ForeignTryFrom},
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-use crate::{connectors::novalnet::NovalnetRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::novalnet::NovalnetRouterData, types::ResponseRouterData, ConnectorResponseError,
+};
 use domain_types::errors::ResultResponseToRequestExt;
 
 /// Default locale
@@ -1894,13 +1896,17 @@ impl ForeignTryFrom<WebhookDisputeStatus> for common_enums::DisputeStatus {
         match value {
             WebhookDisputeStatus::DisputeOpened => Ok(Self::DisputeOpened),
             WebhookDisputeStatus::DisputeWon => Ok(Self::DisputeWon),
-            WebhookDisputeStatus::Unknown => Err(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?,
+            WebhookDisputeStatus::Unknown => Err(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?,
         }
     }
 }
 
 pub fn option_to_result<T>(opt: Option<T>) -> Result<T, ConnectorRequestError> {
-    opt.ok_or(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
+    opt.ok_or(ConnectorRequestError::NotImplemented(
+        "webhook body decoding failed".to_string(),
+    ))
 }
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -2121,9 +2127,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::GooglePayThirdPartySdk(_)
                 | WalletDataPaymentMethod::MbWayRedirect(_)
                 | WalletDataPaymentMethod::MobilePayRedirect(_)
-                | WalletDataPaymentMethod::RevolutPay(_) => Err(ConnectorRequestError::NotImplemented(
-                    utils::get_unimplemented_payment_method_error_message("novalnet"),
-                ))?,
+                | WalletDataPaymentMethod::RevolutPay(_) => {
+                    Err(ConnectorRequestError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    ))?
+                }
                 WalletDataPaymentMethod::PaypalRedirect(_) => {
                     let transaction = NovalnetPaymentsRequestTransaction {
                         test_mode,
@@ -2479,7 +2487,9 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                     }),
                 }
             }
-            _ => Err(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?,
+            _ => Err(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?,
         }
     }
 }

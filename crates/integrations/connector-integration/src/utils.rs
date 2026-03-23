@@ -1,5 +1,6 @@
 pub mod qr_code;
 pub mod xml_utils;
+use crate::{ConnectorRequestError, ConnectorResponseError};
 use base64::Engine;
 use common_utils::{
     consts::{
@@ -12,7 +13,6 @@ use common_utils::{
     types::MinorUnit,
     CustomResult,
 };
-use crate::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_types::{
         CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -135,13 +135,16 @@ pub(crate) fn handle_json_response_deserialization_failure(
     res: Response,
     _connector: &'static str,
 ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
-    let response_data = String::from_utf8(res.response.to_vec())
-        .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+    let response_data = String::from_utf8(res.response.to_vec()).change_context(
+        ConnectorResponseError::response_deserialization_failed(None),
+    )?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(ConnectorResponseError::response_deserialization_failed(None))?,
+        Ok(_) => Err(ConnectorResponseError::response_deserialization_failed(
+            None,
+        ))?,
         // in case of unexpected response but in html or string format
         Err(_error_msg) => Ok(ErrorResponse {
             status_code: res.status_code,

@@ -8,7 +8,6 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{
         ApplePayWalletData, BankRedirectData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, WalletData,
@@ -16,14 +15,16 @@ use domain_types::{
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
+    utils, ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{connectors::nexinets::NexinetsRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::nexinets::NexinetsRouterData, types::ResponseRouterData, ConnectorResponseError,
+};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 #[derive(Debug, Serialize)]
@@ -478,13 +479,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
                 })?;
-        let currency =
-            item.router_data
-                .request
-                .currency
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "currency",
-                })?;
+        let currency = item.router_data.request.currency.ok_or(
+            ConnectorRequestError::MissingRequiredField {
+                field_name: "currency",
+            },
+        )?;
         Ok(Self {
             initial_amount: amount.get_amount_as_i64(),
             currency,
@@ -666,8 +665,10 @@ fn get_payment_details_and_product<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-) -> Result<(Option<NexinetsPaymentDetails<T>>, NexinetsProduct), error_stack::Report<ConnectorRequestError>>
-{
+) -> Result<
+    (Option<NexinetsPaymentDetails<T>>, NexinetsProduct),
+    error_stack::Report<ConnectorRequestError>,
+> {
     match &item.request.payment_method_data {
         PaymentMethodData::Card(card) => Ok((
             Some(get_card_data(item, card)?),
@@ -793,8 +794,10 @@ fn get_wallet_details<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 >(
     wallet: &WalletData,
-) -> Result<(Option<NexinetsPaymentDetails<T>>, NexinetsProduct), error_stack::Report<ConnectorRequestError>>
-{
+) -> Result<
+    (Option<NexinetsPaymentDetails<T>>, NexinetsProduct),
+    error_stack::Report<ConnectorRequestError>,
+> {
     match wallet {
         WalletData::PaypalRedirect(_) => Ok((None, NexinetsProduct::Paypal)),
         WalletData::ApplePay(applepay_data) => Ok((
@@ -846,12 +849,11 @@ fn get_wallet_details<
 pub fn get_order_id(
     meta: &NexinetsPaymentsMetadata,
 ) -> Result<String, error_stack::Report<ConnectorRequestError>> {
-    let order_id =
-        meta.order_id
-            .clone()
-            .ok_or(ConnectorRequestError::MissingConnectorRelatedTransactionID {
-                id: "order_id".to_string(),
-            })?;
+    let order_id = meta.order_id.clone().ok_or(
+        ConnectorRequestError::MissingConnectorRelatedTransactionID {
+            id: "order_id".to_string(),
+        },
+    )?;
     Ok(order_id)
 }
 

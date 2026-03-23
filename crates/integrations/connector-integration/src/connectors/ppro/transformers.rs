@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::PproRouterData;
 use crate::types::ResponseRouterData;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Capture, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
@@ -19,7 +20,6 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use interfaces::webhooks::IncomingWebhookEvent;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 #[derive(Debug, Serialize, Default)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]

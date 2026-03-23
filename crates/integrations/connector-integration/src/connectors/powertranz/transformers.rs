@@ -1,5 +1,6 @@
 use common_enums::enums;
 use common_utils::types::FloatMajorUnit;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -13,7 +14,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 use crate::{
     connectors::powertranz::{PowertranzAmountConvertor, PowertranzRouterData},

@@ -774,7 +774,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::BarclaycardErrorResponse = res
             .response
             .parse_struct("BarclaycardErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         match response {
             responses::BarclaycardErrorResponse::Standard(error_response) => {

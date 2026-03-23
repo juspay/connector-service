@@ -680,10 +680,11 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 (status, Some(payment_response.id.clone()))
             }
             PaysafeSyncResponse::Payments(sync_response) => {
-                let payment_response = sync_response
-                    .payments
-                    .first()
-                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None)))?;
+                let payment_response = sync_response.payments.first().ok_or_else(|| {
+                    error_stack::Report::from(
+                        ConnectorResponseError::response_deserialization_failed(None),
+                    )
+                })?;
                 let status = get_paysafe_payment_status(
                     payment_response.status,
                     item.router_data.request.capture_method,
@@ -691,15 +692,19 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 (status, Some(payment_response.id.clone()))
             }
             PaysafeSyncResponse::SinglePaymentHandle(payment_handle_response) => {
-                let status = enums::AttemptStatus::try_from(payment_handle_response.status).into_response_err()?;
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status)
+                    .into_response_err()?;
                 (status, Some(payment_handle_response.id.clone()))
             }
             PaysafeSyncResponse::PaymentHandle(sync_response) => {
-                let payment_handle_response = sync_response
-                    .payment_handles
-                    .first()
-                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None)))?;
-                let status = enums::AttemptStatus::try_from(payment_handle_response.status).into_response_err()?;
+                let payment_handle_response =
+                    sync_response.payment_handles.first().ok_or_else(|| {
+                        error_stack::Report::from(
+                            ConnectorResponseError::response_deserialization_failed(None),
+                        )
+                    })?;
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status)
+                    .into_response_err()?;
                 (status, Some(payment_handle_response.id.clone()))
             }
         };
@@ -803,11 +808,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = item.router_data.request.amount.ok_or(
-            ConnectorRequestError::MissingRequiredField {
-                field_name: "amount",
-            },
-        )?;
+        let amount =
+            item.router_data
+                .request
+                .amount
+                .ok_or(ConnectorRequestError::MissingRequiredField {
+                    field_name: "amount",
+                })?;
         Ok(Self {
             merchant_ref_num: item
                 .router_data

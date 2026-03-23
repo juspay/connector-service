@@ -1,3 +1,4 @@
+use common_utils::errors::ErrorSwitch as CommonErrorSwitch;
 use domain_types::errors::{
     doc_url_for_error_code, ApiClientError, ApplicationErrorResponse, ConnectorFlowError,
     ConnectorRequestError, ConnectorResponseError, WebhookError,
@@ -17,7 +18,7 @@ pub trait ReportSwitchExt<T, U> {
 
 impl<T, U, V> ReportSwitchExt<T, U> for Result<T, error_stack::Report<V>>
 where
-    V: ErrorSwitch<U> + error_stack::Context,
+    V: CommonErrorSwitch<U> + error_stack::Context,
     U: error_stack::Context,
 {
     #[track_caller]
@@ -73,145 +74,6 @@ pub enum ConfigurationError {
     ServerError(#[from] tonic::transport::Error),
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
-}
-
-impl IntoGrpcStatus for error_stack::Report<ConnectorRequestError> {
-    fn into_grpc_status(self) -> Status {
-        logger::error!(error=?self);
-        match self.current_context() {
-            // Caller sent invalid, missing, or malformed input
-            ConnectorRequestError::MissingRequiredField { .. }
-            | ConnectorRequestError::MissingRequiredFields { .. }
-            | ConnectorRequestError::InvalidDataFormat { .. }
-            | ConnectorRequestError::InvalidWallet
-            | ConnectorRequestError::InvalidWalletToken { .. }
-            | ConnectorRequestError::MissingPaymentMethodType
-            | ConnectorRequestError::MismatchedPaymentData
-            | ConnectorRequestError::MandatePaymentDataMismatch { .. }
-            | ConnectorRequestError::MissingApplePayTokenData
-            | ConnectorRequestError::MaxFieldLengthViolated { .. }
-            // Prior-step IDs missing in flow (caller's request/flow incomplete)
-            | ConnectorRequestError::MissingConnectorTransactionID
-            | ConnectorRequestError::MissingConnectorRefundID
-            | ConnectorRequestError::MissingConnectorMandateID
-            | ConnectorRequestError::MissingConnectorMandateMetadata
-            | ConnectorRequestError::MissingConnectorRelatedTransactionID { .. } => {
-                Status::invalid_argument(self.to_string())
-            }
-            // Feature not supported / not implemented
-            ConnectorRequestError::NotSupported { .. }
-            | ConnectorRequestError::FlowNotSupported { .. }
-            | ConnectorRequestError::NotImplemented(_)
-            | ConnectorRequestError::CaptureMethodNotSupported => {
-                Status::unimplemented(self.to_string())
-            }
-            // Merchant/config precondition not met (currency, auth, config)
-            ConnectorRequestError::CurrencyNotSupported { .. }
-            | ConnectorRequestError::InvalidConnectorConfig { .. }
-            | ConnectorRequestError::FailedToObtainAuthType
-            | ConnectorRequestError::NoConnectorMetaData
-            | ConnectorRequestError::ConfigurationError { .. } => {
-                Status::failed_precondition(self.to_string())
-            }
-            // Our infra/serialization/source verification failed
-            ConnectorRequestError::FailedToObtainIntegrationUrl
-            | ConnectorRequestError::RequestEncodingFailed
-            | ConnectorRequestError::HeaderMapConstructionFailed
-            | ConnectorRequestError::BodySerializationFailed
-            | ConnectorRequestError::UrlParsingFailed
-            | ConnectorRequestError::UrlEncodingFailed
-            | ConnectorRequestError::AmountConversionFailed
-            | ConnectorRequestError::SourceVerificationFailed => Status::internal(self.to_string()),
-        }
-    }
-}
-
-impl IntoGrpcStatus for error_stack::Report<ConnectorResponseError> {
-    fn into_grpc_status(self) -> Status {
-        logger::error!(error=?self);
-        // All response-phase: we failed to parse/handle connector's response.
-        // From API caller's POV = server-side, not invalid client input.
-        match self.current_context() {
-            ConnectorResponseError::ResponseDeserializationFailed { .. } => {
-                Status::internal(self.to_string()) // Could not parse connector response
-            }
-            ConnectorResponseError::ResponseHandlingFailed { .. } => {
-                Status::internal(self.to_string()) // Failed to process connector response
-            }
-            ConnectorResponseError::UnexpectedResponseError { .. } => {
-                Status::internal(self.to_string()) // Connector returned unexpected format
-            }
-            ConnectorResponseError::MissingConnectorTransactionID { .. } => {
-                Status::internal(self.to_string()) // Connector response missing required field
-            }
-        }
-    }
-}
-
-impl IntoGrpcStatus for error_stack::Report<ApiClientError> {
-    fn into_grpc_status(self) -> Status {
-        logger::error!(error=?self);
-        match self.current_context() {
-            // Connector/upstream timed out
-            ApiClientError::RequestTimeoutReceived | ApiClientError::GatewayTimeoutReceived => {
-                Status::deadline_exceeded(self.to_string())
-            }
-            // Our HTTP client construction / request building failed
-            ApiClientError::HeaderMapConstructionFailed
-            | ApiClientError::InvalidProxyConfiguration
-            | ApiClientError::ClientConstructionFailed
-            | ApiClientError::CertificateDecodeFailed
-            | ApiClientError::BodySerializationFailed
-            | ApiClientError::UnexpectedState
-            | ApiClientError::UrlParsingFailed
-            | ApiClientError::UrlEncodingFailed => Status::internal(self.to_string()),
-            // Connector unreachable, returned 5xx, or connection failed
-            ApiClientError::RequestNotSent(_)
-            | ApiClientError::ResponseDecodingFailed
-            | ApiClientError::ConnectionClosedIncompleteMessage
-            | ApiClientError::InternalServerErrorReceived
-            | ApiClientError::BadGatewayReceived
-            | ApiClientError::ServiceUnavailableReceived
-            | ApiClientError::UnexpectedServerResponse => Status::unavailable(self.to_string()),
-        }
-    }
-}
-
-impl IntoGrpcStatus for error_stack::Report<WebhookError> {
-    fn into_grpc_status(self) -> Status {
-        logger::error!(error=?self);
-        match self.current_context() {
-            // Webhook source could not be verified (signature, secret, etc.)
-            WebhookError::WebhookSourceVerificationFailed
-            | WebhookError::WebhookSignatureNotFound
-            | WebhookError::WebhookVerificationSecretNotFound
-            | WebhookError::WebhookVerificationSecretInvalid => {
-                Status::unauthenticated(self.to_string())
-            }
-            // Connector sent malformed webhook or required fields missing
-            WebhookError::WebhookBodyDecodingFailed
-            | WebhookError::WebhookReferenceIdNotFound
-            | WebhookError::WebhookEventTypeNotFound
-            | WebhookError::WebhookResourceObjectNotFound => {
-                Status::invalid_argument(self.to_string())
-            }
-            WebhookError::WebhooksNotImplemented => Status::unimplemented(self.to_string()),
-            // Our webhook processing or response encoding failed
-            WebhookError::WebhookProcessingFailed | WebhookError::WebhookResponseEncodingFailed => {
-                Status::internal(self.to_string())
-            }
-        }
-    }
-}
-
-impl IntoGrpcStatus for error_stack::Report<ConnectorFlowError> {
-    fn into_grpc_status(self) -> Status {
-        match self.current_context().clone() {
-            ConnectorFlowError::Request(e) => self.change_context(e).into_grpc_status(),
-            ConnectorFlowError::Client(e) => self.change_context(e).into_grpc_status(),
-            ConnectorFlowError::Response(e) => self.change_context(e).into_grpc_status(),
-        }
-    }
 }
 
 impl IntoGrpcStatus for error_stack::Report<ApplicationErrorResponse> {
@@ -327,7 +189,8 @@ fn connector_request_error_details(
 
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorRequestError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        let (_, error_code, error_message, suggested_action) = connector_request_error_details(self);
+        let (_, error_code, error_message, suggested_action) =
+            connector_request_error_details(self);
         grpc_api_types::payments::IntegrationError {
             error_message,
             error_code: error_code.clone(),
@@ -337,7 +200,9 @@ impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorReques
     }
 }
 
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ConnectorRequestError {
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ConnectorRequestError
+{
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
         let (_, error_code, error_message, _) = connector_request_error_details(self);
         grpc_api_types::payments::ConnectorResponseTransformationError {
@@ -358,19 +223,21 @@ fn connector_response_error_details(
     let suggested_action = match e {
         ConnectorResponseError::ResponseDeserializationFailed { .. }
         | ConnectorResponseError::ResponseHandlingFailed { .. }
-        | ConnectorResponseError::UnexpectedResponseError { .. } => {
-            Some("Retry the request; if persistent, check connector response format and compatibility".to_string())
-        }
-        ConnectorResponseError::MissingConnectorTransactionID { .. } => {
-            Some("Ensure the prior connector call completed and returned the required ID".to_string())
-        }
+        | ConnectorResponseError::UnexpectedResponseError { .. } => Some(
+            "Retry the request; if persistent, check connector response format and compatibility"
+                .to_string(),
+        ),
+        ConnectorResponseError::MissingConnectorTransactionID { .. } => Some(
+            "Ensure the prior connector call completed and returned the required ID".to_string(),
+        ),
     };
     (http_status_code, error_code, msg, suggested_action)
 }
 
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorResponseError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        let (_, error_code, error_message, suggested_action) = connector_response_error_details(self);
+        let (_, error_code, error_message, suggested_action) =
+            connector_response_error_details(self);
         grpc_api_types::payments::IntegrationError {
             error_message,
             error_code: error_code.clone(),
@@ -380,7 +247,9 @@ impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorRespon
     }
 }
 
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ConnectorResponseError {
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ConnectorResponseError
+{
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
         let (_, error_code, error_message, _) = connector_response_error_details(self);
         grpc_api_types::payments::ConnectorResponseTransformationError {
@@ -435,7 +304,9 @@ impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApiClientError 
     }
 }
 
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ApiClientError {
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ApiClientError
+{
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
         let (_, error_code, error_message) = api_client_error_details(self);
         grpc_api_types::payments::ConnectorResponseTransformationError {
@@ -449,19 +320,21 @@ impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorFlowError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
         match self {
-            Self::Request(e) => e.switch(),
-            Self::Client(e) => e.switch(),
-            Self::Response(e) => e.switch(),
+            Self::Request(e) => ErrorSwitch::switch(e),
+            Self::Client(e) => ErrorSwitch::switch(e),
+            Self::Response(e) => ErrorSwitch::switch(e),
         }
     }
 }
 
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ConnectorFlowError {
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ConnectorFlowError
+{
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
         match self {
-            Self::Request(e) => e.switch(),
-            Self::Client(e) => e.switch(),
-            Self::Response(e) => e.switch(),
+            Self::Request(e) => ErrorSwitch::switch(e),
+            Self::Client(e) => ErrorSwitch::switch(e),
+            Self::Response(e) => ErrorSwitch::switch(e),
         }
     }
 }
@@ -499,7 +372,9 @@ impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
 /// Extract (connector_http_status_code, error_code, error_message) from a connector flow error.
 /// Only Response errors can have a real connector HTTP status (from the actual HTTP response).
 /// Request/Client/Webhook: always None — no connector HTTP call or no real status.
-pub fn connector_flow_error_to_error_details(e: &ConnectorFlowError) -> (Option<u16>, String, String) {
+pub fn connector_flow_error_to_error_details(
+    e: &ConnectorFlowError,
+) -> (Option<u16>, String, String) {
     match e {
         ConnectorFlowError::Request(req) => {
             let (_, code, msg, _) = connector_request_error_details(req);
@@ -520,7 +395,7 @@ pub fn connector_flow_error_to_error_details(e: &ConnectorFlowError) -> (Option<
 pub fn connector_request_error_report_to_integration(
     report: error_stack::Report<ConnectorRequestError>,
 ) -> grpc_api_types::payments::IntegrationError {
-    report.current_context().switch()
+    ErrorSwitch::switch(report.current_context())
 }
 
 /// Map a report (ConnectorRequestError or ApplicationErrorResponse, etc.) into `IntegrationError`.
@@ -530,21 +405,21 @@ pub fn report_connector_context_to_integration<E>(
 where
     E: ErrorSwitch<grpc_api_types::payments::IntegrationError> + error_stack::Context,
 {
-    report.current_context().switch()
+    ErrorSwitch::switch(report.current_context())
 }
 
 /// Map a request-phase connector error report to `ConnectorResponseTransformationError`.
 pub fn connector_request_error_report_to_response_transformation(
     report: error_stack::Report<ConnectorRequestError>,
 ) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-    report.current_context().switch()
+    ErrorSwitch::switch(report.current_context())
 }
 
 /// Map a connector response error report to `ConnectorResponseTransformationError`.
 pub fn connector_response_error_report_to_response_transformation(
     report: error_stack::Report<ConnectorResponseError>,
 ) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-    report.current_context().switch()
+    ErrorSwitch::switch(report.current_context())
 }
 
 /// Map a report (ConnectorRequestError or ConnectorResponseError) into `ConnectorResponseTransformationError`.
@@ -552,9 +427,10 @@ pub fn report_connector_context_to_response_transformation<E>(
     report: error_stack::Report<E>,
 ) -> grpc_api_types::payments::ConnectorResponseTransformationError
 where
-    E: ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> + error_stack::Context,
+    E: ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+        + error_stack::Context,
 {
-    report.current_context().switch()
+    ErrorSwitch::switch(report.current_context())
 }
 
 #[derive(Debug, Clone)]
@@ -613,4 +489,3 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
         }
     }
 }
-

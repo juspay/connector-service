@@ -151,18 +151,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             None => return Ok(false),
         };
 
-        let base64_signature = request
-            .headers
-            .get("authorization")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
+        let base64_signature =
+            request
+                .headers
+                .get("authorization")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook signature not found".to_string(),
+                ))?;
 
         let signature = base64_signature.as_bytes();
 
         let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Could not convert secret to UTF-8")?;
         let signature_auth = String::from_utf8(signature.to_vec())
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Could not convert secret to UTF-8")?;
         Ok(signature_auth == secret_auth)
     }
@@ -189,7 +196,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook: transformers::CashtocodePaymentsSyncResponse = request
             .body
             .parse_struct("CashtocodePaymentsSyncResponse")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))?;
 
         Ok(domain_types::connector_types::WebhookDetailsResponse {
             resource_id: Some(
@@ -401,7 +410,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: cashtocode::CashtocodeErrorResponse = res
             .response
             .parse_struct("CashtocodeErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

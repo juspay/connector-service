@@ -216,7 +216,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> CustomResult<bool, ConnectorRequestError> {
         let connector_webhook_secret = connector_webhook_secret
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .ok_or(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Connector webhook secret not configured")?;
 
         let signature =
@@ -227,7 +229,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use common_utils::crypto::{HmacSha256, SignMessage};
         let expected_signature = HmacSha256
             .sign_message(&connector_webhook_secret.secret, &message)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Failed to sign webhook message with HMAC-SHA256")?;
 
         Ok(expected_signature.eq(&signature))
@@ -238,12 +242,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, ConnectorRequestError> {
-        let signature_str = request
-            .headers
-            .get("bls-signature")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
+        let signature_str =
+            request
+                .headers
+                .get("bls-signature")
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook signature not found".to_string(),
+                ))?;
 
-        hex::decode(signature_str).change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))
+        hex::decode(signature_str).change_context(ConnectorRequestError::NotImplemented(
+            "webhook signature not found".to_string(),
+        ))
     }
 
     fn get_webhook_source_verification_message(
@@ -251,10 +260,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, ConnectorRequestError> {
-        let timestamp = request
-            .headers
-            .get("bls-ipn-timestamp")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
+        let timestamp = request.headers.get("bls-ipn-timestamp").ok_or(
+            ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()),
+        )?;
 
         let body_str = String::from_utf8_lossy(&request.body);
 
@@ -272,8 +280,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 transformers::BluesnapWebhookEvent::Chargeback
                 | transformers::BluesnapWebhookEvent::ChargebackStatusChanged => {
                     let dispute_body: transformers::BluesnapDisputeWebhookBody =
-                        serde_urlencoded::from_bytes(&request.body)
-                            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+                        serde_urlencoded::from_bytes(&request.body).change_context(
+                            ConnectorRequestError::NotImplemented(
+                                "webhook body decoding failed".to_string(),
+                            ),
+                        )?;
 
                     transformers::map_chargeback_status_to_event_type(&dispute_body.cb_status)
                 }
@@ -283,8 +294,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             },
             Err(_) => {
                 let dispute_body: transformers::BluesnapDisputeWebhookBody =
-                    serde_urlencoded::from_bytes(&request.body)
-                        .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+                    serde_urlencoded::from_bytes(&request.body).change_context(
+                        ConnectorRequestError::NotImplemented(
+                            "webhook body decoding failed".to_string(),
+                        ),
+                    )?;
 
                 transformers::map_chargeback_status_to_event_type(&dispute_body.cb_status)
             }
@@ -299,8 +313,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, ConnectorRequestError>
     {
         let webhook_body: transformers::BluesnapWebhookBody =
-            serde_urlencoded::from_bytes(&request.body)
-                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            serde_urlencoded::from_bytes(&request.body).change_context(
+                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            )?;
 
         let status = match webhook_body.transaction_type {
             transformers::BluesnapWebhookEvent::Decline
@@ -353,12 +368,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorRequestError,
     > {
         let webhook_body: transformers::BluesnapWebhookBody =
-            serde_urlencoded::from_bytes(&request.body)
-                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            serde_urlencoded::from_bytes(&request.body).change_context(
+                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+            )?;
 
-        let connector_refund_id = webhook_body
-            .reversal_ref_num
-            .ok_or(ConnectorRequestError::NotImplemented("webhook reference id not found".to_string()))?;
+        let connector_refund_id =
+            webhook_body
+                .reversal_ref_num
+                .ok_or(ConnectorRequestError::NotImplemented(
+                    "webhook reference id not found".to_string(),
+                ))?;
 
         Ok(
             domain_types::connector_types::RefundWebhookDetailsResponse {
@@ -871,7 +890,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: bluesnap::BluesnapErrorResponse = res
             .response
             .parse_struct("BluesnapErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

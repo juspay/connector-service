@@ -29,13 +29,13 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, VerifyWebhookSourceFlowData,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::{Response, VerifyWebhookSourceResponseData},
     types::Connectors,
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Mask, Maskable, Secret};
@@ -47,8 +47,6 @@ use serde::Serialize;
 use std::fmt::{Debug, Write};
 
 use super::macros;
-use domain_types::errors::{ResultRequestToResponseExt, ResultResponseToRequestExt};
-use domain_types::errors::ConnectorResponseError;
 use crate::{
     connectors::paypal::transformers::{
         self as paypal, auth_headers, PaypalAuthResponse, PaypalAuthUpdateRequest,
@@ -61,6 +59,8 @@ use crate::{
     utils::{self, ConnectorErrorType, ConnectorErrorTypeMapping},
     with_error_response_body,
 };
+use domain_types::errors::ConnectorResponseError;
+use domain_types::errors::{ResultRequestToResponseExt, ResultResponseToRequestExt};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -172,9 +172,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
         // This is a fallback for connectors that don't require external verification
         // For PayPal, this should never be called due to requires_external_verification check
-        Err(error_stack::report!(
-            ConnectorRequestError::NotImplemented("webhook source verification failed".to_string())
-        ))
+        Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+            "webhook source verification failed".to_string()
+        )))
         .attach_printable(
             "PayPal requires external API call for webhook verification, not internal verification",
         )
@@ -185,18 +185,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorRequestError>>
+    {
         let payload: paypal::PaypalWebooksEventType = request
             .body
             .parse_struct("PaypalWebooksEventType")
-            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook event type not found".to_string(),
+            ))?;
 
         let outcome_code = match payload.event_type {
             paypal::PaypalWebhookEventType::CustomerDisputeResolved => Some(
                 request
                     .body
                     .parse_struct::<paypal::DisputeOutcome>("PaypalDisputeOutcome")
-                    .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?
+                    .change_context(ConnectorRequestError::NotImplemented(
+                        "webhook event type not found".to_string(),
+                    ))?
                     .outcome_code,
             ),
             _ => None,
@@ -215,11 +220,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         error_stack::Report<ConnectorRequestError>,
     > {
         let request_body_copy = request.body.clone();
-        let details: paypal::PaypalWebhooksBody =
-            request
-                .body
-                .parse_struct("PaypalWebhooksBody")
-                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+        let details: paypal::PaypalWebhooksBody = request
+            .body
+            .parse_struct("PaypalWebhooksBody")
+            .change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        )?;
 
         let status = get_paypal_payment_webhook_status(details.event_type);
 
@@ -263,11 +269,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         error_stack::Report<ConnectorRequestError>,
     > {
         let request_body_copy = request.body.clone();
-        let details: paypal::PaypalWebhooksBody =
-            request
-                .body
-                .parse_struct("PaypalWebhooksBody")
-                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+        let details: paypal::PaypalWebhooksBody = request
+            .body
+            .parse_struct("PaypalWebhooksBody")
+            .change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        )?;
 
         let (connector_refund_id, refund_status) = match (details.resource, details.event_type) {
             (
@@ -306,17 +313,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         error_stack::Report<ConnectorRequestError>,
     > {
         let request_body_copy = request.body.clone();
-        let details: paypal::PaypalWebhooksBody =
-            request
-                .body
-                .parse_struct("PaypalWebhooksBody")
-                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+        let details: paypal::PaypalWebhooksBody = request
+            .body
+            .parse_struct("PaypalWebhooksBody")
+            .change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        )?;
 
         let dispute = match details.resource {
             paypal::PaypalResource::PaypalDisputeWebhooks(payload) => payload,
-            _ => Err(error_stack::report!(
-                ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string())
-            ))
+            _ => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string()
+            )))
             .attach_printable("Expected PayPal dispute webhook resource")?,
         };
 
@@ -381,11 +389,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
         error_stack::Report<ConnectorRequestError>,
     > {
-        let details: paypal::PaypalWebhooksBody =
-            request
-                .body
-                .parse_struct("PaypalWebhooksBody")
-                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+        let details: paypal::PaypalWebhooksBody = request
+            .body
+            .parse_struct("PaypalWebhooksBody")
+            .change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        )?;
         Ok(Box::new(details))
     }
 }
@@ -826,7 +835,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         res: Response,
         event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
-        self.get_order_error_response(res, event_builder).into_response_err()
+        self.get_order_error_response(res, event_builder)
+            .into_response_err()
     }
 }
 
@@ -1738,7 +1748,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     .try_fold(String::new(), |mut acc, error| {
                         if let Some(description) = &error.description {
                             write!(acc, "description - {description} ;")
-                                .change_context(ConnectorResponseError::response_handling_failed(None))
+                                .change_context(ConnectorResponseError::response_handling_failed(
+                                    None,
+                                ))
                                 .attach_printable("Failed to concatenate error details")
                                 .map(|_| acc)
                         } else {

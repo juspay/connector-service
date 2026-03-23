@@ -697,7 +697,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         } else {
             res.response
                 .parse_struct("SilverflowErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))?
+                .change_context(ConnectorResponseError::response_deserialization_failed(
+                    None,
+                ))?
         };
 
         crate::with_error_response_body!(event_builder, response);

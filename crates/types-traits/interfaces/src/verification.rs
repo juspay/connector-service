@@ -28,8 +28,10 @@ pub trait SourceVerification {
     /// Get the verification algorithm being used
     fn get_algorithm(
         &self,
-    ) -> CustomResult<Box<dyn crypto::VerifySignature + Send>, domain_types::errors::ConnectorRequestError>
-    {
+    ) -> CustomResult<
+        Box<dyn crypto::VerifySignature + Send>,
+        domain_types::errors::ConnectorRequestError,
+    > {
         Ok(Box::new(crypto::NoAlgorithm))
     }
 

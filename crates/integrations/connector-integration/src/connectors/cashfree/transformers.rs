@@ -6,10 +6,10 @@ use domain_types::{
         PaymentsResponseData, ResponseId,
     },
     errors::ResultRequestToResponseExt,
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
+    ConnectorRequestError,
 };
 use error_stack::report;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -406,13 +406,11 @@ impl
         )?;
 
         // Get webhook URL from request - required for Cashfree V3
-        let notify_url =
-            item.request
-                .webhook_url
-                .clone()
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "webhook_url",
-                })?;
+        let notify_url = item.request.webhook_url.clone().ok_or(
+            ConnectorRequestError::MissingRequiredField {
+                field_name: "webhook_url",
+            },
+        )?;
 
         let order_meta = CashfreeOrderMeta {
             return_url,

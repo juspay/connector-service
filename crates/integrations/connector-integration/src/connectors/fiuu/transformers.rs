@@ -1122,10 +1122,10 @@ where
                         }
                         "11" => Ok(common_enums::AttemptStatus::Failure),
                         "22" => Ok(common_enums::AttemptStatus::Pending),
-                        other => Err(
-                            error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
-                                .attach_printable(other.to_owned()),
+                        other => Err(error_stack::Report::from(
+                            ConnectorResponseError::unexpected_response_error(None),
                         )
+                        .attach_printable(other.to_owned())),
                     }?;
                     let response = if status == common_enums::AttemptStatus::Failure {
                         Err(ErrorResponse {
@@ -1317,7 +1317,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ))?,
             notify_url: Some(
                 Url::parse(&item.router_data.request.get_webhook_url()?)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        None,
+                    ))
                     .into_request_err()?,
             ),
         })
@@ -1369,10 +1371,10 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                     "00" => Ok(common_enums::RefundStatus::Success),
                     "11" => Ok(common_enums::RefundStatus::Failure),
                     "22" => Ok(common_enums::RefundStatus::Pending),
-                other => Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
-                    .attach_printable(other.to_owned()),
-            )
+                    other => Err(error_stack::Report::from(
+                        ConnectorResponseError::unexpected_response_error(None),
+                    )
+                    .attach_printable(other.to_owned())),
                 }?;
                 if refund_status == common_enums::RefundStatus::Failure {
                     Ok(Self {
@@ -1715,10 +1717,10 @@ impl TryFrom<FiuuWebhookStatus> for common_enums::AttemptStatus {
                     Ok(Self::Charged)
                 }
                 Some(CaptureMethod::Manual) => Ok(Self::Authorized),
-                  _ => Err(
-                    error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
-                        .attach_printable(webhook_status.status.to_string()),
+                _ => Err(error_stack::Report::from(
+                    ConnectorResponseError::unexpected_response_error(None),
                 )
+                .attach_printable(webhook_status.status.to_string())),
             },
             FiuuPaymentWebhookStatus::Failure => Ok(Self::Failure),
             FiuuPaymentWebhookStatus::Pending => Ok(Self::AuthenticationPending),
@@ -1762,10 +1764,10 @@ impl TryFrom<FiuuSyncStatus> for common_enums::AttemptStatus {
                 Ok(Self::Voided)
             }
             (StatCode::Failure, _) => Ok(Self::Failure),
-              (other, _) => Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
-                    .attach_printable(other.to_string()),
+            (other, _) => Err(error_stack::Report::from(
+                ConnectorResponseError::unexpected_response_error(None),
             )
+            .attach_printable(other.to_string())),
         }
     }
 }
@@ -1860,10 +1862,10 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
             "22" => Ok(common_enums::AttemptStatus::Pending),
             "11" | "12" | "13" | "15" | "16" | "17" | "18" | "19" | "20" | "21" | "23" | "24"
             | "25" | "99" => Ok(common_enums::AttemptStatus::Failure),
-                other => Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
-                    .attach_printable(other.to_owned()),
+            other => Err(error_stack::Report::from(
+                ConnectorResponseError::unexpected_response_error(None),
             )
+            .attach_printable(other.to_owned())),
         }?;
         let capture_message_status = capture_status_codes();
         let error_response = if status == common_enums::AttemptStatus::Failure {
@@ -1993,10 +1995,10 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
             "11" | "12" | "13" | "14" | "15" | "16" | "17" | "18" | "19" | "20" | "21" => {
                 Ok(common_enums::AttemptStatus::VoidFailed)
             }
-                other => Err(
-                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
-                    .attach_printable(other.to_owned()),
+            other => Err(error_stack::Report::from(
+                ConnectorResponseError::unexpected_response_error(None),
             )
+            .attach_printable(other.to_owned())),
         }?;
         let void_message_status = void_status_codes();
         let error_response = if status == common_enums::AttemptStatus::VoidFailed {
@@ -2498,7 +2500,9 @@ impl TryFrom<FiuuRefundSyncResponse> for RefundWebhookDetailsResponse {
                 raw_connector_response: None,
                 response_headers: None,
             }),
-            _ => Err(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?,
+            _ => Err(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?,
         }
     }
 }

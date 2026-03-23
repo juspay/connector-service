@@ -72,9 +72,9 @@ impl AccessTokenProvider for RefundFlowData {
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use error_stack::ResultExt;
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
+use error_stack::ResultExt;
 
 const TL_SIGNATURE: &str = "Tl-Signature";
 
@@ -436,7 +436,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: truelayer::TruelayerErrorResponse = res
             .response
             .parse_struct("TruelayerErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -882,13 +884,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             VerifyWebhookSourceResponseData,
         >,
     ) -> CustomResult<String, ConnectorRequestError> {
-        let tl_signature_header = req
-            .request
-            .webhook_headers
-            .get("tl-signature")
-            .ok_or(ConnectorRequestError::MissingRequiredField {
+        let tl_signature_header = req.request.webhook_headers.get("tl-signature").ok_or(
+            ConnectorRequestError::MissingRequiredField {
                 field_name: "tl-signature",
-            })?;
+            },
+        )?;
 
         let tl_signature = tl_signature_header.as_str();
         let parts: Vec<&str> = tl_signature.splitn(3, '.').collect();
@@ -909,9 +909,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let jku = jws_header
             .jku
-            .ok_or(ConnectorRequestError::MissingRequiredField {
-                field_name: "jku",
-            })?;
+            .ok_or(ConnectorRequestError::MissingRequiredField { field_name: "jku" })?;
 
         if truelayer::ALLOWED_JKUS.contains(&jku.as_str()) {
             Ok(jku)
@@ -939,10 +937,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
         ConnectorResponseError,
     > {
-        let response: truelayer::Jwks = res
-            .response
-            .parse_struct("truelayer Jwks")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+        let response: truelayer::Jwks =
+            res.response.parse_struct("truelayer Jwks").change_context(
+                ConnectorResponseError::response_deserialization_failed(None),
+            )?;
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
         }
@@ -977,7 +975,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: truelayer::TruelayerWebhookEventTypeBody = request
             .body
             .parse_struct("TruelayerPayoutsWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
 
         Ok(truelayer::get_webhook_event(webhook_body._type))
     }
@@ -995,7 +995,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
 
         let status = truelayer::get_truelayer_payment_webhook_status(details._type)?;
 
@@ -1044,10 +1046,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhookBody")
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
 
-        let status = truelayer::get_truelayer_refund_webhook_status(details._type)
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+        let status = truelayer::get_truelayer_refund_webhook_status(details._type).change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        )?;
 
         let (error_code, error_message) = if status == RefundStatus::Failure {
             (
@@ -1084,7 +1089,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: truelayer::TruelayerWebhookBody = request
             .body
             .parse_struct("TruelayerWebhooksBody")
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string(),
+            ))?;
         Ok(Box::new(details))
     }
 }

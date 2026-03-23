@@ -17,7 +17,9 @@ use serde::{Deserialize, Serialize};
 
 use super::{requests, responses, JpmorganAmountConvertor};
 use crate::{connectors::jpmorgan::JpmorganRouterData, types::ResponseRouterData, utils};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt};
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
+};
 
 type Error = error_stack::Report<ConnectorRequestError>;
 type ResponseError = error_stack::Report<ConnectorResponseError>;

@@ -3137,7 +3137,8 @@ impl
             Some(false), // should_unify_address = false for access token operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         let connector_feature_data = value
             .connector_feature_data
@@ -3224,7 +3225,8 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
@@ -3354,7 +3356,8 @@ impl
             .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         // Extract access_token from state field
         let access_token = value
@@ -3433,7 +3436,8 @@ impl
             Some(false), // should_unify_address = false for sync operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         let access_token = value
             .state
@@ -3500,7 +3504,8 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             Some(false), // should_unify_address = false for void operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -5206,7 +5211,8 @@ impl
             })
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -5269,7 +5275,8 @@ impl
             })
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let refund_id = value.merchant_refund_id.clone();
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -5966,7 +5973,8 @@ impl
             Some(false), // should_unify_address = false for void post capture operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -6076,7 +6084,8 @@ impl
             Some(false), // should_unify_address = false for void post capture operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -6660,7 +6669,8 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -6727,7 +6737,8 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -7045,7 +7056,8 @@ impl
             _ => Some(true),
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -7151,7 +7163,8 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -8206,7 +8219,8 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         // For order creation, create a default address
@@ -8722,7 +8736,8 @@ impl
             Some(false), // should_unify_address = false for session token operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         let connector_feature_data = value
             .connector_feature_data
@@ -8883,7 +8898,8 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         // For payment method token creation, address is optional
         let address = value
@@ -9042,7 +9058,8 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let address = value
             .address
             .map(|addr| {
@@ -10465,7 +10482,8 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         Ok(Self {
@@ -10543,7 +10561,8 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         let metadata = value
@@ -10632,7 +10651,8 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         let access_token = value
@@ -10731,7 +10751,8 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)
+            .map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,

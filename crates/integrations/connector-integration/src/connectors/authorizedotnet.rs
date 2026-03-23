@@ -202,7 +202,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let webhook_body: AuthorizedotnetWebhookEventType = request
             .body
             .parse_struct("AuthorizedotnetWebhookEventType")
-            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook event type not found".to_string(),
+            ))
             .attach_printable_lazy(|| {
                 "Failed to parse webhook event type from Authorize.Net webhook body"
             })?;
@@ -251,7 +253,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))
             .attach_printable_lazy(|| {
                 "Failed to parse Authorize.Net payment webhook body structure"
             })?;
@@ -292,7 +296,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook resource object not found".to_string(),
+            ))
             .attach_printable_lazy(|| {
                 "Failed to parse Authorize.Net refund webhook body structure"
             })?;

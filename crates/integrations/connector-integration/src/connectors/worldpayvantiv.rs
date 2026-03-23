@@ -208,7 +208,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
-        Err(error_stack::report!(ConnectorRequestError::NotImplemented("webhooks not implemented".to_string())))
+        Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+            "webhooks not implemented".to_string()
+        )))
     }
 
     fn process_payment_webhook(
@@ -217,7 +219,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
-        Err(error_stack::report!(ConnectorRequestError::NotImplemented("webhooks not implemented".to_string())))
+        Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+            "webhooks not implemented".to_string()
+        )))
     }
 
     fn process_refund_webhook(
@@ -226,7 +230,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
-        Err(error_stack::report!(ConnectorRequestError::NotImplemented("webhooks not implemented".to_string())))
+        Err(error_stack::report!(ConnectorRequestError::NotImplemented(
+            "webhooks not implemented".to_string()
+        )))
     }
 }
 

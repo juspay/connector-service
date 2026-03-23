@@ -1,11 +1,10 @@
+use crate::utils::{self, ErrorCodeAndMessage};
 use crate::{
     connectors,
     connectors::trustpay::{TrustpayAmountConvertor, TrustpayRouterData},
     types::ResponseRouterData,
-    ConnectorRequestError,
-    ConnectorResponseError,
+    ConnectorRequestError, ConnectorResponseError,
 };
-use crate::utils::{self, ErrorCodeAndMessage};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -14,6 +13,9 @@ use common_utils::{
     request::Method,
     types::{FloatMajorUnit, MinorUnit, StringMajorUnit},
     Email,
+};
+use domain_types::errors::{
+    report_request_as_response, ResultRequestToResponseExt, ResultResponseToRequestExt,
 };
 use domain_types::{
     connector_flow::{Authorize, CreateAccessToken, CreateOrder, Refund},
@@ -40,7 +42,6 @@ use hyperswitch_masking::{PeekInterface, Secret};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use domain_types::errors::{report_request_as_response, ResultRequestToResponseExt, ResultResponseToRequestExt};
 
 type Error = error_stack::Report<ConnectorRequestError>;
 
@@ -569,7 +570,8 @@ fn handle_cards_response(
     let (status, message) = get_transaction_status(
         response.payment_status.to_owned(),
         response.redirect_url.to_owned(),
-    ).into_response_err()?;
+    )
+    .into_response_err()?;
 
     let form_fields = response.redirect_params.unwrap_or_default();
     let redirection_data = response.redirect_url.map(|url| RedirectForm::Form {
@@ -885,7 +887,9 @@ impl TryFrom<WebhookStatus> for enums::AttemptStatus {
         match item {
             WebhookStatus::Paid => Ok(Self::Charged),
             WebhookStatus::Rejected => Ok(Self::AuthorizationFailed),
-            _ => Err(ConnectorRequestError::NotImplemented("webhook event type not found".to_string())),
+            _ => Err(ConnectorRequestError::NotImplemented(
+                "webhook event type not found".to_string(),
+            )),
         }
     }
 }
@@ -897,7 +901,9 @@ impl TryFrom<WebhookStatus> for enums::RefundStatus {
             WebhookStatus::Paid => Ok(Self::Success),
             WebhookStatus::Refunded => Ok(Self::Success),
             WebhookStatus::Rejected => Ok(Self::Failure),
-            _ => Err(ConnectorRequestError::NotImplemented("webhook event type not found".to_string())),
+            _ => Err(ConnectorRequestError::NotImplemented(
+                "webhook event type not found".to_string(),
+            )),
         }
     }
 }
@@ -1606,9 +1612,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         expiry_date,
                         redirect_url: item.router_data.request.get_router_return_url()?,
                         enrollment_status: STATUS,
-                        eci: token_data.eci.clone().ok_or(ConnectorRequestError::MissingRequiredField {
-                            field_name: "eci",
-                        })?,
+                        eci: token_data.eci.clone().ok_or(
+                            ConnectorRequestError::MissingRequiredField { field_name: "eci" },
+                        )?,
                         authentication_status: STATUS,
                         verification_id: token_data.get_cryptogram().ok_or(
                             ConnectorRequestError::MissingRequiredField {
@@ -2110,12 +2116,16 @@ impl TryFrom<ResponseRouterData<TrustpayCreateIntentResponse, Self>>
             (
                 enums::PaymentMethodType::ApplePay,
                 InitResultData::AppleInitResultData(apple_pay_response),
-            ) => get_apple_pay_session(instance_id, &secrets, apple_pay_response, item).into_response_err(),
+            ) => get_apple_pay_session(instance_id, &secrets, apple_pay_response, item)
+                .into_response_err(),
             (
                 enums::PaymentMethodType::GooglePay,
                 InitResultData::GoogleInitResultData(google_pay_response),
-            ) => get_google_pay_session(instance_id, &secrets, google_pay_response, item).into_response_err(),
-            _ => Err(report_request_as_response(report!(ConnectorRequestError::InvalidWallet))),
+            ) => get_google_pay_session(instance_id, &secrets, google_pay_response, item)
+                .into_response_err(),
+            _ => Err(report_request_as_response(report!(
+                ConnectorRequestError::InvalidWallet
+            ))),
         }
     }
 }

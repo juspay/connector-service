@@ -1,5 +1,5 @@
-use bytes::Bytes;
 use crate::ConnectorResponseError;
+use bytes::Bytes;
 use serde_json::{Map, Value};
 
 /// Processes XML response bytes by converting to properly structured JSON.
@@ -59,7 +59,9 @@ pub fn preprocess_xml_response_bytes(xml_data: Bytes) -> Result<Bytes, Connector
             tracing::error!(error=?err, "Failed to parse XML to JSON structure");
 
             // Create a basic JSON structure with error information
-            return Err(ConnectorResponseError::response_deserialization_failed(None));
+            return Err(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ));
         }
     };
 

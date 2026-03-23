@@ -13,6 +13,8 @@ use common_utils::{
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
 };
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -56,8 +58,6 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{self as razorpay, ForeignTryFrom};
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 
 use crate::{
     connectors::razorpayv2::transformers::RazorpayV2SyncResponse, with_error_response_body,
@@ -561,7 +561,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let sync_response: RazorpayV2SyncResponse = res
             .response
             .parse_struct("RazorpayV2SyncResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_response_body!(event_builder, sync_response);
 
@@ -758,7 +760,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayRefundResponse = res
             .response
             .parse_struct("RazorpayRefundSyncResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_response_body!(event_builder, response);
 
@@ -793,8 +797,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-                .attach_printable(format!("error while decoing webhook body {err}"))
+            report!(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string()
+            ))
+            .attach_printable(format!("error while decoing webhook body {err}"))
         })?;
 
         if payload.refund.is_some() {
@@ -812,8 +818,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let request_body_copy = request.body.clone();
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-                .attach_printable(format!("error while decoding webhook body {err}"))
+            report!(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string()
+            ))
+            .attach_printable(format!("error while decoding webhook body {err}"))
         })?;
 
         let notif = payload.payment.ok_or_else(|| {
@@ -849,8 +857,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let request_body_copy = request.body.clone();
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-            report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
-                .attach_printable(format!("error while decoing webhook body {err}"))
+            report!(ConnectorRequestError::NotImplemented(
+                "webhook body decoding failed".to_string()
+            ))
+            .attach_printable(format!("error while decoing webhook body {err}"))
         })?;
 
         let notif = payload.refund.ok_or_else(|| {
@@ -938,7 +948,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayRefundResponse = res
             .response
             .parse_struct("RazorpayRefundResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_response_body!(event_builder, response);
 
@@ -1033,8 +1045,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .response
             .parse_struct("RazorpayCaptureResponse")
             .map_err(|err| {
-                report!(ConnectorResponseError::response_deserialization_failed(None))
-                    .attach_printable(format!("Failed to parse RazorpayCaptureResponse: {err:?}"))
+                report!(ConnectorResponseError::response_deserialization_failed(
+                    None
+                ))
+                .attach_printable(format!("Failed to parse RazorpayCaptureResponse: {err:?}"))
             })?;
 
         with_response_body!(event_builder, response);

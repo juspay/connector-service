@@ -65,9 +65,9 @@ impl AccessTokenProvider for RefundFlowData {
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use error_stack::ResultExt;
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
+use error_stack::ResultExt;
 
 const X_VOLT_API_VERSION: &str = "X-Volt-Api-Version";
 const X_VOLT_INITIATION_CHANNEL: &str = "X-Volt-Initiation-Channel";
@@ -341,7 +341,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: volt::VoltErrorResponse = res
             .response
             .parse_struct("VoltErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 

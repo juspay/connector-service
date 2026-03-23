@@ -16,7 +16,9 @@ use serde::Serialize;
 
 use super::{requests, responses, BarclaycardAmountConvertor, BarclaycardRouterData};
 use crate::{types::ResponseRouterData, utils};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt};
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
+};
 
 /// CAVV (Cardholder Authentication Verification Value) Algorithm
 ///

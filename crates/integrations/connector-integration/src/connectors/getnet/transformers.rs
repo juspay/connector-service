@@ -1,6 +1,7 @@
 use crate::{connectors::getnet::GetnetRouterData, types::ResponseRouterData};
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::{id_type::CustomerId, types::MinorUnit};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateAccessToken, PSync, RSync, Refund, Void},
     connector_types::{
@@ -16,7 +17,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 const TRANSACTION_TYPE_FULL: &str = "FULL";
 const DEFAULT_INSTALLMENTS: i32 = 1;

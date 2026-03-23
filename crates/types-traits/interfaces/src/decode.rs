@@ -14,8 +14,10 @@ pub trait BodyDecoding {
     /// Get the decoding algorithm being used
     fn get_algorithm(
         &self,
-    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorRequestError>
-    {
+    ) -> CustomResult<
+        Box<dyn crypto::DecodeMessage + Send>,
+        domain_types::errors::ConnectorRequestError,
+    > {
         Ok(Box::new(crypto::NoAlgorithm))
     }
 
@@ -38,7 +40,8 @@ pub trait BodyDecoding {
         secrets: Option<ConnectorSourceVerificationSecrets>,
         body: &[u8],
     ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorRequestError> {
-        let secrets = secrets.ok_or(domain_types::errors::ConnectorRequestError::RequestEncodingFailed)?;
+        let secrets =
+            secrets.ok_or(domain_types::errors::ConnectorRequestError::RequestEncodingFailed)?;
 
         let algorithm = self.get_algorithm()?;
         let extracted_secrets = self.get_secrets(secrets)?;

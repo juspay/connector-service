@@ -5,11 +5,11 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
+    ConnectorRequestError,
 };
 use error_stack;
 use error_stack::ResultExt;
@@ -58,8 +58,9 @@ impl<F, T> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                             .as_ref()
                             .filter(|redirect_str| !redirect_str.is_empty())
                             .map(|url| {
-                                Url::parse(url)
-                                    .change_context(ConnectorRequestError::FailedToObtainIntegrationUrl)
+                                Url::parse(url).change_context(
+                                    ConnectorRequestError::FailedToObtainIntegrationUrl,
+                                )
                             })
                             .transpose()
                             .into_response_err()?;
@@ -304,7 +305,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             _ => None,
         }
         .get_required_value("payment_method not implemented")
-        .change_context(ConnectorRequestError::NotImplemented("payment_method".to_owned()))?;
+        .change_context(ConnectorRequestError::NotImplemented(
+            "payment_method".to_owned(),
+        ))?;
         let return_url = item.router_data.request.get_router_return_url()?;
         let amount = item
             .connector

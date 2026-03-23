@@ -66,9 +66,9 @@ use base64::Engine;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use error_stack::ResultExt;
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
+use error_stack::ResultExt;
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -124,7 +124,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: cryptopay::CryptopayErrorResponse = res
             .response
             .parse_struct("CryptopayErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -428,10 +430,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let base64_signature = request
             .headers
             .get("x-cryptopay-signature")
-            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .ok_or(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Missing incoming webhook signature for Cryptopay")?;
-        hex::decode(base64_signature)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+        hex::decode(base64_signature).change_context(ConnectorRequestError::NotImplemented(
+            "webhook source verification failed".to_string(),
+        ))
     }
 
     fn get_webhook_source_verification_message(
@@ -440,7 +445,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let message = std::str::from_utf8(&request.body)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Webhook source verification message parsing failed for Cryptopay")?;
         Ok(message.to_string().into_bytes())
     }
@@ -455,7 +462,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?,
+            None => Err(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))?,
         };
 
         let signature =
@@ -466,7 +475,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook source verification failed".to_string(),
+            ))
             .attach_printable("Webhook source verification failed for Cryptopay")
     }
 
@@ -479,7 +490,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?;
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook event type not found".to_string(),
+            ))?;
         match notif.data.status {
             cryptopay::CryptopayPaymentStatus::Completed => Ok(EventType::PaymentIntentSuccess),
             cryptopay::CryptopayPaymentStatus::Unresolved => Ok(EventType::PaymentActionRequired),
@@ -497,9 +510,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?;
-        let response = WebhookDetailsResponse::try_from(notif)
-            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()));
+            .change_context(ConnectorRequestError::NotImplemented(
+                "webhook event type not found".to_string(),
+            ))?;
+        let response = WebhookDetailsResponse::try_from(notif).change_context(
+            ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+        );
 
         response.map(|mut response| {
             response.raw_connector_response =

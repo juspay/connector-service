@@ -33,9 +33,7 @@ use serde::{Deserialize, Serialize};
 use super::{requests, responses};
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
-use domain_types::errors::{
-    report_request_as_response, ResultRequestToResponseExt,
-};
+use domain_types::errors::{report_request_as_response, ResultRequestToResponseExt};
 
 pub const SIGNATURE_VERSION: &str = "HMAC_SHA256_V1";
 pub const DS_VERSION: &str = "0.0";
@@ -405,8 +403,10 @@ fn get_redsys_attempt_status(
             | "9093" | "9094" | "9104" | "9218" | "9253" | "9261" | "9997" | "0002" => {
                 Ok(common_enums::AttemptStatus::Failure)
             }
-            error => Err(error_stack::Report::from(ConnectorResponseError::response_handling_failed(None))
-                .attach_printable(format!("Received Unknown Status:{error}"))),
+            error => Err(error_stack::Report::from(
+                ConnectorResponseError::response_handling_failed(None),
+            )
+            .attach_printable(format!("Received Unknown Status:{error}"))),
         }
     }
 }
@@ -418,8 +418,10 @@ impl TryFrom<responses::DsResponse> for common_enums::RefundStatus {
             "0900" => Ok(Self::Success),
             "9999" => Ok(Self::Pending),
             "0950" | "0172" | "174" => Ok(Self::Failure),
-            unknown_status => Err(error_stack::Report::from(ConnectorResponseError::response_handling_failed(None))
-                .attach_printable(format!("Received unknown refund status:{unknown_status}"))),
+            unknown_status => Err(error_stack::Report::from(
+                ConnectorResponseError::response_handling_failed(None),
+            )
+            .attach_printable(format!("Received unknown refund status:{unknown_status}"))),
         }
     }
 }
@@ -429,7 +431,9 @@ where
     T: serde::de::DeserializeOwned,
 {
     let decoded_bytes = utils::safe_base64_decode(connector_response.to_string())
-        .change_context(ConnectorResponseError::response_deserialization_failed(None))
+        .change_context(ConnectorResponseError::response_deserialization_failed(
+            None,
+        ))
         .attach_printable("Failed to decode Base64")?;
 
     let response_data: T = serde_json::from_slice(&decoded_bytes)
@@ -441,15 +445,17 @@ where
 fn build_threeds_form(
     ds_emv3ds: &responses::RedsysEmv3DSResponseData,
 ) -> Result<router_response_types::RedirectForm, ResponseError> {
-    let creq = ds_emv3ds
-        .creq
-        .clone()
-        .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
+    let creq =
+        ds_emv3ds
+            .creq
+            .clone()
+            .ok_or(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
-    let endpoint = ds_emv3ds
-        .acs_u_r_l
-        .clone()
-        .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
+    let endpoint = ds_emv3ds.acs_u_r_l.clone().ok_or(
+        ConnectorResponseError::response_deserialization_failed(None),
+    )?;
 
     let mut form_fields = std::collections::HashMap::new();
     form_fields.insert("creq".to_string(), creq);
@@ -478,14 +484,15 @@ fn get_preauthenticate_response(
         }
     };
 
-    let three_d_s_server_trans_i_d = emv3ds
-        .three_d_s_server_trans_i_d
-        .clone()
-        .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
+    let three_d_s_server_trans_i_d = emv3ds.three_d_s_server_trans_i_d.clone().ok_or(
+        ConnectorResponseError::response_deserialization_failed(None),
+    )?;
 
     let message_version = &emv3ds.protocol_version;
     let semantic_version = common_utils::types::SemanticVersion::from_str(message_version)
-        .change_context(ConnectorResponseError::response_deserialization_failed(None))
+        .change_context(ConnectorResponseError::response_deserialization_failed(
+            None,
+        ))
         .attach_printable("Failed to parse message_version as SemanticVersion")?;
 
     let authentication_data = Some(domain_types::router_request_types::AuthenticationData {

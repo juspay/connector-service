@@ -6,7 +6,10 @@ use common_utils::{
     types::MinorUnit,
 };
 
-use crate::{connectors::billwerk::BillwerkRouterData, types::ResponseRouterData, utils, ConnectorResponseError};
+use crate::{
+    connectors::billwerk::BillwerkRouterData, types::ResponseRouterData, utils,
+    ConnectorResponseError,
+};
 
 use domain_types::{
     connector_flow::{Authorize, Capture, PaymentMethodToken, RSync},
@@ -15,12 +18,12 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{
         ConnectorSpecificConfig, ErrorResponse, PaymentMethodToken as PaymentMethodTokenFlow,
     },
     router_data_v2::RouterDataV2,
+    ConnectorRequestError,
 };
 
 use hyperswitch_masking::{ExposeInterface, Secret};

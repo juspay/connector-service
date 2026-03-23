@@ -20,7 +20,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::types::ResponseRouterData;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultResponseToRequestExt};
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultResponseToRequestExt,
+};
 
 // Auth
 pub struct CalidaAuthType {
@@ -216,17 +218,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .get_optional_billing_zip(),
                     webhook_url: url::Url::parse(&item.router_data.request.get_webhook_url()?)
-                        .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                        .change_context(ConnectorResponseError::response_deserialization_failed(
+                            None,
+                        ))
                         .into_request_err()?,
                     success_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        None,
+                    ))
                     .into_request_err()?,
                     failure_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        None,
+                    ))
                     .into_request_err()?,
                 })
             }
@@ -398,6 +406,7 @@ pub fn sort_and_minify_json(value: &Value) -> Result<String, ConnectorRequestErr
     }
 
     let sorted_value = sort_value(value);
-    serde_json::to_string(&sorted_value)
-        .map_err(|_| ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
+    serde_json::to_string(&sorted_value).map_err(|_| {
+        ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string())
+    })
 }

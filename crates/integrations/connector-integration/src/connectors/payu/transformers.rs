@@ -5,12 +5,12 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::AuthoriseIntegrityObject,
     router_response_types::RedirectForm,
+    ConnectorRequestError,
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -351,18 +351,16 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })?,
 
             // URLs - use router return URL if available
-            surl: router_data
-                .request
-                .get_router_return_url()
-                .map_err(|_| ConnectorRequestError::MissingRequiredField {
+            surl: router_data.request.get_router_return_url().map_err(|_| {
+                ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
-                })?,
-            furl: router_data
-                .request
-                .get_router_return_url()
-                .map_err(|_| ConnectorRequestError::MissingRequiredField {
+                }
+            })?,
+            furl: router_data.request.get_router_return_url().map_err(|_| {
+                ConnectorRequestError::MissingRequiredField {
                     field_name: "router_return_url",
-                })?,
+                }
+            })?,
 
             // Payment method specific
             pg,

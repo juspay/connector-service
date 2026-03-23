@@ -2,6 +2,7 @@ use super::LoonioRouterData;
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
 use common_utils::{id_type::CustomerId, pii::Email, types::FloatMajorUnit, Method};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
@@ -22,7 +23,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 // ===== AUTH TYPE =====
 
 #[derive(Debug, Clone)]

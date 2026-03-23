@@ -9,6 +9,8 @@ use common_utils::{
     events,
     ext_traits::{ByteSliceExt, XmlExt},
 };
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
@@ -38,8 +40,6 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
-use domain_types::errors::ConnectorRequestError;
-use domain_types::errors::ConnectorResponseError;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     decode::BodyDecoding, verification::SourceVerification,
@@ -315,7 +315,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: responses::RedsysErrorResponse = res
             .response
             .parse_struct("RedsysErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -473,12 +475,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ConnectorResponseError,
     > {
-        let response = String::from_utf8(res.response.to_vec())
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+        let response = String::from_utf8(res.response.to_vec()).change_context(
+            ConnectorResponseError::response_deserialization_failed(None),
+        )?;
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
             .parse_xml::<responses::RedsysSyncResponse>()
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         let router_data: RouterDataV2<
             PSync,
@@ -651,12 +656,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ConnectorResponseError,
     > {
-        let response = String::from_utf8(res.response.to_vec())
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+        let response = String::from_utf8(res.response.to_vec()).change_context(
+            ConnectorResponseError::response_deserialization_failed(None),
+        )?;
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
             .parse_xml::<responses::RedsysSyncResponse>()
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(
+                None,
+            ))?;
 
         let router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> =
             <ResponseRouterData<

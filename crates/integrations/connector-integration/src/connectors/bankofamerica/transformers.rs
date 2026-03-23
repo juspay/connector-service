@@ -10,9 +10,13 @@ pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::genera
 pub const FLUID_DATA_DESCRIPTOR_FOR_SAMSUNG_PAY: &str = "FID=COMMON.SAMSUNG.INAPP.PAYMENT";
 const MAX_STATE_LENGTH: usize = 20;
 
-use crate::{connectors::bankofamerica::BankofamericaRouterData, types::ResponseRouterData, utils, ConnectorResponseError};
+use crate::{
+    connectors::bankofamerica::BankofamericaRouterData, types::ResponseRouterData, utils,
+    ConnectorResponseError,
+};
 use cards;
 use common_enums;
+use domain_types::errors::ResultRequestToResponseExt;
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
@@ -20,7 +24,6 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    ConnectorRequestError,
     payment_address::Address,
     payment_method_data::{
         self, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -28,11 +31,11 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     utils::{is_payment_failure, CardIssuer},
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, ExposeOptionInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::ResultRequestToResponseExt;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -2215,7 +2218,10 @@ impl<F> TryFrom<ResponseRouterData<BankOfAmericaTransactionResponse, Self>>
             Some(app_status) => {
                 let status = map_boa_attempt_status((
                     app_status,
-                    item.router_data.request.is_auto_capture().into_response_err()?,
+                    item.router_data
+                        .request
+                        .is_auto_capture()
+                        .into_response_err()?,
                 ));
 
                 let risk_info: Option<ClientRiskInformation> = None;
@@ -2350,13 +2356,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     field_name: "Amount",
                 })?;
 
-        let currency =
-            item.router_data
-                .request
-                .currency
-                .ok_or(ConnectorRequestError::MissingRequiredField {
-                    field_name: "Currency",
-                })?;
+        let currency = item.router_data.request.currency.ok_or(
+            ConnectorRequestError::MissingRequiredField {
+                field_name: "Currency",
+            },
+        )?;
 
         Ok(Self {
             client_reference_information: ClientReferenceInformation {

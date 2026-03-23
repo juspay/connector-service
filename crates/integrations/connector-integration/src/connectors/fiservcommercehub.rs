@@ -510,7 +510,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: fiservcommercehub::FiservcommercehubErrorResponse = res
             .response
             .parse_struct("FiservcommercehubErrorResponse")
-            .change_context(errors::ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(
+                errors::ConnectorResponseError::response_deserialization_failed(None),
+            )?;
 
         with_error_response_body!(event_builder, response);
 

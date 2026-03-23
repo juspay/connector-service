@@ -1,6 +1,9 @@
 use crate::{types::ResponseRouterData, utils::is_refund_failure};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{pii::Email, types::FloatMajorUnit};
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
@@ -20,7 +23,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{format_description::well_known::Iso8601, PrimitiveDateTime};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt};
 
 #[derive(Debug, Clone)]
 pub struct Revolv3AuthType {

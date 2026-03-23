@@ -10,13 +10,13 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    ConnectorRequestError,
     payment_method_data::{
         BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
+    ConnectorRequestError,
 };
 
 use crate::types::ResponseRouterData;
@@ -266,7 +266,9 @@ impl TryFrom<&ConnectorSpecificConfig> for MerchantAuthentication {
                 name: name.clone(),
                 transaction_key: transaction_key.clone(),
             }),
-            _ => Err(error_stack::report!(ConnectorRequestError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(
+                ConnectorRequestError::FailedToObtainAuthType
+            )),
         }
     }
 }
@@ -2825,7 +2827,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .customer_payment_profile_id_list
                 .first()
                 .or(response.customer_payment_profile_id.as_ref())
-                .ok_or_else(|| error_stack::report!(ConnectorResponseError::response_handling_failed(None)))?;
+                .ok_or_else(|| {
+                    error_stack::report!(ConnectorResponseError::response_handling_failed(None))
+                })?;
 
             // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}
             let connector_mandate_id = format!("{connector_customer_id}-{payment_profile_id}");
@@ -3015,7 +3019,9 @@ impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
     }
 }
 
-pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, ConnectorRequestError> {
+pub fn get_trans_id(
+    details: &AuthorizedotnetWebhookObjectId,
+) -> Result<String, ConnectorRequestError> {
     match details.event_type {
         AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => {
             // For payment profile creation, use the customer_profile_id as the primary identifier
@@ -3041,7 +3047,9 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
                             target: "authorizedotnet_webhook",
                             "No customer_profile_id or id found in CustomerPaymentProfileCreated webhook payload"
                         );
-                        Err(ConnectorRequestError::NotImplemented("webhook reference id not found".to_string()))
+                        Err(ConnectorRequestError::NotImplemented(
+                            "webhook reference id not found".to_string(),
+                        ))
                     }
                 }
             }
@@ -3064,7 +3072,9 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
                         "No transaction ID found in webhook payload for event type: {:?}",
                         details.event_type
                     );
-                    Err(ConnectorRequestError::NotImplemented("webhook reference id not found".to_string()))
+                    Err(ConnectorRequestError::NotImplemented(
+                        "webhook reference id not found".to_string(),
+                    ))
                 }
             }
         }

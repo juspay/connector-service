@@ -695,8 +695,9 @@ impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
 pub fn parse_webhook_event(
     body: &[u8],
 ) -> Result<PayloadWebhookEvent, error_stack::Report<ConnectorRequestError>> {
-    serde_json::from_slice::<PayloadWebhookEvent>(body)
-        .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
+    serde_json::from_slice::<PayloadWebhookEvent>(body).change_context(
+        ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()),
+    )
 }
 
 // RSync response

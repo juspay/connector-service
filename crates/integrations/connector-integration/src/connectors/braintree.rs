@@ -58,9 +58,9 @@ use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use error_stack::ResultExt;
 use domain_types::errors::ConnectorRequestError;
 use domain_types::errors::ConnectorResponseError;
+use error_stack::ResultExt;
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -482,7 +482,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: BraintreePaymentsResponse = res
                     .response
                     .parse_struct("Braintree PaymentsResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        None,
+                    ))?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,
@@ -494,7 +496,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: BraintreeAuthResponse = res
                     .response
                     .parse_struct("Braintree AuthResponse")
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(
+                        None,
+                    ))?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,

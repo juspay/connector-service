@@ -4,8 +4,8 @@ use common_utils::{
     events, CustomResult,
 };
 use domain_types::{
-    errors::{ConnectorRequestError, ConnectorResponseError},
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
+    errors::{ConnectorRequestError, ConnectorResponseError},
     payment_address::RedirectionResponse,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     types::Connectors,
@@ -25,7 +25,8 @@ pub trait ConnectorCommon {
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError> {
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, ConnectorRequestError>
+    {
         Ok(Vec::new())
     }
 

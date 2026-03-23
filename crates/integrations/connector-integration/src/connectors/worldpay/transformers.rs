@@ -10,7 +10,6 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
@@ -18,13 +17,15 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
+    utils, ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::worldpay::WorldpayRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::worldpay::WorldpayRouterData, types::ResponseRouterData, ConnectorResponseError,
+};
 
 // Define ForeignTryFrom trait locally
 pub trait ForeignTryFrom<T>: Sized {
@@ -421,11 +422,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let auth = WorldpayAuthType::try_from(&item.router_data.connector_config)?;
 
-        let merchant_name = auth
-            .merchant_name
-            .ok_or(ConnectorRequestError::InvalidConnectorConfig {
-                config: "connector_config.merchant_name",
-            })?;
+        let merchant_name =
+            auth.merchant_name
+                .ok_or(ConnectorRequestError::InvalidConnectorConfig {
+                    config: "connector_config.merchant_name",
+                })?;
 
         let is_mandate_payment = item.router_data.request.is_mandate_payment();
         let three_ds = create_three_ds_request(&item.router_data, is_mandate_payment)?;
@@ -506,11 +507,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract merchant name from connector config
         let auth = WorldpayAuthType::try_from(&item.router_data.connector_config)?;
 
-        let merchant_name = auth
-            .merchant_name
-            .ok_or(ConnectorRequestError::InvalidConnectorConfig {
-                config: "connector_config.merchant_name",
-            })?;
+        let merchant_name =
+            auth.merchant_name
+                .ok_or(ConnectorRequestError::InvalidConnectorConfig {
+                    config: "connector_config.merchant_name",
+                })?;
 
         // Extract payment instrument from mandate_reference
         let payment_instrument = match &item.router_data.request.mandate_reference {
@@ -888,7 +889,8 @@ impl<F, T>
                 resource_id: ResponseId::foreign_try_from((
                     router_data.response,
                     optional_correlation_id.clone(),
-                )).into_response_err()?,
+                ))
+                .into_response_err()?,
                 redirection_data: redirection_data.map(Box::new),
                 mandate_reference: mandate_reference.map(Box::new),
                 connector_metadata,
@@ -978,7 +980,8 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None)).into_response_err()?,
+            resource_id: ResponseId::foreign_try_from((item.response.clone(), None))
+                .into_response_err()?,
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
@@ -1175,7 +1178,8 @@ impl TryFrom<ResponseRouterData<WorldpayPaymentsResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.outcome.clone());
         let response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::foreign_try_from((item.response.clone(), None)).into_response_err()?,
+            resource_id: ResponseId::foreign_try_from((item.response.clone(), None))
+                .into_response_err()?,
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,

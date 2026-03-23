@@ -1,6 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::consts;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::payment_method_data::RawCardNumber;
 use domain_types::{
     connector_flow::{Authorize, Capture, RSync, Refund, SetupMandate, Void},
@@ -18,7 +19,6 @@ use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 // Re-export from common utils for use in this connector
 pub use crate::utils::{convert_metadata_to_merchant_defined_info, MerchantDefinedInformation};

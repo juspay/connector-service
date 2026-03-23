@@ -1,7 +1,5 @@
 use crate::{
-    connectors::zift::ZiftRouterData,
-    types::ResponseRouterData,
-    ConnectorRequestError,
+    connectors::zift::ZiftRouterData, types::ResponseRouterData, ConnectorRequestError,
     ConnectorResponseError,
 };
 use common_utils::{
@@ -13,12 +11,12 @@ use std::fmt::Debug;
 
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund, RepeatPayment, SetupMandate, Void},
-    errors::ResultRequestToResponseExt,
     connector_types::{
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
+    errors::ResultRequestToResponseExt,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -540,7 +538,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
         item: ResponseRouterData<ZiftAuthPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let is_approved = item.response.response_code.is_approved();
-        let is_auto_capture = item.router_data.request.is_auto_capture().into_response_err()?;
+        let is_auto_capture = item
+            .router_data
+            .request
+            .is_auto_capture()
+            .into_response_err()?;
 
         let status = match (is_approved, is_auto_capture) {
             (true, true) => common_enums::AttemptStatus::Charged,
@@ -704,7 +706,11 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<ZiftAuthPaymentsRespo
         item: ResponseRouterData<ZiftAuthPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let is_approved = item.response.response_code.is_approved();
-        let is_auto_capture = item.router_data.request.is_auto_capture().into_response_err()?;
+        let is_auto_capture = item
+            .router_data
+            .request
+            .is_auto_capture()
+            .into_response_err()?;
 
         let status = match (is_approved, is_auto_capture) {
             (true, true) => common_enums::AttemptStatus::Charged,
@@ -1055,7 +1061,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             common_enums::AttemptStatus::Failure
         };
         if status != common_enums::AttemptStatus::Failure {
-            let transaction_id = item.response.transaction_id
+            let transaction_id = item
+                .response
+                .transaction_id
                 .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "transaction_id",
                 })

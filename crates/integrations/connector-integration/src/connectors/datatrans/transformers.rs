@@ -2,6 +2,7 @@ use crate::types::ResponseRouterData;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{AttemptStatus, Currency, RefundStatus};
 use common_utils::MinorUnit;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -15,7 +16,6 @@ use domain_types::{
 };
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 // Error message constants
 const DEFAULT_ERROR_CODE: &str = "UNKNOWN_ERROR";

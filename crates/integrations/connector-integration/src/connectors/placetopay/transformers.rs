@@ -6,18 +6,19 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
-    utils,
+    utils, ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-use crate::{connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData, ConnectorResponseError};
+use crate::{
+    connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData, ConnectorResponseError,
+};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

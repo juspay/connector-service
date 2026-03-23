@@ -6,7 +6,6 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    ConnectorRequestError,
     payment_method_data::{
         BankRedirectData, Card, NetworkTokenData, PayLaterData, PaymentMethodData,
         PaymentMethodDataTypes, RawCardNumber, WalletData,
@@ -14,6 +13,7 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
+    ConnectorRequestError,
 };
 use error_stack::{self, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -215,9 +215,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | WalletData::RevolutPay(_)
             | WalletData::MbWay(_)
             | WalletData::Satispay(_)
-            | WalletData::Wero(_) => {
-                Err(ConnectorRequestError::NotImplemented("Payment method".to_string()))?
-            }
+            | WalletData::Wero(_) => Err(ConnectorRequestError::NotImplemented(
+                "Payment method".to_string(),
+            ))?,
         };
         Ok(payment_data)
     }
@@ -410,9 +410,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | BankRedirectData::OnlineBankingThailand { .. }
             | BankRedirectData::LocalBankRedirect {}
             | BankRedirectData::OpenBankingUk { .. }
-            | BankRedirectData::OpenBanking {} => {
-                Err(ConnectorRequestError::NotImplemented("Payment method".to_string()))?
-            }
+            | BankRedirectData::OpenBanking {} => Err(ConnectorRequestError::NotImplemented(
+                "Payment method".to_string(),
+            ))?,
         };
         Ok(payment_data)
     }
@@ -1519,7 +1519,9 @@ impl<F, T> TryFrom<ResponseRouterData<AciCaptureResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(item: ResponseRouterData<AciCaptureResponse, Self>) -> Result<Self, Self::Error> {
-        let status = map_aci_capture_status(AciStatus::from_str(&item.response.result.code).into_response_err()?);
+        let status = map_aci_capture_status(
+            AciStatus::from_str(&item.response.result.code).into_response_err()?,
+        );
         let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: item.response.result.code.clone(),
@@ -1584,7 +1586,9 @@ impl<F, T> TryFrom<ResponseRouterData<AciVoidResponse, Self>>
 {
     type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(item: ResponseRouterData<AciVoidResponse, Self>) -> Result<Self, Self::Error> {
-        let status = map_aci_void_status(AciStatus::from_str(&item.response.result.code).into_response_err()?);
+        let status = map_aci_void_status(
+            AciStatus::from_str(&item.response.result.code).into_response_err()?,
+        );
         let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: item.response.result.code.clone(),
@@ -1713,9 +1717,9 @@ impl<F> TryFrom<ResponseRouterData<AciRefundResponse, Self>>
     type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<AciRefundResponse, Self>) -> Result<Self, Self::Error> {
-        let refund_status = common_enums::RefundStatus::from(AciRefundStatus::from_str(
-            &item.response.result.code,
-        ).into_response_err()?);
+        let refund_status = common_enums::RefundStatus::from(
+            AciRefundStatus::from_str(&item.response.result.code).into_response_err()?,
+        );
         let response = if refund_status == common_enums::RefundStatus::Failure {
             Err(ErrorResponse {
                 code: item.response.result.code.clone(),

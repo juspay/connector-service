@@ -1,6 +1,7 @@
 use crate::types::ResponseRouterData;
 use common_enums::{enums::Currency, AttemptStatus, CaptureMethod};
 use common_utils::types::MinorUnit;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -15,7 +16,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
-use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 #[derive(Debug, Clone)]
 pub struct SilverflowAuthType {

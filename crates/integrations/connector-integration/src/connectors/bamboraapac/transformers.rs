@@ -6,10 +6,10 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId,
     },
-    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
+    ConnectorRequestError,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -604,9 +604,11 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
         let receipt = match &router_data.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) | ResponseId::EncodedData(id) => id.clone(),
             ResponseId::NoResponseId => {
-                return Err(error_stack::report!(ConnectorRequestError::MissingRequiredField {
-                    field_name: "connector_transaction_id",
-                }))
+                return Err(error_stack::report!(
+                    ConnectorRequestError::MissingRequiredField {
+                        field_name: "connector_transaction_id",
+                    }
+                ))
             }
         };
 
