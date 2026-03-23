@@ -1,5 +1,5 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate
+// Source: services.proto ∩ services/*.rs  |  Regenerate: make generate
 
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest,
@@ -37,12 +37,15 @@ use grpc_api_types::payments::{
     PaymentServiceSetupRecurringResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
-    PayoutServiceCreateRequest,
-    PayoutServiceCreateResponse,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RefundResponse,
 };
+use grpc_api_types::payouts::{
+    PayoutServiceCreateRequest,
+    PayoutServiceCreateResponse,
+};
+
 use crate::services::payments::{
     accept_req_transformer, accept_res_transformer,
     authenticate_req_transformer, authenticate_res_transformer,
@@ -55,7 +58,6 @@ use crate::services::payments::{
     create_session_token_req_transformer, create_session_token_res_transformer,
     defend_req_transformer, defend_res_transformer,
     get_req_transformer, get_res_transformer,
-    payout_create_req_transformer, payout_create_res_transformer,
     post_authenticate_req_transformer, post_authenticate_res_transformer,
     pre_authenticate_req_transformer, pre_authenticate_res_transformer,
     refund_req_transformer, refund_res_transformer,
@@ -64,6 +66,9 @@ use crate::services::payments::{
     submit_evidence_req_transformer, submit_evidence_res_transformer,
     tokenize_req_transformer, tokenize_res_transformer,
     void_req_transformer, void_res_transformer,
+};
+use crate::services::payouts::{
+    payout_create_req_transformer, payout_create_res_transformer,
 };
 
 // accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.

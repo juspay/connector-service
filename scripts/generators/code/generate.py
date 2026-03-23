@@ -140,37 +140,33 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
     return rpcs
 
 
-def parse_service_flows(services_dir: Path) -> set[str]:
+def parse_service_flows(services_dir: Path) -> dict[str, str]:
     """
     Scan all .rs files in services directory for every req_transformer! invocation.
     Captures the flow name from `fn_name: {flow}_req_transformer`.
     """
-    flows = set()
+    flows = {}
     for f in services_dir.glob("*.rs"):
+        module_name = f.stem
         text = f.read_text()
-        flows.update(
-            m.group(1)
-            for m in re.finditer(
-                r"fn_name:\s*(\w+)_req_transformer\b", text
-            )
-        )
+        for m in re.finditer(r"fn_name:\s*(\w+)_req_transformer\b", text):
+            flows[m.group(1)] = module_name
     return flows
 
 
-def parse_single_flows(services_dir: Path) -> set[str]:
+def parse_single_flows(services_dir: Path) -> dict[str, str]:
     """
     Scan all .rs files in services directory for hand-written single-step transformers.
     These are `pub fn {flow}_transformer` functions that are NOT req/res macros —
     they take the request directly and return the response without an HTTP round-trip
     (e.g. webhook processing via `handle_transformer`).
     """
-    flows = set()
+    flows = {}
     for f in services_dir.glob("*.rs"):
+        module_name = f.stem
         text = f.read_text()
-        flows.update(
-            m.group(1)
-            for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE)
-        )
+        for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE):
+            flows[m.group(1)] = module_name
     return flows
 
 
@@ -192,7 +188,7 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
                 file=sys.stderr,
             )
             continue
-        flows.append({"name": flow, **proto_rpcs[flow]})
+        flows.append({"name": flow, "module": service_flows[flow], **proto_rpcs[flow]})
 
     single_flows = []
     for flow in sorted(single_flow_names):
@@ -202,9 +198,9 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
                 file=sys.stderr,
             )
             continue
-        single_flows.append({"name": flow, **proto_rpcs[flow]})
+        single_flows.append({"name": flow, "module": single_flow_names[flow], **proto_rpcs[flow]})
 
-    implemented = service_flows | single_flow_names
+    implemented = set(service_flows.keys()) | set(single_flow_names.keys())
     unimplemented = sorted(set(proto_rpcs) - implemented)
     if unimplemented:
         print(f"  Proto RPCs not yet implemented (skipped): {unimplemented}")
@@ -361,25 +357,52 @@ def gen_kotlin(flows: list[dict], single_flows: list[dict] = []) -> None:
 
 def gen_rust_handlers(flows: list[dict]) -> None:
     """Generate _generated_flow_registrations.rs — included by handlers/payments.rs."""
-    all_types = sorted({t for f in flows for t in (f["request"], f["response"])})
+    modules = {}
+    for f in flows:
+        mod = f["module"]
+        if mod not in modules:
+            modules[mod] = set()
+        modules[mod].add(f["request"])
+        modules[mod].add(f["response"])
+
+    modules_sorted = {}
+    for mod in modules:
+        modules_sorted[mod] = sorted(modules[mod])
+
+    flows_by_module = {}
+    for f in flows:
+        mod = f["module"]
+        if mod not in flows_by_module:
+            flows_by_module[mod] = []
+        flows_by_module[mod].append(f)
 
     render(
         "rust/handlers.rs.j2",
         RUST_HANDLERS_OUT,
         flows=flows,
-        all_types=all_types,
+        modules=modules_sorted,
+        flows_by_module=flows_by_module,
     )
 
 
 def gen_rust_ffi_flows(flows: list[dict]) -> None:
     """Generate _generated_ffi_flows.rs — included by bindings/uniffi.rs."""
-    req_types = sorted({f["request"] for f in flows})
+    modules_req = {}
+    for f in flows:
+        mod = f["module"]
+        if mod not in modules_req:
+            modules_req[mod] = set()
+        modules_req[mod].add(f["request"])
+
+    modules_req_sorted = {}
+    for mod in modules_req:
+        modules_req_sorted[mod] = sorted(modules_req[mod])
 
     render(
         "rust/ffi_flows.rs.j2",
         RUST_FFI_FLOWS_OUT,
         flows=flows,
-        req_types=req_types,
+        modules_req=modules_req_sorted,
     )
 
 

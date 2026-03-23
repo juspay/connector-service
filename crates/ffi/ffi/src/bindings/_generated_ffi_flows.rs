@@ -1,5 +1,5 @@
 // AUTO-GENERATED — do not edit by hand.
-// Source: services.proto ∩ services/payments.rs  |  Regenerate: make generate
+// Source: services.proto ∩ services/*.rs  |  Regenerate: make generate
 
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest,
@@ -20,9 +20,12 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest,
     PaymentServiceSetupRecurringRequest,
     PaymentServiceVoidRequest,
-    PayoutServiceCreateRequest,
     RecurringPaymentServiceChargeRequest,
 };
+use grpc_api_types::payouts::{
+    PayoutServiceCreateRequest,
+};
+
 use crate::handlers::payments::{
     accept_req_handler, accept_res_handler,
     authenticate_req_handler, authenticate_res_handler,
