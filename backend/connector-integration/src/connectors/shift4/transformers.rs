@@ -12,7 +12,7 @@ use domain_types::{
     payment_method_data::{
         BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -29,12 +29,12 @@ pub struct Shift4AuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for Shift4AuthType {
+impl TryFrom<&ConnectorSpecificConfig> for Shift4AuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Shift4 { api_key } => Ok(Self {
+            ConnectorSpecificConfig::Shift4 { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
@@ -244,7 +244,7 @@ impl<T: PaymentMethodDataTypes>
                     })
                     .ok_or_else(|| {
                         error_stack::report!(errors::ConnectorError::MissingRequiredField {
-                            field_name: "cardholder_name"
+                            field_name: "billing_address.first_name"
                         })
                     })?;
 

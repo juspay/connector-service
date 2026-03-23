@@ -28,7 +28,7 @@ use domain_types::{
     },
     errors::{self},
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -317,7 +317,7 @@ macros::macro_connector_implementation!(
             // Get order_id from reference_id (stored after CreateOrder via set_order_reference_id)
             let order_id = req.resource_common_data.reference_id
                 .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "reference_id" })?;
+                .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "merchant_order_id" })?;
             Ok(format!("{}/pa/payment_intents/{}/confirm", &req.resource_common_data.connectors.airwallex.base_url, order_id))
         }
     }
@@ -464,7 +464,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = airwallex::AirwallexAuthType::try_from(&req.connector_auth_type)
+            let auth = airwallex::AirwallexAuthType::try_from(&req.connector_config)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
             Ok(vec![
                 (
@@ -743,7 +743,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         // Note: This method should not be used for OAuth-based connectors like Airwallex
         // Use build_payment_headers or build_refund_headers instead for OAuth flows

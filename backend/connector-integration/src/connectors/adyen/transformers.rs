@@ -24,12 +24,12 @@ use domain_types::{
     errors,
     payment_method_data::{
         ApplePayPaymentData, BankDebitData, BankRedirectData, BankTransferData, Card,
-        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, PayLaterData,
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData, VoucherNextStepData,
-        WalletData,
+        CardRedirectData, DefaultPCIHolder, GiftCardData, GpayTokenizationData, NetworkTokenData,
+        PayLaterData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VoucherData,
+        VoucherNextStepData, WalletData,
     },
     router_data::{
-        ConnectorResponseData, ConnectorSpecificAuth, ErrorResponse,
+        ConnectorResponseData, ConnectorSpecificConfig, ErrorResponse,
         ExtendedAuthorizationResponseData,
     },
     router_data_v2::RouterDataV2,
@@ -174,7 +174,9 @@ pub struct AdyenNetworkTokenData {
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
     holder_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     brand: Option<CardBrand>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     network_payment_reference: Option<Secret<String>>,
 }
 
@@ -1293,14 +1295,15 @@ pub struct AdyenAuthType {
     pub(super) review_key: Option<Secret<String>>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for AdyenAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for AdyenAuthType {
     type Error = errors::ConnectorError;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Adyen {
+            ConnectorSpecificConfig::Adyen {
                 api_key,
                 merchant_account,
                 review_key,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 merchant_account: merchant_account.to_owned(),
@@ -1360,6 +1363,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             network_payment_reference: None,
         };
         Ok(Self::AdyenCard(Box::new(adyen_card)))
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(&NetworkTokenData, Option<Secret<String>>)> for AdyenPaymentMethod<T>
+{
+    type Error = Error;
+    fn try_from(
+        (token_data, card_holder_name): (&NetworkTokenData, Option<Secret<String>>),
+    ) -> Result<Self, Self::Error> {
+        let adyen_network_token = AdyenNetworkTokenData {
+            number: token_data.get_network_token(),
+            expiry_month: token_data.get_network_token_expiry_month(),
+            expiry_year: token_data.get_expiry_year_4_digit(),
+            holder_name: card_holder_name,
+            brand: None,                     // Only required for NTI mandate payments
+            network_payment_reference: None, // Only for mandate payments
+        };
+        Ok(Self::NetworkToken(Box::new(adyen_network_token)))
     }
 }
 
@@ -1479,7 +1501,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | WalletData::WeChatPayQr(_)
             | WalletData::CashappQr(_)
             | WalletData::Mifinity(_)
-            | WalletData::BluecodeRedirect { .. } => Err(errors::ConnectorError::NotImplemented(
+            | WalletData::BluecodeRedirect { .. }
+            | WalletData::MbWay(_)
+            | WalletData::Satispay(_)
+            | WalletData::Wero(_) => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }
@@ -2002,7 +2027,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, card_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let (recurring_processing_model, store_payment_method, shopper_reference) =
             get_recurring_processing_model(&item.router_data)?;
@@ -2176,7 +2201,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, wallet_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((wallet_data, &item.router_data))?,
         ));
@@ -2343,7 +2368,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, bank_redirect_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let (recurring_processing_model, store_payment_method, shopper_reference) =
             get_recurring_processing_model(&item.router_data)?;
@@ -2464,7 +2489,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, bank_debit_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let (recurring_processing_model, store_payment_method, shopper_reference) =
             get_recurring_processing_model(&item.router_data)?;
@@ -2604,7 +2629,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, bank_transfer_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
@@ -2756,7 +2781,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, card_redirect_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
@@ -2868,7 +2893,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, gift_card_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from(gift_card_data)?,
         ));
@@ -2955,6 +2980,146 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
+        &NetworkTokenData,
+    )> for AdyenPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+            &NetworkTokenData,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, token_data) = value;
+        let amount = get_amount_data(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let (recurring_processing_model, store_payment_method, shopper_reference) =
+            get_recurring_processing_model(&item.router_data)?;
+
+        let return_url = item.router_data.request.get_router_return_url()?;
+
+        let billing_address =
+            get_address_info(item.router_data.resource_common_data.get_optional_billing())
+                .and_then(Result::ok);
+
+        let card_holder_name = item
+            .router_data
+            .resource_common_data
+            .get_optional_billing_full_name();
+
+        let additional_data = get_additional_data(&item.router_data);
+
+        let adyen_metadata =
+            get_adyen_metadata(item.router_data.request.metadata.clone().expose_option());
+        let store = adyen_metadata.store.clone();
+        let device_fingerprint = adyen_metadata.device_fingerprint.clone();
+        let platform_chargeback_logic = adyen_metadata.platform_chargeback_logic.clone();
+        let country_code =
+            get_country_code(item.router_data.resource_common_data.get_optional_billing());
+
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((token_data, card_holder_name))?,
+        ));
+
+        // Cryptogram is REQUIRED for network token payments
+        let cryptogram =
+            token_data
+                .get_cryptogram()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "network_token_data.token_cryptogram",
+                })?;
+
+        let mpi_data = Some(AdyenMpiData {
+            directory_response: common_enums::TransactionStatus::Success,
+            authentication_response: common_enums::TransactionStatus::Success,
+            cavv: None,
+            token_authentication_verification_value: Some(cryptogram),
+            eci: Some("02".to_string()),
+            ds_trans_id: None,
+            three_ds_version: None,
+            challenge_cancel: None,
+            risk_score: None,
+            cavv_algorithm: None,
+        });
+
+        Ok(Self {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: get_browser_info(&item.router_data)?,
+            additional_data,
+            mpi_data,
+            telephone_number: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_phone_number(),
+            shopper_name: get_shopper_name(
+                item.router_data.resource_common_data.get_optional_billing(),
+            ),
+            shopper_email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
+            shopper_locale: item.router_data.request.locale.clone(),
+            social_security_number: None,
+            billing_address,
+            delivery_address: get_address_info(
+                item.router_data
+                    .resource_common_data
+                    .get_optional_shipping(),
+            )
+            .and_then(Result::ok),
+            country_code,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: get_shopper_statement(&item.router_data),
+            shopper_ip: item.router_data.request.get_ip_address_as_optional(),
+            merchant_order_reference: item.router_data.request.merchant_order_id.clone(),
+            store,
+            splits: None,
+            device_fingerprint,
+            metadata: item
+                .router_data
+                .request
+                .metadata
+                .clone()
+                .map(|value| Secret::new(filter_adyen_metadata(value.expose()))),
+            platform_chargeback_logic,
+            session_validity: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
         &PayLaterData,
     )> for AdyenPaymentRequest<T>
 {
@@ -2976,7 +3141,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let (item, pay_later_data) = value;
         let payment_method = AdyenPaymentMethod::try_from((&item.router_data, pay_later_data))?;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let return_url = item.router_data.request.get_router_return_url()?;
         let additional_data = get_additional_data(&item.router_data);
@@ -3095,7 +3260,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, voucher_data) = value;
         let amount = get_amount_data(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((voucher_data, &item.router_data))?,
         ));
@@ -3318,6 +3483,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 PaymentMethodData::PayLater(ref pay_later_data) => {
                     Self::try_from((item, pay_later_data))
                 }
+                PaymentMethodData::NetworkToken(ref token_data) => {
+                    Self::try_from((item, token_data))
+                }
                 PaymentMethodData::Crypto(_)
                 | PaymentMethodData::MandatePayment
                 | PaymentMethodData::Reward
@@ -3325,7 +3493,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | PaymentMethodData::Upi(_)
                 | PaymentMethodData::OpenBanking(_)
                 | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
-                | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(errors::ConnectorError::NotImplemented(
                     "payment method".into(),
@@ -3356,7 +3523,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .encoded_data
             .clone()
             .get_required_value("encoded_data")
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::MissingRequiredField {
+                field_name: "encoded_data: AdyenRedirectRequestTypes",
+            })?;
         let adyen_redirection_type =
             serde_urlencoded::from_str::<AdyenRedirectRequestTypes>(encoded_data.as_str())
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
@@ -3403,7 +3572,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
             reference: item
@@ -5186,7 +5355,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
 
         Ok(Self {
             merchant_account: auth_type.merchant_account,
@@ -5255,7 +5424,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let reference = match item.router_data.request.multiple_capture_data.clone() {
             // if multiple capture request, send capture_id as our reference for the capture
             Some(multiple_capture_request_data) => multiple_capture_request_data.capture_reference,
@@ -5360,7 +5529,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let (item, card_data) = value;
         let amount = get_amount_data_for_setup_mandate(&item);
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let shopper_reference = match item
             .router_data
@@ -5806,7 +5975,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             currency: item.router_data.request.currency,
             value: item.router_data.request.minor_amount,
         };
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
         let shopper_interaction = AdyenShopperInteraction::ContinuedAuthentication;
         let (recurring_processing_model, store_payment_method, shopper_reference) =
             get_recurring_processing_model_for_repeat_payment(&item.router_data)?;
@@ -6017,7 +6186,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_config)?;
 
         Ok(Self {
             dispute_psp_reference: item
@@ -6219,7 +6388,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_config)?;
 
         Ok(Self {
             defense_documents: get_defence_documents(item.router_data.request.clone()).ok_or(
@@ -6330,7 +6499,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_config)?;
 
         Ok(Self {
             dispute_psp_reference: item.router_data.request.connector_dispute_id.clone(),

@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
         generate_accept_dispute_response, generate_defend_dispute_response,
@@ -109,7 +109,7 @@ impl DisputeService for Disputes {
                         connector,
                         request_id,
                         lineage_ids,
-                        connector_auth_type,
+                        connector_config,
                         reference_id,
                         resource_id,
                         shadow_mode,
@@ -129,11 +129,15 @@ impl DisputeService for Disputes {
                     let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
-                        payload.clone(),
-                        config.connectors.clone(),
-                    ))
-                    .map_err(|e| e.into_grpc_status())?;
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
+                    let dispute_flow_data =
+                        DisputeFlowData::foreign_try_from((payload.clone(), connectors))
+                            .map_err(|e| e.into_grpc_status())?;
 
                     let router_data: RouterDataV2<
                         SubmitEvidence,
@@ -143,7 +147,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type,
+                        connector_config,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -323,7 +327,7 @@ impl DisputeService for Disputes {
                         connector,
                         request_id,
                         lineage_ids,
-                        connector_auth_type,
+                        connector_config,
                         reference_id,
                         resource_id,
                         shadow_mode,
@@ -344,11 +348,15 @@ impl DisputeService for Disputes {
                     let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?;
 
-                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
-                        payload.clone(),
-                        config.connectors.clone(),
-                    ))
-                    .map_err(|e| e.into_grpc_status())?;
+                    let connectors = utils::connectors_with_connector_config_overrides(
+                        &connector_config,
+                        &config,
+                    )
+                    .into_grpc_status()?;
+
+                    let dispute_flow_data =
+                        DisputeFlowData::foreign_try_from((payload.clone(), connectors))
+                            .map_err(|e| e.into_grpc_status())?;
 
                     let router_data: RouterDataV2<
                         Accept,
@@ -358,7 +366,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type,
+                        connector_config,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -443,8 +451,7 @@ impl DisputeService for Disputes {
             |request_data| {
                 async move {
                     let connector = request_data.extracted_metadata.connector;
-                    let connector_auth_details =
-                        request_data.extracted_metadata.connector_auth_type;
+                    let connector_config = request_data.extracted_metadata.connector_config;
                     let payload = request_data.payload;
                     let request_details = payload
                         .request_details
@@ -471,7 +478,7 @@ impl DisputeService for Disputes {
                         .verify_webhook_source(
                             request_details.clone(),
                             webhook_secrets.clone(),
-                            Some(connector_auth_details.clone()),
+                            Some(connector_config.clone()),
                         )
                         .switch()
                         .map_err(|e| e.into_grpc_status())?;
@@ -480,7 +487,7 @@ impl DisputeService for Disputes {
                         connector_data,
                         request_details,
                         webhook_secrets,
-                        Some(connector_auth_details),
+                        Some(connector_config),
                     )
                     .await
                     .map_err(|e| e.into_grpc_status())?;
@@ -503,11 +510,11 @@ async fn get_disputes_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorSpecificAuth>,
+    connector_config: Option<ConnectorSpecificConfig>,
 ) -> CustomResult<EventResponse, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_dispute_webhook(request_details, webhook_secrets, connector_config)
         .switch()?;
 
     // Generate response

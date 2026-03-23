@@ -17,7 +17,7 @@ use domain_types::{
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -119,12 +119,12 @@ pub struct StaxAuthType {
     pub api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for StaxAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for StaxAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Stax { api_key } => Ok(Self {
+            ConnectorSpecificConfig::Stax { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
@@ -815,10 +815,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        if item.router_data.request.email.is_none() && item.router_data.request.name.is_none() {
+        if item.router_data.request.email.is_none() {
             Err(errors::ConnectorError::MissingRequiredField {
-                field_name: "email or name",
+                field_name: "email",
             })?
+        } else if item.router_data.request.name.is_none() {
+            Err(errors::ConnectorError::MissingRequiredField { field_name: "name" })?
         } else {
             Ok(Self {
                 email: item

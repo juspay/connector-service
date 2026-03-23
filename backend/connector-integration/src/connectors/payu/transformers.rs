@@ -7,7 +7,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::AuthoriseIntegrityObject,
     router_response_types::RedirectForm,
@@ -75,14 +75,15 @@ pub struct PayuAuthType {
     pub api_secret: Secret<String>, // Merchant salt for signature
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for PayuAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for PayuAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Payu {
+            ConnectorSpecificConfig::Payu {
                 api_key,
                 api_secret,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
@@ -299,7 +300,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .change_context(ConnectorError::AmountConversionFailed)?;
 
         // Extract authentication
-        let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = PayuAuthType::try_from(&router_data.connector_config)?;
 
         // Determine payment flow based on payment method
         let (pg, bankcode, vpa, s2s_flow) = determine_upi_flow(&router_data.request)?;
@@ -463,7 +464,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         // Extract authentication
-        let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = PayuAuthType::try_from(&router_data.connector_config)?;
 
         // Extract transaction ID from connector_transaction_id
         let transaction_id = router_data

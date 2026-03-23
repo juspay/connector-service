@@ -3,7 +3,6 @@
 use common_utils::errors::ErrorSwitch;
 // use api_models::errors::types::{ Extra};
 use strum::Display;
-
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
@@ -85,6 +84,15 @@ impl ApplicationErrorResponse {
             sub_code: "MISSING_REQUIRED_FIELD".to_owned(),
             error_identifier: 400,
             error_message: format!("Missing required param: {field_name}"),
+            error_object: None,
+        })
+    }
+
+    pub fn empty_field_error(field_name: &str) -> Self {
+        Self::BadRequest(ApiError {
+            sub_code: format!("INVALID_{}", field_name.to_uppercase()),
+            error_identifier: 400,
+            error_message: format!("{} cannot be empty", field_name),
             error_object: None,
         })
     }
@@ -874,8 +882,8 @@ pub enum ConnectorError {
     FailedToObtainCertificateKey,
     #[error("Failed to verify source of the response")]
     SourceVerificationFailed,
-    #[error("Failed to decode message")]
-    DecodingFailed,
+    #[error("Failed to decode message: {0:?}")]
+    DecodingFailed(Option<String>),
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
@@ -901,6 +909,8 @@ pub enum ConnectorError {
     WebhooksNotImplemented,
     #[error("Failed to decode webhook event body")]
     WebhookBodyDecodingFailed,
+    #[error("Failed to decode webhook")]
+    WebhookDecodingFailed,
     #[error("Signature not found for incoming webhook")]
     WebhookSignatureNotFound,
     #[error("Failed to verify webhook source")]
@@ -946,7 +956,7 @@ pub enum ConnectorError {
         message: String,
         connector: &'static str,
     },
-    #[error("Invalid Configuration")]
+    #[error("Invalid Configuration: {config}")]
     InvalidConnectorConfig { config: &'static str },
     #[error("Failed to convert amount to required type")]
     AmountConversionFailed,

@@ -13,7 +13,7 @@ use domain_types::{
         ApplePayWalletData, BankRedirectData, Card, PaymentMethodData, PaymentMethodDataTypes,
         RawCardNumber, WalletData,
     },
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
@@ -240,13 +240,14 @@ pub struct NexinetsAuthType {
     pub(super) api_key: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for NexinetsAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for NexinetsAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Nexinets {
+            ConnectorSpecificConfig::Nexinets {
                 merchant_id,
                 api_key,
+                ..
             } => {
                 let auth_key = format!("{}:{}", merchant_id.peek(), api_key.peek());
                 let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
@@ -833,7 +834,10 @@ fn get_wallet_details<
         | WalletData::CashappQr(_)
         | WalletData::SwishQr(_)
         | WalletData::Mifinity(_)
-        | WalletData::RevolutPay(_) => Err(ConnectorError::NotImplemented(
+        | WalletData::RevolutPay(_)
+        | WalletData::MbWay(_)
+        | WalletData::Satispay(_)
+        | WalletData::Wero(_) => Err(ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("nexinets"),
         ))?,
     }

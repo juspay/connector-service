@@ -8,7 +8,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -123,15 +123,16 @@ pub struct BamboraapacAuthType {
     pub account_number: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for BamboraapacAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for BamboraapacAuthType {
     type Error = ConnectorError;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Bamboraapac {
+            ConnectorSpecificConfig::Bamboraapac {
                 username,
                 password,
                 account_number,
+                ..
             } => Ok(Self {
                 username: username.clone(),
                 password: password.clone(),
@@ -439,7 +440,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
         // Extract card data
         let card_data = match &router_data.request.payment_method_data {
@@ -477,7 +478,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             cvn: card_data.card_cvc.clone(),
             card_holder_name: card_data.card_holder_name.clone().ok_or(
                 ConnectorError::MissingRequiredField {
-                    field_name: "card_holder_name",
+                    field_name: "payment_method.card.card_holder_name",
                 },
             )?,
             username: auth.username,
@@ -597,7 +598,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
         // Get the connector transaction ID (receipt) from the payment attempt
         let receipt = match &router_data.request.connector_transaction_id {
@@ -717,7 +718,7 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     fn try_from(
         router_data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
         // Get the connector transaction ID to query
         let receipt = router_data
@@ -877,7 +878,7 @@ impl
             RefundsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
         // Get the connector transaction ID to refund
         let receipt = router_data.request.connector_transaction_id.clone();
@@ -994,7 +995,7 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
     fn try_from(
         router_data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> Result<Self, Self::Error> {
-        let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
         // Get the refund connector transaction ID to query
         let receipt = router_data.request.connector_refund_id.clone();
@@ -1190,7 +1191,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
         // Extract card data from payment method data
         let card_data = match &router_data.request.payment_method_data {
@@ -1224,7 +1225,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             exp_year: card_data.get_expiry_year_4_digit(),
             card_holder_name: card_data.card_holder_name.clone().ok_or(
                 ConnectorError::MissingRequiredField {
-                    field_name: "card_holder_name",
+                    field_name: "payment_method.card.card_holder_name",
                 },
             )?,
             username: auth.username,
@@ -1383,7 +1384,7 @@ impl<
             PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = BamboraapacAuthType::try_from(&router_data.connector_auth_type)?;
+        let auth = BamboraapacAuthType::try_from(&router_data.connector_config)?;
 
         // Extract the card token (customer_id from SetupMandate) from mandate_reference
         let token = match &router_data.request.mandate_reference {

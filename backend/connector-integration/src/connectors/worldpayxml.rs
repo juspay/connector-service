@@ -16,7 +16,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -467,7 +467,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_auth_type)?;
+            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_config)?;
             let mut headers = vec![
                 (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
             ];
@@ -502,7 +502,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_auth_type)?;
+            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_config)?;
             let mut headers = vec![
                 (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
             ];
@@ -537,7 +537,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_auth_type)?;
+            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_config)?;
             let mut headers = vec![
                 (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
             ];
@@ -572,7 +572,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_auth_type)?;
+            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_config)?;
             let mut headers = vec![
                 (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
             ];
@@ -607,7 +607,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_auth_type)?;
+            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_config)?;
             let mut headers = vec![
                 (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
             ];
@@ -642,7 +642,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_auth_type)?;
+            let auth = worldpayxml::WorldpayxmlAuthType::try_from(&req.connector_config)?;
             let mut headers = vec![
                 (headers::CONTENT_TYPE.to_string(), CONTENT_TYPE_XML.to_string().into()),
             ];
@@ -694,7 +694,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = worldpayxml::WorldpayxmlAuthType::try_from(auth_type)?;
         self.build_auth_header(auth)

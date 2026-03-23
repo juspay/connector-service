@@ -91,7 +91,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
     fn get_auth_header(
         &self,
-        auth_type: &domain_types::router_data::ConnectorSpecificAuth,
+        auth_type: &domain_types::router_data::ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = razorpayv2::RazorpayV2AuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
@@ -177,7 +177,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
+        let mut auth_headers = self.get_auth_header(&req.connector_config)?;
         headers.append(&mut auth_headers);
         Ok(headers)
     }
@@ -324,7 +324,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
+        let mut auth_headers = self.get_auth_header(&req.connector_config)?;
         headers.append(&mut auth_headers);
         Ok(headers)
     }
@@ -361,7 +361,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .reference_id
             .as_ref()
             .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
-                field_name: "reference_id",
+                field_name: "merchant_order_id",
             })?
             .clone();
         let converted_amount = self
@@ -655,7 +655,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
+        let mut auth_headers = self.get_auth_header(&req.connector_config)?;
         headers.append(&mut auth_headers);
         Ok(headers)
     }
@@ -770,7 +770,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
+        let mut auth_headers = self.get_auth_header(&req.connector_config)?;
         headers.append(&mut auth_headers);
         Ok(headers)
     }
@@ -851,7 +851,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             headers::CONTENT_TYPE.to_string(),
             "application/json".to_string().into(),
         )];
-        let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
+        let mut auth_headers = self.get_auth_header(&req.connector_config)?;
         headers.append(&mut auth_headers);
         Ok(headers)
     }

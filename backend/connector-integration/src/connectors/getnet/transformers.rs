@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
@@ -65,15 +65,16 @@ pub struct GetnetAuthType {
     pub seller_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for GetnetAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for GetnetAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Getnet {
+            ConnectorSpecificConfig::Getnet {
                 api_key,
                 api_secret,
                 seller_id,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
@@ -227,7 +228,7 @@ impl<T: PaymentMethodDataTypes + fmt::Debug + Sync + Send + 'static + Serialize>
             .clone()
             .or_else(|| item.resource_common_data.get_optional_billing_full_name())
             .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "card_holder_name",
+                field_name: "payment_method.card.card_holder_name",
             })?;
 
         let card = GetnetCard {

@@ -7,7 +7,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    router_data::ConnectorSpecificAuth,
+    router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use error_stack::report;
@@ -26,12 +26,14 @@ pub struct CashfreeAuthType {
     pub secret_key: Secret<String>, // X-Client-Secret
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for CashfreeAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for CashfreeAuthType {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Cashfree { app_id, secret_key } => Ok(Self {
+            ConnectorSpecificConfig::Cashfree {
+                app_id, secret_key, ..
+            } => Ok(Self {
                 app_id: app_id.to_owned(),
                 secret_key: secret_key.to_owned(),
             }),
@@ -482,7 +484,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract payment_session_id from reference_id (set by CreateOrder response)
         let payment_session_id = item.resource_common_data.reference_id.clone().ok_or(
             ConnectorError::MissingRequiredField {
-                field_name: "payment_session_id",
+                field_name: "merchant_order_id",
             },
         )?;
 

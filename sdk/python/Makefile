@@ -1,9 +1,12 @@
-.PHONY: install-deps generate-bindings generate-proto generate-all \
-        generate-flows pack-archive install test-package dist clean
+.PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
+        generate-flows pack-archive install test-package test-composite dist clean
 	#
 # SDK-specific paths (define BEFORE including common.mk)
 MAKEFILE_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 SDK_ROOT     := $(MAKEFILE_DIR)
+
+# Connectors to test (comma-separated, default: stripe)
+CONNECTORS ?= stripe
 
 # Include common SDK build configuration
 include $(SDK_ROOT)/../common.mk
@@ -34,6 +37,15 @@ install-deps:
 	fi
 	@echo "All required tools present."
 
+# ---------------------------------------------------------------------------
+# install-codegen-deps
+# Ensures jinja2 etc. are installed before generate-flows (used by CI and local).
+# Delegates to sdk/Makefile install-deps (idempotent, skips if present).
+# ---------------------------------------------------------------------------
+install-codegen-deps:
+	@$(MAKE) -C $(REPO_ROOT)/sdk install-deps
+
+# ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
 # uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
@@ -85,16 +97,17 @@ generate-proto: install-deps
 # stubs. Proto is generated first to ensure the __init__.py marker exists
 # before the UniFFI wrapper references the package.
 # ---------------------------------------------------------------------------
-generate-all: generate-proto generate-bindings
+generate-all: generate-proto generate-bindings generate-flows
 
 # ---------------------------------------------------------------------------
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
 # codegen script. Assumes descriptor is already generated.
+# Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows:
+generate-flows: install-codegen-deps
 	@echo "Generating Python flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang python
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang python
 	@echo "Python flow methods generated."
 
 # ---------------------------------------------------------------------------
@@ -129,13 +142,40 @@ test-package: generate-all pack-archive
 	@rm -rf /tmp/test-hyperswitch-py
 	@mkdir -p /tmp/test-hyperswitch-py
 	@cp $(SDK_ROOT)/smoke-test/test_smoke.py /tmp/test-hyperswitch-py/
+	@# Copy credentials file if it exists
+	@if [ -f $(REPO_ROOT)/creds.json ]; then \
+		cp $(REPO_ROOT)/creds.json /tmp/test-hyperswitch-py/; \
+	else \
+		echo "  Note: creds.json not found, test will use placeholder credentials"; \
+	fi
 	@python3 -m pip install \
 		--target /tmp/test-hyperswitch-py \
 		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
 		--force-reinstall
-	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke.py --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
+	@echo "Running composite flow test..."
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.py /tmp/test-hyperswitch-py/
+	@cd /tmp/test-hyperswitch-py && python3 test_smoke_composite.py
 	@rm -rf /tmp/test-hyperswitch-py
 	@echo "Package test passed."
+
+# ---------------------------------------------------------------------------
+# test-composite
+# Runs the composite flow smoke test (access token + authorize flow).
+# Tests the PayPal access token composite flow in an isolated environment.
+# ---------------------------------------------------------------------------
+test-composite: generate-all pack-archive
+	@echo "Testing composite flow in isolation..."
+	@rm -rf /tmp/test-hyperswitch-py-composite
+	@mkdir -p /tmp/test-hyperswitch-py-composite
+	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.py /tmp/test-hyperswitch-py-composite/
+	@python3 -m pip install \
+		--target /tmp/test-hyperswitch-py-composite \
+		$(PACKAGE_DIR)/hyperswitch_payments-0.1.0-py3-none-any.whl \
+		--force-reinstall
+	@cd /tmp/test-hyperswitch-py-composite && python3 test_smoke_composite.py
+	@rm -rf /tmp/test-hyperswitch-py-composite
+	@echo "Composite flow test passed."
 
 # ---------------------------------------------------------------------------
 # dist

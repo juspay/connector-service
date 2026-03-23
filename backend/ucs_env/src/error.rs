@@ -135,7 +135,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::MissingConnectorMandateMetadata
             | Self::IntegrityCheckFailed { .. }
             | Self::SourceVerificationFailed
-            | Self::DecodingFailed
+            | Self::DecodingFailed(..)
             | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),
@@ -168,6 +168,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             }),
             Self::MissingApplePayTokenData
             | Self::WebhookBodyDecodingFailed
+            | Self::WebhookDecodingFailed
             | Self::WebhookSourceVerificationFailed
             | Self::WebhookVerificationSecretInvalid => {
                 ApplicationErrorResponse::BadRequest(ApiError {
@@ -330,6 +331,33 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             captured_amount: None,
             authorized_amount: None,
             connector_response: None,
+        }
+    }
+}
+
+/// Convert ApplicationErrorResponse to proto IntegrationError
+impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApplicationErrorResponse {
+    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::IntegrationError {
+            error_message: api_error.error_message.clone(),
+            error_code: api_error.sub_code.clone(),
+            suggested_action: None,
+            doc_url: None,
+        }
+    }
+}
+
+/// Convert ApplicationErrorResponse to proto ConnectorResponseTransformationError
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ApplicationErrorResponse
+{
+    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::ConnectorResponseTransformationError {
+            error_message: api_error.error_message.clone(),
+            error_code: api_error.sub_code.clone(),
+            http_status_code: Some(api_error.error_identifier.into()),
         }
     }
 }

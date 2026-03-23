@@ -6,7 +6,7 @@ use common_utils::{
 use domain_types::{
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
     payment_address::RedirectionResponse,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     types::Connectors,
 };
 use hyperswitch_masking;
@@ -23,7 +23,7 @@ pub trait ConnectorCommon {
     /// HTTP header used for authorization.
     fn get_auth_header(
         &self,
-        _auth_type: &ConnectorSpecificAuth,
+        _auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<
         Vec<(String, hyperswitch_masking::Maskable<String>)>,
         domain_types::errors::ConnectorError,

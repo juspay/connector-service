@@ -31,7 +31,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
@@ -261,7 +261,7 @@ macros::create_all_prerequisites!(
                 ),
                 ("WP-API-Version".to_string(), "2024-06-01".into()),
             ];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.connector_config)?;
             headers.append(&mut api_key);
             Ok(headers)
         }
@@ -280,18 +280,18 @@ macros::create_all_prerequisites!(
             &req.resource_common_data.connectors.worldpay.base_url
         }
 
-        /// Helper function to extract link_data from connector_meta_data
+        /// Helper function to extract link_data from connector_feature_data
         /// Used by PreAuthenticate and PostAuthenticate flows to avoid code duplication
         pub fn extract_link_data_from_metadata<F, Req, Res>(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
             let metadata_obj = req
                 .resource_common_data
-                .connector_meta_data
+                .connector_feature_data
                 .as_ref()
                 .and_then(|metadata| metadata.peek().as_object())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data",
+                    field_name: "connector_feature_data",
                 })?;
 
             metadata_obj
@@ -299,7 +299,7 @@ macros::create_all_prerequisites!(
                 .and_then(|value| value.as_str())
                 .map(|s| s.to_string())
                 .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_meta_data.link_data",
+                    field_name: "connector_feature_data.link_data",
                 }.into())
         }
     }
@@ -326,7 +326,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorSpecificAuth,
+        auth_type: &ConnectorSpecificConfig,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = worldpay::WorldpayAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;

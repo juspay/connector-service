@@ -21,7 +21,7 @@ use domain_types::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         WalletData as WalletDataPaymentMethod,
     },
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils::{self, ForeignTryFrom},
@@ -228,7 +228,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = NovalnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = NovalnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let merchant = NovalnetPaymentsRequestMerchant {
             signature: auth.product_activation_key,
@@ -470,7 +470,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::CashappQr(_)
                 | WalletDataPaymentMethod::SwishQr(_)
                 | WalletDataPaymentMethod::WeChatPayQr(_)
-                | WalletDataPaymentMethod::Mifinity(_) => Err(ConnectorError::NotImplemented(
+                | WalletDataPaymentMethod::Mifinity(_)
+                | WalletDataPaymentMethod::MbWay(_)
+                | WalletDataPaymentMethod::Satispay(_)
+                | WalletDataPaymentMethod::Wero(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 )
                 .into()),
@@ -584,14 +587,15 @@ pub struct NovalnetAuthType {
     pub(super) tariff_id: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for NovalnetAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for NovalnetAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificAuth::Novalnet {
+            ConnectorSpecificConfig::Novalnet {
                 product_activation_key,
                 payment_access_key,
                 tariff_id,
+                ..
             } => Ok(Self {
                 product_activation_key: product_activation_key.to_owned(),
                 payment_access_key: payment_access_key.to_owned(),
@@ -1922,7 +1926,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
-        let auth = NovalnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = NovalnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let merchant = NovalnetPaymentsRequestMerchant {
             signature: auth.product_activation_key,
@@ -2154,7 +2158,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 | WalletDataPaymentMethod::CashappQr(_)
                 | WalletDataPaymentMethod::SwishQr(_)
                 | WalletDataPaymentMethod::WeChatPayQr(_)
-                | WalletDataPaymentMethod::Mifinity(_) => Err(ConnectorError::NotImplemented(
+                | WalletDataPaymentMethod::Mifinity(_)
+                | WalletDataPaymentMethod::MbWay(_)
+                | WalletDataPaymentMethod::Satispay(_)
+                | WalletDataPaymentMethod::Wero(_) => Err(ConnectorError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("novalnet"),
                 ))?,
             },
@@ -2190,7 +2197,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = NovalnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = NovalnetAuthType::try_from(&item.router_data.connector_config)?;
 
         let merchant = NovalnetPaymentsRequestMerchant {
             signature: auth.product_activation_key,

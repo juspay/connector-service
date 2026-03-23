@@ -113,7 +113,6 @@ default_impl_verify_webhook_source_v2!(
     Silverflow,
     Stax,
     Stripe,
-    Truelayer,
     Trustpay,
     Trustpayments,
     Tsys,
@@ -123,6 +122,7 @@ default_impl_verify_webhook_source_v2!(
     Worldpayvantiv,
     Worldpayxml,
     Xendit,
-    Zift
+    Zift,
+    Ppro
 );
 // PayPal has its own implementation in paypal.rs

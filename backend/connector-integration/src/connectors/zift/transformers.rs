@@ -15,7 +15,7 @@ use domain_types::{
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorSpecificAuth, ErrorResponse},
+    router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
@@ -352,13 +352,14 @@ pub struct CardVerificationDetails<T: PaymentMethodDataTypes + Serialize + Debug
     csc: Secret<String>,
 }
 
-impl TryFrom<&ConnectorSpecificAuth> for ZiftAuthType {
+impl TryFrom<&ConnectorSpecificConfig> for ZiftAuthType {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(auth_type: &ConnectorSpecificAuth) -> Result<Self, Self::Error> {
-        if let ConnectorSpecificAuth::Zift {
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        if let ConnectorSpecificConfig::Zift {
             user_name,
             password,
             account_id,
+            ..
         } = auth_type
         {
             Ok(Self {
@@ -421,7 +422,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data.clone();
         let request_data = &router_data.request;
-        let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
         let request_type = if item.router_data.request.is_auto_capture()? {
             RequestType::Sale
         } else {
@@ -634,7 +635,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data.clone();
         let request_data = &router_data.request;
-        let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
         let request_type = if item.router_data.request.is_auto_capture()? {
             RequestType::Sale
         } else {
@@ -847,7 +848,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
         let transaction_id = item
             .router_data
             .request
@@ -881,7 +882,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
         let amount = item
             .connector
             .amount_converter
@@ -987,7 +988,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             }
             .into());
         }
-        let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
 
         let (transaction_industry_type, transaction_category_code, payment_method_details) =
             match &item.router_data.request.payment_method_data {
@@ -1116,7 +1117,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
         Ok(Self {
             request_type: RequestType::Void,
             auth,
@@ -1191,7 +1192,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth = ZiftAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let auth = ZiftAuthType::try_from(&item.router_data.connector_config)?;
         let amount = item
             .connector
             .amount_converter
