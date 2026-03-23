@@ -13,7 +13,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{BankRedirectData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -263,128 +263,154 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let auth_details = TrustlyAuthType::try_from(&item.router_data.connector_config)?;
+        match &item.router_data.request.payment_method_data {
+            PaymentMethodData::BankRedirect(BankRedirectData::Trustly { .. }) => {
+                let auth_details = TrustlyAuthType::try_from(&item.router_data.connector_config)?;
 
-        let return_url = item
-            .router_data
-            .resource_common_data
-            .return_url
-            .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "return_url",
-            })?;
-        let uuid = uuid::Uuid::new_v4().to_string();
-        let attributes = TrustlyPaymentRequestAttributes {
-            amount: convert_amount(
-                item.connector.amount_converter,
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )?,
-            country: item
-                .router_data
-                .resource_common_data
-                .get_billing_country()
-                .unwrap_or(
-                    item.router_data
-                        .resource_common_data
-                        .get_optional_shipping_country()
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "country",
-                        })?,
-                ),
-            currency: item.router_data.request.currency,
-            email: item
-                .router_data
-                .request
-                .email
-                .clone()
-                .or(item
+                let return_url = item
                     .router_data
                     .resource_common_data
-                    .get_optional_billing_email())
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "email",
-                })?,
-            fail_u_r_l: return_url.clone(),
-            firstname: item
-                .router_data
-                .resource_common_data
-                .get_billing_first_name()?,
-            i_p: item.router_data.request.get_ip_address_as_optional(),
-            lastname: item
-                .router_data
-                .resource_common_data
-                .get_billing_last_name()?,
-            locale: item
-                .router_data
-                .request
-                .get_optional_language_from_browser_info()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "locale",
-                })?
-                .replace('-', "_"),
-            mobile: item
-                .router_data
-                .resource_common_data
-                .address
-                .get_payment_billing()
-                .and_then(|billing| billing.get_phone_with_country_code().ok()),
-            shipping_address_city: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_city(),
-            shipping_address_country: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_country(),
-            shipping_address_line1: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_line1(),
-            shipping_address_line2: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_line2(),
-            shipping_address_postal_code: item
-                .router_data
-                .resource_common_data
-                .get_optional_shipping_zip(),
-            shopper_statement: item.router_data.resource_common_data.get_description()?,
-            success_u_r_l: return_url,
-        };
+                    .return_url
+                    .clone()
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "return_url",
+                    })?;
+                let uuid = uuid::Uuid::new_v4().to_string();
+                let attributes = TrustlyPaymentRequestAttributes {
+                    amount: convert_amount(
+                        item.connector.amount_converter,
+                        item.router_data.request.minor_amount,
+                        item.router_data.request.currency,
+                    )?,
+                    country: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_country()
+                        .unwrap_or(
+                            item.router_data
+                                .resource_common_data
+                                .get_optional_shipping_country()
+                                .ok_or(errors::ConnectorError::MissingRequiredField {
+                                    field_name: "country",
+                                })?,
+                        ),
+                    currency: item.router_data.request.currency,
+                    email: item
+                        .router_data
+                        .request
+                        .email
+                        .clone()
+                        .or(item
+                            .router_data
+                            .resource_common_data
+                            .get_optional_billing_email())
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "email",
+                        })?,
+                    fail_u_r_l: return_url.clone(),
+                    firstname: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_first_name()?,
+                    i_p: item.router_data.request.get_ip_address_as_optional(),
+                    lastname: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_last_name()?,
+                    locale: item
+                        .router_data
+                        .request
+                        .get_optional_language_from_browser_info()
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "locale",
+                        })?
+                        .replace('-', "_"),
+                    mobile: item
+                        .router_data
+                        .resource_common_data
+                        .address
+                        .get_payment_billing()
+                        .and_then(|billing| billing.get_phone_with_country_code().ok()),
+                    shipping_address_city: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_shipping_city(),
+                    shipping_address_country: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_shipping_country(),
+                    shipping_address_line1: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_shipping_line1(),
+                    shipping_address_line2: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_shipping_line2(),
+                    shipping_address_postal_code: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_shipping_zip(),
+                    shopper_statement: item.router_data.resource_common_data.get_description()?,
+                    success_u_r_l: return_url,
+                };
 
-        let data = TrustlyPaymentRequestData {
-            attributes,
-            end_user_i_d: item.router_data.request.get_customer_id()?,
-            message_i_d: item
-                .router_data
-                .resource_common_data
-                .connector_request_reference_id,
-            notification_u_r_l: item.router_data.request.webhook_url.clone().ok_or(
-                errors::ConnectorError::MissingRequiredField {
-                    field_name: "webhook_url",
-                },
-            )?,
-            password: auth_details.password.clone(),
-            username: auth_details.username.clone(),
-        };
+                let data = TrustlyPaymentRequestData {
+                    attributes,
+                    end_user_i_d: item.router_data.request.get_customer_id()?,
+                    message_i_d: item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id,
+                    notification_u_r_l: item.router_data.request.webhook_url.clone().ok_or(
+                        errors::ConnectorError::MissingRequiredField {
+                            field_name: "webhook_url",
+                        },
+                    )?,
+                    password: auth_details.password.clone(),
+                    username: auth_details.username.clone(),
+                };
 
-        let signature = generate_trustly_signature(
-            &TrustlyMethod::Deposit,
-            uuid.as_str(),
-            &data,
-            &auth_details.private_key.expose(),
-        )?;
+                let signature = generate_trustly_signature(
+                    &TrustlyMethod::Deposit,
+                    uuid.as_str(),
+                    &data,
+                    &auth_details.private_key.expose(),
+                )?;
 
-        Ok(Self {
-            method: TrustlyMethod::Deposit,
-            version: TRUSTLY_VERSION.to_string(),
-            params: TrustlyPaymentRequestParams {
-                data,
-                signature: Secret::new(signature),
-                u_u_i_d: uuid,
-            },
-        })
+                Ok(Self {
+                    method: TrustlyMethod::Deposit,
+                    version: TRUSTLY_VERSION.to_string(),
+                    params: TrustlyPaymentRequestParams {
+                        data,
+                        signature: Secret::new(signature),
+                        u_u_i_d: uuid,
+                    },
+                })
+            }
+            PaymentMethodData::Card(_)
+            | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::MobilePayment(_) => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Truelayer"),
+            )
+            .into()),
+        }
     }
 }
 
