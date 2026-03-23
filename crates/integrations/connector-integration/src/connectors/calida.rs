@@ -37,7 +37,7 @@ use domain_types::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
-    errors::ConnectorError,
+    ConnectorRequestError,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -61,6 +61,8 @@ use transformers::*;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
+use domain_types::errors::ResultResponseToRequestExt;
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -92,7 +94,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<bool, ConnectorError> {
+    ) -> CustomResult<bool, ConnectorRequestError> {
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
             None => return Ok(false),
@@ -101,14 +103,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let security_header = request
             .headers
             .get("x-eorder-webhook-signature")
-            .ok_or(ConnectorError::WebhookSignatureNotFound)?
+            .ok_or(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?
             .clone();
 
         let signature = hex::decode(security_header)
-            .change_context(ConnectorError::WebhookSignatureNotFound)?;
+            .change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
 
-        let parsed: serde_json::Value =
-            serde_json::from_slice(&request.body).change_context(ConnectorError::ParsingFailed)?;
+        let parsed: serde_json::Value = serde_json::from_slice(&request.body)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
+            .into_request_err()?;
 
         let sorted_payload = sort_and_minify_json(&parsed)?;
 
@@ -116,7 +119,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
             .map(|_| true)
-            .change_context(ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
 
         Ok(verify)
     }
@@ -126,12 +129,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let request_body_copy = request.body.clone();
         let webhook_body: CalidaWebhookResponse = request
             .body
             .parse_struct("CalidaWebhookResponse")
-            .change_context(ConnectorError::WebhookResourceObjectNotFound)
+            .change_context(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))
             .attach_printable_lazy(|| "Failed to parse Calida payment webhook body structure")?;
 
         let transaction_id = webhook_body.order_id.clone();
@@ -161,7 +164,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<ConnectorError>> {
+    ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
         Ok(EventType::Payment)
     }
 }
@@ -497,7 +500,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -539,9 +542,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = CalidaAuthType::try_from(auth_type)
-            .change_context(ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             format!("token {}", auth.api_key.expose()).into_masked(),
@@ -552,11 +555,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: CalidaErrorResponse = res
             .response
             .parse_struct("CalidaErrorResponse")
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -579,9 +582,9 @@ impl ConnectorValidation for Calida<DefaultPCIHolder> {
         &self,
         _pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData<DefaultPCIHolder>,
-    ) -> CustomResult<(), ConnectorError> {
+    ) -> CustomResult<(), ConnectorRequestError> {
         match pm_data {
-            PaymentMethodData::Card(_) => Err(ConnectorError::NotImplemented(
+            PaymentMethodData::Card(_) => Err(ConnectorRequestError::NotImplemented(
                 "validate_mandate_payment does not support cards".to_string(),
             )
             .into()),
@@ -595,7 +598,7 @@ impl ConnectorValidation for Calida<DefaultPCIHolder> {
         _is_three_ds: bool,
         _status: enums::AttemptStatus,
         _connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
-    ) -> CustomResult<(), ConnectorError> {
+    ) -> CustomResult<(), ConnectorRequestError> {
         Ok(())
     }
 
@@ -620,13 +623,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!(
                 "{}api/{}/order/payin/start",
                 self.connector_base_url_payments(req),
@@ -651,18 +654,18 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let connector_transaction_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
 
             Ok(format!(
                 "{}api/{}/order/{}/status",

@@ -10,7 +10,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
-    errors::ConnectorError,
+    ConnectorRequestError,
     payment_method_data::{
         BankDebitData, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
@@ -20,8 +20,9 @@ use domain_types::{
 };
 
 use crate::types::ResponseRouterData;
-// Alias to make the transition easier
-type HsInterfacesConnectorError = ConnectorError;
+// Aliases to make the transition easier
+type HsInterfacesConnectorRequestError = ConnectorRequestError;
+type HsInterfacesConnectorResponseError = ConnectorResponseError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
@@ -31,8 +32,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 use super::AuthorizedotnetRouterData;
+use domain_types::errors::{ConnectorResponseError, ResultRequestToResponseExt};
 
-type Error = error_stack::Report<ConnectorError>;
+type Error = error_stack::Report<ConnectorRequestError>;
+type ResponseError = error_stack::Report<ConnectorResponseError>;
 
 // Constants
 const MAX_ID_LENGTH: usize = 20;
@@ -69,7 +72,7 @@ fn get_refund_credit_card_payment(
     let metadata = connector_metadata
         .as_ref()
         .ok_or_else(|| {
-            error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+            error_stack::report!(HsInterfacesConnectorRequestError::MissingRequiredField {
                 field_name: "connector_metadata",
             })
         })?
@@ -77,7 +80,7 @@ fn get_refund_credit_card_payment(
 
     // Extract creditCard field (stringified JSON or JSON object)
     let credit_card_value = metadata.get("creditCard").ok_or_else(|| {
-        error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+        error_stack::report!(HsInterfacesConnectorRequestError::MissingRequiredField {
             field_name: "creditCard"
         })
     })?;
@@ -91,11 +94,11 @@ fn get_refund_credit_card_payment(
                     "Failed to parse credit card JSON"
                 );
             })
-            .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?,
+            .change_context(HsInterfacesConnectorRequestError::RequestEncodingFailed)?,
         serde_json::Value::Object(_) => credit_card_value.clone(),
         _ => {
             return Err(error_stack::report!(
-                HsInterfacesConnectorError::MissingRequiredField {
+                HsInterfacesConnectorRequestError::MissingRequiredField {
                     field_name: "creditCard"
                 }
             ))
@@ -106,7 +109,7 @@ fn get_refund_credit_card_payment(
         .get("cardNumber")
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+            error_stack::report!(HsInterfacesConnectorRequestError::MissingRequiredField {
                 field_name: "cardNumber"
             })
         })?
@@ -154,7 +157,7 @@ fn metadata_to_user_fields(
     };
 
     let value = if needs_serialization {
-        serde_json::to_value(meta).change_context(ConnectorError::RequestEncodingFailed)?
+        serde_json::to_value(meta).change_context(ConnectorRequestError::RequestEncodingFailed)?
     } else {
         meta
     };
@@ -214,7 +217,7 @@ pub struct AuthorizedotnetRawCardNumber<T: PaymentMethodDataTypes>(pub RawCardNu
 impl AuthorizedotnetRawCardNumber<DefaultPCIHolder> {
     pub fn from_card_number_string(card_number: String) -> Result<Self, Error> {
         let card_number = cards::CardNumber::from_str(&card_number)
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
         Ok(Self(RawCardNumber(card_number)))
     }
 }
@@ -263,7 +266,7 @@ impl TryFrom<&ConnectorSpecificConfig> for MerchantAuthentication {
                 name: name.clone(),
                 transaction_key: transaction_key.clone(),
             }),
-            _ => Err(error_stack::report!(ConnectorError::FailedToObtainAuthType)),
+            _ => Err(error_stack::report!(ConnectorRequestError::FailedToObtainAuthType)),
         }
     }
 }
@@ -296,7 +299,7 @@ pub enum AuthorizationType {
 }
 
 impl TryFrom<enums::CaptureMethod> for AuthorizationType {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(capture_method: enums::CaptureMethod) -> Result<Self, Self::Error> {
         match capture_method {
@@ -305,7 +308,7 @@ impl TryFrom<enums::CaptureMethod> for AuthorizationType {
                 Ok(Self::Final)
             }
             enums::CaptureMethod::ManualMultiple | enums::CaptureMethod::Scheduled => {
-                Err(error_stack::report!(ConnectorError::NotSupported {
+                Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Capture method not supported".to_string(),
                     connector: "authorizedotnet",
                 }))?
@@ -549,7 +552,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
-            .map_err(|_| error_stack::report!(ConnectorError::RequestEncodingFailed))?;
+            .map_err(|_| error_stack::report!(ConnectorRequestError::RequestEncodingFailed))?;
 
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
@@ -624,7 +627,7 @@ fn create_regular_transaction_request<
                                 .get_optional_billing_full_name()
                         })
                         .ok_or_else(|| {
-                            error_stack::report!(ConnectorError::MissingRequiredField {
+                            error_stack::report!(ConnectorRequestError::MissingRequiredField {
                                 field_name: "bank_account_holder_name",
                             })
                         })?;
@@ -652,14 +655,14 @@ fn create_regular_transaction_request<
                 | BankDebitData::SepaGuaranteedBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. } => {
-                    Err(error_stack::report!(ConnectorError::NotImplemented(
+                    Err(error_stack::report!(ConnectorRequestError::NotImplemented(
                         "SEPA, SEPA Guaranteed, BECS, and BACS bank debits are not supported for authorizedotnet"
                             .to_string(),
                     )))
                 }
             }
         }
-        pm => Err(error_stack::report!(ConnectorError::NotImplemented(
+        pm => Err(error_stack::report!(ConnectorRequestError::NotImplemented(
             format!("Payment method {:?}", pm)
         ))),
     }?;
@@ -672,7 +675,7 @@ fn create_regular_transaction_request<
             TransactionType::AuthCaptureTransaction
         }
         Some(_) => {
-            return Err(error_stack::report!(ConnectorError::NotSupported {
+            return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                 message: "Capture method not supported".to_string(),
                 connector: "authorizedotnet",
             }))
@@ -778,7 +781,7 @@ fn create_regular_transaction_request<
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorError::AmountConversionFailed)
+                .change_context(ConnectorRequestError::AmountConversionFailed)
                 .attach_printable("Failed to convert payment amount for authorize transaction")?,
         ),
         currency_code: Some(currency),
@@ -863,7 +866,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     let mandate_id = connector_mandate_ref
                         .get_connector_mandate_id()
                         .ok_or_else(|| {
-                            error_stack::report!(ConnectorError::MissingRequiredField {
+                            error_stack::report!(ConnectorRequestError::MissingRequiredField {
                                 field_name: "connector_mandate_id"
                             })
                         })?;
@@ -882,7 +885,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             })
                         })
                         .ok_or_else(|| {
-                            error_stack::report!(ConnectorError::MissingRequiredField {
+                            error_stack::report!(ConnectorRequestError::MissingRequiredField {
                                 field_name: "valid mandate_id format (should contain '-')"
                             })
                         })?;
@@ -910,7 +913,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 // Case 3: Network token with NTI - NOT SUPPORTED (same as Hyperswitch)
                 MandateReferenceId::NetworkTokenWithNTI(_) => {
-                    return Err(error_stack::report!(ConnectorError::NotImplemented(
+                    return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
                         "Network token with NTI not supported for authorizedotnet".to_string(),
                     )))
                 }
@@ -940,7 +943,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .clone()
                 .map(serde_json::to_value)
                 .transpose()
-                .change_context(ConnectorError::RequestEncodingFailed)?,
+                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
             false, // Already serialized above
         )?;
 
@@ -974,7 +977,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 TransactionType::AuthCaptureTransaction
             }
             Some(_) => {
-                return Err(error_stack::report!(ConnectorError::NotSupported {
+                return Err(error_stack::report!(ConnectorRequestError::NotSupported {
                     message: "Capture method not supported".to_string(),
                     connector: "authorizedotnet",
                 }))
@@ -990,7 +993,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorError::AmountConversionFailed)
+                .change_context(ConnectorRequestError::AmountConversionFailed)
                 .attach_printable(
                     "Failed to convert payment amount for repeat payment transaction",
                 )?,
@@ -1071,7 +1074,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => {
                 return Err(error_stack::report!(
-                    HsInterfacesConnectorError::MissingRequiredField {
+                    HsInterfacesConnectorRequestError::MissingRequiredField {
                         field_name: "connector_transaction_id"
                     }
                 ));
@@ -1087,7 +1090,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_amount_to_capture,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorError::AmountConversionFailed)
+                .change_context(ConnectorRequestError::AmountConversionFailed)
                 .attach_printable("Failed to convert capture amount for capture transaction")?,
             ref_trans_id: original_connector_txn_id,
         };
@@ -1141,7 +1144,7 @@ pub struct AuthorizedotnetAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for AuthorizedotnetAuthType {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::Authorizedotnet {
@@ -1155,7 +1158,7 @@ impl TryFrom<&ConnectorSpecificConfig> for AuthorizedotnetAuthType {
                 transaction_key: transaction_key.to_owned(),
             })
         } else {
-            Err(ConnectorError::FailedToObtainAuthType)?
+            Err(ConnectorRequestError::FailedToObtainAuthType)?
         }
     }
 }
@@ -1192,7 +1195,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let transaction_id = match router_data.request.connector_transaction_id.as_str() {
             "" => {
                 return Err(error_stack::report!(
-                    HsInterfacesConnectorError::MissingRequiredField {
+                    HsInterfacesConnectorRequestError::MissingRequiredField {
                         field_name: "connector_transaction_id"
                     }
                 ));
@@ -1270,7 +1273,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ResponseId::ConnectorTransactionId(id) => id.clone(),
             _ => {
                 return Err(error_stack::report!(
-                    HsInterfacesConnectorError::MissingRequiredField {
+                    HsInterfacesConnectorRequestError::MissingRequiredField {
                         field_name: "connector_transaction_id"
                     }
                 ))
@@ -1312,7 +1315,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.router_data.request.connector_refund_id.clone()
         } else {
             return Err(error_stack::report!(
-                HsInterfacesConnectorError::MissingRequiredField {
+                HsInterfacesConnectorRequestError::MissingRequiredField {
                     field_name: "connector_refund_id"
                 }
             ));
@@ -1415,7 +1418,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .connector_feature_data
             .clone()
             .ok_or_else(|| {
-                error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                error_stack::report!(HsInterfacesConnectorRequestError::MissingRequiredField {
                     field_name: "connector_feature_data"
                 })
             })?;
@@ -1431,7 +1434,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     item.router_data.request.minor_refund_amount,
                     item.router_data.request.currency,
                 )
-                .change_context(ConnectorError::AmountConversionFailed)
+                .change_context(ConnectorRequestError::AmountConversionFailed)
                 .attach_printable("Failed to convert refund amount for refund transaction")?,
             currency_code: item.router_data.request.currency,
             payment,
@@ -1720,7 +1723,7 @@ impl<
     > TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1742,7 +1745,7 @@ impl<
                     .raw_connector_response
                     .clone(),
             )
-            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(None))?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1763,7 +1766,7 @@ impl<
 impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1785,7 +1788,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
                     .raw_connector_response
                     .clone(),
             )
-            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(None))?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1806,7 +1809,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetVoidResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1827,7 +1830,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
                     .raw_connector_response
                     .clone(),
             )
-            .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(None))?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1851,7 +1854,7 @@ impl<
     > TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -1968,7 +1971,7 @@ impl<
 impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2021,7 +2024,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
 impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetPSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -2366,7 +2369,7 @@ type PaymentConversionResult = Result<
         Result<PaymentsResponseData, ErrorResponse>,
         Option<domain_types::router_data::ConnectorResponseData>,
     ),
-    HsInterfacesConnectorError,
+    ConnectorResponseError,
 >;
 
 pub fn convert_to_payments_response_data_or_error(
@@ -2582,7 +2585,7 @@ impl From<RSyncStatus> for RefundStatus {
 impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetRSyncResponse, Self>,
@@ -2672,7 +2675,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for AuthorizedotnetSetupMandateRequest<T>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: AuthorizedotnetRouterData<
             RouterDataV2<
@@ -2683,11 +2686,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             >,
             T,
         >,
-    ) -> Result<Self, error_stack::Report<ConnectorError>> {
+    ) -> Result<Self, error_stack::Report<ConnectorRequestError>> {
         let ccard = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
             pm => {
-                return Err(error_stack::report!(ConnectorError::NotImplemented(
+                return Err(error_stack::report!(ConnectorRequestError::NotImplemented(
                     format!("Payment method {:?}", pm)
                 )))
             }
@@ -2705,7 +2708,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_customer
             .as_ref()
-            .ok_or(ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_customer_id is missing",
             })?
             .clone();
@@ -2774,10 +2777,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetSetupMandateResponse, Self>,
-    ) -> Result<Self, error_stack::Report<ConnectorError>> {
+    ) -> Result<Self, error_stack::Report<ConnectorResponseError>> {
         let ResponseRouterData {
             response,
             router_data,
@@ -2789,9 +2792,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .connector_customer
             .as_ref()
-            .ok_or(ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_customer_id",
-            })?
+            })
+            .into_response_err()?
             .clone();
 
         // Check if we have a successful response:
@@ -2821,7 +2825,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .customer_payment_profile_id_list
                 .first()
                 .or(response.customer_payment_profile_id.as_ref())
-                .ok_or(ConnectorError::ResponseDeserializationFailed)?;
+                .ok_or_else(|| error_stack::report!(ConnectorResponseError::response_handling_failed(None)))?;
 
             // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}
             let connector_mandate_id = format!("{connector_customer_id}-{payment_profile_id}");
@@ -3011,7 +3015,7 @@ impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
     }
 }
 
-pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, ConnectorError> {
+pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, ConnectorRequestError> {
     match details.event_type {
         AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => {
             // For payment profile creation, use the customer_profile_id as the primary identifier
@@ -3037,7 +3041,7 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
                             target: "authorizedotnet_webhook",
                             "No customer_profile_id or id found in CustomerPaymentProfileCreated webhook payload"
                         );
-                        Err(ConnectorError::WebhookReferenceIdNotFound)
+                        Err(ConnectorRequestError::NotImplemented("webhook reference id not found".to_string()))
                     }
                 }
             }
@@ -3060,7 +3064,7 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
                         "No transaction ID found in webhook payload for event type: {:?}",
                         details.event_type
                     );
-                    Err(ConnectorError::WebhookReferenceIdNotFound)
+                    Err(ConnectorRequestError::NotImplemented("webhook reference id not found".to_string()))
                 }
             }
         }
@@ -3068,7 +3072,7 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
 }
 
 impl TryFrom<AuthorizedotnetWebhookObjectId> for AuthorizedotnetPSyncResponse {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(item: AuthorizedotnetWebhookObjectId) -> Result<Self, Self::Error> {
         Ok(Self {
             transaction: Some(SyncTransactionResponse {
@@ -3203,7 +3207,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, 
         ConnectorCustomerResponse,
     >
 {
-    type Error = Error;
+    type Error = ResponseError;
     fn try_from(
         value: ResponseRouterData<AuthorizedotnetCreateConnectorCustomerResponse, Self>,
     ) -> Result<Self, Self::Error> {

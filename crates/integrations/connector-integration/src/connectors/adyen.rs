@@ -35,7 +35,6 @@ use domain_types::{
         SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
         WebhookDetailsResponse,
     },
-    errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -47,7 +46,7 @@ use domain_types::{
     },
     utils,
 };
-use error_stack::report;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
@@ -69,6 +68,8 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -290,12 +291,14 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_config)?;
+            let mut api_key = self
+                .get_auth_header(&req.connector_config)
+                .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -327,14 +330,14 @@ fn build_env_specific_endpoint(
     base_url: &str,
     test_mode: Option<bool>,
     connector_metadata: &Option<SecretSerdeValue>,
-) -> CustomResult<String, errors::ConnectorError> {
+) -> CustomResult<String, ConnectorRequestError> {
     if test_mode.unwrap_or(true) {
         Ok(base_url.to_string())
     } else {
         let adyen_connector_metadata_object =
             transformers::AdyenConnectorMetadataObject::try_from(connector_metadata)?;
         let endpoint_prefix = adyen_connector_metadata_object.endpoint_prefix.ok_or(
-            errors::ConnectorError::InvalidConnectorConfig {
+            ConnectorRequestError::InvalidConnectorConfig {
                 config: "metadata.endpoint_prefix",
             },
         )?;
@@ -354,9 +357,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = adyen::AdyenAuthType::try_from(auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+            .map_err(|_| ConnectorRequestError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::X_API_KEY.to_string(),
             auth.api_key.into_masked(),
@@ -370,11 +373,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: adyen::AdyenErrorResponse = res
             .response
             .parse_struct("ErrorResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -410,13 +413,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
@@ -428,7 +431,7 @@ macros::macro_connector_implementation!(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         self.build_error_response(res, event_builder)
     }
     }
@@ -450,13 +453,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
@@ -483,16 +486,20 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let id = match &req.request.connector_transaction_id {
                 ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into())
+                _ => {
+                    return Err(
+                        ConnectorRequestError::MissingConnectorTransactionID.into(),
+                    )
+                }
             };
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
@@ -540,13 +547,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let id = req.request.connector_transaction_id.clone();
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
@@ -574,16 +581,16 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
         }
     }
@@ -690,11 +697,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<errors::ConnectorError>>
+    ) -> Result<domain_types::connector_types::EventType, error_stack::Report<ConnectorRequestError>>
     {
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(errors::ConnectorError::WebhookBodyDecodingFailed)
+                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
         Ok(transformers::get_adyen_webhook_event_type(notif.event_code))
@@ -705,11 +712,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(errors::ConnectorError::WebhookBodyDecodingFailed)
+                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
@@ -753,11 +760,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(errors::ConnectorError::WebhookBodyDecodingFailed)
+                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
@@ -790,12 +797,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<
         domain_types::connector_types::DisputeWebhookDetailsResponse,
-        error_stack::Report<errors::ConnectorError>,
+        error_stack::Report<ConnectorRequestError>,
     > {
         let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
-                report!(errors::ConnectorError::WebhookBodyDecodingFailed)
+                report!(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
         let (stage, status) = transformers::get_dispute_stage_and_status(
@@ -845,13 +852,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = req.request.connector_transaction_id.clone();
 
             let endpoint = build_env_specific_endpoint(
@@ -882,13 +889,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
@@ -915,16 +922,16 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
         }
     }
@@ -946,16 +953,16 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // TODO: Add build_env_specific_endpoint when DisputeFlowData has test_mode and connector_feature_data fields
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
         }
     }
@@ -977,13 +984,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let endpoint = build_env_specific_endpoint(
                 self.connector_base_url_payments(req),
                 req.resource_common_data.test_mode,
@@ -1098,7 +1105,7 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         &self,
         pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData<DefaultPCIHolder>,
-    ) -> CustomResult<(), errors::ConnectorError> {
+    ) -> CustomResult<(), ConnectorRequestError> {
         let mandate_supported_pmd = std::collections::HashSet::from([
             PaymentMethodDataType::Card,
             PaymentMethodDataType::AchBankDebit,
@@ -1114,11 +1121,11 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
         _is_three_ds: bool,
         _status: AttemptStatus,
         _connector_feature_data: Option<SecretSerdeValue>,
-    ) -> CustomResult<(), errors::ConnectorError> {
+    ) -> CustomResult<(), ConnectorRequestError> {
         if data.encoded_data.is_some() {
             return Ok(());
         }
-        Err(errors::ConnectorError::MissingRequiredField {
+        Err(ConnectorRequestError::MissingRequiredField {
             field_name: "encoded_data",
         }
         .into())

@@ -8,7 +8,7 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
-    errors,
+    errors::{self, ResultRequestToResponseExt},
     payment_method_data::{
         BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
     },
@@ -21,6 +21,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 // ===== AUTHENTICATION =====
 
@@ -31,7 +32,7 @@ pub struct NmiAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for NmiAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -44,7 +45,7 @@ impl TryFrom<&ConnectorSpecificConfig> for NmiAuthType {
                 public_key: public_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType
             )),
         }
     }
@@ -225,7 +226,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NmiPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::NmiRouterData<
@@ -273,7 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -297,7 +298,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // ===== PAYMENT METHOD TRANSFORMATION =====
 
 impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMethod<T> {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(pm_data: &PaymentMethodData<T>) -> Result<Self, Self::Error> {
         match pm_data {
@@ -318,12 +319,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                 | BankDebitData::BecsBankDebit { .. }
                 | BankDebitData::BacsBankDebit { .. },
             ) => Err(error_stack::report!(
-                errors::ConnectorError::NotImplemented(
+                ConnectorRequestError::NotImplemented(
                     "Bank Debit type not supported for NMI".to_string()
                 )
             )),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
+                ConnectorRequestError::NotImplemented("Payment method not supported".to_string())
             )),
         }
     }
@@ -338,7 +339,7 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     >,
-) -> Result<AchData, error_stack::Report<errors::ConnectorError>> {
+) -> Result<AchData, error_stack::Report<ConnectorRequestError>> {
     match bank_debit_data {
         BankDebitData::AchBankDebit {
             account_number,
@@ -358,7 +359,7 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
                         .ok()
                 })
                 .ok_or_else(|| {
-                    error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                    error_stack::report!(ConnectorRequestError::MissingRequiredField {
                         field_name: "bank_account_holder_name",
                     })
                 })?;
@@ -375,7 +376,7 @@ fn create_ach_data<T: PaymentMethodDataTypes>(
             Ok(ach_data)
         }
         _ => Err(error_stack::report!(
-            errors::ConnectorError::NotImplemented(
+            ConnectorRequestError::NotImplemented(
                 "Only ACH Bank Debit is supported for NMI".to_string()
             )
         )),
@@ -404,7 +405,7 @@ pub type NmiPaymentsResponse = StandardResponse;
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -416,7 +417,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<StandardResponse, Sel
                 // For auth type, status is Authorized
                 // For sale type, status is Charged
                 // We need to check the original request's auto_capture flag
-                if item.router_data.request.is_auto_capture()? {
+                if item.router_data.request.is_auto_capture().into_response_err()? {
                     AttemptStatus::Charged
                 } else {
                     AttemptStatus::Authorized
@@ -469,7 +470,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NmiSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::NmiRouterData<
@@ -512,7 +513,7 @@ pub struct SyncTransactionData {
 impl TryFrom<ResponseRouterData<SyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<SyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -523,7 +524,8 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
+            .into_response_err()?;
 
         // Find the transaction matching the requested transaction_id
         // If not found, use the most recent one (last in list)
@@ -595,7 +597,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NmiCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::NmiRouterData<
@@ -611,7 +613,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingRequiredField {
+            .change_context(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_transaction_id",
             })?;
 
@@ -622,7 +624,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -638,7 +640,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -701,7 +703,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NmiRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::NmiRouterData<
@@ -736,7 +738,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
 
         Ok(Self {
             security_key: auth.api_key,
@@ -754,7 +756,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -799,7 +801,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NmiRefundSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::NmiRouterData<
@@ -826,7 +828,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<SyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<SyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -844,11 +846,11 @@ impl TryFrom<ResponseRouterData<SyncResponse, Self>>
             (status, transaction.transaction_id.clone())
         } else {
             // Empty response - treat as pending with proper error for connector_refund_id
-            return Err(error_stack::report!(
-                errors::ConnectorError::MissingConnectorRelatedTransactionID {
+            return Err(errors::report_request_as_response(error_stack::report!(
+                ConnectorRequestError::MissingConnectorRelatedTransactionID {
                     id: "connector_refund_id".to_string()
                 }
-            ));
+            )));
         };
 
         Ok(Self {
@@ -896,7 +898,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for NmiVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::NmiRouterData<
@@ -937,7 +939,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<StandardResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<StandardResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;

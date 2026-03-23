@@ -21,13 +21,13 @@ use domain_types::{
     utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
 
-use domain_types::errors::ConnectorError;
 
 use common_utils::consts;
 
 use serde::{Deserialize, Serialize};
 
 use hyperswitch_masking::Secret;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt};
 
 #[derive(Default, Debug, Serialize)]
 pub struct CryptopayPaymentsRequest {
@@ -56,7 +56,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CryptopayPaymentsRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: CryptopayRouterData<
             RouterDataV2<
@@ -110,7 +110,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
+                Err(ConnectorRequestError::NotImplemented(
                     get_unimplemented_payment_method_error_message("CryptoPay"),
                 ))
             }
@@ -126,7 +126,7 @@ pub struct CryptopayAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         if let ConnectorSpecificConfig::Cryptopay {
             api_key,
@@ -139,7 +139,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CryptopayAuthType {
                 api_secret: api_secret.to_owned(),
             })
         } else {
-            Err(ConnectorError::FailedToObtainAuthType.into())
+            Err(ConnectorRequestError::FailedToObtainAuthType.into())
         }
     }
 }
@@ -176,7 +176,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         item: ResponseRouterData<CryptopayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -228,7 +228,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             Some(ref amount) => Some(CryptopayAmountConvertor::convert_back(
                 amount.clone(),
                 router_data.request.currency,
-            )?),
+            ).into_response_err()?),
             None => None,
         };
         match (amount_captured_in_minor_units, status) {
@@ -314,7 +314,7 @@ pub enum WebhookEvent {
 impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         item: ResponseRouterData<CryptopayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -366,7 +366,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             Some(ref amount) => Some(CryptopayAmountConvertor::convert_back(
                 amount.clone(),
                 router_data.request.currency,
-            )?),
+            ).into_response_err()?),
             None => None,
         };
         match (amount_captured_in_minor_units, status) {
@@ -396,7 +396,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
 }
 
 impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(notif: CryptopayWebhookDetails) -> Result<Self, Self::Error> {
         let status = common_enums::AttemptStatus::from(notif.data.status.clone());

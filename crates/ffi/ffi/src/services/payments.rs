@@ -531,13 +531,5 @@ pub fn handle_event_transformer(
         Some(connector_config),
         source_verified,
     )
-    .map_err(
-        |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            ConnectorResponseTransformationError {
-                error_message: format!("Error in Processing webhook events: {e}"),
-                error_code: "WEBHOOK_PROCESSING_ERROR".to_string(),
-                http_status_code: None,
-            }
-        },
-    )
+    .map_err(ucs_env::error::report_connector_context_to_response_transformation)
 }

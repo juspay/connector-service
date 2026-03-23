@@ -23,7 +23,6 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
@@ -47,26 +46,28 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 // Trait for types that can provide access tokens
 pub trait AccessTokenProvider {
-    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError>;
+    fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError>;
 }
 
 impl AccessTokenProvider for PaymentFlowData {
-    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError> {
+    fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
         self.get_access_token()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
     }
 }
 
 impl AccessTokenProvider for RefundFlowData {
-    fn get_access_token(&self) -> CustomResult<String, errors::ConnectorError> {
+    fn get_access_token(&self) -> CustomResult<String, ConnectorRequestError> {
         self.get_access_token()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID)
     }
 }
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use error_stack::ResultExt;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 const X_VOLT_API_VERSION: &str = "X-Volt-Api-Version";
 const X_VOLT_INITIATION_CHANNEL: &str = "X-Volt-Initiation-Channel";
@@ -270,7 +271,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FlowData, Req, Res>(
             &self,
             req: &RouterDataV2<F, FlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
         where
             FlowData: AccessTokenProvider,
             Self: ConnectorIntegrationV2<F, FlowData, Req, Res>,
@@ -336,11 +337,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: volt::VoltErrorResponse = res
             .response
             .parse_struct("VoltErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -383,13 +384,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/payments"))
         }
@@ -412,7 +413,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             _req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -421,7 +422,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{base_url}/oauth"))
         }
@@ -429,12 +430,12 @@ macros::macro_connector_implementation!(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         // auth error have different structure than common error
         let response: volt::VoltAuthErrorResponse = res
             .response
             .parse_struct("VoltAuthErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
          with_error_response_body!(event_builder, response);
 
@@ -469,19 +470,19 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = self.connector_base_url(req);
             let connector_payment_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
             Ok(format!("{base_url}/payments/{connector_payment_id}"))
         }
     }
@@ -503,18 +504,18 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = req.resource_common_data.connectors.volt
             .secondary_base_url
             .as_ref()
-            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
             let connector_payment_id = req.request.connector_transaction_id.clone();
             Ok(format!(
                 "{base_url}/payments/{connector_payment_id}/request-refund",

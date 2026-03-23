@@ -7,7 +7,6 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -17,6 +16,7 @@ use serde::Serialize;
 
 use super::{requests, responses, BarclaycardAmountConvertor, BarclaycardRouterData};
 use crate::{types::ResponseRouterData, utils};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt};
 
 /// CAVV (Cardholder Authentication Verification Value) Algorithm
 ///
@@ -37,7 +37,7 @@ pub struct BarclaycardAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for BarclaycardAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -51,7 +51,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BarclaycardAuthType {
                 merchant_account: merchant_account.to_owned(),
                 api_secret: api_secret.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -90,11 +90,11 @@ fn truncate_string(state: &Secret<String>, max_len: usize) -> Secret<String> {
 fn build_bill_to(
     billing: &domain_types::payment_address::Address,
     email: common_utils::pii::Email,
-) -> Result<requests::BillTo, error_stack::Report<errors::ConnectorError>> {
+) -> Result<requests::BillTo, error_stack::Report<ConnectorRequestError>> {
     let address = billing
         .address
         .as_ref()
-        .ok_or(errors::ConnectorError::MissingRequiredField {
+        .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "billing.address",
         })?;
 
@@ -106,7 +106,7 @@ fn build_bill_to(
                 .as_ref()
                 .map(|state| truncate_string(state, 20)) // NOTE: Cybersource connector throws error if billing state exceeds 20 characters. Since Barclaycard is Cybersource just whitelisting, we truncate if state exceeds 20 characters, so truncation is done to avoid payment failure
         })
-        .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+        .ok_or(ConnectorRequestError::MissingRequiredField {
             field_name: "billing_address.state",
         })?;
 
@@ -219,7 +219,7 @@ fn transform_payment_response<F, Req>(
     auto_capture: bool,
 ) -> Result<
     RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-    error_stack::Report<errors::ConnectorError>,
+    error_stack::Report<ConnectorRequestError>,
 > {
     match item.response {
         responses::BarclaycardPaymentsResponse::ClientReferenceInformation(info_response) => {
@@ -399,7 +399,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::BarclaycardPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: BarclaycardRouterData<
@@ -420,7 +420,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let ccard = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(errors::ConnectorError::NotImplemented(
+            _ => Err(ConnectorRequestError::NotImplemented(
                 "Only card payments are supported".to_string(),
             )),
         }?;
@@ -451,7 +451,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .resource_common_data
             .address
             .get_payment_method_billing()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "billing",
             })?;
 
@@ -509,7 +509,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::BarclaycardCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         value: BarclaycardRouterData<
@@ -556,7 +556,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::BarclaycardVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         value: BarclaycardRouterData<
@@ -569,14 +569,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data
                 .request
                 .currency
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "currency",
                 })?;
         let amount = BarclaycardAmountConvertor::convert(
             router_data
                 .request
                 .amount
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "amount",
                 })?,
             currency,
@@ -602,7 +602,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     currency,
                 },
                 reason: router_data.request.cancellation_reason.clone().ok_or(
-                    errors::ConnectorError::MissingRequiredField {
+                    ConnectorRequestError::MissingRequiredField {
                         field_name: "cancellation_reason",
                     },
                 )?,
@@ -620,7 +620,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::BarclaycardRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: BarclaycardRouterData<
@@ -652,7 +652,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<responses::BarclaycardAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardAuthorizeResponse, Self>,
@@ -661,38 +661,38 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             item.router_data.request.capture_method,
             Some(common_enums::CaptureMethod::Automatic) | None
         );
-        transform_payment_response(item, auto_capture)
+        transform_payment_response(item, auto_capture).into_response_err()
     }
 }
 
 impl TryFrom<ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        transform_payment_response(item, true)
+        transform_payment_response(item, true).into_response_err()
     }
 }
 
 impl TryFrom<ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        transform_payment_response(item, false)
+        transform_payment_response(item, false).into_response_err()
     }
 }
 
 impl TryFrom<ResponseRouterData<responses::BarclaycardTransactionResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardTransactionResponse, Self>,
@@ -769,7 +769,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardTransactionResponse, Self>
 impl TryFrom<ResponseRouterData<responses::BarclaycardRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardRefundResponse, Self>,
@@ -810,7 +810,7 @@ impl TryFrom<ResponseRouterData<responses::BarclaycardRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<responses::BarclaycardRsyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::BarclaycardRsyncResponse, Self>,

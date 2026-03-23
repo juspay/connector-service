@@ -12,6 +12,7 @@ use common_utils::{
     types::MinorUnit,
     CustomResult,
 };
+use crate::{ConnectorRequestError, ConnectorResponseError};
 use domain_types::{
     connector_types::{
         CaptureSyncResponse, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -28,7 +29,7 @@ use serde_json::Value;
 use std::{collections::HashMap, str::FromStr};
 pub use xml_utils::preprocess_xml_response_bytes;
 
-type Error = Report<errors::ConnectorError>;
+type Error = Report<ConnectorRequestError>;
 use common_enums::enums;
 use serde::{Deserialize, Serialize};
 
@@ -90,9 +91,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static>
 
 pub fn missing_field_err(
     message: &'static str,
-) -> Box<dyn Fn() -> Report<errors::ConnectorError> + 'static> {
+) -> Box<dyn Fn() -> Report<ConnectorRequestError> + 'static> {
     Box::new(move || {
-        errors::ConnectorError::MissingRequiredField {
+        ConnectorRequestError::MissingRequiredField {
             field_name: message,
         }
         .into()
@@ -117,12 +118,12 @@ where
     let parsed: T = match json_value {
         Value::String(json_str) => serde_json::from_str(&json_str)
             .map_err(Report::from)
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+            .change_context(ConnectorRequestError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
             })?,
         _ => serde_json::from_value(json_value.clone())
             .map_err(Report::from)
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+            .change_context(ConnectorRequestError::InvalidConnectorConfig {
                 config: "merchant_connector_account.metadata",
             })?,
     };
@@ -133,14 +134,14 @@ where
 pub(crate) fn handle_json_response_deserialization_failure(
     res: Response,
     _connector: &'static str,
-) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+) -> CustomResult<ErrorResponse, ConnectorResponseError> {
     let response_data = String::from_utf8(res.response.to_vec())
-        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(errors::ConnectorError::ResponseDeserializationFailed)?,
+        Ok(_) => Err(ConnectorResponseError::response_deserialization_failed(None))?,
         // in case of unexpected response but in html or string format
         Err(_error_msg) => Ok(ErrorResponse {
             status_code: res.status_code,
@@ -182,7 +183,9 @@ pub(crate) fn safe_base64_decode(base64_data: String) -> Result<Vec<u8>, Error> 
             .map_err(|e| error_stack.push(e))
             .ok()
     })
-    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)
+    .ok_or(ConnectorRequestError::InvalidDataFormat {
+        field_name: "base64_data",
+    })
     .attach_printable(format!(
         "Base64 decoding failed for all engines. Errors: {:?}",
         error_stack
@@ -271,7 +274,7 @@ pub fn serialize_to_xml_string_with_root<T: Serialize>(
     data: &T,
 ) -> Result<String, Error> {
     let xml_content = quick_xml::se::to_string_with_root(root_name, data)
-        .change_context(errors::ConnectorError::RequestEncodingFailed)
+        .change_context(ConnectorRequestError::RequestEncodingFailed)
         .attach_printable("Failed to serialize XML with root")?;
 
     let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{xml_content}");
@@ -345,7 +348,7 @@ pub trait MultipleCaptureSyncResponse {
 
 pub(crate) fn construct_captures_response_hashmap<T>(
     capture_sync_response_list: Vec<T>,
-) -> CustomResult<HashMap<String, CaptureSyncResponse>, errors::ConnectorError>
+) -> CustomResult<HashMap<String, CaptureSyncResponse>, ConnectorRequestError>
 where
     T: MultipleCaptureSyncResponse,
 {
@@ -362,7 +365,7 @@ where
                         .get_connector_reference_id(),
                     amount: capture_sync_response
                         .get_amount_captured()
-                        .change_context(errors::ConnectorError::AmountConversionFailed)
+                        .change_context(ConnectorRequestError::AmountConversionFailed)
                         .attach_printable(
                             "failed to convert back captured response amount to minor unit",
                         )?,

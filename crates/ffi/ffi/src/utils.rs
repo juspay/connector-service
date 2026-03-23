@@ -1,5 +1,5 @@
 use common_utils::metadata::{HeaderMaskingConfig, MaskedMetadata};
-use domain_types::errors::ConnectorError;
+use domain_types::errors::ConnectorRequestError;
 use grpc_api_types::payments::IntegrationError;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -36,11 +36,8 @@ pub fn ffi_headers_to_masked_metadata(
 
 /// Load development config from the embedded config string.
 /// This avoids runtime path lookup by embedding the config at build time.
-pub fn load_config(embedded_config: &str) -> Result<Arc<Config>, ConnectorError> {
+pub fn load_config(embedded_config: &str) -> Result<Arc<Config>, ConnectorRequestError> {
     toml::from_str(embedded_config)
         .map(Arc::new)
-        .map_err(|e| ConnectorError::GenericError {
-            error_message: e.to_string(),
-            error_object: serde_json::Value::Null,
-        })
+        .map_err(|e| ConnectorRequestError::config_error("INVALID_CONFIG_FORMAT", e.to_string()))
 }

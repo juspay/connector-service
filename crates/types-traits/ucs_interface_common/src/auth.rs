@@ -49,7 +49,8 @@ fn parse_connector_config_from_typed_header(
         }))
     })?;
 
-    let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())?;
+    let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())
+        .map_err(domain_types::errors::connector_request_report_to_application)?;
 
     let connector_config = ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
         ApplicationErrorResponse::BadRequest(ApiError {
@@ -110,7 +111,8 @@ fn parse_connector_config_from_deprecated_header(
         }))
     })?;
 
-    let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())?;
+    let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())
+        .map_err(domain_types::errors::connector_request_report_to_application)?;
 
     let connector_config = ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
         ApplicationErrorResponse::BadRequest(ApiError {

@@ -10,7 +10,6 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -20,6 +19,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use tracing::info;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 pub const NEXT_ACTION_DATA: &str = "nextActionData";
 
@@ -48,7 +48,7 @@ pub enum CardBrand {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ConnectorError {
+pub enum RazorpayConnectorError {
     ParsingFailed,
     NotImplemented,
     FailedToObtainAuthType,
@@ -188,7 +188,7 @@ pub struct RazorpayRouterData<T> {
 }
 
 impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
         Ok(Self {
             amount,
@@ -227,7 +227,7 @@ impl RazorpayAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for RazorpayAuthType {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorRequestError;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Razorpay {
@@ -241,7 +241,7 @@ impl TryFrom<&ConnectorSpecificConfig> for RazorpayAuthType {
                     api_secret: secret.to_owned(),
                 }),
             },
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType),
         }
     }
 }
@@ -249,7 +249,7 @@ impl TryFrom<&ConnectorSpecificConfig> for RazorpayAuthType {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(&Card<T>, Option<Secret<String>>)> for RazorpayPaymentMethod<T>
 {
-    type Error = ConnectorError;
+    type Error = ConnectorRequestError;
     fn try_from(
         (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
     ) -> Result<Self, Self::Error> {
@@ -271,7 +271,7 @@ fn extract_payment_method_and_data<
 >(
     payment_method_data: &PaymentMethodData<T>,
     customer_name: Option<String>,
-) -> Result<(PaymentMethodType, PaymentMethodSpecificData<T>), errors::ConnectorError> {
+) -> Result<(PaymentMethodType, PaymentMethodSpecificData<T>), ConnectorRequestError> {
     match payment_method_data {
         PaymentMethodData::Card(card_data) => {
             let card_holder_name = customer_name.clone();
@@ -303,7 +303,7 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
-        | PaymentMethodData::OpenBanking(_) => Err(errors::ConnectorError::NotImplemented(
+        | PaymentMethodData::OpenBanking(_) => Err(ConnectorRequestError::NotImplemented(
             "Only Card payment method is supported for Razorpay".to_string(),
         )),
     }
@@ -322,7 +322,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         &Card<T>,
     )> for RazorpayPaymentRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         value: (
@@ -350,7 +350,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let contact = billing
             .and_then(|billing| billing.phone.as_ref())
             .and_then(|phone| phone.number.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "contact",
             })?;
 
@@ -362,7 +362,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let email = billing_email
             .or(item.router_data.request.email.clone())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "email",
             })?;
 
@@ -371,7 +371,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .reference_id
             .clone()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "order_id",
             })?;
 
@@ -455,7 +455,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for RazorpayPaymentRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -469,7 +469,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => Self::try_from((item, card)),
-            _ => Err(errors::ConnectorError::NotImplemented(
+            _ => Err(ConnectorRequestError::NotImplemented(
                 "Only card payments are supported".into(),
             )
             .into()),
@@ -553,7 +553,7 @@ pub struct RazorpayRefundRequest {
 }
 
 impl ForeignTryFrom<RazorpayRefundStatus> for common_enums::RefundStatus {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorRequestError;
     fn foreign_try_from(item: RazorpayRefundStatus) -> Result<Self, Self::Error> {
         match item {
             RazorpayRefundStatus::Failed => Ok(Self::Failure),
@@ -570,7 +570,7 @@ impl
         >,
     > for RazorpayRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: &RazorpayRouterData<
             &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -678,7 +678,7 @@ fn get_psync_razorpay_payment_status(
 impl ForeignTryFrom<(RazorpayRefundResponse, Self, u16)>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorRequestError;
 
     fn foreign_try_from(
         (response, data, http_code): (RazorpayRefundResponse, Self, u16),
@@ -705,7 +705,7 @@ impl ForeignTryFrom<(RazorpayRefundResponse, Self, u16)>
 impl ForeignTryFrom<(RazorpayRefundResponse, Self, u16)>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorRequestError;
 
     fn foreign_try_from(
         (response, data, http_code): (RazorpayRefundResponse, Self, u16),
@@ -739,7 +739,7 @@ impl<F, Req>
         Option<common_enums::PaymentMethodType>,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorRequestError;
 
     fn foreign_try_from(
         (response, data, _http_code, _capture_method, _is_multiple_capture_psync_flow, _pmt): (
@@ -762,7 +762,7 @@ impl<F, Req>
                     .as_ref()
                     .and_then(|next_actions| next_actions.first())
                     .map(|action| action.url.clone())
-                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
+                    .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "next.url",
                     })?;
 
@@ -923,7 +923,7 @@ impl
         >,
     > for RazorpayOrderRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -1025,7 +1025,7 @@ impl ForeignTryFrom<(RazorpayOrderResponse, Self, u16, bool)>
         PaymentCreateOrderResponse,
     >
 {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorRequestError;
 
     fn foreign_try_from(
         (response, data, _status_code, _): (RazorpayOrderResponse, Self, u16, bool),
@@ -1160,31 +1160,31 @@ pub struct RazorpayWebhookCard {
 
 pub fn get_webhook_object_from_body(
     body: Vec<u8>,
-) -> Result<Payload, error_stack::Report<errors::ConnectorError>> {
+) -> Result<Payload, error_stack::Report<ConnectorRequestError>> {
     let webhook: RazorpayWebhook = body
         .parse_struct("RazorpayWebhook")
-        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
     Ok(webhook.payload)
 }
 
 pub(crate) fn get_razorpay_payment_webhook_status(
     entity: RazorpayEntity,
     status: RazorpayPaymentStatus,
-) -> Result<AttemptStatus, errors::ConnectorError> {
+) -> Result<AttemptStatus, ConnectorRequestError> {
     match entity {
         RazorpayEntity::Payment => match status {
             RazorpayPaymentStatus::Authorized => Ok(AttemptStatus::Authorized),
             RazorpayPaymentStatus::Captured => Ok(AttemptStatus::Charged),
             RazorpayPaymentStatus::Failed => Ok(AttemptStatus::AuthorizationFailed),
         },
-        RazorpayEntity::Refund => Err(errors::ConnectorError::RequestEncodingFailed),
+        RazorpayEntity::Refund => Err(ConnectorRequestError::RequestEncodingFailed),
     }
 }
 
 pub(crate) fn get_razorpay_refund_webhook_status(
     entity: RazorpayEntity,
     status: RazorpayRefundStatus,
-) -> Result<common_enums::RefundStatus, errors::ConnectorError> {
+) -> Result<common_enums::RefundStatus, ConnectorRequestError> {
     match entity {
         RazorpayEntity::Refund => match status {
             RazorpayRefundStatus::Processed => Ok(common_enums::RefundStatus::Success),
@@ -1193,7 +1193,7 @@ pub(crate) fn get_razorpay_refund_webhook_status(
             }
             RazorpayRefundStatus::Failed => Ok(common_enums::RefundStatus::Failure),
         },
-        RazorpayEntity::Payment => Err(errors::ConnectorError::RequestEncodingFailed),
+        RazorpayEntity::Payment => Err(ConnectorRequestError::RequestEncodingFailed),
     }
 }
 
@@ -1245,7 +1245,7 @@ impl
         >,
     > for RazorpayCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -1264,7 +1264,7 @@ impl
 impl<F, Req> ForeignTryFrom<(RazorpayCaptureResponse, Self, u16)>
     for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = errors::ConnectorError;
+    type Error = ConnectorRequestError;
     fn foreign_try_from(
         (response, data, http_code): (RazorpayCaptureResponse, Self, u16),
     ) -> Result<Self, Self::Error> {
@@ -1387,7 +1387,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for RazorpayWebCollectRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -1408,7 +1408,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let vpa = collect_data
                     .vpa_id
                     .as_ref()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                    .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "vpa_id",
                     })?
                     .peek()
@@ -1426,7 +1426,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .resource_common_data
             .reference_id
             .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "order_id (reference_id)",
             })?
             .clone();
@@ -1563,7 +1563,7 @@ impl<F, Req>
         Vec<u8>, // raw_response
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = errors::ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn foreign_try_from(
         (upi_response, data, _status_code, _raw_response): (
@@ -1601,13 +1601,13 @@ impl<F, Req>
                     Some(payment_id) => (ResponseId::ConnectorTransactionId(payment_id), None),
                     None => {
                         // Payment ID is null, this is likely an error
-                        return Err(errors::ConnectorError::ResponseHandlingFailed);
+                        return Err(error_stack::report!(ConnectorResponseError::response_handling_failed(None)));
                     }
                 }
             }
             RazorpayUpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
-                return Err(errors::ConnectorError::ResponseHandlingFailed);
+                return Err(error_stack::report!(ConnectorResponseError::response_handling_failed(None)));
             }
         };
 

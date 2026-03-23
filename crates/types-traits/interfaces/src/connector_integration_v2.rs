@@ -5,7 +5,11 @@ use common_utils::{
     request::{Method, Request, RequestBuilder, RequestContent},
     CustomResult,
 };
-use domain_types::{router_data::ErrorResponse, router_data_v2::RouterDataV2};
+use domain_types::{
+    errors::{ConnectorRequestError, ConnectorResponseError},
+    router_data::ErrorResponse,
+    router_data_v2::RouterDataV2,
+};
 use hyperswitch_masking::Maskable;
 use serde_json::json;
 
@@ -45,7 +49,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_headers(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         Ok(vec![])
     }
 
@@ -63,9 +67,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_url(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<String, domain_types::errors::ConnectorError> {
-        // metrics::UNIMPLEMENTED_FLOW
-        //     .add(1, router_env::metric_attributes!(("connector", self.id()))); // TODO: discuss env
+    ) -> CustomResult<String, ConnectorRequestError> {
         Ok(String::new())
     }
 
@@ -73,7 +75,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_request_body(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<RequestContent>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<Option<RequestContent>, ConnectorRequestError> {
         Ok(None)
     }
 
@@ -81,7 +83,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_request_form_data(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<reqwest::multipart::Form>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<Option<reqwest::multipart::Form>, ConnectorRequestError> {
         Ok(None)
     }
 
@@ -89,7 +91,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn build_request_v2(
         &self,
         req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<Request>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<Option<Request>, ConnectorRequestError> {
         Ok(Some(
             RequestBuilder::new()
                 .method(self.get_http_method())
@@ -111,7 +113,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         _res: domain_types::router_response_types::Response,
     ) -> CustomResult<
         RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-        domain_types::errors::ConnectorError,
+        ConnectorResponseError,
     >
     where
         Flow: Clone,
@@ -130,7 +132,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         res: domain_types::router_response_types::Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         if let Some(event) = event_builder {
             event.set_connector_response(&json!({"error": "Error response parsing not implemented", "status_code": res.status_code}))
         }
@@ -142,7 +144,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         res: domain_types::router_response_types::Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let error_message = match res.status_code {
             500 => "internal_server_error",
             501 => "not_implemented",
@@ -177,21 +179,11 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         })
     }
 
-    // whenever capture sync is implemented at the connector side, this method should be overridden
-    /// retunes the capture sync method
-    // fn get_multiple_capture_sync_method(
-    //     &self,
-    // ) -> CustomResult<api::CaptureSyncMethod, domain_types::errors::ConnectorError> {
-    //     Err(domain_types::errors::ConnectorError::NotImplemented("multiple capture sync".into()).into())
-    // }
     /// returns certificate string
     fn get_certificate(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<
-        Option<hyperswitch_masking::Secret<String>>,
-        domain_types::errors::ConnectorError,
-    > {
+    ) -> CustomResult<Option<hyperswitch_masking::Secret<String>>, ConnectorRequestError> {
         Ok(None)
     }
 
@@ -199,10 +191,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_certificate_key(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<
-        Option<hyperswitch_masking::Secret<String>>,
-        domain_types::errors::ConnectorError,
-    > {
+    ) -> CustomResult<Option<hyperswitch_masking::Secret<String>>, ConnectorRequestError> {
         Ok(None)
     }
 }

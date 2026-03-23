@@ -2,7 +2,10 @@ use std::marker::PhantomData;
 
 use common_enums::DynamicContentType;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt};
-use domain_types::{errors, router_data_v2::RouterDataV2};
+use domain_types::{
+    errors::{ConnectorRequestError, ConnectorResponseError},
+    router_data_v2::RouterDataV2,
+};
 use error_stack::ResultExt;
 
 use crate::types;
@@ -14,7 +17,7 @@ pub trait ContentTypeSelector<F, FCD, Req, Res> {
     fn get_dynamic_content_type(
         &self,
         req: &RouterDataV2<F, FCD, Req, Res>,
-    ) -> CustomResult<DynamicContentType, errors::ConnectorError>;
+    ) -> CustomResult<DynamicContentType, ConnectorRequestError>;
 }
 
 pub trait FlowTypes {
@@ -77,7 +80,7 @@ pub struct NoRequestBody;
 pub struct NoRequestBodyTemplating;
 
 impl<F, FCD, Req, Resp> TryFrom<RouterDataV2<F, FCD, Req, Resp>> for NoRequestBody {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(_value: RouterDataV2<F, FCD, Req, Resp>) -> Result<Self, Self::Error> {
         Ok(Self)
@@ -108,10 +111,10 @@ pub trait BridgeRequestResponse: Send + Sync {
     fn request_body(
         &self,
         rd: Self::ConnectorInputData,
-    ) -> CustomResult<Self::RequestBody, errors::ConnectorError>
+    ) -> CustomResult<Self::RequestBody, ConnectorRequestError>
     where
         Self::RequestBody:
-            TryFrom<Self::ConnectorInputData, Error = error_stack::Report<errors::ConnectorError>>,
+            TryFrom<Self::ConnectorInputData, Error = error_stack::Report<ConnectorRequestError>>,
     {
         Self::RequestBody::try_from(rd)
     }
@@ -119,31 +122,32 @@ pub trait BridgeRequestResponse: Send + Sync {
     fn response(
         &self,
         bytes: bytes::Bytes,
-    ) -> CustomResult<Self::ResponseBody, errors::ConnectorError>
+    ) -> CustomResult<Self::ResponseBody, ConnectorResponseError>
     where
         Self::ResponseBody: for<'a> serde::Deserialize<'a>,
     {
         if bytes.is_empty() {
             serde_json::from_str("{}")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))
         } else {
             bytes
                 .parse_struct(std::any::type_name::<Self::ResponseBody>())
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))
         }
     }
 
     fn router_data(
         &self,
         response: ResponseRouterDataType<Self::ConnectorInputData, Self::ResponseBody>,
-    ) -> CustomResult<RouterDataType<Self::ConnectorInputData>, errors::ConnectorError>
+    ) -> CustomResult<RouterDataType<Self::ConnectorInputData>, ConnectorResponseError>
     where
         RouterDataType<Self::ConnectorInputData>: TryFrom<
             ResponseRouterDataType<Self::ConnectorInputData, Self::ResponseBody>,
-            Error = error_stack::Report<errors::ConnectorError>,
+            Error = error_stack::Report<ConnectorResponseError>,
         >,
     {
         RouterDataType::<Self::ConnectorInputData>::try_from(response)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
     }
 }
 
@@ -156,7 +160,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 _req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorRequestError>
             {
                 // always return None
                 Ok(None)
@@ -177,7 +181,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorRequestError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [<$connector RouterData>] {
@@ -204,7 +208,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorRequestError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [<$connector RouterData>] {
@@ -217,7 +221,7 @@ macro_rules! expand_fn_get_request_body {
                 // Validate XML structure before sending
                 crate::connectors::macros::validate_xml_structure(&soap_xml)
                     .map_err(|e| {
-                        error_stack::report!(errors::ConnectorError::RequestEncodingFailed)
+                        error_stack::report!(domain_types::errors::ConnectorRequestError::RequestEncodingFailed)
                             .attach_printable(e)
                     })?;
 
@@ -239,7 +243,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorRequestError>
             {
                 use crate::connectors::macros::ContentTypeSelector;
 
@@ -282,7 +286,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorRequestError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [< $connector RouterData >] {
@@ -307,7 +311,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            macro_types::ConnectorError,
+            macro_types::ConnectorResponseError,
         > {
             use error_stack::ResultExt;
             paste::paste! {let bridge = self.[< $flow:snake >];}
@@ -315,7 +319,7 @@ macro_rules! expand_fn_handle_response {
             // Apply preprocessing if specified in the macro
             let response_bytes = self
                 .preprocess_response_bytes(data, res.response)
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                .change_context(macro_types::ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
 
             let response_body = bridge.response(response_bytes)?;
             event_builder.map(|i| i.set_connector_response(&response_body));
@@ -338,7 +342,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            macro_types::ConnectorError,
+            macro_types::ConnectorResponseError,
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
@@ -368,7 +372,7 @@ macro_rules! expand_default_functions {
             req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
         ) -> macro_types::CustomResult<
             Vec<(String, macro_types::Maskable<String>)>,
-            macro_types::ConnectorError,
+            macro_types::ConnectorRequestError,
         > {
             self.build_headers(req)
         }
@@ -395,7 +399,7 @@ macro_rules! expand_default_functions {
             &self,
             res: Response,
             event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, macro_types::ConnectorResponseError> {
             self.build_error_response(res, event_builder)
         }
     };
@@ -850,22 +854,29 @@ macro_rules! impl_templating_mixed {
                 fn response(
                     &self,
                     bytes: bytes::Bytes,
-                ) -> CustomResult<Self::ResponseBody, errors::ConnectorError> {
+                ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorResponseError> {
                     use common_utils::ext_traits::XmlExt;
                     use error_stack::ResultExt;
 
                     if bytes.is_empty() {
-                        return Err(errors::ConnectorError::ResponseDeserializationFailed.into());
+                        return Err(
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(None)
+                                .into(),
+                        );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .change_context(
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                        )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
                     response_str
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .change_context(
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                        )
                         .attach_printable("Failed to parse XML response")
                 }
             }
@@ -893,22 +904,29 @@ macro_rules! impl_templating_mixed {
                 fn response(
                     &self,
                     bytes: bytes::Bytes,
-                ) -> CustomResult<Self::ResponseBody, errors::ConnectorError> {
+                ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorResponseError> {
                     use common_utils::ext_traits::XmlExt;
                     use error_stack::ResultExt;
 
                     if bytes.is_empty() {
-                        return Err(errors::ConnectorError::ResponseDeserializationFailed.into());
+                        return Err(
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(None)
+                                .into(),
+                        );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .change_context(
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                        )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
                     response_str
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)
+                        .change_context(
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                        )
                         .attach_printable("Failed to parse XML response")
                 }
             }
@@ -1144,7 +1162,9 @@ macro_rules! expand_imports {
             // };
             pub(super) use common_utils::{errors::CustomResult, events, request::RequestContent};
             pub(super) use domain_types::{
-                errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
+                errors::{ConnectorRequestError, ConnectorResponseError},
+                router_data::ErrorResponse,
+                router_data_v2::RouterDataV2,
                 router_response_types::Response,
             };
             pub(super) use hyperswitch_masking::Maskable;
@@ -1165,23 +1185,29 @@ macro_rules! create_amount_converter_wrapper {
                 pub fn convert(
                     amount: common_utils::types::MinorUnit,
                     currency: common_enums::Currency,
-                ) -> Result<common_utils::types::$amount_type, error_stack::Report<errors::ConnectorError>> {
+                ) -> Result<
+                    common_utils::types::$amount_type,
+                    error_stack::Report<domain_types::errors::ConnectorRequestError>,
+                > {
                     domain_types::utils::convert_amount(
                         &common_utils::types::[<$amount_type ForConnector>],
                         amount,
                         currency,
-                    )
+                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat { field_name: "amount" })
                 }
 
                 pub fn convert_back(
                     amount: common_utils::types::$amount_type,
                     currency: common_enums::Currency,
-                ) -> Result<common_utils::types::MinorUnit, error_stack::Report<errors::ConnectorError>> {
+                ) -> Result<
+                    common_utils::types::MinorUnit,
+                    error_stack::Report<domain_types::errors::ConnectorRequestError>,
+                > {
                     domain_types::utils::convert_back_amount_to_minor_units(
                         &common_utils::types::[<$amount_type ForConnector>],
                         amount,
                         currency,
-                    )
+                    ).change_context(errors::ConnectorRequestError::InvalidDataFormat { field_name: "amount" })
                 }
             }
         }

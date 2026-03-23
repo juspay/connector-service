@@ -255,7 +255,7 @@ use crate::{
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData, TaxInfo, WebhookDetailsResponse,
     },
-    errors::{ApiError, ApplicationErrorResponse},
+    errors::{self, ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
     payment_address::{
         Address, AddressDetails, OrderDetailsWithAmount, PaymentAddress, PhoneDetails,
@@ -935,19 +935,23 @@ impl<
                                 Some(grpc_api_types::payments::apple_wallet::payment_data::PaymentData::DecryptedData(decrypted_data)) => {
                                     let payment_data = payment_method_data::ApplePayWalletData::validate_decrypted_payment_data(
                                         decrypted_data.payment_data,
-                                    )?;
+                                    )
+                                    .map_err(errors::connector_request_report_to_application)?;
 
                                     Ok(payment_method_data::ApplePayPaymentData::Decrypted(
                                         payment_method_data::ApplePayDecryptedData {
                                             application_primary_account_number: payment_method_data::ApplePayWalletData::validate_decrypted_primary_account_number(
                                                 decrypted_data.application_primary_account_number,
-                                            )?,
+                                            )
+                                            .map_err(errors::connector_request_report_to_application)?,
                                             application_expiration_month: payment_method_data::ApplePayWalletData::validate_decrypted_expiration_month(
                                                 decrypted_data.application_expiration_month,
-                                            )?,
+                                            )
+                                            .map_err(errors::connector_request_report_to_application)?,
                                             application_expiration_year: payment_method_data::ApplePayWalletData::validate_decrypted_expiration_year(
                                                 decrypted_data.application_expiration_year,
-                                            )?,
+                                            )
+                                            .map_err(errors::connector_request_report_to_application)?,
                                             payment_data,
                                         }
                                     ))
@@ -1010,13 +1014,16 @@ impl<
                                         payment_method_data::GooglePayDecryptedData {
                                             card_exp_month: payment_method_data::GooglePayWalletData::validate_decrypted_card_exp_month(
                                                 decrypt_data.card_exp_month,
-                                            )?,
+                                            )
+                                            .map_err(errors::connector_request_report_to_application)?,
                                             card_exp_year: payment_method_data::GooglePayWalletData::validate_decrypted_card_exp_year(
                                                 decrypt_data.card_exp_year,
-                                            )?,
+                                            )
+                                            .map_err(errors::connector_request_report_to_application)?,
                                             application_primary_account_number: payment_method_data::GooglePayWalletData::validate_decrypted_primary_account_number(
                                                 decrypt_data.application_primary_account_number,
-                                            )?,
+                                            )
+                                            .map_err(errors::connector_request_report_to_application)?,
                                             cryptogram: decrypt_data.cryptogram,
                                             eci_indicator: decrypt_data.eci_indicator,
                                         }
@@ -3130,7 +3137,7 @@ impl
             Some(false), // should_unify_address = false for access token operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         let connector_feature_data = value
             .connector_feature_data
@@ -3217,7 +3224,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         // Extract specific headers for vault and other integrations
         let vault_headers = extract_headers_from_metadata(metadata);
@@ -3347,7 +3354,7 @@ impl
             .map(|l2_l3| L2L3Data::foreign_try_from((l2_l3, &address, value.customer.as_ref())))
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         // Extract access_token from state field
         let access_token = value
@@ -3426,7 +3433,7 @@ impl
             Some(false), // should_unify_address = false for sync operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         let access_token = value
             .state
@@ -3493,7 +3500,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             Some(false), // should_unify_address = false for void operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -5199,7 +5206,7 @@ impl
             })
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -5262,7 +5269,7 @@ impl
             })
             .transpose()?;
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let refund_id = value.merchant_refund_id.clone();
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -5959,7 +5966,7 @@ impl
             Some(false), // should_unify_address = false for void post capture operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -6069,7 +6076,7 @@ impl
             Some(false), // should_unify_address = false for void post capture operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -6653,7 +6660,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -6720,7 +6727,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -7038,7 +7045,7 @@ impl
             _ => Some(true),
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -7144,7 +7151,7 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let access_token = value
             .state
             .as_ref()
@@ -8199,7 +8206,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         // For order creation, create a default address
@@ -8518,30 +8525,30 @@ impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> for BrowserInf
 }
 
 impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for SessionTokenRequestData {
-    type Error = ApplicationErrorResponse;
+    type Error = errors::ConnectorRequestError;
 
     fn foreign_try_from(
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = match value.amount {
-            Some(amount) => Ok(common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-                currency: common_enums::Currency::foreign_try_from(amount.currency())?,
-            }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for repeat payments".to_owned(),
-                error_object: None,
-            }))),
-        }?;
+        let amount = value.amount.ok_or_else(|| {
+            error_stack::Report::from(errors::ConnectorRequestError::config_error(
+                "MISSING_AMOUNT",
+                "Amount is required for repeat payments",
+            ))
+        })?;
+        let amount = common_utils::types::Money {
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(amount.currency())
+                .map_err(errors::application_report_to_connector_request)?,
+        };
         Ok(Self {
             amount: amount.amount,
             currency: amount.currency,
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
-                .transpose()?,
+                .transpose()
+                .map_err(errors::application_report_to_connector_request)?,
         })
     }
 }
@@ -8574,7 +8581,7 @@ impl ForeignTryFrom<grpc_api_types::payments::MerchantAuthenticationServiceCreat
 
 // Generic implementation for access token request from connector auth
 impl ForeignTryFrom<&ConnectorSpecificConfig> for AccessTokenRequestData {
-    type Error = ApplicationErrorResponse;
+    type Error = errors::ConnectorRequestError;
 
     fn foreign_try_from(
         _auth_type: &ConnectorSpecificConfig,
@@ -8662,23 +8669,22 @@ impl
     ForeignTryFrom<grpc_api_types::payments::MerchantAuthenticationServiceCreateSessionTokenRequest>
     for SessionTokenRequestData
 {
-    type Error = ApplicationErrorResponse;
+    type Error = errors::ConnectorRequestError;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::MerchantAuthenticationServiceCreateSessionTokenRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let amount = match value.amount {
-            Some(amount) => Ok(common_utils::types::Money {
-                amount: common_utils::types::MinorUnit::new(amount.minor_amount),
-                currency: common_enums::Currency::foreign_try_from(amount.currency())?,
-            }),
-            None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_AMOUNT".to_owned(),
-                error_identifier: 400,
-                error_message: "Amount is required for session token creation".to_owned(),
-                error_object: None,
-            }))),
-        }?;
+        let amount = value.amount.ok_or_else(|| {
+            error_stack::Report::from(errors::ConnectorRequestError::config_error(
+                "MISSING_AMOUNT",
+                "Amount is required for session token creation",
+            ))
+        })?;
+        let amount = common_utils::types::Money {
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(amount.currency())
+                .map_err(errors::application_report_to_connector_request)?,
+        };
 
         Ok(Self {
             amount: amount.amount,
@@ -8686,7 +8692,8 @@ impl
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
-                .transpose()?,
+                .transpose()
+                .map_err(errors::application_report_to_connector_request)?,
         })
     }
 }
@@ -8715,7 +8722,7 @@ impl
             Some(false), // should_unify_address = false for session token operations
         );
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         let connector_feature_data = value
             .connector_feature_data
@@ -8876,7 +8883,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         // For payment method token creation, address is optional
         let address = value
@@ -9035,7 +9042,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let address = value
             .address
             .map(|addr| {
@@ -10458,7 +10465,7 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         Ok(Self {
@@ -10536,7 +10543,7 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         let metadata = value
@@ -10625,7 +10632,7 @@ impl
             }
         };
 
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
         let vault_headers = extract_headers_from_metadata(metadata);
 
         let access_token = value
@@ -10724,7 +10731,7 @@ impl
             &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata).map_err(errors::connector_request_report_to_application)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,

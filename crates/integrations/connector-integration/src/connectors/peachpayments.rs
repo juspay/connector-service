@@ -5,11 +5,14 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
+use common_utils::{
+    errors::CustomResult,
+    events,
+    ext_traits::{ByteSliceExt, StringExt},
+};
 use domain_types::{
     connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::*,
-    errors,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -35,6 +38,8 @@ use serde::Serialize;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -87,7 +92,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 Self::common_get_content_type(self).to_string().into(),
@@ -126,10 +131,10 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
-        fn get_headers(&self, req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        fn get_headers(&self, req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
-        fn get_url(&self, req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
+        fn get_url(&self, req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> CustomResult<String, ConnectorRequestError> {
             match req.request.capture_method {
                 Some(common_enums::CaptureMethod::Automatic) => Ok(format!(
                     "{}/transactions/create-and-confirm",
@@ -139,7 +144,7 @@ macros::macro_connector_implementation!(
                     "{}/transactions/authorization",
                     self.connector_base_url_payments(req)
                 )),
-                _ => Err(errors::ConnectorError::CaptureMethodNotSupported.into()),
+                _ => Err(ConnectorRequestError::CaptureMethodNotSupported.into()),
             }
         }
     }
@@ -158,12 +163,12 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
-        fn get_headers(&self, req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        fn get_headers(&self, req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
-        fn get_url(&self, req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
+        fn get_url(&self, req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
             Ok(format!("{}/transactions/authorization/{}/capture", self.connector_base_url_payments(req), connector_payment_id))
         }
     }
@@ -182,10 +187,10 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
-        fn get_headers(&self, req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        fn get_headers(&self, req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
-        fn get_url(&self, req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
+        fn get_url(&self, req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> CustomResult<String, ConnectorRequestError> {
             let connector_payment_id = req.request.connector_transaction_id.clone();
             Ok(format!("{}/transactions/authorization/{}/reverse", self.connector_base_url_payments(req), connector_payment_id))
         }
@@ -205,10 +210,10 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
-        fn get_headers(&self, req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        fn get_headers(&self, req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
-        fn get_url(&self, req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>) -> CustomResult<String, errors::ConnectorError> {
+        fn get_url(&self, req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>) -> CustomResult<String, ConnectorRequestError> {
             let connector_transaction_id = req.request.connector_transaction_id.clone();
             Ok(format!("{}/transactions/{}/refund", self.connector_base_url_refunds(req), connector_transaction_id))
         }
@@ -227,10 +232,10 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
-        fn get_headers(&self, req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        fn get_headers(&self, req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
-        fn get_url(&self, req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
+        fn get_url(&self, req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> CustomResult<String, ConnectorRequestError> {
             let reference_id = req.resource_common_data.connector_request_reference_id.clone();
             Ok(format!("{}/transactions/by-reference/{}", self.connector_base_url_payments(req), reference_id))
         }
@@ -249,10 +254,10 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
-        fn get_headers(&self, req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        fn get_headers(&self, req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
-        fn get_url(&self, req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>) -> CustomResult<String, errors::ConnectorError> {
+        fn get_url(&self, req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>) -> CustomResult<String, ConnectorRequestError> {
             let reference_id = req.resource_common_data.connector_request_reference_id.clone();
             Ok(format!("{}/transactions/by-reference/{}", self.connector_base_url_refunds(req), reference_id))
         }
@@ -281,9 +286,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = transformers::PeachpaymentsAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         Ok(vec![
             ("x-api-key".to_string(), auth.api_key.expose().into()),
             ("x-tenant-id".to_string(), auth.tenant_id.expose().into()),
@@ -295,11 +300,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: responses::PeachpaymentsErrorResponse = res
             .response
             .parse_struct("PeachpaymentsErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -652,9 +657,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
-        let webhook_body: responses::PeachpaymentsIncomingWebhook =
-            transformers::get_webhook_object_from_body(&request.body)?;
+    ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
         let description = webhook_body
             .transaction
@@ -699,10 +708,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         }
                     }
                 } else {
-                    Err(errors::ConnectorError::WebhookEventTypeNotFound.into())
+                    Err(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()).into())
                 }
             }
-            _ => Err(errors::ConnectorError::WebhookEventTypeNotFound.into()),
+            _ => Err(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()).into()),
         }
     }
 
@@ -711,13 +720,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
-        let webhook_body: responses::PeachpaymentsIncomingWebhook =
-            transformers::get_webhook_object_from_body(&request.body)?;
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
         let transaction = webhook_body
             .transaction
-            .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+            .ok_or(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?;
 
         let status: common_enums::AttemptStatus = transaction.transaction_result.clone().into();
 
@@ -761,13 +774,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
-        let webhook_body: responses::PeachpaymentsIncomingWebhook =
-            transformers::get_webhook_object_from_body(&request.body)?;
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
+        let body = String::from_utf8(request.body.clone())
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
         let transaction = webhook_body
             .transaction
-            .ok_or(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+            .ok_or(ConnectorRequestError::NotImplemented("webhook resource object not found".to_string()))?;
 
         let refund_status: common_enums::RefundStatus = match transaction.transaction_result {
             responses::PeachpaymentsPaymentStatus::ApprovedConfirmed
@@ -807,10 +824,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
     ) -> Result<
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
-        error_stack::Report<errors::ConnectorError>,
+        error_stack::Report<ConnectorRequestError>,
     > {
-        let webhook_body: responses::PeachpaymentsIncomingWebhook =
-            transformers::get_webhook_object_from_body(&request.body)?;
+        let body = String::from_utf8(request.body.clone())
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
+
+        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
+            .parse_struct("PeachpaymentsIncomingWebhook")
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
         Ok(Box::new(webhook_body))
     }

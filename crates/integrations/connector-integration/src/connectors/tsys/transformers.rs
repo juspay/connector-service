@@ -7,7 +7,6 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -19,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use crate::types::ResponseRouterData;
 
 use super::TsysRouterData;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 // ============================================================================
 // Card Data Source Enum
@@ -168,7 +168,7 @@ pub struct TsysAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for TsysAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -183,7 +183,7 @@ impl TryFrom<&ConnectorSpecificConfig> for TsysAuthType {
                 developer_id: developer_id.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType
             )),
         }
     }
@@ -233,7 +233,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TsysPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item_data: TsysRouterData<
@@ -248,7 +248,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> Result<Self, Self::Error> {
         let item = &item_data.router_data;
         if item.resource_common_data.is_three_ds() {
-            return Err(errors::ConnectorError::NotImplemented(
+            return Err(ConnectorRequestError::NotImplemented(
                 "Three_ds payments through Tsys".to_string(),
             )
             .into());
@@ -266,7 +266,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .connector
                         .amount_converter
                         .convert(item.request.minor_amount, item.request.currency)
-                        .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                        .change_context(ConnectorRequestError::AmountConversionFailed)?,
                     currency_code: item.request.currency,
                     card_number: card_data.card_number.clone(),
                     expiration_date: card_data
@@ -290,7 +290,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     Ok(Self::Auth(auth_data))
                 }
             }
-            _ => Err(errors::ConnectorError::NotImplemented(
+            _ => Err(ConnectorRequestError::NotImplemented(
                 "Payment method not implemented".to_string(),
             ))?,
         }
@@ -376,7 +376,7 @@ fn get_payments_response(connector_response: TsysResponse, http_code: u16) -> Pa
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TsysAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<TsysAuthorizeResponse, Self>,
@@ -463,7 +463,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<TsysAuthorizeResponse
 impl TryFrom<ResponseRouterData<TsysCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<TsysCaptureResponse, Self>) -> Result<Self, Self::Error> {
         let TsysCaptureResponse(response_data) = item.response;
@@ -522,7 +522,7 @@ impl TryFrom<ResponseRouterData<TsysCaptureResponse, Self>>
 impl TryFrom<ResponseRouterData<TsysVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<TsysVoidResponse, Self>) -> Result<Self, Self::Error> {
         let TsysVoidResponse(response_data) = item.response;
@@ -616,7 +616,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TsysPSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item_data: TsysRouterData<
@@ -634,7 +634,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
             developer_id: auth.developer_id,
         };
 
@@ -719,7 +719,7 @@ fn get_payments_sync_response(
 impl TryFrom<ResponseRouterData<TsysPSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<TsysPSyncResponse, Self>) -> Result<Self, Self::Error> {
         let TsysPSyncResponse(TsysSyncResponse {
@@ -779,7 +779,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TsysPaymentsCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item_data: TsysRouterData<
@@ -798,13 +798,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector_transaction_id
                 .clone()
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?,
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?,
             developer_id: auth.developer_id,
             transaction_amount: item_data
                 .connector
                 .amount_converter
                 .convert(item.request.minor_amount_to_capture, item.request.currency)
-                .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                .change_context(ConnectorRequestError::AmountConversionFailed)?,
         };
 
         Ok(Self { capture })
@@ -841,7 +841,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for TsysPaymentsCancelRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item_data: TsysRouterData<
@@ -891,7 +891,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         TsysRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for TsysRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item_data: TsysRouterData<
@@ -909,7 +909,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .connector
                 .amount_converter
                 .convert(MinorUnit(item.request.refund_amount), item.request.currency)
-                .change_context(errors::ConnectorError::AmountConversionFailed)?,
+                .change_context(ConnectorRequestError::AmountConversionFailed)?,
             transaction_id: item.request.connector_transaction_id.clone(),
         };
 
@@ -947,7 +947,7 @@ pub struct RefundResponse {
 impl TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = match item.response.return_response {
@@ -986,7 +986,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         TsysRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     > for TsysRSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item_data: TsysRouterData<
@@ -1011,7 +1011,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<TsysRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<TsysRSyncResponse, Self>) -> Result<Self, Self::Error> {
         let TsysRSyncResponse(TsysSyncResponse {
