@@ -4,6 +4,8 @@
 package payments
 
 import types.Payment.*
+import types.Payouts.*
+import types.PaymentMethods.*
 
 import uniffi.connector_service_ffi.acceptReqTransformer
 import uniffi.connector_service_ffi.acceptResTransformer
