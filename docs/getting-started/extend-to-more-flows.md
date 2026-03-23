@@ -1,12 +1,12 @@
 # Extending to More Flows
 
-YOu have implemmented the basic plumbing for routing payment processor agnostic APIs. All methods work the same way with the single interface regardless of which payment processor you use. That's the power you get with the library.
+You have implemented the basic plumbing for routing payment processor agnostic APIs. All methods work the same way with the single interface regardless of which payment processor you use. That's the power you get with the library.
 
 Beyond the basic authorization and capture, the library handles complex payment scenarios in a processor agnostic manner. This includes recurring payments, incremental authorization, void, reverse, refund and more.
 
 ## Payment Flows Overview
 
-Below are some sample use cases to try out quickly, followed by some real world scenarios.
+Below are some sample real worls scenarious to try out quickly.
 
 | Flow | Use Case | Key Operations |
 |------|----------|----------------|
@@ -16,12 +16,12 @@ Below are some sample use cases to try out quickly, followed by some real world 
 | **Incremental Authorization** | Hotel check-in, car rental | [`authorize`](../../api-reference/services/payment-service/authorize.md), [`incrementalAuthorization`](../../api-reference/services/payment-service/incremental-authorization.md) |
 | **Partial Capture** | Multi-shipment orders | [`capture`](../../api-reference/services/payment-service/capture.md) with partial amount |
 | **Refunds** | Customer returns | [`refund`](../../api-reference/services/payment-service/refund.md) |
-| **Reucrring Payments** | SaaS billing and rer | [`setupMandate`](../../api-reference/services/payment-service/setup-recurring.md), [`charge`](../../api-reference/services/recurring-payment-service/charge.md) |
+| **Recurring Payments** | SaaS billing and more | [`setupRecurring`](../../api-reference/services/payment-service/setup-recurring.md), [`charge`](../../api-reference/services/recurring-payment-service/charge.md) |
 
 
 ## Incremental Authorization
 
-Hotels and car rentals need to increase authorization amounts after the initial charge:
+Lets take hotels and car rentals. Such businesses will need to make an initial charge (like a security deposit) and then need to increase authorization amounts after the initial charge. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
 // 1. Initial authorization: $100 hold
@@ -47,23 +47,23 @@ See: [`incrementalAuthorization` API Reference](../../api-reference/services/pay
 
 ## Subscription / Recurring Payments
 
-Store a payment method and charge it later:
+Let take subnscription businesses like a email subscription or and AI subscription. Suych businesses would want to store a payment method of a customer against a particular subscription plan, and charge it later:
 
 ```javascript
-// 1. Set up mandate (store payment method)
-const mandate = await client.payments.setupMandate({
+// 1. Set up recurring (store payment method)
+const recurring = await client.payments.setupRecurring({
     customerId: 'cus_xyz789',
     paymentMethod: { card: { ... } }
 });
 
 // 2. Charge the stored method monthly
 const charge = await client.recurringPayments.charge({
-    mandateId: mandate.mandateId,
+    connectorRecurringPaymentId: recurring.connectorRecurringPaymentId,
     amount: { minorAmount: 2900, currency: Currency.USD }
 });
+```
 
-
-See: [`setupMandate`](../../api-reference/services/payment-service/setup-recurring.md), [`charge`](../../api-reference/services/recurring-payment-service/charge.md), [`revoke`](../../api-reference/services/recurring-payment-service/revoke.md)
+See: [`setupRecurring`](../../api-reference/services/payment-service/setup-recurring.md), [`charge`](../../api-reference/services/recurring-payment-service/charge.md), [`revoke`](../../api-reference/services/recurring-payment-service/revoke.md)
 
 
 ## Partial Capture
