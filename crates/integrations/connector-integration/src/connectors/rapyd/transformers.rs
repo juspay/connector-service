@@ -389,8 +389,7 @@ fn build_rapyd_bank_debit_payment_method<
                 .resource_common_data
                 .get_optional_billing_last_name();
 
-            let first_name = billing_first_name
-                .or_else(|| bank_account_holder_name.as_ref().map(|name| name.clone()));
+            let first_name = billing_first_name.or(bank_account_holder_name.clone());
             let last_name = billing_last_name;
 
             Ok(Some(PaymentMethod {
