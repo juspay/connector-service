@@ -578,9 +578,7 @@ impl CustomerService for Customer {
                         connectors,
                         &request_data.masked_metadata,
                     ))
-                    .map_err(|e| {
-                        tonic::Status::internal(format!("Failed to resolve connectors: {e}"))
-                    })?;
+                    .map_err(|e| e.into_grpc_status())?;
 
                     // Create connector customer request data directly
                     let connector_customer_request_data = ConnectorCustomerData::foreign_try_from(
@@ -1576,9 +1574,7 @@ impl PaymentService for Payments {
                         &metadata_payload.connector_config,
                         metadata_payload.environment.as_deref(),
                     )
-                    .map_err(|e| {
-                        tonic::Status::internal(format!("Failed to resolve connectors: {e}"))
-                    })?;
+                    .map_err(|e| error_stack::Report::new(e).into_grpc_status())?;
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
@@ -3617,13 +3613,13 @@ impl PaymentMethodAuthenticationService for PaymentMethodAuthentication {
             .cloned()
             .unwrap_or_else(|| "PaymentService".to_string());
         let config = get_config_from_request(&request)?;
-        grpc_logging_wrapper(
+        Box::pin(grpc_logging_wrapper(
             request,
             &service_name,
             config.clone(),
             FlowName::PreAuthenticate,
             |request_data| async move { self.internal_pre_authenticate(request_data).await },
-        )
+        ))
         .await
     }
 

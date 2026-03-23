@@ -5,7 +5,8 @@
 
 use serde_json::{Map, Value};
 use std::collections::HashMap;
-use superposition_core::{eval_config, parse_toml_config, Config, MergeStrategy};
+use superposition_core::{eval_config, ConfigFormat, MergeStrategy, TomlFormat};
+use superposition_types::DetailedConfig;
 
 use crate::consts::{
     CONFIG_KEY_CONNECTOR_BASE_URL, CONFIG_KEY_CONNECTOR_BASE_URL_BANK_REDIRECTS,
@@ -33,7 +34,7 @@ pub enum SuperpositionConfigError {
 /// Parsed and cached representation of superposition.toml
 #[derive(Debug, Clone)]
 pub struct SuperpositionConfig {
-    config: Config,
+    config: DetailedConfig,
 }
 
 impl SuperpositionConfig {
@@ -56,7 +57,7 @@ impl SuperpositionConfig {
                 source: e,
             })?;
 
-        let config = parse_toml_config(&contents)
+        let config = TomlFormat::parse_into_detailed(&contents)
             .map_err(|e| SuperpositionConfigError::ParseError(e.to_string()))?;
 
         Ok(Self { config })
@@ -91,7 +92,15 @@ impl SuperpositionConfig {
             Value::String(environment.to_string()),
         );
 
-        let default_configs = self.config.default_configs.clone().into_inner();
+        // Convert DefaultConfigsWithSchema to Map<String, Value> by extracting the value field
+        let default_configs: Map<String, Value> = self
+            .config
+            .default_configs
+            .clone()
+            .into_inner()
+            .into_iter()
+            .map(|(k, v)| (k, v.value))
+            .collect();
 
         eval_config(
             default_configs,

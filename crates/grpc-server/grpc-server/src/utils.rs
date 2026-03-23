@@ -28,6 +28,7 @@ use tonic::metadata;
 use ucs_env::{configs, configs::ConfigPatch, error::ResultExtGrpc};
 
 use crate::request::RequestData;
+use ucs_env::error::IntoGrpcStatus;
 
 /// Record the header's fields in request's trace
 pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> tracing::Span {
@@ -81,37 +82,61 @@ pub fn get_resolved_connectors(
     connector_config: &ConnectorSpecificConfig,
     environment: Option<&str>,
 ) -> Result<domain_types::types::Connectors, ApplicationErrorResponse> {
-    if let Some(env) = environment {
-        validate_environment(env).map_err(|e| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_ENVIRONMENT".to_string(),
-                error_identifier: 400,
-                error_message: e,
-                error_object: None,
-            })
-        })?;
-
-        if let Some(urls) = resolve_connector_urls(
-            config.superposition_config.as_ref().map(|arc| arc.as_ref()),
-            connector,
-            env,
-        ) {
-            tracing::info!("resolved URLs from superposition for environment: {}", env);
-            let patched_connectors = config.connectors.patch_connector_urls(connector, &urls);
-            connectors_with_connector_config_overrides_on_connectors(
-                connector_config,
-                patched_connectors,
-            )
-            .map_err(|e| {
-                ApplicationErrorResponse::InternalServerError(ApiError {
-                    sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
-                    error_identifier: 500,
-                    error_message: format!("Failed to resolve connector overrides: {}", e),
+    match environment {
+        Some(env) => {
+            validate_environment(env).map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_ENVIRONMENT".to_string(),
+                    error_identifier: 400,
+                    error_message: e,
                     error_object: None,
                 })
-            })
-        } else {
-            tracing::info!("superposition resolution failed, using static config with overrides");
+            })?;
+
+            match resolve_connector_urls(
+                config.superposition_config.as_ref().map(|arc| arc.as_ref()),
+                connector,
+                env,
+            ) {
+                Some(urls) => {
+                    tracing::info!("resolved URLs from superposition for environment: {}", env);
+                    let patched_connectors =
+                        config.connectors.patch_connector_urls(connector, &urls)?;
+                    connectors_with_connector_config_overrides_on_connectors(
+                        connector_config,
+                        patched_connectors,
+                    )
+                    .map_err(|e| {
+                        ApplicationErrorResponse::InternalServerError(ApiError {
+                            sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
+                            error_identifier: 500,
+                            error_message: format!("Failed to resolve connector overrides: {}", e),
+                            error_object: None,
+                        })
+                    })
+                }
+                None => {
+                    tracing::info!(
+                        "superposition resolution failed, using static config with overrides"
+                    );
+                    connectors_with_connector_config_overrides(connector_config, config).map_err(
+                        |e| {
+                            ApplicationErrorResponse::InternalServerError(ApiError {
+                                sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
+                                error_identifier: 500,
+                                error_message: format!(
+                                    "Failed to resolve connector overrides: {}",
+                                    e
+                                ),
+                                error_object: None,
+                            })
+                        },
+                    )
+                }
+            }
+        }
+        None => {
+            tracing::info!("no x-environment header, using static config with overrides");
             connectors_with_connector_config_overrides(connector_config, config).map_err(|e| {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
@@ -121,16 +146,6 @@ pub fn get_resolved_connectors(
                 })
             })
         }
-    } else {
-        tracing::info!("no x-environment header, using static config with overrides");
-        connectors_with_connector_config_overrides(connector_config, config).map_err(|e| {
-            ApplicationErrorResponse::InternalServerError(ApiError {
-                sub_code: "CONNECTOR_OVERRIDE_ERROR".to_string(),
-                error_identifier: 500,
-                error_message: format!("Failed to resolve connector overrides: {}", e),
-                error_object: None,
-            })
-        })
     }
 }
 
@@ -631,9 +646,7 @@ macro_rules! implement_connector_operation {
                 &connector_config,
                 metadata_payload.environment.as_deref(),
             )
-            .map_err(|e| {
-                tonic::Status::internal(format!("Failed to resolve connector config: {e}"))
-            })?;
+            .map_err(|e| error_stack::Report::new(e).into_grpc_status())?;
 
             // Create common request data
             let common_flow_data = $common_flow_data_constructor((payload.clone(), connectors, &masked_metadata))
