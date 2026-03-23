@@ -29,6 +29,7 @@ pub mod auth_headers {
 pub struct MifinityConnectorMetadataObject {
     pub brand_id: Secret<String>,
     pub destination_account_number: Secret<String>,
+    pub date_of_birth: Option<Secret<Date>>,
 }
 
 impl TryFrom<&Option<pii::SecretSerdeValue>> for MifinityConnectorMetadataObject {
@@ -120,6 +121,85 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             config: "merchant_connector_account.metadata",
         })?;
         match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::Card(_) => {
+                let money = Money {
+                    amount: item
+                        .connector
+                        .amount_converter
+                        .convert(
+                            item.router_data.request.minor_amount,
+                            item.router_data.request.currency,
+                        )
+                        .change_context(ConnectorError::RequestEncodingFailed)?,
+                    currency: item.router_data.request.currency,
+                };
+                let phone_details = item.router_data.resource_common_data.get_billing_phone()?;
+                let billing_country = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_country()?;
+                let dob = metadata
+                    .date_of_birth
+                    .ok_or(ConnectorError::MissingRequiredField {
+                        field_name: "metadata.date_of_birth",
+                    })?;
+                let client = MifinityClient {
+                    first_name: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_first_name()?,
+                    last_name: item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_last_name()?,
+                    phone: phone_details.get_number()?,
+                    dialing_code: phone_details.get_country_code()?,
+                    nationality: billing_country,
+                    email_address: item.router_data.resource_common_data.get_billing_email()?,
+                    dob,
+                };
+                let address = MifinityAddress {
+                    address_line1: item.router_data.resource_common_data.get_billing_line1()?,
+                    country_code: billing_country,
+                    city: item.router_data.resource_common_data.get_billing_city()?,
+                };
+                let validation_key = format!(
+                    "payment_validation_key_{}_{}",
+                    item.router_data
+                        .resource_common_data
+                        .merchant_id
+                        .get_string_repr(),
+                    item.router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone()
+                );
+                let client_reference = item.router_data.request.customer_id.clone().ok_or(
+                    ConnectorError::MissingRequiredField {
+                        field_name: "client_reference",
+                    },
+                )?;
+                let destination_account_number = metadata.destination_account_number;
+                let trace_id = item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone();
+                let brand_id = metadata.brand_id;
+                Ok(Self {
+                    money,
+                    client,
+                    address,
+                    validation_key,
+                    client_reference,
+                    trace_id: trace_id.clone(),
+                    description: trace_id.clone(),
+                    destination_account_number,
+                    brand_id,
+                    return_url: item.router_data.request.get_router_return_url()?,
+                    language_preference: None,
+                })
+            }
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 WalletData::Mifinity(data) => {
                     let money = Money {
@@ -234,8 +314,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
                 .into()),
             },
-            PaymentMethodData::Card(_)
-            | PaymentMethodData::CardRedirect(_)
+            PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::BankRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankDebit(_)
