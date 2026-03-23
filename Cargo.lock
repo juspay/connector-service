@@ -1040,6 +1040,7 @@ dependencies = [
  "interfaces",
  "josekit",
  "jsonwebtoken",
+ "openssl",
  "paste",
  "qrcode",
  "quick-xml 0.31.0",
