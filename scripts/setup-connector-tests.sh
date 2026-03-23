@@ -7,11 +7,12 @@
 #   1. Checks that Node ≥18 and npm are available
 #   2. Runs `npm install` inside browser-automation-engine/ (skipped if up-to-date)
 #   3. Installs Playwright browser binaries (chromium + webkit) if not present
-#   4. Auto-installs Netlify CLI locally if not already available (optional)
-#   5. Deploys the GPay/APay token-generator pages to Netlify and writes
+#   4. Checks/installs grpcurl for gRPC backend testing
+#   5. Auto-installs Netlify CLI locally if not already available (optional)
+#   6. Deploys the GPay/APay token-generator pages to Netlify and writes
 #      GPAY_HOSTED_URL to .env.connector-tests (skipped if already deployed)
-#   6. Verifies credentials file is present (creds.json)
-#   7. Installs test-prism launcher to PATH
+#   7. Verifies credentials file is present (creds.json)
+#   8. Installs test-prism launcher to PATH
 #
 # Re-running this script is safe — every step checks whether work is needed
 # before doing it.
@@ -103,7 +104,75 @@ else
   success "Playwright browsers already installed"
 fi
 
-# ── Step 3.5: Install Netlify CLI (if needed) ─────────────────────────────────
+# ── Step 3.5: Check/Install grpcurl ───────────────────────────────────────────
+info "Checking grpcurl..."
+
+if command -v grpcurl &>/dev/null; then
+  success "grpcurl already installed ($(grpcurl --version 2>&1 | head -1))"
+else
+  warn "grpcurl not found — attempting to install..."
+
+  # Detect platform
+  OS="$(uname -s)"
+  ARCH="$(uname -m)"
+
+  case "${OS}" in
+    Darwin)
+      if command -v brew &>/dev/null; then
+        info "Installing grpcurl via Homebrew..."
+        brew install grpcurl && success "grpcurl installed via Homebrew"
+      else
+        warn "Homebrew not found. Please install grpcurl manually:"
+        warn "  brew install grpcurl"
+        warn "  OR download from: https://github.com/fullstorydev/grpcurl/releases"
+        warn ""
+        warn "grpcurl is required for gRPC backend testing."
+      fi
+      ;;
+    Linux)
+      info "Installing grpcurl from GitHub releases..."
+      GRPCURL_VERSION="1.9.1"
+      DOWNLOAD_URL="https://github.com/fullstorydev/grpcurl/releases/download/v${GRPCURL_VERSION}/grpcurl_${GRPCURL_VERSION}_linux_x86_64.tar.gz"
+
+      TEMP_DIR=$(mktemp -d)
+      if curl -L -o "${TEMP_DIR}/grpcurl.tar.gz" "${DOWNLOAD_URL}" 2>&1; then
+        tar -xzf "${TEMP_DIR}/grpcurl.tar.gz" -C "${TEMP_DIR}"
+
+        # Try to install to /usr/local/bin or ~/bin
+        if [[ -w "/usr/local/bin" ]]; then
+          mv "${TEMP_DIR}/grpcurl" /usr/local/bin/
+          success "grpcurl installed to /usr/local/bin/grpcurl"
+        elif mkdir -p "${HOME}/bin" 2>/dev/null; then
+          mv "${TEMP_DIR}/grpcurl" "${HOME}/bin/"
+          success "grpcurl installed to ~/bin/grpcurl"
+
+          # Check if ~/bin is in PATH
+          if [[ ":${PATH}:" != *":${HOME}/bin:"* ]]; then
+            warn "~/bin is not in your PATH. Add it to your shell profile:"
+            warn "  echo 'export PATH=\"\${HOME}/bin:\${PATH}\"' >> ~/.bashrc"
+            warn "  source ~/.bashrc"
+          fi
+        else
+          warn "Could not install grpcurl to system path."
+          warn "Binary available at: ${TEMP_DIR}/grpcurl"
+          warn "Move it manually: sudo mv ${TEMP_DIR}/grpcurl /usr/local/bin/"
+        fi
+      else
+        warn "Failed to download grpcurl. Please install manually:"
+        warn "  https://github.com/fullstorydev/grpcurl/releases"
+      fi
+      rm -rf "${TEMP_DIR}"
+      ;;
+    *)
+      warn "Unsupported OS: ${OS}. Please install grpcurl manually:"
+      warn "  https://github.com/fullstorydev/grpcurl/releases"
+      warn ""
+      warn "grpcurl is required for gRPC backend testing."
+      ;;
+  esac
+fi
+
+# ── Step 4: Install Netlify CLI (if needed) ───────────────────────────────────
 info "Checking Netlify CLI..."
 
 # Check if Netlify CLI is already installed globally or can run via npx
@@ -143,7 +212,7 @@ if [[ "${NETLIFY_AVAILABLE}" == "false" && "${SKIP_NETLIFY_DEPLOY:-0}" != "1" ]]
   fi
 fi
 
-# ── Step 4: Netlify deploy (GPAY_HOSTED_URL) ──────────────────────────────────
+# ── Step 5: Netlify deploy (GPAY_HOSTED_URL) ──────────────────────────────────
 # Source .env.connector-tests if it exists so we pick up a previously saved URL
 if [[ -f "${ENV_FILE}" ]]; then
   # shellcheck disable=SC1090
@@ -217,7 +286,7 @@ if [[ "${SKIP_NETLIFY}" != "1" && -n "${NETLIFY_CMD}" ]]; then
   fi
 fi
 
-# ── Step 5: Verify credentials ─────────────────────────────────────────────────
+# ── Step 6: Verify credentials ─────────────────────────────────────────────────
 info "Checking credentials file..."
 
 CREDS_PATH="${CONNECTOR_AUTH_FILE_PATH:-${UCS_CREDS_PATH:-${DEFAULT_CREDS}}}"
@@ -234,7 +303,7 @@ else
   warn "Connector tests that require credentials will be skipped."
 fi
 
-# ── Step 6: Install test-prism launcher ───────────────────────────────────────
+# ── Step 7: Install test-prism launcher ───────────────────────────────────────
 info "Installing test-prism command..."
 
 LAUNCHER_NAME="test-prism"

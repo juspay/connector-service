@@ -19,7 +19,7 @@ More details:
 
 - Run commands from repo root.
 - Rust toolchain installed.
-- `grpcurl` installed for grpcurl backend runs.
+- `grpcurl` for gRPC backend testing (auto-installed by setup script).
 - Connector credentials file available (shape: `.github/test/template_creds.json`).
 
 ## Primary entry point: `test-prism`
@@ -50,11 +50,12 @@ On first invocation, the script checks for `~/.config/ucs-connector-tests/setup.
 
 1. Checks Node/npm and installs browser-automation-engine dependencies
 2. Installs Playwright browsers
-3. **Auto-installs Netlify CLI locally** (if not already available)
-4. Deploys GPay token-generator to Netlify (optional - enables Google Pay tests)
-5. Verifies credentials file
-6. **Installs `test-prism` into the first writable directory on your `PATH`**
-7. Writes the `setup.done` sentinel
+3. **Checks/installs grpcurl** (via Homebrew on macOS, direct download on Linux)
+4. **Auto-installs Netlify CLI locally** (if not already available)
+5. Deploys GPay token-generator to Netlify (optional - enables Google Pay tests)
+6. Verifies credentials file
+7. **Installs `test-prism` into the first writable directory on your `PATH`**
+8. Writes the `setup.done` sentinel
 
 **Netlify CLI Installation:**
 - Setup checks for Netlify CLI (global or local)
