@@ -12,7 +12,7 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         SubmitEvidenceData,
     },
-    errors::ConnectorRequestError,
+    errors::{ConnectorFlowError, ConnectorRequestError},
     payment_method_data::DefaultPCIHolder,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -178,8 +178,7 @@ impl DisputeService for Disputes {
                         ),
                     )
                     .await
-                    .switch()
-                    .map_err(|e| e.into_grpc_status())?;
+                    .map_err(|e: error_stack::Report<ConnectorFlowError>| e.into_grpc_status())?;
 
                     let dispute_response = generate_submit_evidence_response(response)
                         .map_err(|e| e.into_grpc_status())?;

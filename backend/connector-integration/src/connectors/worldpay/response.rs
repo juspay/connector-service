@@ -303,7 +303,7 @@ where
         .map(|href| {
             urlencoding::decode(href)
                 .map(|s| transform_fn(s.into_owned()))
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::response_handling_failed(None))
         })
         .transpose()
         .into_request_err()?;

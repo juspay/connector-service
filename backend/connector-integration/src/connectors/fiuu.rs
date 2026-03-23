@@ -269,7 +269,7 @@ macros::create_all_prerequisites!(
         ) -> Result<Bytes, ConnectorResponseError> {
                 let response_str = String::from_utf8(response_bytes.to_vec()).map_err(|e| {
                 error!("Error in Deserializing Response Data: {:?}", e);
-                ConnectorResponseError::ResponseDeserializationFailed
+                ConnectorResponseError::response_deserialization_failed(None)
             })?;
 
             let mut json = serde_json::Map::new();
@@ -292,7 +292,7 @@ macros::create_all_prerequisites!(
             if !miscellaneous.is_empty() {
                 let misc_value = serde_json::to_value(miscellaneous).map_err(|e| {
                     error!("Error serializing miscellaneous data: {:?}", e);
-                    ConnectorResponseError::ResponseDeserializationFailed
+                    ConnectorResponseError::response_deserialization_failed(None)
                 })?;
                 json.insert("miscellaneous".to_string(), misc_value);
             }
@@ -302,7 +302,7 @@ macros::create_all_prerequisites!(
             // Convert JSON Value to string and then to bytes
             let json_string = serde_json::to_string(&flattened_json).map_err(|e| {
                 tracing::error!(error=?e, "Failed to convert to JSON string");
-                ConnectorResponseError::ResponseDeserializationFailed
+                ConnectorResponseError::response_deserialization_failed(None)
             })?;
 
             tracing::info!(json=?json_string, "Flattened JSON structure");
@@ -387,7 +387,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: fiuu::FiuuErrorResponse = res
             .response
             .parse_struct("fiuu::FiuuErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -659,7 +659,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Some(headers) => {
                 let content_header = utils::get_http_header("Content-type", &headers)
                     .attach_printable("Missing content type in headers")
-                    .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+                    .change_context(ConnectorResponseError::response_handling_failed(None))?;
                 let response: FiuuPaymentResponse = if content_header
                     .to_lowercase()
                     .replace(' ', "")
@@ -667,7 +667,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 {
                     parse_response(&res.response)
                 } else {
-                    Err(error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed))
+                    Err(error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None)))
                         .attach_printable(format!("Expected content type to be text/plain;charset=UTF-8 , but received different content type as {content_header} in response"))?
                 }?;
                 with_response_body!(event_builder, response);
@@ -677,14 +677,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     router_data: data.clone(),
                     http_code: res.status_code,
                 })
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::response_handling_failed(None))
             }
             None => {
                 // We don't get headers for payment webhook response handling
                 let response: FiuuPaymentResponse = res
                     .response
                     .parse_struct("fiuu::FiuuPaymentResponse")
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
                 with_response_body!(event_builder, response);
 
                 RouterDataV2::try_from(ResponseRouterData {
@@ -692,7 +692,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     router_data: data.clone(),
                     http_code: res.status_code,
                 })
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::response_handling_failed(None))
             }
         }
     }
@@ -1101,7 +1101,7 @@ where
 {
     let response_str = String::from_utf8(data.to_vec()).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);
-        error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed)
+        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
     })?;
 
     let mut json = serde_json::Map::new();
@@ -1124,14 +1124,14 @@ where
     if !miscellaneous.is_empty() {
         let misc_value = serde_json::to_value(miscellaneous).map_err(|e| {
             error!("Error serializing miscellaneous data: {:?}", e);
-            error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed)
+            error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
         })?;
         json.insert("miscellaneous".to_string(), misc_value);
     }
 
     let response: T = serde_json::from_value(Value::Object(json)).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);
-        error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed)
+        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
     })?;
 
     Ok(response)

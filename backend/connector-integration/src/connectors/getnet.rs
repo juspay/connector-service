@@ -319,7 +319,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: getnet::GetnetErrorResponse = res
             .response
             .parse_struct("GetnetErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .attach_printable("Failed to deserialize Getnet error response")?;
 
         with_error_response_body!(event_builder, response);

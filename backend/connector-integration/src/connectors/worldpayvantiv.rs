@@ -72,7 +72,7 @@ pub(crate) mod headers {
 /// Some responses might come as a JSON string containing XML, this function handles that case
 fn unwrap_json_wrapped_xml(response_bytes: &[u8]) -> CustomResult<String, ConnectorRequestError> {
     let response_str = std::str::from_utf8(response_bytes)
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
         .attach_printable("Failed to convert response bytes to UTF-8 string")
         .into_request_err()?;
 
@@ -80,7 +80,7 @@ fn unwrap_json_wrapped_xml(response_bytes: &[u8]) -> CustomResult<String, Connec
     let xml_str = if response_str.trim().starts_with('"') {
         // Try to parse as JSON string first to unwrap the XML
         serde_json::from_str::<String>(response_str)
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
             .attach_printable("Failed to parse JSON-wrapped XML response")
             .into_request_err()?
     } else {
@@ -334,7 +334,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .map_err(|_parse_error| ConnectorResponseError::ResponseHandlingFailed)?;
+            .map_err(|_parse_error| ConnectorResponseError::response_handling_failed(None))?;
 
         with_response_body!(event_builder, response);
 
@@ -390,11 +390,11 @@ macros::create_all_prerequisites!(
             if xml_str.trim().starts_with("<?xml") || xml_str.trim().starts_with("<") {
                 // This is an XML response - convert to JSON
                 let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-                    .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                    .change_context(ConnectorResponseError::response_handling_failed(None))
                     .into_request_err()?;
 
                 let json_bytes = serde_json::to_vec(&xml_response)
-                    .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                    .change_context(ConnectorResponseError::response_handling_failed(None))
                     .into_request_err()?;
 
                 Ok(bytes::Bytes::from(json_bytes))
@@ -555,7 +555,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -624,7 +624,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -717,7 +717,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -786,7 +786,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let xml_str = unwrap_json_wrapped_xml(&res.response).into_response_err()?;
 
         let response: CnpOnlineResponse = deserialize_xml_to_struct(&xml_str)
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }
@@ -862,7 +862,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: VantivSyncResponse = res
             .response
             .parse_struct("VantivSyncResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
         if let Some(i) = event_builder {
             i.set_connector_response(&response)
         }

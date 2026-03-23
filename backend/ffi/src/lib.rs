@@ -2,6 +2,7 @@
 uniffi::setup_scaffolding!();
 
 pub mod bindings;
+pub mod error;
 pub mod handlers;
 pub mod macros;
 pub mod services;

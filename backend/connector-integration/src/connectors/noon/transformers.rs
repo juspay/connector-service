@@ -278,7 +278,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 data.router_data.request.minor_amount,
                 data.router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         let payment_data = match item.request.payment_method_data.clone() {
@@ -464,7 +464,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
@@ -708,7 +708,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: amount
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))
                 .into_request_err()?,
             currency: item.request.currency,
             transaction_reference: None,
@@ -816,7 +816,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
         let transaction = NoonActionTransaction {
             amount: refund_amount
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))
                 .into_request_err()?,
             currency: item.request.currency,
             transaction_reference: Some(item.request.refund_id.clone()),
@@ -984,7 +984,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .transactions
             .iter()
             .find(|transaction| transaction.transaction_reference.is_some())
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());
         let response = if utils::is_refund_failure(refund_status) {
@@ -1320,14 +1320,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             })
             .transpose()
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         let tokenize_c_c = subscription.is_some().then_some(true);
 
         let order = NoonOrder {
             amount: amount
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))
                 .into_request_err()?,
             currency,
             channel,
@@ -1482,7 +1482,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         // For repeat payments, use the subscription payment method with the mandate ID

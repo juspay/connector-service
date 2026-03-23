@@ -1896,7 +1896,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                     .into_response_err()?
                                     .clone()
                                     .parse_value("PaymentRequestMetadata")
-                                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
                                     .attach_printable(
                                         "Failed to parse apple_pay_combined.manual.payment_request_data metadata",
                                     )?
@@ -1957,7 +1957,7 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                             Some(connector_meta) => connector_meta
                                 .expose()
                                 .parse_value("GpaySessionTokenData")
-                                .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                                .change_context(ConnectorResponseError::response_deserialization_failed(None))
                                 .attach_printable("Failed to parse gpay metadata")?,
                             None => Err(ConnectorRequestError::NoConnectorMetaData)
                                 .attach_printable("connector_feature_data is None")

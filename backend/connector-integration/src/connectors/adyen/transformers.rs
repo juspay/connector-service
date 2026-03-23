@@ -3988,7 +3988,7 @@ impl ForeignTryFrom<(bool, AdyenWebhookStatus)> for AttemptStatus {
             //If Unexpected Event is received, need to understand how it reached this point
             //Webhooks with Payment Events only should try to consume this resource object.
             AdyenWebhookStatus::UnexpectedEvent | AdyenWebhookStatus::Reversed => Err(
-                error_stack::report!(ConnectorResponseError::ResponseHandlingFailed),
+                error_stack::report!(ConnectorResponseError::response_handling_failed(None)),
             ),
         }
     }
@@ -4596,7 +4596,7 @@ fn get_qr_metadata(
 ) -> CustomResult<Option<serde_json::Value>, ConnectorResponseError> {
     // Generate QR code image from qr_code_data
     let image_data = QrImage::new_from_data(response.action.qr_code_data.clone())
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+        .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
     let image_data_url = Url::parse(image_data.data.as_str()).ok();
     let qr_code_url = response.action.qr_code_url.clone();
@@ -4631,7 +4631,7 @@ fn get_qr_metadata(
     qr_code_info
         .map(|info| info.encode_to_value())
         .transpose()
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
 }
 
 pub fn get_webhook_response(
@@ -4683,7 +4683,7 @@ pub fn get_webhook_response(
     if is_multiple_capture_psync_flow {
         let capture_sync_response_list =
             utils::construct_captures_response_hashmap(vec![response.clone()])
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+                .change_context(ConnectorResponseError::response_handling_failed(None))?;
         Ok(AdyenPaymentsResponseData {
             status,
             error,
@@ -7024,7 +7024,7 @@ pub fn get_present_to_shopper_metadata(
 
             Some(voucher_data.encode_to_value())
                 .transpose()
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::response_handling_failed(None))
         }
         // NOTE: Support for other payment methods will be added in future iterations
         // - Bank transfer methods (PermataBankTransfer, BcaBankTransfer, BniVa, BriVa, CimbVa, DanamonVa, MandiriVa)

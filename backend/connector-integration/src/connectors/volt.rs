@@ -341,7 +341,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: volt::VoltErrorResponse = res
             .response
             .parse_struct("VoltErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -435,7 +435,7 @@ macros::macro_connector_implementation!(
         let response: volt::VoltAuthErrorResponse = res
             .response
             .parse_struct("VoltAuthErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
          with_error_response_body!(event_builder, response);
 

@@ -551,7 +551,7 @@ impl<
                         } else {
                             // For regular URLs, parse and convert
                             let url = Url::parse(&deep_link_info.deep_link)
-                                .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+                                .change_context(ConnectorResponseError::response_handling_failed(None))?;
                             Some(Box::new(RedirectForm::from((url, Method::Get))))
                         }
                     } else {

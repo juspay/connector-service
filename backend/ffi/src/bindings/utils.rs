@@ -4,6 +4,7 @@
 //! and handling FFI option decoding.
 
 use bytes::Bytes;
+use common_utils::errors::ErrorSwitch;
 use domain_types::connector_types::ConnectorEnum;
 use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::router_response_types::Response;
@@ -15,6 +16,8 @@ use grpc_api_types::payments::{
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use prost::Message;
 
+use crate::error::SdkError;
+
 /// Helper to convert internal Request to Protobuf FfiConnectorHttpRequest bytes.
 pub fn build_ffi_request_bytes(
     request: &common_utils::request::Request,
@@ -25,12 +28,7 @@ pub fn build_ffi_request_bytes(
         .as_ref()
         .map(|b| b.get_body_bytes())
         .transpose()
-        .map_err(|e| IntegrationError {
-            error_message: format!("Body encoding failed: {e}"),
-            error_code: "BODY_ENCODING_FAILED".to_string(),
-            suggested_action: None,
-            doc_url: None,
-        })?
+        .map_err(|e| SdkError::BodyEncodingFailed(e.to_string()).switch())?
         .unwrap_or((None, None));
 
     if let Some(boundary) = boundary {
@@ -54,13 +52,8 @@ pub fn build_ffi_request_bytes(
 pub fn build_domain_response(
     response_bytes: Vec<u8>,
 ) -> Result<Response, ConnectorResponseTransformationError> {
-    let response = FfiConnectorHttpResponse::decode(Bytes::from(response_bytes)).map_err(|e| {
-        ConnectorResponseTransformationError {
-            error_message: format!("ConnectorHttpResponse decode failed: {e}"),
-            error_code: "DECODE_FAILED".to_string(),
-            http_status_code: None,
-        }
-    })?;
+    let response = FfiConnectorHttpResponse::decode(Bytes::from(response_bytes))
+        .map_err(|e| SdkError::DecodeFailed(format!("ConnectorHttpResponse decode failed: {e}")).switch())?;
 
     let mut header_map = HeaderMap::new();
     for (key, value) in &response.headers {
@@ -79,57 +72,32 @@ pub fn build_domain_response(
             Some(header_map)
         },
         response: Bytes::from(response.body),
-        status_code: response.status_code.try_into().map_err(|e| {
-            ConnectorResponseTransformationError {
-                error_message: format!("Invalid HTTP status code: {e}"),
-                error_code: "INVALID_STATUS_CODE".to_string(),
-                http_status_code: None,
-            }
+        status_code: response.status_code.try_into().map_err(|e: std::num::TryFromIntError| {
+            SdkError::InvalidStatusCode(e.to_string()).switch()
         })?,
     })
 }
 
-/// refactor later
 /// Parse FfiOptions from optional bytes (for request path).
 pub fn parse_ffi_options_for_req(options_bytes: Vec<u8>) -> Result<FfiOptions, IntegrationError> {
     if options_bytes.is_empty() {
-        return Err(IntegrationError {
-            error_message: "Empty options bytes".to_string(),
-            error_code: "EMPTY_OPTIONS".to_string(),
-            suggested_action: None,
-            doc_url: None,
-        });
+        return Err(SdkError::EmptyPayload.switch());
     }
-    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| IntegrationError {
-        error_message: format!("Options decode failed: {e}"),
-        error_code: "DECODE_FAILED".to_string(),
-        suggested_action: None,
-        doc_url: None,
-    })
+    FfiOptions::decode(Bytes::from(options_bytes))
+        .map_err(|e| SdkError::DecodeFailed(format!("Options decode failed: {e}")).switch())
 }
 
-/// refactor later
 /// Parse FfiOptions from optional bytes (for response path).
 pub fn parse_ffi_options_for_res(
     options_bytes: Vec<u8>,
 ) -> Result<FfiOptions, ConnectorResponseTransformationError> {
     if options_bytes.is_empty() {
-        return Err(ConnectorResponseTransformationError {
-            error_message: "Empty options bytes".to_string(),
-            error_code: "EMPTY_OPTIONS".to_string(),
-            http_status_code: None,
-        });
+        return Err(SdkError::EmptyPayload.switch());
     }
-    FfiOptions::decode(Bytes::from(options_bytes)).map_err(|e| {
-        ConnectorResponseTransformationError {
-            error_message: format!("Options decode failed: {e}"),
-            error_code: "DECODE_FAILED".to_string(),
-            http_status_code: None,
-        }
-    })
+    FfiOptions::decode(Bytes::from(options_bytes))
+        .map_err(|e| SdkError::DecodeFailed(format!("Options decode failed: {e}")).switch())
 }
 
-/// refactor later
 /// Build FfiMetadataPayload from FfiOptions.
 /// The connector identity is inferred from which ConnectorSpecificConfig variant is set.
 pub fn parse_metadata_for_req(
@@ -139,23 +107,13 @@ pub fn parse_metadata_for_req(
     let proto_config = options
         .connector_config
         .as_ref()
-        .ok_or_else(|| IntegrationError {
-            error_message: "Missing connector_config".to_string(),
-            error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
-            suggested_action: None,
-            doc_url: None,
-        })?;
+        .ok_or_else(|| SdkError::MissingConnectorConfig.switch())?;
 
     // 2. Infer connector from which oneof variant is set
     let config_variant = proto_config
         .config
         .as_ref()
-        .ok_or_else(|| IntegrationError {
-            error_message: "Missing connector_config.config".to_string(),
-            error_code: "MISSING_CONNECTOR_CONFIG_VARIANT".to_string(),
-            suggested_action: None,
-            doc_url: None,
-        })?;
+        .ok_or_else(|| SdkError::UnspecifiedConnectorConfig.switch())?;
 
     let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
         .map_err(ucs_env::error::connector_request_error_report_to_integration)?;
@@ -170,32 +128,21 @@ pub fn parse_metadata_for_req(
     })
 }
 
-/// refactor later
 /// Build FfiMetadataPayload from FfiOptions (for response path).
 pub fn parse_metadata_for_res(
     options: &FfiOptions,
 ) -> Result<crate::types::FfiMetadataPayload, ConnectorResponseTransformationError> {
     // 1. Resolve ConnectorSpecificConfig from FfiOptions
-    let proto_config =
-        options
-            .connector_config
-            .as_ref()
-            .ok_or_else(|| ConnectorResponseTransformationError {
-                error_message: "Missing connector_config".to_string(),
-                error_code: "MISSING_CONNECTOR_CONFIG".to_string(),
-                http_status_code: None,
-            })?;
+    let proto_config = options
+        .connector_config
+        .as_ref()
+        .ok_or_else(|| SdkError::MissingConnectorConfig.switch())?;
 
     // 2. Infer connector from which oneof variant is set
-    let config_variant =
-        proto_config
-            .config
-            .as_ref()
-            .ok_or_else(|| ConnectorResponseTransformationError {
-                error_message: "Missing connector_config.config".to_string(),
-                error_code: "MISSING_CONNECTOR_CONFIG_VARIANT".to_string(),
-                http_status_code: None,
-            })?;
+    let config_variant = proto_config
+        .config
+        .as_ref()
+        .ok_or_else(|| SdkError::UnspecifiedConnectorConfig.switch())?;
 
     let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
         .map_err(ucs_env::error::connector_request_error_report_to_response_transformation)?;

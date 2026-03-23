@@ -555,7 +555,7 @@ fn get_payment_status(
             },
             StaxTransactionType::Charge => AttemptStatus::Charged,
             _ => return Err(errors::report_response_as_request(error_stack::Report::from(
-                ConnectorResponseError::ResponseHandlingFailed,
+                ConnectorResponseError::response_handling_failed(None),
             ))),
         }
     };
@@ -630,7 +630,7 @@ impl TryFrom<ResponseRouterData<StaxPaymentResponse, Self>>
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // MUST find and validate child transaction with type="refund"
         // Following HS pattern: filter by amount and find most recent by created_at
@@ -699,7 +699,7 @@ fn get_refund_status(
         .first()
         .ok_or_else(|| {
             errors::report_response_as_request(error_stack::Report::from(
-                ConnectorResponseError::ResponseHandlingFailed,
+                ConnectorResponseError::response_handling_failed(None),
             ))
         })?;
 
@@ -739,7 +739,7 @@ fn extract_refund_id(
         .first()
         .ok_or_else(|| {
             errors::report_response_as_request(error_stack::Report::from(
-                ConnectorResponseError::ResponseHandlingFailed,
+                ConnectorResponseError::response_handling_failed(None),
             ))
         })?;
 

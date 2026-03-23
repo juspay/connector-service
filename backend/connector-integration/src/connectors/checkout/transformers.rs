@@ -2317,7 +2317,7 @@ impl<F> TryFrom<ResponseRouterData<RSyncResponse, Self>>
             .response
             .iter()
             .find(|&x| x.action_id.clone() == refund_action_id)
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
         let refund_status = common_enums::RefundStatus::from(action_response);
         Ok(Self {
             response: Ok(RefundsResponseData {

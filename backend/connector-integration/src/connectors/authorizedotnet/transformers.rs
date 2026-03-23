@@ -1745,7 +1745,7 @@ impl<
                     .raw_connector_response
                     .clone(),
             )
-            .change_context(HsInterfacesConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(None))?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1788,7 +1788,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
                     .raw_connector_response
                     .clone(),
             )
-            .change_context(HsInterfacesConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(None))?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1830,7 +1830,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
                     .raw_connector_response
                     .clone(),
             )
-            .change_context(HsInterfacesConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(HsInterfacesConnectorResponseError::response_handling_failed(None))?;
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -2825,7 +2825,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .customer_payment_profile_id_list
                 .first()
                 .or(response.customer_payment_profile_id.as_ref())
-                .ok_or_else(|| error_stack::report!(ConnectorResponseError::ResponseHandlingFailed))?;
+                .ok_or_else(|| error_stack::report!(ConnectorResponseError::response_handling_failed(None)))?;
 
             // Create composite mandate ID: {customer_profile_id}-{payment_profile_id}
             let connector_mandate_id = format!("{connector_customer_id}-{payment_profile_id}");

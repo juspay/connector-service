@@ -429,7 +429,7 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPaymentsResponseData, Self>>
                 .as_ref()
                 .map(|hosted_page| hosted_page.uri.clone())
                 .ok_or_else(|| {
-                    error_stack::report!(ConnectorResponseError::UnexpectedResponseError)
+                    error_stack::report!(ConnectorResponseError::unexpected_response_error(None))
                 })?;
 
             let redirection_data = Some(RedirectForm::Form {
@@ -558,7 +558,7 @@ impl<F, T> TryFrom<ResponseRouterData<TruelayerPSyncResponseData, Self>>
             }
             TruelayerPSyncResponseData::WebhookResponse(response) => {
                 let status = get_truelayer_payment_webhook_status(response._type)
-                    .map_err(|_| ConnectorResponseError::ResponseHandlingFailed)?;
+                    .map_err(|_| ConnectorResponseError::response_handling_failed(None))?;
                 if is_payment_failure(status)
                     && response.failure_reason == Some("canceled".to_string())
                 {
@@ -767,7 +767,7 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
             }
             TruelayerRsyncResponse::WebhookResponse(webhook_response) => {
                 let status = get_truelayer_refund_webhook_status(webhook_response._type)
-                    .map_err(|_| ConnectorResponseError::ResponseHandlingFailed)?;
+                    .map_err(|_| ConnectorResponseError::response_handling_failed(None))?;
                 let response = if utils::is_refund_failure(status) {
                     Err(ErrorResponse {
                         code: webhook_response
@@ -790,7 +790,7 @@ impl TryFrom<ResponseRouterData<TruelayerRsyncResponse, Self>>
                     Ok(RefundsResponseData {
                         connector_refund_id: webhook_response.refund_id.ok_or_else(|| {
                             error_stack::report!(
-                                ConnectorResponseError::UnexpectedResponseError
+                                ConnectorResponseError::unexpected_response_error(None)
                             )
                         })?,
                         refund_status: status,

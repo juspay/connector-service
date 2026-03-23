@@ -85,7 +85,7 @@ fn fetch_payment_instrument<
             let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::response_handling_failed(None))
                 .into_request_err()?;
 
             Ok(PaymentInstrument::Card(CardPayment {
@@ -127,7 +127,7 @@ fn fetch_payment_instrument<
             let expiry_year: i32 = expiry_year_4_digit
                 .peek()
                 .parse::<i32>()
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::response_handling_failed(None))
                 .into_request_err()?;
 
             Ok(PaymentInstrument::RawCardForNTI(RawCardDetails {
@@ -1248,11 +1248,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .redirect_response
             .as_ref()
             .and_then(|redirect_response| redirect_response.params.as_ref())
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)
+            .ok_or(ConnectorResponseError::response_handling_failed(None))
             .into_request_err()?;
 
         let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
             .into_request_err()?;
 
         Ok(parsed_request)
@@ -1291,11 +1291,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .redirect_response
             .as_ref()
             .and_then(|redirect_response| redirect_response.params.as_ref())
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)
+            .ok_or(ConnectorResponseError::response_handling_failed(None))
             .into_request_err()?;
 
         let parsed_request = serde_urlencoded::from_str::<Self>(params.peek())
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
             .into_request_err()?;
 
         Ok(parsed_request)

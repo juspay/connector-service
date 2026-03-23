@@ -99,7 +99,7 @@ impl TryFrom<SaleStatus> for RefundStatus {
             SaleStatus::Initial | SaleStatus::Authorized => Ok(Self::Pending),
             SaleStatus::Failed => Ok(Self::Failure),
             SaleStatus::Voided | SaleStatus::PartialVoid | SaleStatus::Chargeback => {
-                Err(ConnectorResponseError::ResponseHandlingFailed)?
+                Err(ConnectorResponseError::response_handling_failed(None))?
             }
         }
     }
@@ -490,7 +490,7 @@ impl TryFrom<ResponseRouterData<PaymeSyncResponse, Self>>
             let sale_item = response
                 .items
                 .first()
-                .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+                .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
             // Map PayMe sale status to AttemptStatus using SaleStatus enum
             let status = sale_item
@@ -867,7 +867,7 @@ impl TryFrom<ResponseRouterData<PaymeRSyncResponse, Self>>
         let transaction_item = response
             .items
             .first()
-            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
         // Map PayMe sale status to RefundStatus using SaleStatus enum
         let refund_status = transaction_item

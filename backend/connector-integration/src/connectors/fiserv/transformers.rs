@@ -1041,7 +1041,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)
+            .ok_or(ConnectorResponseError::response_handling_failed(None))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;
@@ -1172,7 +1172,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
         let fiserv_payment_response = response
             .sync_responses
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)
+            .ok_or(ConnectorResponseError::response_handling_failed(None))
             .attach_printable("Fiserv Sync response array was empty")?;
 
         let gateway_resp = &fiserv_payment_response.gateway_response;

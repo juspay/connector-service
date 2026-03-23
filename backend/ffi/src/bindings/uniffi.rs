@@ -8,6 +8,7 @@
 #[cfg(feature = "uniffi")]
 mod uniffi_bindings_inner {
     use bytes::Bytes;
+    use common_utils::errors::ErrorSwitch;
     use common_utils::request::Request;
     use domain_types::router_response_types::Response;
     use grpc_api_types::payments::Environment;
@@ -23,6 +24,7 @@ mod uniffi_bindings_inner {
         parse_ffi_options_for_res, parse_metadata_for_req, parse_metadata_for_res,
     };
     use crate::define_ffi_flow;
+    use crate::error::SdkError;
 
     // ── Generic transformer runners ───────────────────────────────────────────
 
@@ -45,12 +47,10 @@ mod uniffi_bindings_inner {
             Err(e) => {
                 return FfiResult {
                     r#type: ffi_result::Type::IntegrationError.into(),
-                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
-                        error_message: format!("Request payload decode failed: {e}"),
-                        error_code: "DECODE_FAILED".to_string(),
-                        suggested_action: None,
-                        doc_url: None,
-                    })),
+                    payload: Some(ffi_result::Payload::IntegrationError(
+                        SdkError::DecodeFailed(format!("Request payload decode failed: {e}"))
+                            .switch(),
+                    )),
                 }
                 .encode_to_vec();
             }
@@ -102,12 +102,9 @@ mod uniffi_bindings_inner {
             None => {
                 return FfiResult {
                     r#type: ffi_result::Type::IntegrationError.into(),
-                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
-                        error_message: "Request encoding failed".to_string(),
-                        error_code: "ENCODING_FAILED".to_string(),
-                        suggested_action: None,
-                        doc_url: None,
-                    })),
+                    payload: Some(ffi_result::Payload::IntegrationError(
+                        SdkError::RequestNotProduced.switch(),
+                    )),
                 }
                 .encode_to_vec();
             }
@@ -122,12 +119,9 @@ mod uniffi_bindings_inner {
                 .encode_to_vec(),
                 Err(e) => FfiResult {
                     r#type: ffi_result::Type::IntegrationError.into(),
-                    payload: Some(ffi_result::Payload::IntegrationError(IntegrationError {
-                        error_message: format!("Request re-decode failed: {e}"),
-                        error_code: "RE_DECODE_FAILED".to_string(),
-                        suggested_action: None,
-                        doc_url: None,
-                    })),
+                    payload: Some(ffi_result::Payload::IntegrationError(
+                        SdkError::PayloadValidationFailed(e.to_string()).switch(),
+                    )),
                 }
                 .encode_to_vec(),
             },
@@ -173,11 +167,8 @@ mod uniffi_bindings_inner {
                 return FfiResult {
                     r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
                     payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
-                        ConnectorResponseTransformationError {
-                            error_message: format!("Request payload decode failed: {e}"),
-                            error_code: "DECODE_FAILED".to_string(),
-                            http_status_code: None,
-                        },
+                        SdkError::DecodeFailed(format!("Request payload decode failed: {e}"))
+                            .switch(),
                     )),
                 }
                 .encode_to_vec();
@@ -278,11 +269,10 @@ mod uniffi_bindings_inner {
                 return FfiResult {
                     r#type: ffi_result::Type::ConnectorResponseTransformationError.into(),
                     payload: Some(ffi_result::Payload::ConnectorResponseTransformationError(
-                        ConnectorResponseTransformationError {
-                            error_message: format!("EventServiceHandleRequest decode failed: {e}"),
-                            error_code: "DECODE_FAILED".to_string(),
-                            http_status_code: None,
-                        },
+                        SdkError::DecodeFailed(format!(
+                            "EventServiceHandleRequest decode failed: {e}"
+                        ))
+                        .switch(),
                     )),
                 }
                 .encode_to_vec();

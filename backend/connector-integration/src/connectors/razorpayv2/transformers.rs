@@ -588,7 +588,7 @@ impl
                     .items
                     .into_iter()
                     .next()
-                    .ok_or(ConnectorResponseError::ResponseHandlingFailed)?
+                    .ok_or(ConnectorResponseError::response_handling_failed(None))?
             }
         };
 
@@ -678,7 +678,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             RazorpayV2UpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
-                return Err(ConnectorResponseError::ResponseHandlingFailed);
+                return Err(ConnectorResponseError::response_handling_failed(None));
             }
         };
 

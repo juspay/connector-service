@@ -813,8 +813,11 @@ impl Payments {
             })?,
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
-                let (status_code, code, message) =
+                let (connector_http_status, code, message) =
                     connector_flow_error_to_error_details(error_report.current_context());
+                // Real connector HTTP status or 0 when none (e.g. Request/Client errors—no connector response yet).
+                // Never hardcode 500/400/etc.; only use status from actual connector HTTP response.
+                let status_code = connector_http_status.unwrap_or(0);
 
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {

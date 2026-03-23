@@ -479,34 +479,22 @@ pub fn handle_event_transformer(
     connector_config: domain_types::router_data::ConnectorSpecificConfig,
     _metadata: &common_utils::metadata::MaskedMetadata,
 ) -> Result<EventServiceHandleResponse, ConnectorResponseTransformationError> {
+    use common_utils::errors::ErrorSwitch;
     use domain_types::utils::ForeignTryFrom as _;
 
-    let request_details =
-        payload
-            .request_details
-            .ok_or_else(|| ConnectorResponseTransformationError {
-                error_message: "Missing required field: request_details".to_string(),
-                error_code: "MISSING_REQUIRED_FIELD".to_string(),
-                http_status_code: None,
-            })?;
-    let request_details = RequestDetails::foreign_try_from(request_details).map_err(|e| {
-        ConnectorResponseTransformationError {
-            error_message: format!("ForeignTryFrom failed: {e}"),
-            error_code: "CONVERSION_FAILED".to_string(),
-            http_status_code: None,
-        }
-    })?;
+    use crate::error::SdkError;
+
+    let request_details = payload
+        .request_details
+        .ok_or_else(|| SdkError::MissingRequiredField("request_details".to_string()).switch())?;
+    let request_details = RequestDetails::foreign_try_from(request_details)
+        .map_err(|e| SdkError::ConversionFailed(e.to_string()).switch())?;
 
     let webhook_secrets = payload
         .webhook_secrets
         .map(|ws| {
-            ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
-                ConnectorResponseTransformationError {
-                    error_message: format!("ForeignTryFrom failed: {e}"),
-                    error_code: "CONVERSION_FAILED".to_string(),
-                    http_status_code: None,
-                }
-            })
+            ConnectorWebhookSecrets::foreign_try_from(ws)
+                .map_err(|e| SdkError::ConversionFailed(e.to_string()).switch())
         })
         .transpose()?;
 
@@ -531,13 +519,7 @@ pub fn handle_event_transformer(
         Some(connector_config),
         source_verified,
     )
-    .map_err(
-        |e: error_stack::Report<domain_types::errors::WebhookError>| {
-            ConnectorResponseTransformationError {
-                error_message: format!("Error in Processing webhook events: {e}"),
-                error_code: "WEBHOOK_PROCESSING_ERROR".to_string(),
-                http_status_code: None,
-            }
-        },
-    )
+    .map_err(|e: error_stack::Report<domain_types::errors::WebhookError>| {
+        SdkError::WebhookProcessingFailed(e.to_string()).switch()
+    })
 }

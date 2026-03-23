@@ -3030,7 +3030,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             })?
             .expose()
             .parse_value("CybersourceRedirectionAuthResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
             .into_request_err()?;
         let order_information = OrderInformation { amount_details };
 

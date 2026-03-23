@@ -1601,13 +1601,13 @@ impl<F, Req>
                     Some(payment_id) => (ResponseId::ConnectorTransactionId(payment_id), None),
                     None => {
                         // Payment ID is null, this is likely an error
-                        return Err(error_stack::report!(ConnectorResponseError::ResponseHandlingFailed));
+                        return Err(error_stack::report!(ConnectorResponseError::response_handling_failed(None)));
                     }
                 }
             }
             RazorpayUpiPaymentsResponse::Error { error: _ } => {
                 // Handle error case - this should probably return an error instead
-                return Err(error_stack::report!(ConnectorResponseError::ResponseHandlingFailed));
+                return Err(error_stack::report!(ConnectorResponseError::response_handling_failed(None)));
             }
         };
 

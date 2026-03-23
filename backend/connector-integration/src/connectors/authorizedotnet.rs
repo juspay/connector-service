@@ -433,7 +433,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: transformers::ResponseMessages = res
             .response
             .parse_struct("ResponseMessages")
-            .map_err(|_| ConnectorResponseError::ResponseDeserializationFailed)?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_response_body!(event_builder, response);
 

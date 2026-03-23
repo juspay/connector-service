@@ -372,7 +372,7 @@ macros::macro_connector_implementation!(
         let response: gigadat::GigadatRefundErrorResponse = res
             .response
             .parse_struct("GigadatRefundErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -652,7 +652,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: gigadat::GigadatErrorResponse = res
             .response
             .parse_struct("GigadatErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 

@@ -2895,7 +2895,7 @@ pub fn get_connector_metadata(
             _ => None,
         })
         .transpose()
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
         .into_request_err()?;
     Ok(next_action_response)
 }
@@ -3019,7 +3019,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentIntentSyncResponse, Self>>
 
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum).into_response_err()?;
 
@@ -4001,7 +4001,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
                         http_code: item.http_code,
                     })
                 }
-                _ => Err(ConnectorResponseError::ResponseHandlingFailed)?,
+                _ => Err(ConnectorResponseError::response_handling_failed(None))?,
             },
             Ok(_) => match item.response {
                 PaymentSyncResponse::PaymentIntentSyncResponse(payment_intent_sync_response) => {
@@ -4011,9 +4011,9 @@ impl<F> TryFrom<ResponseRouterData<PaymentSyncResponse, Self>>
                         http_code: item.http_code,
                     })
                 }
-                _ => Err(ConnectorResponseError::ResponseHandlingFailed)?,
+                _ => Err(ConnectorResponseError::response_handling_failed(None))?,
             },
-            Err(err) => Err(err).change_context(ConnectorResponseError::MissingConnectorTransactionID),
+            Err(err) => Err(err).change_context(ConnectorResponseError::MissingConnectorTransactionID { http_status_code: None }),
         }
     }
 }
@@ -4031,7 +4031,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         let amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.0.amount, currency_enum).into_response_err()?;
@@ -4046,7 +4046,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseError::ResponseHandlingFailed);
+        .change_context(ConnectorResponseError::response_handling_failed(None));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = Some(response_integrity_object);
@@ -4067,7 +4067,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let currency_enum =
             common_enums::Currency::from_str(item.response.0.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         let capture_amount_in_minor_unit = item
             .response
@@ -4088,7 +4088,7 @@ impl TryFrom<ResponseRouterData<PaymentsCaptureResponse, Self>>
             router_data: item.router_data,
             http_code: item.http_code,
         })
-        .change_context(ConnectorResponseError::ResponseHandlingFailed);
+        .change_context(ConnectorResponseError::response_handling_failed(None));
 
         new_router_data.map(|mut router_data| {
             router_data.request.integrity_object = response_integrity_object;
@@ -4317,7 +4317,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let currency_enum =
             common_enums::Currency::from_str(item.response.currency.to_uppercase().as_str())
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         let refund_amount_in_minor_unit =
             StripeAmountConvertor::convert_back(item.response.amount, currency_enum).into_response_err()?;

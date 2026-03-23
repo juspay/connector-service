@@ -135,7 +135,7 @@ pub fn get_payment_id(
     })?;
     let nexixpay_meta_data =
         serde_json::from_value::<NexixpayConnectorMetaData>(connector_metadata)
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
     let payment_flow = payment_intent.unwrap_or(nexixpay_meta_data.psync_flow);
     let payment_id = match payment_flow {

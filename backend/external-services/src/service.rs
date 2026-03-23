@@ -534,7 +534,7 @@ where
                         let response_bytes = serde_json::to_vec(&injector_response.response)
                             .map_err(|_| {
                                 ConnectorFlowError::from(
-                                    ConnectorResponseError::ResponseHandlingFailed,
+                                    ConnectorResponseError::response_handling_failed(None),
                                 )
                             })?;
 
@@ -622,7 +622,7 @@ where
                     event.add_service_name(event_params.service_name);
 
                     let result = handle_connector_response(
-                        response.change_context(ConnectorResponseError::ResponseHandlingFailed),
+                        response.change_context(ConnectorResponseError::response_handling_failed(None)),
                         updated_router_data,
                         &connector,
                         Some(&mut event),
@@ -647,7 +647,7 @@ where
                 .check_integrity(&data.request.clone(), None)
                 .map_err(|_| {
                     report_connector_response_to_flow(error_stack::report!(
-                        ConnectorResponseError::ResponseHandlingFailed
+                        ConnectorResponseError::response_handling_failed(None)
                     ))
                 })?;
             Ok(data)

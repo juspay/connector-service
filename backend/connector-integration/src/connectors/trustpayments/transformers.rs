@@ -324,7 +324,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .response
             .responses
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check for errors
         if response.errorcode != "0" {
@@ -533,7 +533,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check for errors at the response level
         if response_item.errorcode != "0" {
@@ -562,7 +562,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsPSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -732,7 +732,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsCaptureResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check for errors
         if response_item.errorcode != "0" {
@@ -883,7 +883,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsVoidResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check for errors
         if response_item.errorcode != "0" {
@@ -1125,7 +1125,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .response
             .response
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check for errors at the response level
         if response_item.errorcode != "0" {
@@ -1150,7 +1150,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRSyncResponse, Self>>
             .records
             .as_ref()
             .and_then(|records| records.first())
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check for errors at the record level
         if record.errorcode != "0" {
@@ -1203,7 +1203,7 @@ impl TryFrom<ResponseRouterData<TrustpaymentsRefundResponse, Self>>
             .response
             .responses
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         // Map refund status
         let refund_status = get_refund_status_from_settlestatus(

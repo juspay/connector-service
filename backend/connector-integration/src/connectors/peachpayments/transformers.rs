@@ -50,7 +50,7 @@ fn get_webhook_response(
 > {
     let transaction = response
         .transaction
-        .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+        .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
     let status: AttemptStatus = transaction.transaction_result.clone().into();
 

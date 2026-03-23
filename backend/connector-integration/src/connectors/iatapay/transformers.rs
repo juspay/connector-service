@@ -374,7 +374,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             Value::String(checkout_methods.redirect.redirect_url.clone()),
                         );
                         let metadata_value = serde_json::to_value(metadata_map)
-                            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+                            .change_context(ConnectorResponseError::response_handling_failed(None))?;
                         (Some(metadata_value), None)
                     }
                     false => {

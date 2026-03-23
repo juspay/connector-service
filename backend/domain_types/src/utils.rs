@@ -86,12 +86,12 @@ pub fn handle_json_response_deserialization_failure(
     _: &'static str,
 ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
     let response_data = String::from_utf8(res.response.to_vec())
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+        .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
     // check for whether the response is in json format
     match serde_json::from_str::<Value>(&response_data) {
         // in case of unexpected response but in json format
-        Ok(_) => Err(ConnectorResponseError::ResponseHandlingFailed)?,
+        Ok(_) => Err(ConnectorResponseError::response_handling_failed(None))?,
         // in case of unexpected response but in html or string format
         Err(_) => Ok(ErrorResponse {
             status_code: res.status_code,
@@ -166,7 +166,7 @@ pub fn base64_decode(
 ) -> core::result::Result<Vec<u8>, error_stack::Report<ConnectorResponseError>> {
     base64::engine::general_purpose::STANDARD
         .decode(data)
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
 }
 
 pub fn to_currency_base_unit(

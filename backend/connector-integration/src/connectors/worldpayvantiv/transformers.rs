@@ -1473,7 +1473,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 })
             }
             (_, _) => Err(
-                error_stack::Report::from(ConnectorResponseError::UnexpectedResponseError)
+                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
                     .attach_printable(
                         "Only one of 'sale_response' or 'authorization_response' is expected",
                     ),

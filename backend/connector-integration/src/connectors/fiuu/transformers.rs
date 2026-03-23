@@ -1123,7 +1123,7 @@ where
                         "11" => Ok(common_enums::AttemptStatus::Failure),
                         "22" => Ok(common_enums::AttemptStatus::Pending),
                         other => Err(
-                            error_stack::Report::from(ConnectorResponseError::UnexpectedResponseError)
+                            error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
                                 .attach_printable(other.to_owned()),
                         )
                     }?;
@@ -1317,7 +1317,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             ))?,
             notify_url: Some(
                 Url::parse(&item.router_data.request.get_webhook_url()?)
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
                     .into_request_err()?,
             ),
         })
@@ -1370,7 +1370,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                     "11" => Ok(common_enums::RefundStatus::Failure),
                     "22" => Ok(common_enums::RefundStatus::Pending),
                 other => Err(
-                error_stack::Report::from(ConnectorResponseError::UnexpectedResponseError)
+                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
                     .attach_printable(other.to_owned()),
             )
                 }?;
@@ -1542,7 +1542,7 @@ impl TryFrom<ErrorInputs> for ErrorDetails {
                 serde_urlencoded::from_str::<FiuuPaymentRedirectResponse>(encoded_data)
             })
             .transpose()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
             .attach_printable("Failed to deserialize FiuuPaymentRedirectResponse")?;
         let error_message = value
             .response_error_desc
@@ -1716,7 +1716,7 @@ impl TryFrom<FiuuWebhookStatus> for common_enums::AttemptStatus {
                 }
                 Some(CaptureMethod::Manual) => Ok(Self::Authorized),
                   _ => Err(
-                    error_stack::Report::from(ConnectorResponseError::UnexpectedResponseError)
+                    error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
                         .attach_printable(webhook_status.status.to_string()),
                 )
             },
@@ -1763,7 +1763,7 @@ impl TryFrom<FiuuSyncStatus> for common_enums::AttemptStatus {
             }
             (StatCode::Failure, _) => Ok(Self::Failure),
               (other, _) => Err(
-                error_stack::Report::from(ConnectorResponseError::UnexpectedResponseError)
+                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
                     .attach_printable(other.to_string()),
             )
         }
@@ -1861,7 +1861,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
             "11" | "12" | "13" | "15" | "16" | "17" | "18" | "19" | "20" | "21" | "23" | "24"
             | "25" | "99" => Ok(common_enums::AttemptStatus::Failure),
                 other => Err(
-                error_stack::Report::from(ConnectorResponseError::UnexpectedResponseError)
+                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
                     .attach_printable(other.to_owned()),
             )
         }?;
@@ -1994,7 +1994,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
                 Ok(common_enums::AttemptStatus::VoidFailed)
             }
                 other => Err(
-                error_stack::Report::from(ConnectorResponseError::UnexpectedResponseError)
+                error_stack::Report::from(ConnectorResponseError::unexpected_response_error(None))
                     .attach_printable(other.to_owned()),
             )
         }?;
@@ -2180,7 +2180,7 @@ pub fn get_qr_metadata(
         response.txn_data.request_data.qr_data.peek().clone(),
         DUIT_NOW_BRAND_COLOR,
     )
-    .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+    .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
     let image_data_url = Url::parse(image_data.data.clone().as_str()).ok();
     let display_to_timestamp = None;
@@ -2195,7 +2195,7 @@ pub fn get_qr_metadata(
 
         Some(qr_code_info.encode_to_value())
             .transpose()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
     } else {
         Ok(None)
     }

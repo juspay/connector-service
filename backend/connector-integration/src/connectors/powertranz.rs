@@ -537,7 +537,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             } else {
                 res.response
                     .parse_struct("PowertranzErrorResponse")
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)?
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?
             };
 
             with_response_body!(event_builder, response);

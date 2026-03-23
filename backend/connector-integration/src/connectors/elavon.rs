@@ -221,7 +221,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         match res
             .response
             .parse_struct::<ElavonPaymentsResponse>("ElavonPaymentsResponse")
-            .map_err(|_| ConnectorResponseError::ResponseDeserializationFailed)
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))
         {
             Ok(elavon_response) => {
                 with_error_response_body!(event_builder, elavon_response);

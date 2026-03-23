@@ -370,7 +370,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     ) -> Result<Self, Self::Error> {
         let transaction = match item.response.transactions.first() {
             Some(order) => order,
-            _ => Err(ConnectorResponseError::ResponseHandlingFailed)?,
+            _ => Err(ConnectorResponseError::response_handling_failed(None))?,
         };
         let nexinets_metadata = NexinetsPaymentsMetadata {
             transaction_id: Some(transaction.transaction_id.clone()),
@@ -378,7 +378,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             psync_flow: item.response.transaction_type.clone(),
         };
         let connector_metadata = serde_json::to_value(&nexinets_metadata)
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         let redirection_data = item
             .response
@@ -390,7 +390,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
             | NexinetsTransactionType::Capture => {
                 ResponseId::ConnectorTransactionId(transaction.transaction_id.clone())
             }
-            _ => Err(ConnectorResponseError::ResponseHandlingFailed)?,
+            _ => Err(ConnectorResponseError::response_handling_failed(None))?,
         };
         let mandate_reference = item
             .response
@@ -516,7 +516,7 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
             order_id: Some(item.response.order.order_id.clone()),
             psync_flow: item.response.transaction_type.clone(),
         })
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+        .change_context(ConnectorResponseError::response_handling_failed(None))?;
         let resource_id = match item.response.transaction_type.clone() {
             NexinetsTransactionType::Preauth
             | NexinetsTransactionType::Debit

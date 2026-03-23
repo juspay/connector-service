@@ -216,17 +216,17 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .get_optional_billing_zip(),
                     webhook_url: url::Url::parse(&item.router_data.request.get_webhook_url()?)
-                        .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                        .change_context(ConnectorResponseError::response_deserialization_failed(None))
                         .into_request_err()?,
                     success_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
                     .into_request_err()?,
                     failure_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
                     .into_request_err()?,
                 })
             }

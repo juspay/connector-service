@@ -683,7 +683,7 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 let payment_response = sync_response
                     .payments
                     .first()
-                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed))?;
+                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None)))?;
                 let status = get_paysafe_payment_status(
                     payment_response.status,
                     item.router_data.request.capture_method,
@@ -698,7 +698,7 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 let payment_handle_response = sync_response
                     .payment_handles
                     .first()
-                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed))?;
+                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None)))?;
                 let status = enums::AttemptStatus::try_from(payment_handle_response.status).into_response_err()?;
                 (status, Some(payment_handle_response.id.clone()))
             }

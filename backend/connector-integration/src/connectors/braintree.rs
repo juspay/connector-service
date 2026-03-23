@@ -482,7 +482,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: BraintreePaymentsResponse = res
                     .response
                     .parse_struct("Braintree PaymentsResponse")
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,
@@ -494,7 +494,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: BraintreeAuthResponse = res
                     .response
                     .parse_struct("Braintree AuthResponse")
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,

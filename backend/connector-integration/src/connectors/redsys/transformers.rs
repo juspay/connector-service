@@ -405,7 +405,7 @@ fn get_redsys_attempt_status(
             | "9093" | "9094" | "9104" | "9218" | "9253" | "9261" | "9997" | "0002" => {
                 Ok(common_enums::AttemptStatus::Failure)
             }
-            error => Err(error_stack::Report::from(ConnectorResponseError::ResponseHandlingFailed)
+            error => Err(error_stack::Report::from(ConnectorResponseError::response_handling_failed(None))
                 .attach_printable(format!("Received Unknown Status:{error}"))),
         }
     }
@@ -418,7 +418,7 @@ impl TryFrom<responses::DsResponse> for common_enums::RefundStatus {
             "0900" => Ok(Self::Success),
             "9999" => Ok(Self::Pending),
             "0950" | "0172" | "174" => Ok(Self::Failure),
-            unknown_status => Err(error_stack::Report::from(ConnectorResponseError::ResponseHandlingFailed)
+            unknown_status => Err(error_stack::Report::from(ConnectorResponseError::response_handling_failed(None))
                 .attach_printable(format!("Received unknown refund status:{unknown_status}"))),
         }
     }
@@ -429,11 +429,11 @@ where
     T: serde::de::DeserializeOwned,
 {
     let decoded_bytes = utils::safe_base64_decode(connector_response.to_string())
-        .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+        .change_context(ConnectorResponseError::response_deserialization_failed(None))
         .attach_printable("Failed to decode Base64")?;
 
     let response_data: T = serde_json::from_slice(&decoded_bytes)
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+        .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
     Ok(response_data)
 }
@@ -444,12 +444,12 @@ fn build_threeds_form(
     let creq = ds_emv3ds
         .creq
         .clone()
-        .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+        .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
     let endpoint = ds_emv3ds
         .acs_u_r_l
         .clone()
-        .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+        .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
     let mut form_fields = std::collections::HashMap::new();
     form_fields.insert("creq".to_string(), creq);
@@ -481,11 +481,11 @@ fn get_preauthenticate_response(
     let three_d_s_server_trans_i_d = emv3ds
         .three_d_s_server_trans_i_d
         .clone()
-        .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+        .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
     let message_version = &emv3ds.protocol_version;
     let semantic_version = common_utils::types::SemanticVersion::from_str(message_version)
-        .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+        .change_context(ConnectorResponseError::response_deserialization_failed(None))
         .attach_printable("Failed to parse message_version as SemanticVersion")?;
 
     let authentication_data = Some(domain_types::router_request_types::AuthenticationData {
@@ -1710,7 +1710,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                 (item.router_data.resource_common_data.status, response)
             }
             (Some(_), Some(_)) | (None, None) => {
-                Err(ConnectorResponseError::ResponseHandlingFailed)?
+                Err(ConnectorResponseError::response_handling_failed(None))?
             }
         };
 
@@ -1879,7 +1879,7 @@ impl TryFrom<ResponseRouterData<responses::RedsysSyncResponse, Self>>
                 })
             }
             (Some(_), Some(_)) | (None, None) => {
-                Err(ConnectorResponseError::ResponseHandlingFailed)?
+                Err(ConnectorResponseError::response_handling_failed(None))?
             }
         };
 

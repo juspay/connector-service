@@ -1318,7 +1318,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
             .transaction
             .clone()
             .and_then(|data| data.refund.tid.map(|tid| tid.to_string()))
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         match item.response.result.status {
             NovalnetAPIStatus::Success => {
@@ -1390,7 +1390,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 .change_context(ConnectorRequestError::RequestEncodingFailed)?;
             let novalnet_redirection_response =
                 serde_urlencoded::from_str::<NovalnetRedirectionResponse>(encoded_data.as_str())
-                    .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                    .change_context(ConnectorResponseError::response_handling_failed(None))
                     .into_request_err()?;
             let tid = novalnet_redirection_response
                 .tid
@@ -2493,7 +2493,7 @@ impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetail
             .refund
             .tid
             .map(|tid| tid.to_string())
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?;
 
         match notif.result.status {
             NovalnetAPIStatus::Success => {

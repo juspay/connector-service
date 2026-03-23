@@ -1,6 +1,6 @@
 use domain_types::errors::{
-    ApiClientError, ConnectorFlowError, ConnectorRequestError, ConnectorResponseError,
-    WebhookError,
+    doc_url_for_error_code, ApiClientError, ConnectorFlowError, ConnectorRequestError,
+    ConnectorResponseError, WebhookError,
 };
 use grpc_api_types::payments::PaymentServiceAuthorizeResponse;
 use tonic::Status;
@@ -112,7 +112,12 @@ impl IntoGrpcStatus for error_stack::Report<ConnectorRequestError> {
 impl IntoGrpcStatus for error_stack::Report<ConnectorResponseError> {
     fn into_grpc_status(self) -> Status {
         logger::error!(error=?self);
-        Status::internal(self.to_string())
+        match self.current_context() {
+            ConnectorResponseError::MissingConnectorTransactionID { .. } => {
+                Status::invalid_argument(self.to_string())
+            }
+            _ => Status::internal(self.to_string()),
+        }
     }
 }
 
@@ -156,117 +161,163 @@ impl IntoGrpcStatus for error_stack::Report<ConnectorFlowError> {
     }
 }
 
-fn connector_request_error_details(e: &ConnectorRequestError) -> (u16, &'static str, String) {
+/// Request-phase errors occur before the connector HTTP call; there is no real connector HTTP status.
+fn connector_request_error_details(
+    e: &ConnectorRequestError,
+) -> (Option<u16>, String, String, Option<String>) {
     let msg = e.to_string();
-    match e {
-        ConnectorRequestError::FailedToObtainIntegrationUrl
-        | ConnectorRequestError::FailedToObtainAuthType
-        | ConnectorRequestError::RequestEncodingFailed
+    let error_code = e.error_code().to_string();
+    let suggested_action = match e {
+        ConnectorRequestError::FailedToObtainIntegrationUrl => {
+            Some("Verify connector configuration and integration URL setup".to_string())
+        }
+        ConnectorRequestError::FailedToObtainAuthType => {
+            Some("Verify connector authentication configuration".to_string())
+        }
+        ConnectorRequestError::RequestEncodingFailed
         | ConnectorRequestError::HeaderMapConstructionFailed
         | ConnectorRequestError::BodySerializationFailed
         | ConnectorRequestError::UrlParsingFailed
-        | ConnectorRequestError::UrlEncodingFailed
-        | ConnectorRequestError::AmountConversionFailed
-        | ConnectorRequestError::MandatePaymentDataMismatch { .. } => (500, "INTERNAL_SERVER_ERROR", msg),
-        ConnectorRequestError::InvalidConnectorConfig { .. }
-        | ConnectorRequestError::InvalidWallet
-        | ConnectorRequestError::InvalidWalletToken { .. }
-        | ConnectorRequestError::MissingRequiredField { .. }
-        | ConnectorRequestError::MissingRequiredFields { .. }
-        | ConnectorRequestError::InvalidDataFormat { .. }
-        | ConnectorRequestError::MismatchedPaymentData
-        | ConnectorRequestError::MissingPaymentMethodType
-        | ConnectorRequestError::NotSupported { .. }
-        | ConnectorRequestError::FlowNotSupported { .. }
-        | ConnectorRequestError::SourceVerificationFailed
-        | ConnectorRequestError::MissingApplePayTokenData
-        | ConnectorRequestError::CurrencyNotSupported { .. } => (400, "BAD_REQUEST", msg),
-        ConnectorRequestError::NoConnectorMetaData
-        | ConnectorRequestError::MaxFieldLengthViolated { .. }
-        | ConnectorRequestError::MissingConnectorMandateID
-        | ConnectorRequestError::MissingConnectorTransactionID
-        | ConnectorRequestError::MissingConnectorRefundID
-        | ConnectorRequestError::MissingConnectorRelatedTransactionID { .. }
-        | ConnectorRequestError::MissingConnectorMandateMetadata => (422, "UNPROCESSABLE_ENTITY", msg),
-        ConnectorRequestError::NotImplemented(_) | ConnectorRequestError::CaptureMethodNotSupported => {
-            (501, "NOT_IMPLEMENTED", msg)
+        | ConnectorRequestError::UrlEncodingFailed => {
+            Some("Check request payload format and structure".to_string())
         }
-        ConnectorRequestError::ConfigurationError { code, message } => (400, *code, message.clone()),
-    }
+        ConnectorRequestError::AmountConversionFailed => {
+            Some("Ensure amount is in the correct format (minor units) and valid numeric range".to_string())
+        }
+        ConnectorRequestError::MandatePaymentDataMismatch { .. } => {
+            Some("Ensure payment data matches the data used during mandate creation".to_string())
+        }
+        ConnectorRequestError::InvalidConnectorConfig { .. } => {
+            Some("Review and correct connector configuration in merchant account".to_string())
+        }
+        ConnectorRequestError::InvalidWallet
+        | ConnectorRequestError::InvalidWalletToken { .. } => {
+            Some("Use a valid wallet or wallet token for the selected payment method".to_string())
+        }
+        ConnectorRequestError::MissingRequiredField { field_name } => {
+            Some(format!("Provide the required field '{field_name}' in your request"))
+        }
+        ConnectorRequestError::MissingRequiredFields { field_names } => {
+            Some(format!("Provide all required fields: {:?}", field_names))
+        }
+        ConnectorRequestError::InvalidDataFormat { field_name } => {
+            Some(format!("Fix the format of field '{field_name}' to match the expected schema"))
+        }
+        ConnectorRequestError::MismatchedPaymentData => {
+            Some("Ensure payment method data, type, and experience are consistent".to_string())
+        }
+        ConnectorRequestError::MissingPaymentMethodType => {
+            Some("Specify a valid payment method type in your request".to_string())
+        }
+        ConnectorRequestError::NotSupported { .. } | ConnectorRequestError::FlowNotSupported { .. } => {
+            Some("Use a supported payment method or flow for this connector".to_string())
+        }
+        ConnectorRequestError::SourceVerificationFailed => {
+            Some("Verify signature, webhook secret, or request source configuration".to_string())
+        }
+        ConnectorRequestError::MissingApplePayTokenData => {
+            Some("Provide valid Apple Pay tokenization data".to_string())
+        }
+        ConnectorRequestError::CurrencyNotSupported { .. } => {
+            Some("Use a currency supported by the connector or add it to connector configuration".to_string())
+        }
+        ConnectorRequestError::NoConnectorMetaData => {
+            Some("Ensure connector metadata is configured in merchant account".to_string())
+        }
+        ConnectorRequestError::MaxFieldLengthViolated { max_length, .. } => {
+            Some(format!("Shorten the field value to at most {max_length} characters"))
+        }
+        ConnectorRequestError::MissingConnectorMandateID
+        | ConnectorRequestError::MissingConnectorMandateMetadata => {
+            Some("Complete the mandate flow first to obtain mandate ID and metadata".to_string())
+        }
+        ConnectorRequestError::MissingConnectorTransactionID
+        | ConnectorRequestError::MissingConnectorRefundID
+        | ConnectorRequestError::MissingConnectorRelatedTransactionID { .. } => {
+            Some("Ensure the prior step completed successfully and provided the required ID".to_string())
+        }
+        ConnectorRequestError::NotImplemented(_)
+        | ConnectorRequestError::CaptureMethodNotSupported => {
+            Some("Use a supported capture method or check if this feature is available for the connector".to_string())
+        }
+        ConnectorRequestError::ConfigurationError { message, .. } => {
+            Some(format!("Fix configuration: {}", message))
+        }
+    };
+    (None, error_code, msg, suggested_action)
 }
 
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorRequestError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        let (_, error_code, error_message) = connector_request_error_details(self);
+        let (_, error_code, error_message, suggested_action) = connector_request_error_details(self);
         grpc_api_types::payments::IntegrationError {
             error_message,
-            error_code: error_code.to_string(),
-            suggested_action: None,
-            doc_url: None,
+            error_code: error_code.clone(),
+            suggested_action,
+            doc_url: doc_url_for_error_code(&error_code),
         }
     }
 }
 
 impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ConnectorRequestError {
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        let (status_code, error_code, error_message) = connector_request_error_details(self);
+        let (_, error_code, error_message, _) = connector_request_error_details(self);
         grpc_api_types::payments::ConnectorResponseTransformationError {
             error_message,
-            error_code: error_code.to_string(),
-            http_status_code: Some(status_code.into()),
+            error_code: error_code.clone(),
+            http_status_code: None, // Request-phase: no connector HTTP call yet
         }
     }
 }
 
-fn connector_response_error_details(e: &ConnectorResponseError) -> (u16, &'static str, String) {
+fn connector_response_error_details(
+    e: &ConnectorResponseError,
+) -> (Option<u16>, String, String, Option<String>) {
     let msg = e.to_string();
-    match e {
-        ConnectorResponseError::ResponseDeserializationFailed
-        | ConnectorResponseError::ResponseHandlingFailed
-        | ConnectorResponseError::UnexpectedResponseError
-        | ConnectorResponseError::InternalServerErrorReceived
-        | ConnectorResponseError::BadGatewayReceived
-        | ConnectorResponseError::ServiceUnavailableReceived
-        | ConnectorResponseError::GatewayTimeoutReceived
-        | ConnectorResponseError::FailedAtConnector { .. } => (500, "INTERNAL_SERVER_ERROR", msg),
-        ConnectorResponseError::MissingRequiredField { .. } => (400, "BAD_REQUEST", msg),
-        ConnectorResponseError::MissingConnectorTransactionID | ConnectorResponseError::MissingConnectorRefundID => {
-            (422, "UNPROCESSABLE_ENTITY", msg)
+    let error_code = e.as_ref().to_string();
+    // Use real connector HTTP status only; never invent when we don't have it.
+    let http_status_code = e.http_status_code();
+    let suggested_action = match e {
+        ConnectorResponseError::ResponseDeserializationFailed { .. }
+        | ConnectorResponseError::ResponseHandlingFailed { .. }
+        | ConnectorResponseError::UnexpectedResponseError { .. } => {
+            Some("Retry the request; if persistent, check connector response format and compatibility".to_string())
         }
-    }
+        ConnectorResponseError::MissingConnectorTransactionID { .. } => {
+            Some("Ensure the prior connector call completed and returned the required ID".to_string())
+        }
+    };
+    (http_status_code, error_code, msg, suggested_action)
 }
 
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorResponseError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        let (_, error_code, error_message) = connector_response_error_details(self);
+        let (_, error_code, error_message, suggested_action) = connector_response_error_details(self);
         grpc_api_types::payments::IntegrationError {
             error_message,
-            error_code: error_code.to_string(),
-            suggested_action: None,
-            doc_url: None,
+            error_code: error_code.clone(),
+            suggested_action,
+            doc_url: doc_url_for_error_code(&error_code),
         }
     }
 }
 
 impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ConnectorResponseError {
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        let (status_code, error_code, error_message) = connector_response_error_details(self);
+        let (_, error_code, error_message, _) = connector_response_error_details(self);
         grpc_api_types::payments::ConnectorResponseTransformationError {
             error_message,
-            error_code: error_code.to_string(),
-            http_status_code: Some(status_code.into()),
+            error_code: error_code.clone(),
+            http_status_code: self.http_status_code().map(Into::into),
         }
     }
 }
 
-fn api_client_error_details(e: &ApiClientError) -> (u16, &'static str, String) {
+/// Client errors (timeout, connection failed, etc.) may not have a real connector HTTP response.
+fn api_client_error_details(e: &ApiClientError) -> (Option<u16>, String, String) {
     let msg = e.to_string();
-    match e {
-        ApiClientError::RequestTimeoutReceived | ApiClientError::GatewayTimeoutReceived => {
-            (504, "REQUEST_TIMEOUT", msg)
-        }
-        _ => (500, "INTERNAL_SERVER_ERROR", msg),
-    }
+    let error_code = e.as_ref().to_string();
+    (None, error_code, msg)
 }
 
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApiClientError {
@@ -274,20 +325,20 @@ impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApiClientError 
         let (_, error_code, error_message) = api_client_error_details(self);
         grpc_api_types::payments::IntegrationError {
             error_message,
-            error_code: error_code.to_string(),
+            error_code: error_code.clone(),
             suggested_action: None,
-            doc_url: None,
+            doc_url: doc_url_for_error_code(&error_code),
         }
     }
 }
 
 impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for ApiClientError {
     fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        let (status_code, error_code, error_message) = api_client_error_details(self);
+        let (_, error_code, error_message) = api_client_error_details(self);
         grpc_api_types::payments::ConnectorResponseTransformationError {
             error_message,
-            error_code: error_code.to_string(),
-            http_status_code: Some(status_code.into()),
+            error_code: error_code.clone(),
+            http_status_code: None, // Client errors: no real connector HTTP status
         }
     }
 }
@@ -312,20 +363,52 @@ impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
     }
 }
 
-/// Extract (status_code, error_code, error_message) from a connector flow error for building ErrorResponse.
-pub fn connector_flow_error_to_error_details(e: &ConnectorFlowError) -> (u16, String, String) {
+/// Webhook errors occur during our validation; there is no connector HTTP call.
+fn webhook_error_details(e: &WebhookError) -> (Option<u16>, String, String) {
+    let msg = e.to_string();
+    let error_code = e.as_ref().to_string();
+    (None, error_code, msg)
+}
+
+impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for WebhookError {
+    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
+        let (_, error_code, error_message) = webhook_error_details(self);
+        grpc_api_types::payments::IntegrationError {
+            error_message,
+            error_code: error_code.clone(),
+            suggested_action: None,
+            doc_url: doc_url_for_error_code(&error_code),
+        }
+    }
+}
+
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError> for WebhookError {
+    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
+        let (_, error_code, error_message) = webhook_error_details(self);
+        grpc_api_types::payments::ConnectorResponseTransformationError {
+            error_message,
+            error_code: error_code.clone(),
+            http_status_code: None, // Webhook errors: no connector HTTP call
+        }
+    }
+}
+
+/// Extract (connector_http_status_code, error_code, error_message) from a connector flow error.
+/// Only Response errors can have a real connector HTTP status (from the actual HTTP response).
+/// Request/Client/Webhook: always None — no connector HTTP call or no real status.
+pub fn connector_flow_error_to_error_details(e: &ConnectorFlowError) -> (Option<u16>, String, String) {
     match e {
         ConnectorFlowError::Request(req) => {
-            let (sc, code, msg) = connector_request_error_details(req);
-            (sc, code.to_string(), msg)
+            let (_, code, msg, _) = connector_request_error_details(req);
+            (None, code, msg)
         }
         ConnectorFlowError::Client(client) => {
-            let (sc, code, msg) = api_client_error_details(client);
-            (sc, code.to_string(), msg)
+            let (_, code, msg) = api_client_error_details(client);
+            (None, code, msg)
         }
         ConnectorFlowError::Response(resp) => {
-            let (sc, code, msg) = connector_response_error_details(resp);
-            (sc, code.to_string(), msg)
+            let (status_code, code, msg, _) = connector_response_error_details(resp);
+            (status_code, code, msg)
         }
     }
 }

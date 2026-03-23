@@ -593,7 +593,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .reply
             .order_status
             .as_ref()
-            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
         // Check for error in order status
         if let Some(error) = &order_status.error {
@@ -621,7 +621,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment = order_status
             .payment
             .as_ref()
-            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
         // Determine if auto-capture
         let is_auto_capture = router_data.request.capture_method != Some(CaptureMethod::Manual)
@@ -699,7 +699,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlCaptureResponse, Self>>
             .reply
             .ok
             .as_ref()
-            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
         // Extract captureReceived
         let capture_received = &ok_response.capture_received;
@@ -768,7 +768,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlVoidResponse, Self>>
             .reply
             .ok
             .as_ref()
-            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
         // Extract cancelReceived
         let cancel_received = &ok_response.cancel_received;
@@ -842,7 +842,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                     .reply
                     .order_status
                     .as_ref()
-                    .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
                 // Special handling: If error exists but payment is None, return current status (don't fail)
                 if let Some(error) = &order_status.error {
@@ -896,7 +896,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                 let payment = order_status
                     .payment
                     .as_ref()
-                    .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
                 // Determine if auto-capture from request data
                 let is_auto_capture = router_data.request.capture_method
@@ -947,7 +947,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlTransactionResponse, Self>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
                 // Parse string to enum
                 let last_event = parse_last_event(last_event_str)?;
@@ -1024,7 +1024,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRefundResponse, Self>>
             .reply
             .ok
             .as_ref()
-            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
         // Extract refundReceived
         let refund_received = &ok_response.refund_received;
@@ -1085,7 +1085,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                     .reply
                     .order_status
                     .as_ref()
-                    .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
                 // Special handling: If error exists but payment is None, return Pending (don't fail)
                 if let Some(_error) = &order_status.error {
@@ -1108,7 +1108,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                 let payment = order_status
                     .payment
                     .as_ref()
-                    .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
                 // Map status from lastEvent using refund status mapping
                 let refund_status = map_worldpayxml_refund_status(&payment.last_event);
@@ -1156,7 +1156,7 @@ impl TryFrom<ResponseRouterData<responses::WorldpayxmlRsyncResponse, Self>>
                     .last_event
                     .as_ref()
                     .or(webhook_response.payment_status.as_ref())
-                    .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+                    .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
                 // Parse string to enum
                 let last_event = parse_last_event(last_event_str)?;

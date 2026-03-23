@@ -2154,7 +2154,7 @@ pub(crate) fn get_apple_pay_session(
                     apple_pay_init_result.total.amount.clone(),
                     apple_pay_init_result.currency_code,
                 )
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::response_handling_failed(None))
                 .into_request_err()?,
                 total_type: None,
             },

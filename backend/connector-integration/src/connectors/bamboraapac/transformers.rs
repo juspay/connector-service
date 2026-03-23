@@ -515,7 +515,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: PaymentResponse = inner_xml
             .as_str()
             .parse_xml()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // Map Bambora response code to standard status
         // 0 = Approved, 1 = Not Approved
@@ -645,7 +645,7 @@ impl TryFrom<ResponseRouterData<BamboraapacCaptureResponse, Self>>
         let response: CaptureResponse = inner_xml
             .as_str()
             .parse_xml()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // Map Bambora response code to standard status (0 = Approved)
         let status = if response.response_code == 0 {
@@ -763,7 +763,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
         let query_response: QueryResponse = inner_xml
             .as_str()
             .parse_xml()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check if response element exists
         let response = match &query_response.response {
@@ -927,7 +927,7 @@ impl TryFrom<ResponseRouterData<BamboraapacRefundResponse, Self>>
         let response: RefundResponseInner = inner_xml
             .as_str()
             .parse_xml()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // Map Bambora response code to standard refund status (0 = Approved)
         let refund_status = if response.response_code == 0 {
@@ -1035,7 +1035,7 @@ impl TryFrom<ResponseRouterData<BamboraapacSyncResponse, Self>>
         let query_response: QueryResponse = inner_xml
             .as_str()
             .parse_xml()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // Check if response element exists
         let response = match &query_response.response {
@@ -1266,7 +1266,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: RegisterSingleCustomerResponseInner = inner_xml
             .as_str()
             .parse_xml()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // Map Bambora return_value to status
         // 0 = Successful, 1 = Invalid username/password, 2 = User does not belong to API User Group, etc.
@@ -1451,7 +1451,7 @@ impl<
         let response: PaymentResponse = inner_xml
             .as_str()
             .parse_xml()
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         // Map Bambora response code to standard status
         // 0 = Approved, 1 = Not Approved

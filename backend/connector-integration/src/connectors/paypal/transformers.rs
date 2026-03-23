@@ -723,7 +723,7 @@ impl<
             }
             PaypalAuthResponse::PaypalRedirectResponse(_)
             | PaypalAuthResponse::PaypalThreeDsResponse(_) => {
-                Err(ConnectorResponseError::ResponseHandlingFailed)?
+                Err(ConnectorResponseError::response_handling_failed(None))?
             }
         }
     }
@@ -1814,7 +1814,7 @@ where
             ),
 
             PaypalPaymentIntent::Authenticate => {
-                Err(ConnectorResponseError::ResponseHandlingFailed)?
+                Err(ConnectorResponseError::response_handling_failed(None))?
             }
         };
         //payment collection will always have only one element as we only make one transaction per order.
@@ -1822,7 +1822,7 @@ where
             .response
             .purchase_units
             .first()
-            .ok_or(ConnectorResponseError::ResponseHandlingFailed)?
+            .ok_or(ConnectorResponseError::response_handling_failed(None))?
             .payments;
         //payment collection item will either have "authorizations" field or "capture" field, not both at a time.
         let payment_collection_item = match (
@@ -1834,7 +1834,7 @@ where
             (Some(_), Some(captures)) => captures.first(),
             _ => None,
         }
-        .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+        .ok_or(ConnectorResponseError::response_handling_failed(None))?;
         let status = payment_collection_item.status.clone();
         let status = common_enums::AttemptStatus::from(status);
 
@@ -1997,7 +1997,7 @@ impl TryFrom<ResponseRouterData<PaypalRedirectResponse, Self>>
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
                 redirection_data: Some(Box::new(RedirectForm::from((
-                    link.ok_or(ConnectorResponseError::ResponseHandlingFailed)?,
+                    link.ok_or(ConnectorResponseError::response_handling_failed(None))?,
                     Method::Get,
                 )))),
                 mandate_reference: None,
@@ -2166,7 +2166,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 fn paypal_threeds_link(
     (redirect_url, complete_auth_url): (Option<Url>, Option<String>),
 ) -> CustomResult<RedirectForm, ConnectorRequestError> {
-    let mut redirect_url = redirect_url.ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
+    let mut redirect_url = redirect_url.ok_or(ConnectorResponseError::response_handling_failed(None))?;
     let complete_auth_url = complete_auth_url.ok_or(ConnectorRequestError::MissingRequiredField {
         field_name: "complete_authorize_url",
     })?;

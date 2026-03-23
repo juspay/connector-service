@@ -616,7 +616,7 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
         let transaction_data = response
             .data
             .first()
-            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::response_deserialization_failed(None))?;
 
         // Extract card response for detailed checking
         let card_response = transaction_data

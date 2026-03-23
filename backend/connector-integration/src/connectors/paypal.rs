@@ -626,7 +626,7 @@ macros::create_all_prerequisites!(
         let response: paypal::PaypalOrderErrorResponse = res
             .response
             .parse_struct("Paypal ErrorResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)
+            .change_context(ConnectorResponseError::response_handling_failed(None))
             .into_request_err()?;
 
         with_error_response_body!(event_builder, response);
@@ -807,7 +807,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: PaypalAuthResponse = res
             .response
             .parse_struct("PaypalAuthResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -818,7 +818,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
     }
 
     fn get_error_response_v2(
@@ -873,7 +873,7 @@ macros::macro_connector_implementation!(
                 let response: paypal::PaypalAccessTokenErrorResponse = res
                 .response
                 .parse_struct("Paypal AccessTokenErrorResponse")
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+                .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -1414,7 +1414,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let response: transformers::PaypalPostAuthenticateResponse = res
             .response
             .parse_struct("PaypalPostAuthenticateResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -1425,7 +1425,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
     }
 
     fn get_error_response_v2(
@@ -1545,7 +1545,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let verification_response: paypal::PaypalSourceVerificationResponse = res
             .response
             .parse_struct("PaypalSourceVerificationResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
         if let Some(event) = event_builder {
             event.set_connector_response(&verification_response)
         }
@@ -1555,7 +1555,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::response_handling_failed(None))
     }
 
     fn get_error_response_v2(
@@ -1725,7 +1725,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: paypal::PaypalPaymentErrorResponse = res
             .response
             .parse_struct("Paypal ErrorResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -1738,7 +1738,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     .try_fold(String::new(), |mut acc, error| {
                         if let Some(description) = &error.description {
                             write!(acc, "description - {description} ;")
-                                .change_context(ConnectorResponseError::ResponseHandlingFailed)
+                                .change_context(ConnectorResponseError::response_handling_failed(None))
                                 .attach_printable("Failed to concatenate error details")
                                 .map(|_| acc)
                         } else {

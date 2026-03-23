@@ -273,7 +273,7 @@ fn is_auto_capture_request<
 fn is_auto_capture_psync_response(
     data: &PaymentsSyncData,
 ) -> Result<bool, error_stack::Report<ConnectorResponseError>> {
-    is_auto_capture_psync(data).change_context(ConnectorResponseError::ResponseHandlingFailed)
+    is_auto_capture_psync(data).change_context(ConnectorResponseError::response_handling_failed(None))
 }
 
 fn map_payment_response_to_attempt_status(
@@ -442,7 +442,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
         let status = map_payment_response_to_attempt_status(
             response.clone(),
             is_auto_capture(&router_data.request)
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)?,
+                .change_context(ConnectorResponseError::response_handling_failed(None))?,
         );
 
         let payment_response = if status == common_enums::AttemptStatus::Failure {
@@ -501,7 +501,7 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
 
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+                .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         let response_integrity_object = Some(AuthoriseIntegrityObject {
             amount: response_amount,
@@ -767,7 +767,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let response_amount =
             XenditAmountConvertor::convert_back(response.amount, response.currency)
-                .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+                .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         let response_integrity_object = {
             Some(RefundIntegrityObject {

@@ -148,7 +148,7 @@ fn generate_request_id() -> CustomResult<String, ConnectorRequestError> {
     timestamp
         .get(4..)
         .map(|s| s.to_string())
-        .ok_or(ConnectorResponseError::ResponseDeserializationFailed.into())
+        .ok_or(ConnectorResponseError::response_deserialization_failed(None).into())
 }
 
 fn generate_date_time() -> CustomResult<String, ConnectorRequestError> {
@@ -227,7 +227,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         let card_data = match &router_data.request.payment_method_data {
@@ -562,7 +562,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         let capture_request = Self {
@@ -718,7 +718,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let amount = connector
             .amount_converter
             .convert(amount, currency)
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         Ok(Self {
@@ -859,7 +859,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data.request.minor_refund_amount,
                 router_data.request.currency,
             )
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         Ok(Self {

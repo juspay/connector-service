@@ -97,7 +97,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: StaxErrorResponse = res
             .response
             .parse_struct("StaxErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -110,7 +110,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             message: response.get_error_message(),
             reason: Some(
                 std::str::from_utf8(&res.response)
-                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)?
+                    .change_context(ConnectorResponseError::response_deserialization_failed(None))?
                     .to_owned(),
             ),
             attempt_status: None,

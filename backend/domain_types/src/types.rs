@@ -59,7 +59,7 @@ fn extract_headers_from_metadata(
 fn map_req_err_to_resp_err<T>(
     result: Result<T, error_stack::Report<ConnectorRequestError>>,
 ) -> Result<T, error_stack::Report<ConnectorResponseError>> {
-    result.map_err(|e| e.change_context(ConnectorResponseError::ResponseHandlingFailed))
+    result.map_err(|e| e.change_context(ConnectorResponseError::response_handling_failed(None)))
 }
 
 fn map_resp_err_to_req_err<T>(
@@ -3744,7 +3744,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     connector_response,
                 })
             }
-            _ => Err(report!(ConnectorResponseError::UnexpectedResponseError)),
+            _ => Err(report!(ConnectorResponseError::unexpected_response_error(None))),
         }?,
         Err(err) => {
             let status = match err.get_attempt_status_for_grpc(
@@ -4434,7 +4434,7 @@ pub fn generate_payment_void_response(
                     ),
                 })
             }
-            _ => Err(report!(ConnectorResponseError::UnexpectedResponseError)),
+            _ => Err(report!(ConnectorResponseError::unexpected_response_error(None))),
         }?,
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -4533,7 +4533,7 @@ pub fn generate_payment_void_post_capture_response(
                         .get_connector_response_headers_as_map(),
                 })
             }
-            _ => Err(report!(ConnectorResponseError::UnexpectedResponseError)),
+            _ => Err(report!(ConnectorResponseError::unexpected_response_error(None))),
         }?,
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -4765,7 +4765,7 @@ pub fn generate_payment_sync_response(
                     incremental_authorization_allowed,
                 })
             }
-            _ => Err(report!(ConnectorResponseError::UnexpectedResponseError)),
+            _ => Err(report!(ConnectorResponseError::unexpected_response_error(None))),
         }?,
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -6488,7 +6488,7 @@ pub fn generate_payment_incremental_authorization_response(
                     state,
                 })
             }
-            _ => Err(report!(ConnectorResponseError::UnexpectedResponseError)),
+            _ => Err(report!(ConnectorResponseError::unexpected_response_error(None))),
         },
         Err(e) => Ok(PaymentServiceIncrementalAuthorizationResponse {
             status: grpc_api_types::payments::AuthorizationStatus::AuthorizationFailure.into(),
@@ -6600,7 +6600,7 @@ pub fn generate_payment_capture_response(
                     ),
                 })
             }
-            _ => Err(report!(ConnectorResponseError::UnexpectedResponseError)),
+            _ => Err(report!(ConnectorResponseError::unexpected_response_error(None))),
         },
         Err(e) => {
             let status = match e.get_attempt_status_for_grpc(
@@ -9112,7 +9112,7 @@ pub fn generate_payment_sdk_session_token_response(
                         raw_connector_request,
                     })
                 }
-                _ => Err(report!(ConnectorResponseError::UnexpectedResponseError)),
+                _ => Err(report!(ConnectorResponseError::unexpected_response_error(None))),
             }
         }
         Err(e) => Ok(MerchantAuthenticationServiceCreateSdkSessionTokenResponse {

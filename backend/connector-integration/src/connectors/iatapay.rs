@@ -364,7 +364,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: IatapayErrorResponse = res
             .response
             .parse_struct("IatapayErrorResponse")
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
 
         if let Some(i) = event_builder {
             i.set_connector_response(&response);

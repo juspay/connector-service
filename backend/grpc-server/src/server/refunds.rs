@@ -157,8 +157,7 @@ impl RefundService for Refunds {
                         webhook_secrets.clone(),
                         Some(connector_config.clone()),
                     )
-                    .switch()
-                    .map_err(|e| e.into_grpc_status())?;
+                    .map_err(|e: error_stack::Report<ConnectorRequestError>| e.into_grpc_status())?;
 
                 let content = get_refunds_webhook_content(
                     connector_data,

@@ -362,7 +362,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: stripe::ErrorResponse = res
             .response
             .parse_struct("ErrorResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 

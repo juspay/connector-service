@@ -312,7 +312,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Bamb
         use error_stack::ResultExt;
 
         let response_str = String::from_utf8(response_bytes.to_vec())
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         // Only remove namespace prefixes for easier deserialization

@@ -110,7 +110,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
 
         let parsed: serde_json::Value = serde_json::from_slice(&request.body)
-            .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+            .change_context(ConnectorResponseError::response_deserialization_failed(None))
             .into_request_err()?;
 
         let sorted_payload = sort_and_minify_json(&parsed)?;
@@ -559,7 +559,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: CalidaErrorResponse = res
             .response
             .parse_struct("CalidaErrorResponse")
-            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
+            .change_context(ConnectorResponseError::response_handling_failed(None))?;
 
         with_error_response_body!(event_builder, response);
 

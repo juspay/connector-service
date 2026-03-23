@@ -4,7 +4,8 @@ use common_enums;
 use common_utils::errors::ErrorSwitch;
 use error_stack::Report;
 // use api_models::errors::types::{ Extra};
-#[derive(Debug, thiserror::Error, PartialEq, Clone)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
     HeaderMapConstructionFailed,
@@ -46,7 +47,8 @@ pub enum ApiClientError {
 /// - proto → domain (`ForeignTryFrom`)
 /// - domain → connector bytes (`build_request_v2`)
 /// - request building variants from `ApiClientError` (`HeaderMapConstruction`, etc.)
-#[derive(Debug, thiserror::Error, PartialEq, Clone)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ConnectorRequestError {
     #[error("Error while obtaining URL for the integration")]
     FailedToObtainIntegrationUrl,
@@ -137,40 +139,81 @@ impl ConnectorRequestError {
             message: message.into(),
         }
     }
+
+    /// Machine-readable error code (SCREAMING_SNAKE_CASE from variant name, or explicit `code` for ConfigurationError).
+    pub fn error_code(&self) -> &str {
+        match self {
+            Self::ConfigurationError { code, .. } => *code,
+            _ => self.as_ref(),
+        }
+    }
 }
 
 /// Errors that occur on the response transformation side:
 /// - connector bytes → domain (`handle_response_v2`)
 /// - domain → proto (`generate_payment_*_response`)
 /// - connector infra HTTP error responses (5xx, unexpected status)
-#[derive(Debug, thiserror::Error, PartialEq, Clone)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ConnectorResponseError {
     #[error("Failed to deserialize connector response")]
-    ResponseDeserializationFailed,
+    ResponseDeserializationFailed {
+        #[allow(missing_docs)]
+        http_status_code: Option<u16>,
+    },
     #[error("Failed to handle connector response")]
-    ResponseHandlingFailed,
+    ResponseHandlingFailed {
+        #[allow(missing_docs)]
+        http_status_code: Option<u16>,
+    },
     #[error("The connector returned an unexpected response")]
-    UnexpectedResponseError,
-    #[error("Server responded with Internal Server Error")]
-    InternalServerErrorReceived,
-    #[error("Server responded with Bad Gateway")]
-    BadGatewayReceived,
-    #[error("Server responded with Service Unavailable")]
-    ServiceUnavailableReceived,
-    #[error("Server responded with Gateway Timeout")]
-    GatewayTimeoutReceived,
-    #[error("Failed at connector's end with code '{code}'")]
-    FailedAtConnector { message: String, code: String },
+    UnexpectedResponseError {
+        #[allow(missing_docs)]
+        http_status_code: Option<u16>,
+    },
     #[error("Missing connector transaction ID in response")]
-    MissingConnectorTransactionID,
-    #[error("Missing connector refund ID in response")]
-    MissingConnectorRefundID,
-    #[error("Missing required field in response: {field_name}")]
-    MissingRequiredField { field_name: &'static str },
+    MissingConnectorTransactionID {
+        #[allow(missing_docs)]
+        http_status_code: Option<u16>,
+    },
+}
+
+/// Build doc_url from error code. Returns `None` until real docs are hosted; update this
+/// to return `Some(format!("{BASE}/{error_code}"))` when docs are available.
+pub fn doc_url_for_error_code(_error_code: &str) -> Option<String> {
+    None
+}
+
+impl ConnectorResponseError {
+    /// HTTP status code from the connector response, when available.
+    pub fn http_status_code(&self) -> Option<u16> {
+        match self {
+            Self::ResponseDeserializationFailed { http_status_code }
+            | Self::ResponseHandlingFailed { http_status_code }
+            | Self::UnexpectedResponseError { http_status_code }
+            | Self::MissingConnectorTransactionID { http_status_code } => *http_status_code,
+        }
+    }
+
+    /// Create ResponseHandlingFailed with optional HTTP status.
+    pub fn response_handling_failed(http_status_code: Option<u16>) -> Self {
+        Self::ResponseHandlingFailed { http_status_code }
+    }
+
+    /// Create ResponseDeserializationFailed with optional HTTP status.
+    pub fn response_deserialization_failed(http_status_code: Option<u16>) -> Self {
+        Self::ResponseDeserializationFailed { http_status_code }
+    }
+
+    /// Create UnexpectedResponseError with optional HTTP status.
+    pub fn unexpected_response_error(http_status_code: Option<u16>) -> Self {
+        Self::UnexpectedResponseError { http_status_code }
+    }
 }
 
 /// Errors that occur during webhook processing
-#[derive(Debug, thiserror::Error, PartialEq, Clone)]
+#[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum WebhookError {
     #[error("Webhooks not implemented for this connector")]
     WebhooksNotImplemented,
@@ -1012,7 +1055,7 @@ pub fn report_response_as_request(
 pub fn report_request_as_response(
     report: Report<ConnectorRequestError>,
 ) -> Report<ConnectorResponseError> {
-    report.change_context(ConnectorResponseError::ResponseHandlingFailed)
+    report.change_context(ConnectorResponseError::response_handling_failed(None))
 }
 
 /// Extension trait to convert `Result<T, Report<ConnectorRequestError>>` to `Result<T, Report<ConnectorResponseError>>`.

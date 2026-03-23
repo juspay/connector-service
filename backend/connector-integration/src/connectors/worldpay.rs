@@ -345,7 +345,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response = if !res.response.is_empty() {
             res.response
                 .parse_struct("WorldpayErrorResponse")
-                .change_context(ConnectorResponseError::ResponseDeserializationFailed)?
+                .change_context(ConnectorResponseError::response_deserialization_failed(None))?
         } else {
             WorldpayErrorResponse::default(res.status_code)
         };

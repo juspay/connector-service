@@ -608,7 +608,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     })
                 }
             } else {
-                Err(ConnectorResponseError::ResponseDeserializationFailed.into())
+                Err(ConnectorResponseError::response_deserialization_failed(None).into())
             }
         } else {
             // Error response - PhonePe returned success: false
@@ -902,7 +902,7 @@ impl TryFrom<ResponseRouterData<PhonepeSyncResponse, Self>>
                     })
                 }
             } else {
-                Err(ConnectorResponseError::ResponseDeserializationFailed.into())
+                Err(ConnectorResponseError::response_deserialization_failed(None).into())
             }
         } else {
             // Error response from sync API - handle specific PhonePe error codes
