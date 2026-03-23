@@ -2988,6 +2988,20 @@ impl
             .as_ref()
             .and_then(|state| state.access_token.as_ref())
             .map(AccessTokenResponseData::from);
+        let payment_method_token = value.payment_method.as_ref().and_then(|pm| {
+            pm.payment_method.as_ref().and_then(|method| {
+                if let grpc_api_types::payments::payment_method::PaymentMethod::Token(token_data) =
+                    method
+                {
+                    Some(router_data::PaymentMethodToken::Token(
+                        token_data.token.clone(),
+                    ))
+                } else {
+                    None
+                }
+            })
+        });
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -3025,9 +3039,7 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: value.connector_order_reference_id.clone(),
-            payment_method_token: value
-                .payment_method_token
-                .map(|pmt| router_data::PaymentMethodToken::Token(Secret::new(pmt))),
+            payment_method_token,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode: value.test_mode,
@@ -6578,6 +6590,20 @@ impl
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
+        let payment_method_token = value.payment_method.as_ref().and_then(|pm| {
+            pm.payment_method.as_ref().and_then(|method| {
+                if let grpc_api_types::payments::payment_method::PaymentMethod::Token(token_data) =
+                    method
+                {
+                    Some(router_data::PaymentMethodToken::Token(
+                        token_data.token.clone(),
+                    ))
+                } else {
+                    None
+                }
+            })
+        });
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -6610,9 +6636,7 @@ impl
             access_token,
             session_token: value.session_token,
             reference_id: None,
-            payment_method_token: value
-                .payment_method_token
-                .map(|pmt| router_data::PaymentMethodToken::Token(Secret::new(pmt))),
+            payment_method_token,
             preprocessing_id: None,
             connector_api_version: None,
             test_mode,
