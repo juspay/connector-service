@@ -14,7 +14,7 @@ hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "02
 
 [dev-dependencies]
 prost = { workspace = true }
-prost-types = "0.13"
+prost-types = "0.14"
 
 [lints]
 workspace = true

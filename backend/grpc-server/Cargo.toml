@@ -43,7 +43,7 @@ tokio = { version = "1.48.0", features = [
     "signal",
 ] }
 tonic = { workspace = true }
-tonic-reflection = "0.13.0"
+tonic-reflection = "0.14.0"
 hyper = "1.6.0"
 tower-http = { version = "0.6.2", features = ["trace", "request-id"] }
 tower = "0.5.2"
