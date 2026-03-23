@@ -16,7 +16,7 @@ This macro sets up the connector foundation, including the connector struct, flo
 - Defines amount conversion utilities
 - Provides member functions accessible across all flows
 
-**Location:** `backend/connector-integration/src/connectors/macros.rs`
+**Location:** `crates/integrations/connector-integration/src/connectors/macros.rs`
 
 **Syntax:**
 ```rust
@@ -262,7 +262,7 @@ macros::macro_connector_implementation!(
 ## Complete Connector Template
 
 ```rust
-// File: backend/connector-integration/src/connectors/{{connector_name}}.rs
+// File: crates/integrations/connector-integration/src/connectors/{{connector_name}}.rs
 
 mod test;
 pub mod transformers;
