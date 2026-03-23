@@ -1,6 +1,8 @@
 #![allow(clippy::expect_used)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
+#![allow(clippy::indexing_slicing)]
+#![allow(clippy::print_stdout)]
 
 //! Vault payment flow integration tests
 //!
