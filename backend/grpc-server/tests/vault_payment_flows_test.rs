@@ -212,17 +212,19 @@ fn create_vgs_authorize_request() -> PaymentServiceAuthorizeRequest {
     }
 }
 
-/// Pre-tokenize a card via Hyperswitch Vault's `/v2/payment-methods` endpoint,
-/// then build an authorize request with the resulting payment method ID.
+/// Pre-tokenize a card via Hyperswitch Vault's v2 API, then build an authorize
+/// request with the resulting payment method ID.
 ///
-/// Returns `Some((authorize_request, payment_method_id))` if tokenization succeeds,
-/// or `None` if the HS Vault API is unavailable or credentials are insufficient.
+/// The HS Vault v2 API uses `Authorization: api-key=<key>` header format
+/// (not the v1 `api-key` header). A customer must be created first since
+/// `/v2/payment-methods` requires a valid `customer_id`.
 ///
-/// Note: The HS Vault v2 `/v2/payment-methods` endpoint requires an `Authorization`
-/// header with an admin/merchant API key, which is separate from the proxy `api-key`.
-/// Set `authorization_key` in the vault_hyperswitch credentials to enable this test.
+/// Steps:
+/// 1. Create a customer via `POST /v2/customers`
+/// 2. Tokenize card via `POST /v2/payment-methods` with that customer ID
+/// 3. Build authorize request using the payment method ID as the card token
 async fn create_hs_vault_adyen_authorize_request(
-) -> Option<(PaymentServiceAuthorizeRequest, String)> {
+) -> (PaymentServiceAuthorizeRequest, String) {
     let vault_creds = utils::credential_utils::load_vault_credentials("vault_hyperswitch")
         .expect("Failed to load Hyperswitch Vault credentials");
 
@@ -231,23 +233,66 @@ async fn create_hs_vault_adyen_authorize_request(
         .get("vault_auth_data")
         .and_then(|v| v.get("api_key"))
         .and_then(|v| v.as_str())
-        .expect("Missing vault api_key");
+        .expect("Missing vault api_key in vault_hyperswitch credentials");
     let profile_id = vault_creds
         .metadata
         .get("vault_auth_data")
         .and_then(|v| v.get("api_secret"))
         .and_then(|v| v.as_str())
-        .expect("Missing vault profile_id (api_secret)");
+        .expect("Missing vault profile_id (api_secret) in vault_hyperswitch credentials");
 
-    // HS Vault v2 /v2/payment-methods requires a separate Authorization key
-    // (admin or merchant key), not the proxy api-key. If not provided, skip.
-    let authorization_key = vault_creds
+    let vault_endpoint = vault_creds
         .metadata
-        .get("authorization_key")
-        .and_then(|v| v.as_str());
+        .get("vault_endpoint")
+        .and_then(|v| v.as_str())
+        .expect("Missing vault_endpoint in vault_hyperswitch credentials");
 
-    // Step 1: Pre-tokenize card via HS Vault
+    // v2 auth header format: "api-key=<key>"
+    let auth_header = format!("api-key={}", api_key);
+    // Base URL without path (e.g., "https://sandbox.hyperswitch.io")
+    let base_url = vault_endpoint
+        .replace("/v2/proxy", "")
+        .trim_end_matches('/')
+        .to_string();
+
     let client = reqwest::Client::new();
+
+    // Step 1: Create a customer (required for /v2/payment-methods)
+    let customer_body = serde_json::json!({
+        "name": "Vault Test User",
+        "email": "vault-test@example.com"
+    });
+
+    let customer_resp = client
+        .post(format!("{}/v2/customers", base_url))
+        .header("Content-Type", "application/json")
+        .header("Authorization", &auth_header)
+        .header("x-profile-id", profile_id)
+        .json(&customer_body)
+        .send()
+        .await
+        .expect("Failed to call HS Vault /v2/customers endpoint");
+
+    let customer_status = customer_resp.status();
+    let customer_body: serde_json::Value = customer_resp
+        .json()
+        .await
+        .expect("Failed to parse HS Vault customer response");
+
+    assert!(
+        customer_status.is_success(),
+        "HS Vault customer creation failed (status={}): {}",
+        customer_status,
+        customer_body
+    );
+
+    let customer_id = customer_body["id"]
+        .as_str()
+        .expect("No customer ID in response")
+        .to_string();
+    println!("HS Vault created customer: {}", customer_id);
+
+    // Step 2: Tokenize card via /v2/payment-methods
     let tokenize_body = serde_json::json!({
         "payment_method_type": "card",
         "payment_method_subtype": "credit",
@@ -260,34 +305,21 @@ async fn create_hs_vault_adyen_authorize_request(
                 "card_cvc": "737"
             }
         },
-        "customer_id": "vault_test_customer_1234567890ab",
+        "customer_id": customer_id,
         "storage_type": "volatile"
     });
 
-    let vault_endpoint = vault_creds
-        .metadata
-        .get("vault_endpoint")
-        .and_then(|v| v.as_str())
-        .expect("Missing vault_endpoint");
-    // The tokenize endpoint is /v2/payment-methods (not /v2/proxy)
-    let tokenize_url = vault_endpoint.replace("/v2/proxy", "/v2/payment-methods");
+    let tokenize_url = format!("{}/v2/payment-methods", base_url);
 
-    let mut req = client
+    let resp = client
         .post(&tokenize_url)
         .header("Content-Type", "application/json")
-        .header("api-key", api_key)
-        .header("x-profile-id", profile_id);
-
-    // Add Authorization header if provided
-    if let Some(auth_key) = authorization_key {
-        req = req.header("Authorization", auth_key);
-    }
-
-    let resp = req
+        .header("Authorization", &auth_header)
+        .header("x-profile-id", profile_id)
         .json(&tokenize_body)
         .send()
         .await
-        .expect("Failed to call HS Vault tokenize endpoint");
+        .expect("Failed to call HS Vault /v2/payment-methods endpoint");
 
     let resp_status = resp.status();
     let resp_body: serde_json::Value = resp
@@ -295,22 +327,19 @@ async fn create_hs_vault_adyen_authorize_request(
         .await
         .expect("Failed to parse HS Vault tokenize response");
 
-    if !resp_status.is_success() {
-        println!(
-            "HS Vault tokenization failed (status={}): {}. \
-             This may be due to missing 'authorization_key' in vault_hyperswitch credentials \
-             or HS Vault API changes. Skipping test.",
-            resp_status, resp_body
-        );
-        return None;
-    }
+    assert!(
+        resp_status.is_success(),
+        "HS Vault tokenization failed (status={}): {}",
+        resp_status,
+        resp_body
+    );
 
     let pm_id = resp_body["id"]
         .as_str()
         .expect("No payment method ID in tokenize response")
         .to_string();
 
-    // Step 2: Build authorize request with tokenized card references
+    // Step 3: Build authorize request with tokenized card references
     // For HS Vault, the card_number is the payment method ID (token)
     let proxy_card = ProxyCardDetails {
         card_number: Some(Secret::new(pm_id.clone())),
@@ -370,7 +399,7 @@ async fn create_hs_vault_adyen_authorize_request(
         ..Default::default()
     };
 
-    Some((request, pm_id))
+    (request, pm_id)
 }
 
 // ---------------------------------------------------------------------------
@@ -413,26 +442,19 @@ async fn test_vgs_stripe_authorize() {
 /// Test: Hyperswitch Vault → Adyen authorize (auto-capture)
 ///
 /// This test:
-/// 1. Pre-tokenizes a card via HS Vault's `/v2/payment-methods` endpoint
-/// 2. Sends the payment method ID through the vault proxy to Adyen's sandbox
-/// 3. The vault proxy de-tokenizes and forwards raw card data to Adyen
+/// 1. Creates a customer via HS Vault's `/v2/customers` endpoint
+/// 2. Pre-tokenizes a card via HS Vault's `/v2/payment-methods` endpoint
+/// 3. Sends the payment method ID through the vault proxy to Adyen's sandbox
+/// 4. The vault proxy de-tokenizes and forwards raw card data to Adyen
 ///
 /// Note: HS Vault only works with JSON-native connectors (Adyen, Checkout.com),
 /// NOT with form-urlencoded connectors (Stripe).
 ///
-/// The HS Vault v2 `/v2/payment-methods` endpoint requires an `Authorization` header
-/// with a merchant/admin API key. If this key is not available in the test credentials,
-/// the test is skipped gracefully.
+/// Auth format for v2 API: `Authorization: api-key=<key>` + `x-profile-id: <id>`
 #[tokio::test]
 async fn test_hyperswitch_vault_adyen_authorize() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        let Some((request, pm_id)) = create_hs_vault_adyen_authorize_request().await else {
-            println!(
-                "SKIPPED: HS Vault tokenization unavailable. \
-                 Add 'authorization_key' to vault_hyperswitch credentials to enable."
-            );
-            return;
-        };
+        let (request, pm_id) = create_hs_vault_adyen_authorize_request().await;
         println!("HS Vault tokenized payment method ID: {}", pm_id);
 
         let mut grpc_request = Request::new(request);
