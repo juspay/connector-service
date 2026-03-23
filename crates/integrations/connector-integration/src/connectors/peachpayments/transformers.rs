@@ -2,6 +2,7 @@ use super::{requests, responses, PeachpaymentsRouterData};
 
 use crate::types::ResponseRouterData;
 use common_enums::{AttemptStatus, RefundStatus};
+use common_utils::ext_traits::StringExt;
 use common_utils::{consts, errors::CustomResult, types::MinorUnit, SecretSerdeValue};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
@@ -15,6 +16,7 @@ use domain_types::{
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::Serialize;
 use std::fmt::Debug;
@@ -37,6 +39,16 @@ pub fn get_error_message(response_code: Option<&responses::PeachpaymentsResponse
         }
         None => consts::NO_ERROR_CODE.to_string(),
     }
+}
+
+pub fn get_webhook_object_from_body(
+    body: &[u8],
+) -> CustomResult<responses::PeachpaymentsIncomingWebhook, errors::ConnectorError> {
+    let body_string = String::from_utf8(body.to_vec())
+        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+    body_string
+        .parse_struct("PeachpaymentsIncomingWebhook")
+        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
 }
 
 fn get_webhook_response(
