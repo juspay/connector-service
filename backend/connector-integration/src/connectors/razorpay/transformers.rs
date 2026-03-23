@@ -300,6 +300,7 @@ fn extract_payment_method_and_data<
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::CardToken(_)
         | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+        | PaymentMethodData::DecryptedWalletTokenDetailsForNetworkTransactionId(_)
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::OpenBanking(_) => Err(errors::ConnectorError::NotImplemented(
