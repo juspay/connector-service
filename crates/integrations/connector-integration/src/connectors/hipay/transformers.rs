@@ -596,7 +596,7 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<HipayAuthorizeRespons
 // Tokenization Structures
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HipayTokenRequest<T: PaymentMethodDataTypes> {
-    pub card_number: domain_types::payment_method_data::RawCardNumber<T>,
+    pub card_number: payment_method_data::RawCardNumber<T>,
     pub card_expiry_month: Secret<String>,
     pub card_expiry_year: Secret<String>,
     pub card_holder: Secret<String>,
