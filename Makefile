@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -50,7 +50,27 @@ ci:
 ## Generate SDK flow bindings from services.proto ∩ bindings/uniffi.rs
 generate:
 	@echo "▶ Generating SDK flows from services.proto…"
-	python3 sdk/codegen/generate.py
+	@$(MAKE) -C sdk generate
+
+## Run interactive UCS connector test runner
+test-ucs:
+	@echo "▶ Starting interactive UCS connector tests…"
+	cargo run -p ucs-connector-tests --bin test_ucs
+
+## SDK Certification: Run HTTP client sanity suite across all supported languages
+certify-client-sanity:
+	@echo "Cleaning previous client sanity artifacts..."
+	@rm -rf sdk/tests/client_sanity/artifacts || true
+	@mkdir -p sdk/tests/client_sanity/artifacts
+	@echo "Starting Client Sanity Certification..."
+	@pkill -f "[/]echo_server\\.js" || true
+	@pkill -f "[/]simple_proxy\\.js" || true
+	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 2
+	@echo "Generating golden captures from manifest..."
+	@node sdk/tests/client_sanity/generate_golden.js
+	@echo "[CERTIFICATION]: Running client sanity suite..."
+	@node sdk/tests/client_sanity/run_client_certification.js rust python node kotlin
+	@pkill -f "[/]echo_server\\.js"; pkill -f "[/]simple_proxy\\.js" || true
 
 # Format proto files
 proto-format:
@@ -78,6 +98,41 @@ proto-clean:
 	@echo "Cleaning generated files..."
 	rm -rf gen
 
+## Run field-probe to generate connector flow data
+field-probe:
+	@echo "▶ Running field-probe to generate connector flow data…"
+	-cargo run -p field-probe
+
+## Run comprehensive pre-push validation (format, check, clippy, generate, docs)
+validate-pre-push:
+	@echo "▶ Running pre-push validation..."
+	@./scripts/validation/pre-push.sh
+
+## Run pre-push validation with tests (slower but more thorough)
+validate-pre-push-full:
+	@echo "▶ Running pre-push validation with tests..."
+	@./scripts/validation/pre-push.sh --with-tests
+
+## Fix formatting and run pre-push validation
+validate-pre-push-fix:
+	@echo "▶ Running pre-push validation with auto-fix..."
+	@./scripts/validation/pre-push.sh --fix
+
+## Generate connector docs from source code (all connectors)
+docs: field-probe
+	@echo "▶ Generating connector docs…"
+	python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe
+
+## Generate the all-connectors coverage document
+all-connectors-doc: field-probe
+	@echo "▶ Generating all-connectors coverage doc…"
+	python3 scripts/generators/docs/generate.py --all-connectors-doc --probe-path data/field_probe
+
+## Report annotation coverage for connector docs
+docs-check:
+	@echo "▶ Checking connector annotation coverage…"
+	python3 scripts/generators/docs/generate.py --check
+
 ## Show this help
 help:
 	@echo "Usage: make [TARGET]"
@@ -91,6 +146,11 @@ help:
 	@echo "  nextest  Run tests with nextest (faster test runner)"
 	@echo "  ci       Same as '''all''' but with CI=true (treat warnings as errors)"
 	@echo
+	@echo "Validation Targets:"
+	@echo "  validate-pre-push      Run comprehensive pre-push validation (format, check, clippy, generate, docs)"
+	@echo "  validate-pre-push-full Run pre-push validation with tests (slower)"
+	@echo "  validate-pre-push-fix  Run pre-push validation with auto-fix"
+	@echo
 	@echo "Proto Targets:"
 	@echo "  proto-format     Format proto files"
 	@echo "  proto-generate   Generate code from proto files"
@@ -101,5 +161,12 @@ help:
 	@echo "SDK Codegen Targets:"
 	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo
+	@echo "Docs Targets:"
+	@echo "  docs         Regenerate all connector docs from source"
+	@echo "  docs-check   Report which connectors are missing annotation files"
+	@echo "Certification Targets:"
+	@echo "  certify-client-sanity  Run cross-language transport parity certification"
+	@echo
 	@echo "Other Targets:"
+	@echo "  test-ucs Run interactive UCS connector tests"
 	@echo "  help     Show this help message"

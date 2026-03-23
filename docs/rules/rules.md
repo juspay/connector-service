@@ -72,17 +72,17 @@ approved: {true|false}
 
 ## C3: Product Naming
 
-**Requirement:** Always refer to the product as "Connector Service". Never use "UCS", "Universal Connector Service", or other abbreviations.
+**Requirement:** Always refer to the product as "Prism". Never use "UCS", "Universal Prism", or other abbreviations.
 
 **Correct:**
-- "The Connector Service API provides..."
-- "This Domain Schema defines types used across Connector Service..."
-- "To integrate with Connector Service..."
+- "The Prism API provides..."
+- "This Domain Schema defines types used across Prism..."
+- "To integrate with Prism..."
 
 **Incorrect:**
 - "The UCS API provides..."
 - "This Domain Schema defines types used across UCS..."
-- "To integrate with Universal Connector Service..."
+- "To integrate with Universal Prism..."
 
 **Rationale:** Consistent product naming builds brand recognition and avoids confusion for developers reading the documentation.
 
@@ -109,16 +109,46 @@ approved: {true|false}
 **Format:**
 ```bash
 grpcurl -H "x-connector: {connector}" \
-  -H "x-connector-auth: {\"{Connector}\":{\"api_key\":\"$API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"{Connector}\":{\"api_key\":\"$API_KEY\"}}}" \
 ```
 
 **Stripe Example:**
 ```bash
 grpcurl -H "x-connector: stripe" \
-  -H "x-connector-auth: {\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}" \
+  -H "x-connector-config: {\"config\":{\"Stripe\":{\"api_key\":\"$STRIPE_API_KEY\"}}}" \
 ```
 
-### C4.2: Test Data
+### C4.2: Service/Operation URL Format
+
+**Requirement:** Use `types.{ServiceName}/{OperationName}` format for the gRPC method URL.
+
+**Format:**
+```bash
+grpcurl ... localhost:8080 types.{ServiceName}/{OperationName}
+```
+
+**Examples:**
+```bash
+# PaymentService operations
+types.PaymentService/Authorize
+types.PaymentService/Capture
+types.PaymentService/Get
+types.PaymentService/Void
+
+# RecurringPaymentService operations
+types.RecurringPaymentService/Charge
+types.RecurringPaymentService/Revoke
+
+# PaymentMethodService operations
+types.PaymentMethodService/Tokenize
+
+# EventService operations
+types.EventService/HandleEvent
+```
+
+**Rationale:** The proto package is declared as `package types` in the service definitions, so the fully-qualified method name uses the `types` prefix. This ensures consistency with the generated proto code and gRPC reflection.
+
+### C4.3: Test Data
 
 **Card Numbers:**
 - Success: `4242424242424242` (Visa)
@@ -173,7 +203,7 @@ Description of the business scenario.
 ```mermaid
 sequenceDiagram
     participant App as Your App
-    participant CS as Connector Service
+    participant CS as Prism
     participant PP as Payment Provider
     App->>CS: 1. OperationA
     CS-->>App: Return field
@@ -186,7 +216,7 @@ sequenceDiagram
 **Requirements:**
 - Include 3 use cases showing sequence of operations
 - Use mermaid sequence diagrams showing flow of operations
-- **Participants must be:** `App` (Your App), `CS` (Connector Service), `PP` (Payment Provider)
+- **Participants must be:** `App` (Your App), `CS` (Prism), `PP` (Payment Provider)
 - Do NOT include request/response examples
 - Always hyperlink operation names to their API reference
 
@@ -576,7 +606,7 @@ Rules for keeping GitBook configuration in sync with documentation changes.
 ```mermaid
 sequenceDiagram
     participant App as Your App
-    participant CS as Connector Service
+    participant CS as Prism
     participant PP as Payment Provider
 
     App->>CS: 1. Create customer
@@ -656,9 +686,9 @@ Include a details section for each connector with:
 **Format:**
 ```markdown
 ### Stripe
-- **Location**: `backend/connector-integration/src/connectors/stripe.rs`
-- **Transformers**: `backend/connector-integration/src/connectors/stripe/transformers.rs`
-- **Tests**: `backend/grpc-server/tests/stripe_payment_flows_test.rs`
+- **Location**: `crates/integrations/connector-integration/src/connectors/stripe.rs`
+- **Transformers**: `crates/integrations/connector-integration/src/connectors/stripe/transformers.rs`
+- **Tests**: `crates/grpc-server/grpc-server/tests/stripe_payment_flows_test.rs`
 - **Supported Operations**: Authorize, Capture, Void, PSync, Refund, RSync, SetupMandate
 ```
 
