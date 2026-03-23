@@ -8,7 +8,7 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId,
     },
-    errors,
+    errors::ResultRequestToResponseExt,
     payment_method_data::{BankDebitData, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, PaysafePaymentMethodDetails},
     router_data_v2::RouterDataV2,
@@ -19,11 +19,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::connectors::paysafe::PaysafeRouterData;
 use crate::types::ResponseRouterData;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 pub use super::requests::*;
 pub use super::responses::*;
-
-type ConnectorError = error_stack::Report<errors::ConnectorError>;
 
 // Auth Type
 
@@ -35,7 +35,7 @@ pub struct PaysafeAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for PaysafeAuthType {
-    type Error = ConnectorError;
+    type Error = ConnectorRequestError;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Paysafe {
@@ -48,7 +48,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PaysafeAuthType {
                 password: password.clone(),
                 account_id: account_id.clone(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType),
         }
     }
 }
@@ -70,7 +70,7 @@ pub struct PaysafeMeta {
 
 fn create_paysafe_billing_details(
     resource_common_data: &PaymentFlowData,
-) -> Result<Option<PaysafeBillingDetails>, ConnectorError> {
+) -> Result<Option<PaysafeBillingDetails>, error_stack::Report<ConnectorRequestError>> {
     let billing_address = resource_common_data.get_billing_address()?;
     // Only send billing details if billing mandatory fields are available
     if let (Some(zip), Some(country), Some(state)) = (
@@ -115,7 +115,7 @@ pub fn get_paysafe_payment_status(
 }
 
 impl TryFrom<PaysafePaymentHandleStatus> for enums::AttemptStatus {
-    type Error = ConnectorError;
+    type Error = ConnectorRequestError;
     fn try_from(item: PaysafePaymentHandleStatus) -> Result<Self, Self::Error> {
         match item {
             PaysafePaymentHandleStatus::Completed => Ok(Self::Authorized),
@@ -186,7 +186,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaysafePaymentMethodTokenRequest<T>
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PaysafeRouterData<
@@ -204,7 +204,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = PaysafeAuthType::try_from(&item.router_data.connector_config)?;
         let account_id = auth
             .account_id
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+            .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                 config: "account_id",
             })?;
 
@@ -252,11 +252,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                                 .resource_common_data
                                 .get_optional_billing_full_name()
                         })
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                        .ok_or(ConnectorRequestError::MissingRequiredField {
                             field_name: "bank_account_holder_name",
                         })?;
                     let account_type = bank_type.as_ref().map(PaysafeAchAccountType::from).ok_or(
-                        errors::ConnectorError::MissingRequiredField {
+                        ConnectorRequestError::MissingRequiredField {
                             field_name: "bank_type (ach.accountType)",
                         },
                     )?;
@@ -274,7 +274,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )
                 }
                 _ => {
-                    return Err(errors::ConnectorError::NotSupported {
+                    return Err(ConnectorRequestError::NotSupported {
                         message:
                             "Only card and ACH payment methods are supported for PaymentMethodToken"
                                 .to_string(),
@@ -297,7 +297,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         // Paysafe requires return_links even for no-3DS flows
         let redirect_url = router_data.resource_common_data.get_return_url().ok_or(
-            errors::ConnectorError::MissingRequiredField {
+            ConnectorRequestError::MissingRequiredField {
                 field_name: "return_url",
             },
         )?;
@@ -355,12 +355,12 @@ impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaysafePaymentMethodT
         PaymentMethodTokenResponse,
     >
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<PaysafePaymentMethodTokenResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = enums::AttemptStatus::try_from(item.response.status)?;
+        let status = enums::AttemptStatus::try_from(item.response.status).into_response_err()?;
 
         let mut router_data = item.router_data;
         router_data.resource_common_data.status = status;
@@ -388,7 +388,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaysafePaymentsRequest
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PaysafeRouterData<
@@ -407,7 +407,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = PaysafeAuthType::try_from(&item.router_data.connector_config)?;
         let account_id = auth
             .account_id
-            .ok_or(errors::ConnectorError::InvalidConnectorConfig {
+            .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                 config: "account_id",
             })?;
 
@@ -431,7 +431,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .map(|meta| meta.payment_handle_token)
                     })
             })
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "payment_method_token",
             })?;
 
@@ -488,7 +488,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<PaysafeAuthorizeResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<PaysafeAuthorizeResponse, Self>,
@@ -543,7 +543,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaysafeRepeatPaymentRequest
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PaysafeRouterData<
@@ -564,7 +564,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             MandateReferenceId::ConnectorMandateId(mandate_data) => {
                 let token = mandate_data
                     .get_connector_mandate_id()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                    .ok_or(ConnectorRequestError::MissingRequiredField {
                         field_name: "connector_mandate_id",
                     })?
                     .into();
@@ -572,7 +572,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             }
             MandateReferenceId::NetworkMandateId(_)
             | MandateReferenceId::NetworkTokenWithNTI(_) => {
-                return Err(errors::ConnectorError::MissingRequiredField {
+                return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_mandate_id",
                 }
                 .into());
@@ -581,11 +581,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
         let mandate_metadata: PaysafeMandateMetadata = mandate_data
             .get_mandate_metadata()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "mandate_metadata",
             })?
             .parse_value("PaysafeMandateMetadata")
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
 
         let customer_ip = router_data
             .request
@@ -629,7 +629,7 @@ impl<
     > TryFrom<ResponseRouterData<PaysafeRepeatPaymentResponse, Self>>
     for RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<PaysafeRepeatPaymentResponse, Self>,
@@ -668,7 +668,7 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
         PaymentsResponseData,
     >
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<PaysafeSyncResponse, Self>) -> Result<Self, Self::Error> {
         let (status, connector_transaction_id) = match &item.response {
@@ -683,7 +683,7 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 let payment_response = sync_response
                     .payments
                     .first()
-                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
+                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed))?;
                 let status = get_paysafe_payment_status(
                     payment_response.status,
                     item.router_data.request.capture_method,
@@ -691,15 +691,15 @@ impl TryFrom<ResponseRouterData<PaysafeSyncResponse, Self>>
                 (status, Some(payment_response.id.clone()))
             }
             PaysafeSyncResponse::SinglePaymentHandle(payment_handle_response) => {
-                let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status).into_response_err()?;
                 (status, Some(payment_handle_response.id.clone()))
             }
             PaysafeSyncResponse::PaymentHandle(sync_response) => {
                 let payment_handle_response = sync_response
                     .payment_handles
                     .first()
-                    .ok_or(errors::ConnectorError::ResponseDeserializationFailed)?;
-                let status = enums::AttemptStatus::try_from(payment_handle_response.status)?;
+                    .ok_or_else(|| error_stack::Report::from(ConnectorResponseError::ResponseDeserializationFailed))?;
+                let status = enums::AttemptStatus::try_from(payment_handle_response.status).into_response_err()?;
                 (status, Some(payment_handle_response.id.clone()))
             }
         };
@@ -735,7 +735,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaysafeCaptureRequest
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PaysafeRouterData<
@@ -759,7 +759,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<PaysafeCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<PaysafeCaptureResponse, Self>,
@@ -795,7 +795,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaysafeVoidRequest
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PaysafeRouterData<
@@ -804,7 +804,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         let amount = item.router_data.request.amount.ok_or(
-            errors::ConnectorError::MissingRequiredField {
+            ConnectorRequestError::MissingRequiredField {
                 field_name: "amount",
             },
         )?;
@@ -824,7 +824,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<PaysafeVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<PaysafeVoidResponse, Self>) -> Result<Self, Self::Error> {
         let status = enums::AttemptStatus::from(item.response.status);
@@ -858,7 +858,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for PaysafeRefundRequest
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PaysafeRouterData<
@@ -878,7 +878,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<PaysafeRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<PaysafeRefundResponse, Self>,
@@ -899,7 +899,7 @@ impl TryFrom<ResponseRouterData<PaysafeRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<PaysafeRSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = ConnectorError;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<PaysafeRSyncResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {

@@ -9,13 +9,13 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError};
 
 // Error message constants
 const DEFAULT_ERROR_CODE: &str = "UNKNOWN_ERROR";
@@ -37,7 +37,7 @@ impl DatatransAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for DatatransAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -50,7 +50,7 @@ impl TryFrom<&ConnectorSpecificConfig> for DatatransAuthType {
                 password: password.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType
             )),
         }
     }
@@ -148,7 +148,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DatatransPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::DatatransRouterData<
@@ -165,7 +165,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         // Extract card data
         let card_data = match &router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => card,
-            _ => Err(errors::ConnectorError::NotImplemented(
+            _ => Err(ConnectorRequestError::NotImplemented(
                 UNSUPPORTED_PAYMENT_METHOD_ERROR.to_string(),
             ))?,
         };
@@ -224,7 +224,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<DatatransPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<DatatransPaymentsResponse, Self>,
@@ -279,7 +279,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DatatransSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         _item: super::DatatransRouterData<
@@ -380,7 +380,7 @@ pub struct DatatransActionDetail {
 impl TryFrom<ResponseRouterData<DatatransSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<DatatransSyncResponse, Self>,
@@ -445,7 +445,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DatatransCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::DatatransRouterData<
@@ -483,7 +483,7 @@ pub struct DatatransCaptureResponse {
 impl TryFrom<ResponseRouterData<DatatransCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<DatatransCaptureResponse, Self>,
@@ -541,7 +541,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DatatransRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::DatatransRouterData<
@@ -578,7 +578,7 @@ pub struct DatatransRefundResponse {
 impl TryFrom<ResponseRouterData<DatatransRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<DatatransRefundResponse, Self>,
@@ -612,7 +612,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DatatransRefundSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         _item: super::DatatransRouterData<
@@ -668,7 +668,7 @@ pub struct DatatransRefundSyncResponse {
 impl TryFrom<ResponseRouterData<DatatransRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<DatatransRefundSyncResponse, Self>,
@@ -710,7 +710,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for DatatransVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         _item: super::DatatransRouterData<
@@ -738,7 +738,7 @@ pub struct DatatransVoidResponse {
 impl TryFrom<ResponseRouterData<DatatransVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<DatatransVoidResponse, Self>,

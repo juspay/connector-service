@@ -48,6 +48,8 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -212,9 +214,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<bool, errors::ConnectorError> {
+    ) -> CustomResult<bool, ConnectorRequestError> {
         let connector_webhook_secret = connector_webhook_secret
-            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
             .attach_printable("Connector webhook secret not configured")?;
 
         let signature =
@@ -225,7 +227,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         use common_utils::crypto::{HmacSha256, SignMessage};
         let expected_signature = HmacSha256
             .sign_message(&connector_webhook_secret.secret, &message)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
             .attach_printable("Failed to sign webhook message with HMAC-SHA256")?;
 
         Ok(expected_signature.eq(&signature))
@@ -235,24 +237,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
-    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<u8>, ConnectorRequestError> {
         let signature_str = request
             .headers
             .get("bls-signature")
-            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .ok_or(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))?;
 
-        hex::decode(signature_str).change_context(errors::ConnectorError::WebhookSignatureNotFound)
+        hex::decode(signature_str).change_context(ConnectorRequestError::NotImplemented("webhook signature not found".to_string()))
     }
 
     fn get_webhook_source_verification_message(
         &self,
         request: &domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: &domain_types::connector_types::ConnectorWebhookSecrets,
-    ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<u8>, ConnectorRequestError> {
         let timestamp = request
             .headers
             .get("bls-ipn-timestamp")
-            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?;
 
         let body_str = String::from_utf8_lossy(&request.body);
 
@@ -264,14 +266,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<domain_types::connector_types::EventType, errors::ConnectorError> {
+    ) -> CustomResult<domain_types::connector_types::EventType, ConnectorRequestError> {
         match serde_urlencoded::from_bytes::<transformers::BluesnapWebhookBody>(&request.body) {
             Ok(webhook_body) => match webhook_body.transaction_type {
                 transformers::BluesnapWebhookEvent::Chargeback
                 | transformers::BluesnapWebhookEvent::ChargebackStatusChanged => {
                     let dispute_body: transformers::BluesnapDisputeWebhookBody =
                         serde_urlencoded::from_bytes(&request.body)
-                            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+                            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
                     transformers::map_chargeback_status_to_event_type(&dispute_body.cb_status)
                 }
@@ -282,7 +284,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             Err(_) => {
                 let dispute_body: transformers::BluesnapDisputeWebhookBody =
                     serde_urlencoded::from_bytes(&request.body)
-                        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+                        .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
                 transformers::map_chargeback_status_to_event_type(&dispute_body.cb_status)
             }
@@ -294,11 +296,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: domain_types::connector_types::RequestDetails,
         _connector_webhook_secret: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, errors::ConnectorError>
+    ) -> CustomResult<domain_types::connector_types::WebhookDetailsResponse, ConnectorRequestError>
     {
         let webhook_body: transformers::BluesnapWebhookBody =
             serde_urlencoded::from_bytes(&request.body)
-                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
         let status = match webhook_body.transaction_type {
             transformers::BluesnapWebhookEvent::Decline
@@ -348,15 +350,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> CustomResult<
         domain_types::connector_types::RefundWebhookDetailsResponse,
-        errors::ConnectorError,
+        ConnectorRequestError,
     > {
         let webhook_body: transformers::BluesnapWebhookBody =
             serde_urlencoded::from_bytes(&request.body)
-                .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+                .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))?;
 
         let connector_refund_id = webhook_body
             .reversal_ref_num
-            .ok_or(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+            .ok_or(ConnectorRequestError::NotImplemented("webhook reference id not found".to_string()))?;
 
         Ok(
             domain_types::connector_types::RefundWebhookDetailsResponse {
@@ -429,7 +431,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -474,14 +476,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             use domain_types::payment_method_data::PaymentMethodData;
 
             let base_url = self.connector_base_url_payments(req);
@@ -515,17 +517,17 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let connector_tx_id = match &req.request.connector_transaction_id {
                 domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
+                _ => return Err(ConnectorRequestError::MissingConnectorTransactionID.into()),
             };
             Ok(format!("{}/services/2/transactions/{}", self.connector_base_url_payments(req), connector_tx_id))
         }
@@ -548,14 +550,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!("{}/services/2/transactions", self.connector_base_url_payments(req)))
         }
     }
@@ -577,14 +579,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let connector_transaction_id = &req.request.connector_transaction_id;
             Ok(format!(
                 "{}/services/2/transactions/refund/{}",
@@ -610,14 +612,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let refund_id = &req.request.connector_refund_id;
             Ok(format!(
                 "{}/services/2/transactions/{}",
@@ -644,14 +646,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!("{}/services/2/transactions", self.connector_base_url_payments(_req)))
         }
     }
@@ -852,9 +854,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = bluesnap::BluesnapAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.generate_basic_auth().into(),
@@ -865,11 +867,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: bluesnap::BluesnapErrorResponse = res
             .response
             .parse_struct("BluesnapErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 

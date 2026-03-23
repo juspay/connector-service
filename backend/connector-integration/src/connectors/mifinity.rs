@@ -24,7 +24,7 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::ConnectorError,
+    ConnectorRequestError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -40,6 +40,7 @@ use interfaces::{
 use serde::Serialize;
 
 use super::macros;
+use domain_types::errors::ConnectorResponseError;
 use crate::{
     connectors::mifinity::transformers::{
         auth_headers, MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest,
@@ -211,7 +212,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
@@ -251,20 +252,20 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!("{}pegasus-ci/api/gateway/init-iframe", self.connector_base_url_payments(req)))
         }
         fn get_5xx_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
             self.build_error_response(res, event_builder)
         }
     }
@@ -285,13 +286,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let payment_id = req.resource_common_data.connector_request_reference_id.clone();
             let merchant_id = &req.resource_common_data.merchant_id;
             Ok(format!(
@@ -494,9 +495,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = MifinityAuthType::try_from(auth_type)
-            .change_context(ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::KEY.to_string(),
             auth.key.expose().into_masked(),
@@ -507,7 +508,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         if res.response.is_empty() {
             Ok(ErrorResponse {
                 status_code: res.status_code,

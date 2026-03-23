@@ -10,16 +10,18 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{PeekInterface, Secret};
+use error_stack::ResultExt;
 use serde::Serialize;
 use std::fmt::Debug;
 use time::format_description::well_known::Iso8601;
 use time::OffsetDateTime;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 pub fn get_error_code(response_code: Option<&responses::PeachpaymentsResponseCode>) -> String {
     match response_code {
@@ -44,11 +46,11 @@ fn get_webhook_response(
     status_code: u16,
 ) -> CustomResult<
     (AttemptStatus, Result<PaymentsResponseData, ErrorResponse>),
-    errors::ConnectorError,
+    ConnectorResponseError,
 > {
     let transaction = response
         .transaction
-        .ok_or(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        .ok_or(ConnectorResponseError::ResponseHandlingFailed)?;
 
     let status: AttemptStatus = transaction.transaction_result.clone().into();
 
@@ -96,12 +98,12 @@ pub struct PeachpaymentsConnectorMetadataObject {
 }
 
 impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(meta_data: &Option<SecretSerdeValue>) -> Result<Self, Self::Error> {
         let metadata = meta_data
             .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_meta_data",
             })?;
 
@@ -109,21 +111,21 @@ impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject
             metadata
                 .peek()
                 .as_object()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_meta_data",
                 })?;
 
         let client_merchant_reference_id = metadata_obj
             .get("client_merchant_reference_id")
             .and_then(|v: &serde_json::Value| v.as_str())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_meta_data.client_merchant_reference_id",
             })?;
 
         let merchant_payment_method_route_id = metadata_obj
             .get("merchant_payment_method_route_id")
             .and_then(|v: &serde_json::Value| v.as_str())
-            .ok_or(errors::ConnectorError::MissingRequiredField {
+            .ok_or(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_meta_data.merchant_payment_method_route_id",
             })?;
 
@@ -137,7 +139,7 @@ impl TryFrom<&Option<SecretSerdeValue>> for PeachpaymentsConnectorMetadataObject
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for PeachpaymentsAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -148,7 +150,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PeachpaymentsAuthType {
                 tenant_id: tenant_id.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType
             )),
         }
     }
@@ -167,7 +169,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::PeachpaymentsAuthorizeRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PeachpaymentsRouterData<
@@ -181,7 +183,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.resource_common_data.is_three_ds() {
-            return Err(errors::ConnectorError::NotSupported {
+            return Err(ConnectorRequestError::NotSupported {
                 message: "3DS payments".to_string(),
                 connector: "peachpayments",
             }
@@ -206,7 +208,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                     card: requests::PeachpaymentsCardDetails {
                         pan: card_info.card_number.clone(),
                         cardholder_name: card_info.card_holder_name.clone(),
-                        expiry_year: Some(card_info.get_card_expiry_year_2_digit()?),
+                        expiry_year: Some(
+                            card_info
+                                .get_card_expiry_year_2_digit()
+                                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
+                        ),
                         expiry_month: Some(card_info.card_exp_month),
                         cvv: Some(card_info.card_cvc),
                         eci: None,
@@ -251,14 +257,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         },
                         network_token_data: requests::PeachpaymentsNetworkTokenDetails {
                             token: Secret::new(token_data.token_number.peek().clone()),
-                            expiry_year: token_data.get_token_expiry_year_2_digit()?,
+                            expiry_year: token_data
+                                .get_token_expiry_year_2_digit()
+                                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
                             expiry_month: token_data.token_exp_month,
                             cryptogram: token_data.token_cryptogram,
                             eci: token_data.eci,
                             scheme: token_data
                                 .card_network
                                 .map(requests::CardNetworkLowercase::try_from)
-                                .transpose()?,
+                                .transpose()
+                                .change_context(ConnectorRequestError::RequestEncodingFailed)?,
                         },
                         amount: requests::PeachpaymentsAmount {
                             amount: item.router_data.request.minor_amount,
@@ -272,7 +281,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 )
             }
             _ => {
-                return Err(errors::ConnectorError::NotSupported {
+                return Err(ConnectorRequestError::NotSupported {
                     message: "Payment method not supported".to_string(),
                     connector: "peachpayments",
                 }
@@ -291,12 +300,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             pos_data: None,
             send_date_time: OffsetDateTime::now_utc()
                 .format(&Iso8601::DEFAULT)
-                .map_err(|error| {
-                    errors::ConnectorError::RequestEncodingFailedWithReason(format!(
-                        "Failed to format datetime: {}",
-                        error
-                    ))
-                })?,
+                .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?,
         })
     }
 }
@@ -305,7 +309,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<responses::PeachpaymentsPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsPaymentsResponse, Self>,
@@ -358,7 +362,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsSyncResponse, Self>,
@@ -393,7 +397,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::PeachpaymentsCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PeachpaymentsRouterData<
@@ -414,7 +418,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsCaptureResponse, Self>,
@@ -449,7 +453,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::PeachpaymentsVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PeachpaymentsRouterData<
@@ -458,12 +462,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     ) -> Result<Self, Self::Error> {
         let amount = item.router_data.request.amount.ok_or(
-            errors::ConnectorError::MissingRequiredField {
+            ConnectorRequestError::MissingRequiredField {
                 field_name: "amount",
             },
         )?;
         let currency = item.router_data.request.currency.ok_or(
-            errors::ConnectorError::MissingRequiredField {
+            ConnectorRequestError::MissingRequiredField {
                 field_name: "currency",
             },
         )?;
@@ -481,7 +485,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsVoidResponse, Self>,
@@ -516,7 +520,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for requests::PeachpaymentsRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: PeachpaymentsRouterData<
@@ -546,7 +550,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsRefundResponse, Self>,
@@ -567,7 +571,7 @@ impl TryFrom<ResponseRouterData<responses::PeachpaymentsRefundResponse, Self>>
 impl TryFrom<ResponseRouterData<responses::PeachpaymentsRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<responses::PeachpaymentsRefundSyncResponse, Self>,
@@ -613,7 +617,7 @@ impl From<responses::PeachpaymentsRefundStatus> for RefundStatus {
 }
 
 impl TryFrom<common_enums::CardNetwork> for requests::CardNetworkLowercase {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(card_network: common_enums::CardNetwork) -> Result<Self, Self::Error> {
         match card_network {

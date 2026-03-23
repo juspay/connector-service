@@ -30,7 +30,7 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors,
+    errors::ResultRequestToResponseExt,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -59,6 +59,8 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use error_stack::ResultExt;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -95,9 +97,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = braintree::BraintreeAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         let auth_key = format!("{}:{}", auth.public_key.peek(), auth.private_key.peek());
         let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
         Ok(vec![(
@@ -110,7 +112,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: Result<braintree::ErrorResponses, Report<ParsingError>> =
             res.response.parse_struct("Braintree Error Response");
 
@@ -365,7 +367,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -425,7 +427,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         self.build_headers(req)
     }
 
@@ -437,7 +439,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
         Ok(self.connector_base_url_payments(req).to_string())
     }
 
@@ -449,7 +451,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
-    ) -> CustomResult<Option<common_utils::request::RequestContent>, errors::ConnectorError> {
+    ) -> CustomResult<Option<common_utils::request::RequestContent>, ConnectorRequestError> {
         let connector_router_data = BraintreeRouterData {
             connector: self.to_owned(),
             router_data: req.to_owned(),
@@ -473,14 +475,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        errors::ConnectorError,
+        ConnectorResponseError,
     > {
-        match data.request.is_auto_capture()? {
+        match data.request.is_auto_capture().into_response_err()? {
             true => {
                 let response: BraintreePaymentsResponse = res
                     .response
                     .parse_struct("Braintree PaymentsResponse")
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,
@@ -492,7 +494,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 let response: BraintreeAuthResponse = res
                     .response
                     .parse_struct("Braintree AuthResponse")
-                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
                 event_builder.map(|i| i.set_connector_response(&response));
                 RouterDataV2::try_from(ResponseRouterData {
                     response,
@@ -507,7 +509,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         self.build_error_response(res, event_builder)
     }
 }
@@ -528,13 +530,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(self.connector_base_url_payments(req).to_string())
         }
     }
@@ -556,13 +558,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
         Ok(self.connector_base_url_payments(req).to_string())
         }
     }
@@ -584,13 +586,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
          Ok(self.connector_base_url_payments(req).to_string())
         }
     }
@@ -612,13 +614,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
              Ok(self.connector_base_url_payments(req).to_string())
         }
     }
@@ -640,13 +642,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<SdkSessionToken, PaymentFlowData, PaymentsSdkSessionTokenData , PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
              Ok(self.connector_base_url_payments(req).to_string())
         }
     }
@@ -668,13 +670,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
              Ok(self.connector_base_url_payments(req).to_string())
         }
     }
@@ -696,14 +698,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
           Ok(self.connector_base_url_refunds(req).to_string())
         }
     }
@@ -725,14 +727,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
              Ok(self.connector_base_url_refunds(req).to_string())
         }
     }

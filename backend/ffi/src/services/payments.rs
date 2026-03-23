@@ -532,7 +532,7 @@ pub fn handle_event_transformer(
         source_verified,
     )
     .map_err(
-        |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
+        |e: error_stack::Report<domain_types::errors::WebhookError>| {
             ConnectorResponseTransformationError {
                 error_message: format!("Error in Processing webhook events: {e}"),
                 error_code: "WEBHOOK_PROCESSING_ERROR".to_string(),

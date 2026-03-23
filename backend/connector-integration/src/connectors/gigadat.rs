@@ -26,7 +26,6 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::{self},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -40,6 +39,8 @@ use interfaces::{
     decode::BodyDecoding, verification::SourceVerification,
 };
 use serde::Serialize;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 use transformers::{
     self as gigadat, GigadatPaymentsRequest, GigadatPaymentsResponse, GigadatRefundRequest,
     GigadatRefundResponse, GigadatSyncResponse,
@@ -81,7 +82,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -277,15 +278,15 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let auth = gigadat::GigadatAuthType::try_from(&req.connector_config)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         Ok(format!(
             "{}api/payment-token/{}",
             self.connector_base_url_payments(req),
@@ -312,18 +313,18 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
         let transaction_id = req
             .request
             .connector_transaction_id
             .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+            .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
         Ok(format!(
             "{}api/transactions/{}",
             self.connector_base_url_payments(req),
@@ -350,13 +351,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!(
             "{}refunds",
             self.connector_base_url_refunds(req)
@@ -366,12 +367,12 @@ macros::macro_connector_implementation!(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         // Refund has different error format
         let response: gigadat::GigadatRefundErrorResponse = res
             .response
             .parse_struct("GigadatRefundErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
@@ -625,9 +626,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = gigadat::GigadatAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
 
         // Build Basic Auth: base64(access_token:security_token)
         let auth_key = format!(
@@ -647,11 +648,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: gigadat::GigadatErrorResponse = res
             .response
             .parse_struct("GigadatErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 

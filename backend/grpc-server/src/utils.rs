@@ -46,7 +46,7 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
 pub fn log_before_initialization<T>(
     request_data: &RequestData<T>,
     service_name: &str,
-) -> common_utils::errors::CustomResult<(), domain_types::errors::ApplicationErrorResponse>
+) -> common_utils::errors::CustomResult<(), domain_types::errors::ConnectorRequestError>
 where
     T: serde::Serialize,
 {
@@ -361,7 +361,6 @@ macro_rules! implement_connector_operation {
                 api_tag,
             )
             .await
-            .switch()
             .into_grpc_status()?;
 
             // Generate response

@@ -6,7 +6,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_types,
-    errors::{ApiError, ApplicationErrorResponse},
+    errors::ConnectorRequestError,
     router_data::ConnectorSpecificConfig,
 };
 use error_stack::Report;
@@ -42,7 +42,7 @@ pub struct MetadataPayload {
 pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
     server_config: Arc<configs::Config>,
-) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
+) -> CustomResult<MetadataPayload, ConnectorRequestError> {
     // Resolve connector and config: try x-connector-config header first,
     // then fall back to legacy x-connector and x-auth headers.
     let (connector, connector_config) = connector_and_config_from_metadata(metadata)?;
@@ -101,22 +101,16 @@ pub fn extract_lineage_fields_from_metadata(
 
 pub fn connector_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
+) -> CustomResult<connector_types::ConnectorEnum, ConnectorRequestError> {
     parse_metadata(metadata, consts::X_CONNECTOR_NAME).and_then(|inner| {
-        connector_types::ConnectorEnum::from_str(inner).map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CONNECTOR".to_string(),
-                error_identifier: 400,
-                error_message: format!("Invalid connector: {e}"),
-                error_object: None,
-            }))
-        })
+        connector_types::ConnectorEnum::from_str(inner)
+            .map_err(|e| Report::new(ConnectorRequestError::config_error("INVALID_CONNECTOR", format!("Invalid connector: {e}"))))
     })
 }
 
 pub fn merchant_id_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<String, ApplicationErrorResponse> {
+) -> CustomResult<String, ConnectorRequestError> {
     Ok(common_utils::metadata::merchant_id_or_default(
         metadata
             .get(consts::X_MERCHANT_ID)
@@ -126,7 +120,7 @@ pub fn merchant_id_from_metadata(
 
 pub fn request_id_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<String, ApplicationErrorResponse> {
+) -> CustomResult<String, ConnectorRequestError> {
     parse_metadata(metadata, consts::X_REQUEST_ID)
         .map(|inner| inner.to_string())
         .or_else(|_| {
@@ -141,7 +135,7 @@ pub fn request_id_from_metadata(
 
 pub fn tenant_id_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<String, ApplicationErrorResponse> {
+) -> CustomResult<String, ConnectorRequestError> {
     parse_metadata(metadata, consts::X_TENANT_ID)
         .map(|s| s.to_string())
         .or_else(|_| Ok("DefaultTenantId".to_string()))
@@ -149,13 +143,13 @@ pub fn tenant_id_from_metadata(
 
 pub fn reference_id_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<Option<String>, ApplicationErrorResponse> {
+) -> CustomResult<Option<String>, ConnectorRequestError> {
     parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
 }
 
 pub fn resource_id_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<Option<String>, ApplicationErrorResponse> {
+) -> CustomResult<Option<String>, ConnectorRequestError> {
     parse_optional_metadata(metadata, consts::X_RESOURCE_ID).map(|s| s.map(|s| s.to_string()))
 }
 
@@ -170,25 +164,21 @@ pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
 pub fn parse_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
-) -> CustomResult<&'a str, ApplicationErrorResponse> {
+) -> CustomResult<&'a str, ConnectorRequestError> {
     metadata
         .get(key)
         .ok_or_else(|| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_METADATA".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing {key} in request metadata"),
-                error_object: None,
-            }))
+            Report::new(ConnectorRequestError::config_error(
+                "MISSING_REQUIRED_HEADER",
+                format!("Missing {key} in request metadata"),
+            ))
         })
         .and_then(|value| {
             value.to_str().map_err(|e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_METADATA".to_string(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid {key} in request metadata: {e}"),
-                    error_object: None,
-                }))
+                Report::new(ConnectorRequestError::config_error(
+                    "INVALID_HEADER_VALUE",
+                    format!("Invalid {key} in request metadata: {e}"),
+                ))
             })
         })
 }
@@ -196,18 +186,16 @@ pub fn parse_metadata<'a>(
 pub fn parse_optional_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
-) -> CustomResult<Option<&'a str>, ApplicationErrorResponse> {
+) -> CustomResult<Option<&'a str>, ConnectorRequestError> {
     metadata
         .get(key)
         .map(|value| value.to_str())
         .transpose()
         .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_METADATA".to_string(),
-                error_identifier: 400,
-                error_message: format!("Invalid {key} in request metadata: {e}"),
-                error_object: None,
-            }))
+            Report::new(ConnectorRequestError::config_error(
+                "INVALID_HEADER_VALUE",
+                format!("Invalid {key} in request metadata: {e}"),
+            ))
         })
 }
 #[cfg(test)]

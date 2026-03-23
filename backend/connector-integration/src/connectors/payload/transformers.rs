@@ -13,7 +13,6 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
-    errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{
         AdditionalPaymentMethodConnectorResponse, ConnectorResponseData, ConnectorSpecificConfig,
@@ -28,6 +27,9 @@ use serde::{Deserialize, Serialize};
 use super::{requests, responses};
 use crate::connectors::payload::{PayloadAmountConvertor, PayloadRouterData};
 use crate::types::ResponseRouterData;
+use domain_types::errors::{
+    ConnectorRequestError, ConnectorResponseError, ResultRequestToResponseExt,
+};
 
 pub use super::requests::{
     PayloadCaptureRequest, PayloadCardsRequestData, PayloadPaymentsRequest, PayloadRefundRequest,
@@ -40,7 +42,8 @@ pub use super::responses::{
     PayloadWebhookEvent, PayloadWebhooksTrigger,
 };
 
-type Error = error_stack::Report<errors::ConnectorError>;
+type Error = error_stack::Report<ConnectorRequestError>;
+type ResponseError = error_stack::Report<ConnectorResponseError>;
 
 // Constants
 const PAYMENT_METHOD_TYPE_CARD: &str = "card";
@@ -69,14 +72,14 @@ impl TryFrom<(&ConnectorSpecificConfig, enums::Currency)> for PayloadAuth {
         match auth_type {
             ConnectorSpecificConfig::Payload { auth_key_map, .. } => auth_key_map
                 .get(&currency)
-                .ok_or(errors::ConnectorError::CurrencyNotSupported {
+                .ok_or(ConnectorRequestError::CurrencyNotSupported {
                     message: currency.to_string(),
                     connector: "Payload",
                 })?
                 .to_owned()
                 .parse_value::<Self>("PayloadAuth")
-                .change_context(errors::ConnectorError::FailedToObtainAuthType),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+                .change_context(ConnectorRequestError::FailedToObtainAuthType),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -92,12 +95,12 @@ impl TryFrom<&ConnectorSpecificConfig> for PayloadAuthType {
                         let auth = auth_value
                             .to_owned()
                             .parse_value::<PayloadAuth>("PayloadAuth")
-                            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+                            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
                         Ok((*currency, auth))
                     })
                     .collect::<Result<_, Self::Error>>()?,
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -128,12 +131,12 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
             city: resource_common_data.get_billing_city()?,
             country: resource_common_data.get_billing_country()?,
             postal_code: billing_addr.zip.clone().ok_or(
-                errors::ConnectorError::MissingRequiredField {
+                ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.address.zip",
                 },
             )?,
             state_province: billing_addr.state.clone().ok_or(
-                errors::ConnectorError::MissingRequiredField {
+                ConnectorRequestError::MissingRequiredField {
                     field_name: "billing.address.state",
                 },
             )?,
@@ -158,7 +161,7 @@ fn build_payload_cards_request_data<T: PaymentMethodDataTypes>(
             keep_active: is_mandate,
         })
     } else {
-        Err(errors::ConnectorError::NotSupported {
+        Err(ConnectorRequestError::NotSupported {
             message: "Payment method".to_string(),
             connector: "Payload",
         }
@@ -198,7 +201,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
 
         match router_data.request.amount {
-            Some(amount) if amount > 0 => Err(errors::ConnectorError::FlowNotSupported {
+            Some(amount) if amount > 0 => Err(ConnectorRequestError::FlowNotSupported {
                 flow: "Setup mandate with non zero amount".to_string(),
                 connector: "Payload".to_string(),
             }
@@ -274,15 +277,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 domain_types::payment_method_data::WalletData::GooglePay(_)
                 | domain_types::payment_method_data::WalletData::ApplePay(_) => {
-                    Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into())
+                    Err(ConnectorRequestError::NotImplemented("Payment method".to_string()).into())
                 }
-                _ => Err(errors::ConnectorError::NotSupported {
+                _ => Err(ConnectorRequestError::NotSupported {
                     message: "Wallet".to_string(),
                     connector: "Payload",
                 }
                 .into()),
             },
-            _ => Err(errors::ConnectorError::NotSupported {
+            _ => Err(ConnectorRequestError::NotSupported {
                 message: "Payment method".to_string(),
                 connector: "Payload",
             }
@@ -384,12 +387,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
                 connector_mandate_ref,
             ) => connector_mandate_ref.get_connector_mandate_id().ok_or(
-                errors::ConnectorError::MissingRequiredField {
+                ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_mandate_id",
                 },
             )?,
             _ => {
-                return Err(errors::ConnectorError::MissingRequiredField {
+                return Err(ConnectorRequestError::MissingRequiredField {
                     field_name: "connector_mandate_id for RepeatPayment",
                 }
                 .into())
@@ -551,7 +554,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadPaymentsResponse, Self>,
@@ -563,6 +566,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             item.http_code,
             is_mandate_payment,
         )
+        .into_response_err()
     }
 }
 
@@ -576,13 +580,14 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         PaymentsResponseData,
     >
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // SetupMandate is always a mandate payment
         handle_payment_response(item.response, item.router_data, item.http_code, true)
+            .into_response_err()
     }
 }
 
@@ -597,13 +602,14 @@ impl<
         PaymentsResponseData,
     >
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         // RepeatPayment should not return mandate_reference as the mandate already exists
         handle_payment_response(item.response, item.router_data, item.http_code, false)
+            .into_response_err()
     }
 }
 
@@ -616,12 +622,13 @@ impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
         PaymentsResponseData,
     >
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
+            .into_response_err()
     }
 }
 
@@ -629,12 +636,13 @@ impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
+            .into_response_err()
     }
 }
 
@@ -642,12 +650,13 @@ impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
 impl TryFrom<ResponseRouterData<PayloadPaymentsResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         handle_payment_response(item.response, item.router_data, item.http_code, false)
+            .into_response_err()
     }
 }
 
@@ -666,7 +675,7 @@ impl From<responses::RefundStatus> for enums::RefundStatus {
 impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadRefundResponse, Self>,
@@ -685,16 +694,16 @@ impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
 // Webhook helper function to parse incoming webhook events
 pub fn parse_webhook_event(
     body: &[u8],
-) -> Result<PayloadWebhookEvent, error_stack::Report<errors::ConnectorError>> {
+) -> Result<PayloadWebhookEvent, error_stack::Report<ConnectorRequestError>> {
     serde_json::from_slice::<PayloadWebhookEvent>(body)
-        .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)
+        .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
 }
 
 // RSync response
 impl TryFrom<ResponseRouterData<PayloadRefundResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = Error;
+    type Error = ResponseError;
 
     fn try_from(
         item: ResponseRouterData<PayloadRefundResponse, Self>,

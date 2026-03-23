@@ -8,13 +8,14 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 // ===== ENUMS FOR STATUS MAPPING =====
 
@@ -69,7 +70,7 @@ pub struct CeleroAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for CeleroAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
@@ -77,7 +78,7 @@ impl TryFrom<&ConnectorSpecificConfig> for CeleroAuthType {
                 api_key: api_key.to_owned(),
             }),
             _ => Err(error_stack::report!(
-                errors::ConnectorError::FailedToObtainAuthType
+                ConnectorRequestError::FailedToObtainAuthType
             )),
         }
     }
@@ -224,7 +225,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CeleroPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::CeleroRouterData<
@@ -247,7 +248,7 @@ impl<T: PaymentMethodDataTypes>
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for CeleroPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: RouterDataV2<
@@ -267,7 +268,7 @@ impl<T: PaymentMethodDataTypes>
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     > for CeleroPaymentsRequest<T>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RouterDataV2<
@@ -290,13 +291,13 @@ impl<T: PaymentMethodDataTypes>
                 },
             },
             PaymentMethodData::BankDebit(_bank_debit_data) => {
-                return Err(errors::ConnectorError::NotImplemented(
+                return Err(ConnectorRequestError::NotImplemented(
                     "ACH payments not yet implemented".to_string(),
                 )
                 .into())
             }
             _ => {
-                return Err(errors::ConnectorError::NotImplemented(
+                return Err(ConnectorRequestError::NotImplemented(
                     "Payment method not supported".to_string(),
                 )
                 .into())
@@ -306,12 +307,12 @@ impl<T: PaymentMethodDataTypes>
         let is_auto_capture = item
             .request
             .is_auto_capture()
-            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed)?;
 
         // Validate reference ID is not empty
         let reference_id = &item.resource_common_data.connector_request_reference_id;
         if reference_id.is_empty() {
-            return Err(errors::ConnectorError::MissingRequiredField {
+            return Err(ConnectorRequestError::MissingRequiredField {
                 field_name: "connector_request_reference_id",
             }
             .into());
@@ -390,7 +391,7 @@ pub struct CeleroBillingAddressResponse {
 impl<T: PaymentMethodDataTypes> TryFrom<ResponseRouterData<CeleroPaymentsResponse, Self>>
     for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<CeleroPaymentsResponse, Self>,
@@ -564,7 +565,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CeleroSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         _item: super::CeleroRouterData<
@@ -580,7 +581,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
     for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<CeleroSyncResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -615,7 +616,7 @@ impl TryFrom<ResponseRouterData<CeleroSyncResponse, Self>>
         let transaction_data = response
             .data
             .first()
-            .ok_or_else(|| errors::ConnectorError::ResponseDeserializationFailed)?;
+            .ok_or(ConnectorResponseError::ResponseDeserializationFailed)?;
 
         // Extract card response for detailed checking
         let card_response = transaction_data
@@ -722,7 +723,7 @@ pub struct CeleroCaptureResponse {
 impl TryFrom<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
     for CeleroCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -735,7 +736,7 @@ impl TryFrom<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Payment
 impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
     for CeleroCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -756,7 +757,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
 impl TryFrom<ResponseRouterData<CeleroCaptureResponse, Self>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<CeleroCaptureResponse, Self>,
@@ -851,7 +852,7 @@ pub struct CeleroRefundResponse {
 impl TryFrom<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
     for CeleroRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -864,7 +865,7 @@ impl TryFrom<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseDa
 impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
     for CeleroRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -880,7 +881,7 @@ impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseD
 impl TryFrom<ResponseRouterData<CeleroRefundResponse, Self>>
     for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<CeleroRefundResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -954,7 +955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CeleroRefundSyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         _item: super::CeleroRouterData<
@@ -970,7 +971,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 impl TryFrom<ResponseRouterData<CeleroRefundSyncResponse, Self>>
     for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(
         item: ResponseRouterData<CeleroRefundSyncResponse, Self>,
@@ -1036,7 +1037,7 @@ pub struct CeleroVoidResponse {
 impl TryFrom<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
     for CeleroVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1049,7 +1050,7 @@ impl TryFrom<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespon
 impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
     for CeleroVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         _item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -1063,7 +1064,7 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
 impl TryFrom<ResponseRouterData<CeleroVoidResponse, Self>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
 
     fn try_from(item: ResponseRouterData<CeleroVoidResponse, Self>) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -1136,7 +1137,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CeleroCaptureRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::CeleroRouterData<
@@ -1157,7 +1158,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CeleroVoidRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::CeleroRouterData<
@@ -1178,7 +1179,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CeleroRefundRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(
         item: super::CeleroRouterData<

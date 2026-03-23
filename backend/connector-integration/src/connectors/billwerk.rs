@@ -366,6 +366,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 macros::create_amount_converter_wrapper!(connector_name: Billwerk, amount_type: MinorUnit);
 
 use super::macros;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 macros::create_all_prerequisites!(
     connector_name: Billwerk,
     generic_type: T,
@@ -416,7 +418,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 Self::common_get_content_type(self).to_string().into(),
@@ -464,9 +466,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = billwerk::BillwerkAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         let encoded_api_key = BASE64_ENGINE.encode(format!("{}:", auth.api_key.peek()));
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
@@ -478,11 +480,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: billwerk::BillwerkErrorResponse = res
             .response
             .parse_struct("BillwerkErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
 
@@ -518,19 +520,19 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
 
         let base_url = req.resource_common_data.connectors.billwerk
             .secondary_base_url
             .as_ref()
-            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            .ok_or(ConnectorRequestError::FailedToObtainIntegrationUrl)?;
         Ok(format!("{base_url}v1/token"))
     }}
 );
@@ -551,13 +553,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!("{}v1/charge", self.connector_base_url_payments(req)))
         }
     }
@@ -578,14 +580,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
         Ok(format!(
             "{}v1/charge/{}",
             self.connector_base_url_payments(req),
@@ -613,19 +615,19 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
         let connector_payment_id = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
         Ok(format!(
             "{}v1/charge/{connector_payment_id}/settle",
             self.connector_base_url_payments(req)
@@ -649,14 +651,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
         let transaction_id = &req.request.connector_transaction_id;
             Ok(format!("{}v1/charge/{transaction_id}/cancel", self.connector_base_url_payments(req)))
     }
@@ -680,14 +682,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
         Ok(format!("{}v1/refund", self.connector_base_url_refunds(req)))
     }
     }
@@ -708,14 +710,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         self.build_headers(req)
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
         let refund_transaction_id = req.request.connector_refund_id.clone();
         Ok(format!(
             "{}v1/refund/{refund_transaction_id}",

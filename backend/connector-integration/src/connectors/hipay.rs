@@ -27,7 +27,7 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::ConnectorError,
+    ConnectorRequestError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -50,6 +50,7 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
+use domain_types::errors::ConnectorResponseError;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -274,7 +275,7 @@ macros::create_all_prerequisites!(
         pub fn get_tokenization_base_url<F, Req, Res>(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // Use secondary_base_url from config for tokenization endpoint
             req.resource_common_data
                 .connectors
@@ -282,13 +283,13 @@ macros::create_all_prerequisites!(
                 .secondary_base_url
                 .as_ref()
                 .cloned()
-                .ok_or(error_stack::Report::new(ConnectorError::InvalidConnectorConfig { config: "secondary_base_url" }))
+                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig { config: "secondary_base_url" }))
         }
 
         pub fn get_sync_base_url<F, Req, Res>(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // Use third_base_url from config for sync operations (PSync)
             req.resource_common_data
                 .connectors
@@ -296,13 +297,13 @@ macros::create_all_prerequisites!(
                 .third_base_url
                 .as_ref()
                 .cloned()
-                .ok_or(error_stack::Report::new(ConnectorError::InvalidConnectorConfig { config: "third_base_url" }))
+                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig { config: "third_base_url" }))
         }
 
         pub fn get_refund_sync_base_url<Req, Res>(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, Req, Res>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // Use third_base_url from config for refund sync operations
             req.resource_common_data
                 .connectors
@@ -310,13 +311,13 @@ macros::create_all_prerequisites!(
                 .third_base_url
                 .as_ref()
                 .cloned()
-                .ok_or(error_stack::Report::new(ConnectorError::InvalidConnectorConfig { config: "third_base_url" }))
+                .ok_or(error_stack::Report::new(ConnectorRequestError::InvalidConnectorConfig { config: "third_base_url" }))
         }
 
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -369,9 +370,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = hipay::HipayAuthType::try_from(auth_type)
-            .change_context(ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
 
         // Use HTTP Basic Auth for HiPay
         use base64::Engine;
@@ -389,7 +390,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let error_response: hipay::HipayErrorResponse = res
             .response
             .parse_struct("HipayErrorResponse")
@@ -446,7 +447,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
             let mut header = vec![(
                 headers::ACCEPT.to_string(),
@@ -460,7 +461,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let base_url = self.get_tokenization_base_url(req)?;
             Ok(format!("{}/create", base_url.trim_end_matches('/')))
         }
@@ -484,7 +485,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
             let mut header = vec![(
                 headers::ACCEPT.to_string(),
@@ -498,7 +499,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!(
                 "{}/v1/order",
                 self.connector_base_url_payments(req).trim_end_matches('/')
@@ -523,19 +524,19 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_reference = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
 
             let base_url = self.get_sync_base_url(req)?;
             Ok(format!(
@@ -564,7 +565,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
             let mut header = vec![(
                 headers::ACCEPT.to_string(),
@@ -578,12 +579,12 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_reference = req
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
-                .change_context(ConnectorError::MissingConnectorTransactionID)?;
+                .change_context(ConnectorRequestError::MissingConnectorTransactionID)?;
 
             Ok(format!(
                 "{}/v1/maintenance/transaction/{}",
@@ -611,7 +612,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
             let mut header = vec![(
                 headers::ACCEPT.to_string(),
@@ -625,7 +626,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_reference = &req.request.connector_transaction_id;
 
             Ok(format!(
@@ -654,7 +655,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             // Do NOT set Content-Type header manually for FormData - reqwest sets it with boundary
             let mut header = vec![(
                 headers::ACCEPT.to_string(),
@@ -668,7 +669,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let transaction_reference = req.request.connector_transaction_id.clone();
 
             Ok(format!(
@@ -693,7 +694,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_headers(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
             self.common_get_content_type().to_string().into(),
@@ -706,7 +707,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn get_url(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, ConnectorError> {
+    ) -> CustomResult<String, ConnectorRequestError> {
         let transaction_reference = req.request.connector_refund_id.clone();
 
         let base_url = self.get_refund_sync_base_url(req)?;
@@ -724,13 +725,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         res: Response,
     ) -> CustomResult<
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ConnectorError,
+        ConnectorResponseError,
     > {
         // HiPay RSync returns JSON from v3 API (same as PSync)
         let response: HipayRSyncResponse = res
             .response
             .parse_struct("HipayRSyncResponse")
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
 
         if let Some(event) = event_builder {
             event.set_connector_response(&response);
@@ -741,14 +742,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorError::ResponseHandlingFailed)
+        .change_context(ConnectorResponseError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         self.build_error_response(res, event_builder)
     }
 
@@ -756,7 +757,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         self.build_error_response(res, event_builder)
     }
 }

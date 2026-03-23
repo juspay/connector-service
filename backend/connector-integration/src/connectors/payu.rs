@@ -27,7 +27,7 @@ use domain_types::{
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
-    errors::{self, ConnectorError},
+    errors::ConnectorRequestError,
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -51,6 +51,7 @@ use transformers::{
 
 use super::macros;
 use crate::types::ResponseRouterData;
+use domain_types::errors::ConnectorResponseError;
 
 // Trait implementations with generic type parameters
 
@@ -223,7 +224,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
@@ -251,7 +252,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, FCD, PaymentsAuthorizeData<T>, Res>,
             bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, ConnectorError> {
+        ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
             if is_upi_collect_flow(&req.request) {
                 // For UPI collect flows, we need to return base64 decoded response
                 let decoded_value = BASE64_ENGINE.decode(bytes.clone());
@@ -284,7 +285,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             _req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             Ok(vec![
                 ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
                 ("Accept".to_string(), "application/json".into()),
@@ -294,7 +295,7 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // Based on Haskell implementation: uses /merchant/postservice.php?form=2 for verification
             // Test: https://test.payu.in/merchant/postservice.php?form=2
             let base_url = self.base_url(&req.resource_common_data.connectors);
@@ -309,12 +310,12 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
             // PayU sync may return error responses in different formats
             let response: PayuSyncResponse = res
                 .response
                 .parse_struct("PayU Sync ErrorResponse")
-                .change_context(ConnectorError::ResponseDeserializationFailed)?;
+                .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
 
             // Check if PayU returned error status (0 = error)
             if response.status == Some(0) {
@@ -365,14 +366,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             // Based on Haskell Endpoints.hs: uses /_payment endpoint for UPI transactions
             // Test: https://test.payu.in/_payment
             // Prod: https://secure.payu.in/_payment
@@ -386,13 +387,13 @@ macros::macro_connector_implementation!(
             &self,
             res: Response,
             _event_builder: Option<&mut events::Event>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+        ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
             // PayU returns error responses in the same JSON format as success responses
             // We need to parse the response and check for error fields
             let response: PayuPaymentResponse = res
                 .response
                 .parse_struct("PayU ErrorResponse")
-                        .change_context(ConnectorError::ResponseDeserializationFailed)?;
+                        .change_context(ConnectorResponseError::ResponseHandlingFailed)?;
 
             // Check if this is an error response
             if response.error.is_some() {
@@ -445,7 +446,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let _auth = PayuAuthType::try_from(auth_type)?;
         // Payu uses form-based authentication, not headers
         Ok(vec![])

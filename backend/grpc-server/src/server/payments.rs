@@ -28,7 +28,7 @@ use domain_types::{
         RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, VerifyWebhookSourceFlowData,
     },
-    errors::ApplicationErrorResponse,
+    errors::{ConnectorFlowError, ConnectorRequestError},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -89,7 +89,8 @@ use tracing::info;
 use ucs_env::{
     configs::Config,
     error::{
-        ErrorSwitch, IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc,
+        connector_flow_error_to_error_details, IntoGrpcStatus, PaymentAuthorizationError,
+        ResultExtGrpc,
     },
 };
 
@@ -362,8 +363,7 @@ impl Customer {
             ),
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+        .map_err(|e: error_stack::Report<ConnectorFlowError>| {
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Connector customer creation failed: {e}")),
@@ -480,8 +480,7 @@ impl Customer {
             ),
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+        .map_err(|e: error_stack::Report<ConnectorFlowError>| {
             tonic::Status::internal(format!("Connector customer creation failed: {e}"))
         })?;
 
@@ -644,9 +643,8 @@ impl CustomerService for Customer {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(
-                        |e: error_stack::Report<ApplicationErrorResponse>| {
+                        |e: error_stack::Report<ConnectorFlowError>| {
                             tonic::Status::internal(format!(
                                 "Connector customer creation failed: {e}"
                             ))
@@ -815,9 +813,8 @@ impl Payments {
             })?,
             Err(error_report) => {
                 tracing::error!("{:?}", error_report);
-                // Convert ConnectorError to ApplicationErrorResponse to get proper error details
-                let app_err: ApplicationErrorResponse = error_report.current_context().switch();
-                let api_error = app_err.get_api_error();
+                let (status_code, code, message) =
+                    connector_flow_error_to_error_details(error_report.current_context());
 
                 // Convert error to RouterDataV2 with error response
                 let error_router_data = RouterDataV2 {
@@ -842,9 +839,9 @@ impl Payments {
                         },
                     )?,
                     response: Err(ErrorResponse {
-                        status_code: api_error.error_identifier,
-                        code: api_error.sub_code.clone(),
-                        message: api_error.error_message.clone(),
+                        status_code,
+                        code,
+                        message,
                         reason: None,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: None,
@@ -1018,7 +1015,7 @@ impl Payments {
         )
         .await
         .map_err(
-            |e: error_stack::Report<domain_types::errors::ConnectorError>| {
+            |e: error_stack::Report<ConnectorFlowError>| {
                 PaymentAuthorizationError::new(
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(format!("Order creation failed: {e}")),
@@ -1152,7 +1149,6 @@ impl Payments {
             ),
         )
         .await
-        .switch()
         .map_err(|e| e.into_grpc_status())?;
 
         match response.response {
@@ -1252,8 +1248,7 @@ impl Payments {
             api_tag,
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+        .map_err(|e: error_stack::Report<ConnectorFlowError>| {
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Payment Method Token creation failed: {e}")),
@@ -1687,7 +1682,6 @@ impl PaymentService for Payments {
                         ),
                     )
                     .await
-                    .switch()
                     .into_grpc_status()?;
 
                     // Generate response
@@ -2137,7 +2131,6 @@ impl PaymentService for Payments {
                         .process_redirect_response(
                             &updated_request_details,
                         )
-                        .switch()
                         .into_grpc_status()?;
 
                     let response = PaymentServiceVerifyRedirectResponseResponse::foreign_try_from((source_verified, redirect_details_response))
@@ -2449,7 +2442,6 @@ impl PaymentService for Payments {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response
@@ -2653,7 +2645,6 @@ impl PaymentMethodService for PaymentMethod {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response using the existing function
@@ -2707,7 +2698,7 @@ impl MerchantAuthentication {
         event_params: EventParams<'_>,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
-        SessionTokenRequestData: ForeignTryFrom<P, Error = ApplicationErrorResponse>,
+        SessionTokenRequestData: ForeignTryFrom<P, Error = ConnectorRequestError>,
     {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -2787,8 +2778,7 @@ impl MerchantAuthentication {
             ),
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+        .map_err(|e: error_stack::Report<ConnectorFlowError>| {
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Session Token creation failed: {e}")),
@@ -2843,7 +2833,7 @@ impl MerchantAuthentication {
     ) -> Result<AccessTokenResponseData, PaymentAuthorizationError>
     where
         AccessTokenRequestData:
-            for<'a> ForeignTryFrom<&'a ConnectorSpecificConfig, Error = ApplicationErrorResponse>,
+            for<'a> ForeignTryFrom<&'a ConnectorSpecificConfig, Error = ConnectorRequestError>,
     {
         // Get connector integration for CreateAccessToken flow
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -2925,8 +2915,7 @@ impl MerchantAuthentication {
             ),
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+        .map_err(|e: error_stack::Report<ConnectorFlowError>| {
             PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Access Token creation failed: {e}")),
@@ -3468,7 +3457,6 @@ impl RecurringPaymentService for RecurringPayments {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response
@@ -3825,7 +3813,7 @@ pub fn generate_mandate_revoke_response(
         MandateRevokeRequestData,
         MandateRevokeResponseData,
     >,
-) -> Result<RecurringPaymentServiceRevokeResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<RecurringPaymentServiceRevokeResponse, error_stack::Report<ConnectorFlowError>> {
     let mandate_revoke_response = router_data_v2.response;
     let raw_connector_response = router_data_v2
         .resource_common_data

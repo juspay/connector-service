@@ -4,7 +4,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_types,
-    errors::{ApiError, ApplicationErrorResponse},
+    errors::ConnectorRequestError,
     router_data::{ConnectorAuthType, ConnectorSpecificConfig},
     utils::ForeignTryFrom,
 };
@@ -17,48 +17,37 @@ use crate::metadata::{connector_from_metadata, parse_metadata};
 
 fn parse_connector_config_from_typed_header(
     header_value: &metadata::MetadataValue<metadata::Ascii>,
-) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), ApplicationErrorResponse>
+) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), ConnectorRequestError>
 {
     let typed_config: grpc_api_types::payments::ConnectorSpecificConfig = header_value
         .to_str()
-        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "INVALID_CONNECTOR_CONFIG_HEADER".to_string(),
-            error_identifier: 400,
-            error_message: "X-Connector-Config header contains non-ASCII characters".to_string(),
-            error_object: None,
-        }))
+        .change_context(ConnectorRequestError::config_error(
+            "INVALID_HEADER_VALUE",
+            "X-Connector-Config header contains non-ASCII characters",
+        ))
         .and_then(|header_str| {
-            serde_json::from_str(header_str).change_context(ApplicationErrorResponse::BadRequest(
-                ApiError {
-                    sub_code: "INVALID_CONNECTOR_CONFIG_JSON".to_string(),
-                    error_identifier: 400,
-                    error_message:
-                        "Failed to parse X-Connector-Config JSON into ConnectorSpecificConfig"
-                            .to_string(),
-                    error_object: None,
-                },
-            ))
+            serde_json::from_str(header_str).change_context(
+                ConnectorRequestError::config_error(
+                    "INVALID_CONNECTOR_CONFIG_JSON",
+                    "Failed to parse X-Connector-Config JSON into ConnectorSpecificConfig",
+                ),
+            )
         })?;
 
     let config = typed_config.config.as_ref().ok_or_else(|| {
-        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "INVALID_CONNECTOR_CONFIG_FORMAT".to_string(),
-            error_identifier: 400,
-            error_message: "X-Connector-Config header missing config".to_string(),
-            error_object: None,
-        }))
+        Report::new(ConnectorRequestError::config_error(
+            "INVALID_CONNECTOR_CONFIG_FORMAT",
+            "X-Connector-Config header missing config",
+        ))
     })?;
 
     let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())?;
 
     let connector_config = ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
-        ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "AUTH_CONVERSION_FAILED".to_string(),
-            error_identifier: 400,
-            error_message: "Failed to convert connector config from X-Connector-Config header"
-                .to_string(),
-            error_object: None,
-        }),
+        ConnectorRequestError::config_error(
+            "AUTH_CONVERSION_FAILED",
+            "Failed to convert connector config from X-Connector-Config header",
+        ),
     )?;
 
     logger::debug!(
@@ -75,51 +64,39 @@ fn parse_connector_config_from_typed_header(
 /// `{"config":{"Stripe":{...}}}`. This rewrites the JSON key before parsing.
 fn parse_connector_config_from_deprecated_header(
     header_value: &metadata::MetadataValue<metadata::Ascii>,
-) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), ApplicationErrorResponse>
+) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), ConnectorRequestError>
 {
     let header_str = header_value
         .to_str()
-        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "INVALID_CONNECTOR_CONFIG_HEADER".to_string(),
-            error_identifier: 400,
-            error_message: "x-connector-auth header contains non-ASCII characters".to_string(),
-            error_object: None,
-        }))?;
+        .change_context(ConnectorRequestError::config_error(
+            "INVALID_HEADER_VALUE",
+            "x-connector-auth header contains non-ASCII characters",
+        ))?;
 
     // Rewrite old field name to new: "auth_type" → "config"
     let rewritten = header_str.replace("\"auth_type\"", "\"config\"");
 
-    let typed_config: grpc_api_types::payments::ConnectorSpecificConfig = serde_json::from_str(
-        &rewritten,
-    )
-    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-        sub_code: "INVALID_CONNECTOR_CONFIG_JSON".to_string(),
-        error_identifier: 400,
-        error_message: "Failed to parse x-connector-auth JSON into ConnectorSpecificConfig. \
-                     Migrate to x-connector-config with {\"config\":{...}} format."
-            .to_string(),
-        error_object: None,
-    }))?;
+    let typed_config: grpc_api_types::payments::ConnectorSpecificConfig =
+        serde_json::from_str(&rewritten).change_context(ConnectorRequestError::config_error(
+            "INVALID_CONNECTOR_CONFIG_JSON",
+            "Failed to parse x-connector-auth JSON into ConnectorSpecificConfig. \
+             Migrate to x-connector-config with {\"config\":{...}} format.",
+        ))?;
 
     let config = typed_config.config.as_ref().ok_or_else(|| {
-        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "INVALID_CONNECTOR_CONFIG_FORMAT".to_string(),
-            error_identifier: 400,
-            error_message: "x-connector-auth header missing config variant".to_string(),
-            error_object: None,
-        }))
+        Report::new(ConnectorRequestError::config_error(
+            "INVALID_CONNECTOR_CONFIG_FORMAT",
+            "x-connector-auth header missing config variant",
+        ))
     })?;
 
     let connector = connector_types::ConnectorEnum::foreign_try_from(config.clone())?;
 
     let connector_config = ConnectorSpecificConfig::foreign_try_from(typed_config).change_context(
-        ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "AUTH_CONVERSION_FAILED".to_string(),
-            error_identifier: 400,
-            error_message: "Failed to convert config from deprecated x-connector-auth header"
-                .to_string(),
-            error_object: None,
-        }),
+        ConnectorRequestError::config_error(
+            "AUTH_CONVERSION_FAILED",
+            "Failed to convert config from deprecated x-connector-auth header",
+        ),
     )?;
 
     Ok((connector, connector_config))
@@ -133,7 +110,7 @@ const X_CONNECTOR_AUTH_DEPRECATED: &str = "x-connector-auth";
 
 pub fn connector_and_config_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), ApplicationErrorResponse>
+) -> CustomResult<(connector_types::ConnectorEnum, ConnectorSpecificConfig), ConnectorRequestError>
 {
     if let Some(header_value) = metadata.get(X_CONNECTOR_CONFIG) {
         return parse_connector_config_from_typed_header(header_value);
@@ -162,15 +139,13 @@ pub fn connector_and_config_from_metadata(
 pub fn legacy_connector_config_from_metadata(
     metadata: &metadata::MetadataMap,
     connector: &connector_types::ConnectorEnum,
-) -> CustomResult<ConnectorSpecificConfig, ApplicationErrorResponse> {
+) -> CustomResult<ConnectorSpecificConfig, ConnectorRequestError> {
     let generic_auth = generic_auth_from_metadata(metadata)?;
     ConnectorSpecificConfig::foreign_try_from((&generic_auth, connector)).map_err(|_| {
-        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "AUTH_CONVERSION_FAILED".to_string(),
-            error_identifier: 400,
-            error_message: format!("Failed to convert legacy auth for connector: {}", connector),
-            error_object: None,
-        }))
+        Report::new(ConnectorRequestError::config_error(
+            "AUTH_CONVERSION_FAILED",
+            format!("Failed to convert legacy auth for connector: {connector}"),
+        ))
     })
 }
 
@@ -178,7 +153,7 @@ pub fn legacy_connector_config_from_metadata(
 /// This is the legacy format that uses key1, key2, etc.
 pub fn generic_auth_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
+) -> CustomResult<ConnectorAuthType, ConnectorRequestError> {
     let auth = parse_metadata(metadata, X_AUTH)?;
 
     #[allow(clippy::wildcard_in_or_patterns)]
@@ -209,22 +184,13 @@ pub fn generic_auth_from_metadata(
                 common_enums::enums::Currency,
                 common_utils::pii::SecretSerdeValue,
             > = serde_json::from_str(auth_key_map_str).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_AUTH_KEY_MAP".to_string(),
-                    error_identifier: 400,
-                    error_message: "Invalid auth-key-map format".to_string(),
-                    error_object: None,
-                }),
+                ConnectorRequestError::config_error("INVALID_AUTH_KEY_MAP", "Invalid auth-key-map format"),
             )?;
             Ok(ConnectorAuthType::CurrencyAuthKey { auth_key_map })
         }
-        "certificate-auth" | _ => Err(Report::new(ApplicationErrorResponse::BadRequest(
-            ApiError {
-                sub_code: "INVALID_AUTH_TYPE".to_string(),
-                error_identifier: 400,
-                error_message: format!("Invalid auth type: {auth}"),
-                error_object: None,
-            },
+        "certificate-auth" | _ => Err(Report::new(ConnectorRequestError::config_error(
+            "INVALID_AUTH_TYPE",
+            format!("Invalid auth type: {auth}"),
         ))),
     }
 }

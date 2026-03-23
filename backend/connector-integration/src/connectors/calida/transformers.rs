@@ -10,7 +10,6 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
-    errors::{self},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -21,6 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::types::ResponseRouterData;
+use domain_types::errors::{ConnectorRequestError, ConnectorResponseError, ResultResponseToRequestExt};
 
 // Auth
 pub struct CalidaAuthType {
@@ -28,13 +28,13 @@ pub struct CalidaAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for CalidaAuthType {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Calida { api_key, .. } => Ok(Self {
                 api_key: api_key.to_owned(),
             }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType.into()),
         }
     }
 }
@@ -119,17 +119,17 @@ pub struct CalidaRefundRequest {
 }
 
 impl TryFrom<&pii::SecretSerdeValue> for CalidaMetadataObject {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
 
     fn try_from(secret_value: &pii::SecretSerdeValue) -> Result<Self, Self::Error> {
         match secret_value.peek() {
             Value::String(s) => serde_json::from_str(s).change_context(
-                errors::ConnectorError::InvalidConnectorConfig {
+                ConnectorRequestError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data string",
                 },
             ),
             value => serde_json::from_value(value.clone()).change_context(
-                errors::ConnectorError::InvalidConnectorConfig {
+                ConnectorRequestError::InvalidConnectorConfig {
                     config: "Deserializing CalidaMetadataObject from connector_meta_data value",
                 },
             ),
@@ -151,7 +151,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     > for CalidaPaymentsRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: super::CalidaRouterData<
             RouterDataV2<
@@ -164,7 +164,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.request.capture_method == Some(enums::CaptureMethod::Manual) {
-            return Err(errors::ConnectorError::CaptureMethodNotSupported.into());
+            return Err(ConnectorRequestError::CaptureMethodNotSupported.into());
         }
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}) => {
@@ -175,7 +175,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                    .change_context(ConnectorRequestError::RequestEncodingFailed)?;
                 let calida_mca_metadata = CalidaMetadataObject::try_from(
                     &item.router_data.resource_common_data.get_connector_meta()?,
                 )?;
@@ -216,18 +216,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .resource_common_data
                         .get_optional_billing_zip(),
                     webhook_url: url::Url::parse(&item.router_data.request.get_webhook_url()?)
-                        .change_context(errors::ConnectorError::ParsingFailed)?,
+                        .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                        .into_request_err()?,
                     success_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(errors::ConnectorError::ParsingFailed)?,
+                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                    .into_request_err()?,
                     failure_url: url::Url::parse(
                         &item.router_data.request.get_router_return_url()?,
                     )
-                    .change_context(errors::ConnectorError::ParsingFailed)?,
+                    .change_context(ConnectorResponseError::ResponseDeserializationFailed)
+                    .into_request_err()?,
                 })
             }
-            _ => Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
+            _ => Err(ConnectorRequestError::NotImplemented("Payment method".to_string()).into()),
         }
     }
 }
@@ -285,7 +288,7 @@ impl<F, T> TryFrom<ResponseRouterData<CalidaPaymentsResponse, Self>>
 where
     T: Clone,
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         item: ResponseRouterData<CalidaPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -319,7 +322,7 @@ where
 impl<F> TryFrom<ResponseRouterData<CalidaSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(item: ResponseRouterData<CalidaSyncResponse, Self>) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
@@ -375,7 +378,7 @@ pub struct CalidaMetadataObject {
     pub shop_name: String,
 }
 
-pub fn sort_and_minify_json(value: &Value) -> Result<String, errors::ConnectorError> {
+pub fn sort_and_minify_json(value: &Value) -> Result<String, ConnectorRequestError> {
     fn sort_value(val: &Value) -> Value {
         match val {
             Value::Object(map) => {
@@ -396,5 +399,5 @@ pub fn sort_and_minify_json(value: &Value) -> Result<String, errors::ConnectorEr
 
     let sorted_value = sort_value(value);
     serde_json::to_string(&sorted_value)
-        .map_err(|_| errors::ConnectorError::WebhookBodyDecodingFailed)
+        .map_err(|_| ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()))
 }

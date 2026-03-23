@@ -1,10 +1,12 @@
-use domain_types::errors;
+use domain_types::errors::ResultResponseToRequestExt;
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use super::requests::*;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -271,7 +273,7 @@ pub fn get_resource_id<T, F>(
     response: WorldpayPaymentsResponse,
     connector_transaction_id: Option<String>,
     transform_fn: F,
-) -> Result<T, error_stack::Report<errors::ConnectorError>>
+) -> Result<T, error_stack::Report<ConnectorRequestError>>
 where
     F: Fn(String) -> T,
 {
@@ -301,14 +303,15 @@ where
         .map(|href| {
             urlencoding::decode(href)
                 .map(|s| transform_fn(s.into_owned()))
-                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+                .change_context(ConnectorResponseError::ResponseHandlingFailed)
         })
-        .transpose()?;
+        .transpose()
+        .into_request_err()?;
     optional_reference_id
         .or_else(|| response.transaction_reference.map(&transform_fn))
         .or_else(|| connector_transaction_id.map(&transform_fn))
         .ok_or_else(|| {
-            errors::ConnectorError::MissingRequiredField {
+            ConnectorRequestError::MissingRequiredField {
                 field_name: "_links.self.href or transactionReference",
             }
             .into()

@@ -67,6 +67,8 @@ use base64::Engine;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use error_stack::ResultExt;
+use domain_types::errors::ConnectorRequestError;
+use domain_types::errors::ConnectorResponseError;
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
@@ -101,9 +103,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn get_auth_header(
         &self,
         auth_type: &ConnectorSpecificConfig,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
         let auth = cryptopay::CryptopayAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(ConnectorRequestError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             auth.api_key.peek().to_owned().into_masked(),
@@ -118,11 +120,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         &self,
         res: Response,
         event_builder: Option<&mut events::Event>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorResponseError> {
         let response: cryptopay::CryptopayErrorResponse = res
             .response
             .parse_struct("CryptopayErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorResponseError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
@@ -291,7 +293,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, Req, Res>(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError>
         where
             Self: ConnectorIntegrationV2<F, PaymentFlowData, Req, Res>,
         {
@@ -305,14 +307,14 @@ macros::create_all_prerequisites!(
                         .unwrap_or_default();
                     let md5_payload = crypto::Md5
                         .generate_digest(body.as_bytes())
-                        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                        .change_context(ConnectorRequestError::RequestEncodingFailed)?;
                     encode(md5_payload)
                 }
             };
             let api_method = method.to_string();
 
             let now = date_time::date_as_yyyymmddthhmmssmmmz()
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
             let date = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
             let content_type = self.get_content_type().to_string();
@@ -327,7 +329,7 @@ macros::create_all_prerequisites!(
                 auth.api_secret.peek().as_bytes(),
                 sign_req.as_bytes(),
             )
-            .change_context(errors::ConnectorError::RequestEncodingFailed)
+            .change_context(ConnectorRequestError::RequestEncodingFailed)
             .attach_printable("Failed to sign the message")?;
             let authz = BASE64_ENGINE.encode(authz);
             let auth_string: String = format!("HMAC {}:{}", auth.api_key.peek(), authz);
@@ -371,13 +373,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             Ok(format!("{}/api/invoices", self.connector_base_url_payments(req)))
         }
     }
@@ -398,13 +400,13 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorRequestError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
+        ) -> CustomResult<String, ConnectorRequestError> {
             let custom_id = req.resource_common_data.connector_request_reference_id.clone();
 
             Ok(format!(
@@ -422,23 +424,23 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         request: &RequestDetails,
         _connector_webhook_secret: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let base64_signature = request
             .headers
             .get("x-cryptopay-signature")
-            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .ok_or(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
             .attach_printable("Missing incoming webhook signature for Cryptopay")?;
         hex::decode(base64_signature)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
     }
 
     fn get_webhook_source_verification_message(
         &self,
         request: &RequestDetails,
         _connector_webhook_secrets: &ConnectorWebhookSecrets,
-    ) -> Result<Vec<u8>, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<Vec<u8>, error_stack::Report<ConnectorRequestError>> {
         let message = std::str::from_utf8(&request.body)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
             .attach_printable("Webhook source verification message parsing failed for Cryptopay")?;
         Ok(message.to_string().into_bytes())
     }
@@ -448,12 +450,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<bool, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<bool, error_stack::Report<ConnectorRequestError>> {
         let algorithm = crypto::HmacSha256;
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(errors::ConnectorError::WebhookSourceVerificationFailed)?,
+            None => Err(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))?,
         };
 
         let signature =
@@ -464,7 +466,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .change_context(ConnectorRequestError::NotImplemented("webhook source verification failed".to_string()))
             .attach_printable("Webhook source verification failed for Cryptopay")
     }
 
@@ -473,11 +475,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<EventType, error_stack::Report<ConnectorRequestError>> {
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?;
         match notif.data.status {
             cryptopay::CryptopayPaymentStatus::Completed => Ok(EventType::PaymentIntentSuccess),
             cryptopay::CryptopayPaymentStatus::Unresolved => Ok(EventType::PaymentActionRequired),
@@ -491,13 +493,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorRequestError>> {
         let notif: cryptopay::CryptopayWebhookDetails = request
             .body
             .parse_struct("CryptopayWebhookDetails")
-            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+            .change_context(ConnectorRequestError::NotImplemented("webhook event type not found".to_string()))?;
         let response = WebhookDetailsResponse::try_from(notif)
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed);
+            .change_context(ConnectorRequestError::NotImplemented("webhook body decoding failed".to_string()));
 
         response.map(|mut response| {
             response.raw_connector_response =

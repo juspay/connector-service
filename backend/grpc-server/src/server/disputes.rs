@@ -12,7 +12,7 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         SubmitEvidenceData,
     },
-    errors::{ApiError, ApplicationErrorResponse},
+    errors::ConnectorRequestError,
     payment_method_data::DefaultPCIHolder,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -32,7 +32,7 @@ use grpc_api_types::payments::{
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
-use ucs_env::error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc};
+use ucs_env::error::{IntoGrpcStatus, ResultExtGrpc};
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {
@@ -397,7 +397,6 @@ impl DisputeService for Disputes {
                         ),
                     )
                     .await
-                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
                     let dispute_response = generate_accept_dispute_response(response)
@@ -478,7 +477,6 @@ impl DisputeService for Disputes {
                             webhook_secrets.clone(),
                             Some(connector_config.clone()),
                         )
-                        .switch()
                         .map_err(|e| e.into_grpc_status())?;
 
                     let content = get_disputes_webhook_content(
@@ -509,21 +507,17 @@ async fn get_disputes_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_config: Option<ConnectorSpecificConfig>,
-) -> CustomResult<EventResponse, ApplicationErrorResponse> {
+) -> CustomResult<EventResponse, ConnectorRequestError> {
     let webhook_details = connector_data
         .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_config)
-        .switch()?;
+        .process_dispute_webhook(request_details, webhook_secrets, connector_config)?;
 
     // Generate response
-    let response = DisputeResponse::foreign_try_from(webhook_details).change_context(
-        ApplicationErrorResponse::InternalServerError(ApiError {
-            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
-            error_identifier: 500,
-            error_message: "Error while constructing response".to_string(),
-            error_object: None,
-        }),
-    )?;
+    let response = DisputeResponse::foreign_try_from(webhook_details)
+        .change_context(ConnectorRequestError::config_error(
+            "RESPONSE_CONSTRUCTION_ERROR",
+            "Error while constructing response",
+        ))?;
 
     Ok(EventResponse {
         content: Some(

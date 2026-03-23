@@ -6,7 +6,7 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-    errors::ConnectorError,
+    ConnectorRequestError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -17,7 +17,7 @@ use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-use crate::{connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData};
+use crate::{connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData, ConnectorResponseError};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -27,7 +27,7 @@ pub struct PlacetopayAuthType {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for PlacetopayAuthType {
-    type Error = ConnectorError;
+    type Error = ConnectorRequestError;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Placetopay {
@@ -36,7 +36,7 @@ impl TryFrom<&ConnectorSpecificConfig> for PlacetopayAuthType {
                 login: login.to_owned(),
                 tran_key: tran_key.to_owned(),
             }),
-            _ => Err(ConnectorError::FailedToObtainAuthType),
+            _ => Err(ConnectorRequestError::FailedToObtainAuthType),
         }
     }
 }
@@ -51,13 +51,13 @@ pub struct PlacetopayAuth {
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for PlacetopayAuth {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         let placetopay_auth = PlacetopayAuthType::try_from(auth_type)?;
 
         let nonce_bytes = utils::generate_random_bytes(16);
         let now = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
         let nonce_b64 = base64::Engine::encode(
@@ -139,7 +139,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PlacetopayPaymentsRequest<T>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<
@@ -205,7 +205,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             | PaymentMethodData::CardToken(_)
             | PaymentMethodData::NetworkToken(_)
             | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
-                Err(ConnectorError::NotImplemented(
+                Err(ConnectorRequestError::NotImplemented(
                     utils::get_unimplemented_payment_method_error_message("Placetopay"),
                 )
                 .into())
@@ -222,7 +222,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PlacetopayNextActionRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
@@ -235,7 +235,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Void;
         Ok(Self {
             auth,
@@ -292,7 +292,7 @@ pub struct PlacetopayPaymentsResponse {
 impl<F, T> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         item: ResponseRouterData<PlacetopayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -337,7 +337,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PlacetopayPsyncRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -351,7 +351,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .get_connector_transaction_id()?
             .parse::<u64>()
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
 
         Ok(Self {
             auth,
@@ -386,7 +386,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PlacetopayNextActionRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -399,7 +399,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .get_connector_transaction_id()?
             .parse::<u64>()
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Checkout;
         Ok(Self {
             auth,
@@ -424,7 +424,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for PlacetopayRefundRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -441,7 +441,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 .request
                 .connector_transaction_id
                 .parse::<u64>()
-                .change_context(ConnectorError::RequestEncodingFailed)?;
+                .change_context(ConnectorRequestError::RequestEncodingFailed)?;
             let action = PlacetopayNextAction::Reverse;
             let authorization = match item.router_data.request.connector_feature_data.clone() {
                 Some(metadata) => metadata.expose().as_str().map(|auth| auth.to_string()),
@@ -454,7 +454,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 authorization: authorization.map(Secret::new),
             })
         } else {
-            Err(ConnectorError::NotSupported {
+            Err(ConnectorRequestError::NotSupported {
                 message: "Partial Refund".to_string(),
                 connector: "placetopay",
             }
@@ -509,7 +509,7 @@ pub struct PlacetopayRefundResponse {
 impl<F> TryFrom<ResponseRouterData<PlacetopayRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         item: ResponseRouterData<PlacetopayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
@@ -539,7 +539,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
     > for PlacetopayRsyncRequest
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -552,7 +552,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .request
             .connector_transaction_id
             .parse::<u64>()
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorRequestError::RequestEncodingFailed)?;
         Ok(Self {
             auth,
             internal_reference,
@@ -563,7 +563,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<F> TryFrom<ResponseRouterData<PlacetopayRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = error_stack::Report<ConnectorError>;
+    type Error = error_stack::Report<ConnectorResponseError>;
     fn try_from(
         item: ResponseRouterData<PlacetopayRefundResponse, Self>,
     ) -> Result<Self, Self::Error> {

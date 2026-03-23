@@ -7,14 +7,14 @@ pub trait BodyDecoding {
     fn get_secrets(
         &self,
         _secrets: ConnectorSourceVerificationSecrets,
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorRequestError> {
         Ok(Vec::new())
     }
 
     /// Get the decoding algorithm being used
     fn get_algorithm(
         &self,
-    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorError>
+    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorRequestError>
     {
         Ok(Box::new(crypto::NoAlgorithm))
     }
@@ -23,7 +23,7 @@ pub trait BodyDecoding {
     fn get_message(
         &self,
         body: &[u8],
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorRequestError> {
         Ok(body.to_owned())
     }
 
@@ -37,8 +37,8 @@ pub trait BodyDecoding {
         // to handle `None` gracefully. The default implementation assumes a secret is mandatory.
         secrets: Option<ConnectorSourceVerificationSecrets>,
         body: &[u8],
-    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorError> {
-        let secrets = secrets.ok_or(domain_types::errors::ConnectorError::DecodingFailed(None))?;
+    ) -> CustomResult<Vec<u8>, domain_types::errors::ConnectorRequestError> {
+        let secrets = secrets.ok_or(domain_types::errors::ConnectorRequestError::RequestEncodingFailed)?;
 
         let algorithm = self.get_algorithm()?;
         let extracted_secrets = self.get_secrets(secrets)?;
@@ -46,6 +46,6 @@ pub trait BodyDecoding {
 
         algorithm
             .decode_message(&extracted_secrets, message.into())
-            .change_context(domain_types::errors::ConnectorError::DecodingFailed(None))
+            .change_context(domain_types::errors::ConnectorRequestError::RequestEncodingFailed)
     }
 }
