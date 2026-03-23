@@ -104,7 +104,7 @@ message PaymentMethod {
     
     // REWARDS (80-89) - Flattened direct variants
     ClassicReward classic_reward = 80;                  // Classic reward points
-    EVoucher e_voucher = 81;                           // Electronic voucher
+    EVoucher e_voucher = 81;                           // Electronic voucher (e-voucher)
 
     // BANK TRANSFER (90-99)
     InstantBankTransfer instant_bank_transfer = 90;            // Generic instant bank transfer
@@ -152,8 +152,8 @@ message PaymentMethod {
     RedCompra red_compra = 143;                               // RedCompra - Chilean debit card network
     RedPagos red_pagos = 144;                                  // RedPagos - Uruguayan payment network
     Alfamart alfamart = 145;                                   // Alfamart - Indonesian convenience store payment
-    Indomaret indomaret = 146;
-    Oxxo oxxo = 147;                                // Indomaret - Indonesian convenience store payment
+    Indomaret indomaret = 146;                           // Indomaret - Indonesian convenience store payment
+    Oxxo oxxo = 147;                                     // Oxxo - Mexican convenience store payment
     SevenEleven seven_eleven = 148;                            // 7-Eleven - Convenience store payment
     Lawson lawson = 149;                                      // Lawson - Japanese convenience store payment
     MiniStop mini_stop = 150;                                  // Ministop - Japanese convenience store payment
@@ -167,116 +167,21 @@ message PaymentMethod {
 // PAYMENT METHOD CATEGORIES
 // ============================================================================
 
-// Real-time payment methods category - TODO: Not yet supported
-// Includes instant payment systems and QR code-based payments
-/*
-message RTPPaymentMethodType {
-  oneof rtp_type {
-    UPI upi_collect = 1;                   // UPI Collect - Indian real-time payment system (collect flow)
-    UPI upi_intent = 2;                    // UPI Intent - Indian real-time payment system (intent flow)
-    PIX pix = 3;                           // PIX - Brazilian instant payment system
-    PromptPay prompt_pay = 4;              // PromptPay - Thai QR code payment system
-    VietQR viet_qr = 5;                    // VietQR - Vietnamese QR code payment system
-  }
-}
-*/
-
-/*
-// Bank transfer payment methods category
-// Includes various bank transfer systems across different regions
-message BankTransferPaymentMethodType {
-  oneof bank_transfer_type {
-    // ACH ach = 1;                           // Automated Clearing House - US bank transfer system
-    // BACS bacs = 2;                         // Bankers' Automated Clearing Services - UK bank transfer
-    // SEPA sepa = 3;                         // Single Euro Payments Area direct debit
-    // SEPABankTransfer sepa_bank_transfer = 4; // SEPA credit transfer
-    // EFT eft = 5;                           // Electronic Funds Transfer - Generic bank transfer
-    // FPS fps = 6;                           // Faster Payments Service - UK real-time payments
-    // LocalBankTransfer local_bank_transfer = 7; // Generic local bank transfer
-    InstantBankTransfer instant_bank_transfer = 8; // Generic instant bank transfer
-    // BCABankTransfer bca_bank_transfer = 9; // Bank Central Asia transfer in Indonesia
-    // PermataBankTransfer permata_bank_transfer = 10; // Permata Bank transfer in Indonesia
-  }
-}
-*/
+// Note: Payment method categories have been flattened to direct variants in PaymentMethod oneof
 
 // Note: OnlineBankingPaymentMethodType wrapper removed - all banking methods are direct variants
 
-// Buy now, pay later payment methods category - TODO: Not yet supported
-// Includes installment payment services
-/*
-message BNPLPaymentMethodType {
-  oneof bnpl_type {
-    Affirm affirm = 1;                                       // Affirm - US BNPL service
-    AfterpayClearpay afterpay_clearpay = 2;                  // Afterpay/Clearpay - BNPL service
-    Alma alma = 3;                                           // Alma - French BNPL service
-    Atome atome = 4;                                         // Atome - Asian BNPL service
-    PayBright pay_bright = 5;                                // PayBright - Canadian BNPL service
-    Walley walley = 6;                                       // Walley - Nordic BNPL service
-  }
-}
-*/
+// Note: BNPL payment methods are defined as direct variants in PaymentMethod oneof
 
 // Note: MobilePaymentMethodType wrapper removed - mobile payment methods are direct variants
 
 // Note: CryptoCurrencyPaymentMethodType wrapper removed - CryptoCurrency is a direct variant
 
-// Cash and voucher payment methods category - TODO: Not yet supported
-// Includes convenience store payments and voucher systems
-/*
-message CashVoucherPaymentMethodType {
-  oneof cash_voucher_type {
-    Alfamart alfamart = 1;                                   // Alfamart - Indonesian convenience store payment
-    Boleto boleto = 2;                                       // Boleto - Brazilian payment method
-    Efecty efecty = 3;                                       // Efecty - Colombian cash payment network
-    EVoucher evoucher = 4;                                   // E-Voucher - Generic electronic voucher payment
-    Givex givex = 5;                                         // Givex - Gift card and loyalty program provider
-    Indomaret indomaret = 6;                                 // Indomaret - Indonesian convenience store payment
-    OXXO oxxo = 7;                                           // OXXO - Mexican convenience store payment
-    PagoEfectivo pago_efectivo = 8;                          // PagoEfectivo - Peruvian cash payment method
-    PaySafeCard pay_safe_card = 9;                           // Paysafecard - Prepaid payment method
-    SevenEleven seven_eleven = 10;                           // 7-Eleven - Convenience store payment
-    Lawson lawson = 11;                                      // Lawson - Japanese convenience store payment
-    MiniStop mini_stop = 12;                                 // Ministop - Japanese convenience store payment
-    FamilyMart family_mart = 13;                             // FamilyMart - Japanese convenience store payment
-    Seicomart seicomart = 14;                                // Seicomart - Japanese convenience store payment
-    PayEasy pay_easy = 15;                                   // Pay-easy - Japanese bill payment service
-  }
-}
-*/
+// Note: Cash and voucher payment methods are defined as direct variants in PaymentMethod oneof
 
-// Direct debit payment methods category - TODO: Not yet supported
-// Includes direct debit systems across different regions
-/*
-message DirectDebitPaymentMethodType {
-  oneof direct_debit_type {
-    BancontactCard bancontact_card = 1;                      // Bancontact - Belgian debit card scheme
-    BECS becs = 2;                                           // BECS - Bulk Electronic Clearing System - Australian direct debit
-    Benefit benefit = 3;                                     // Benefit - Bahrain's national electronic wallet
-    BNIVA bni_va = 4;                                        // BNI VA - Bank Negara Indonesia Virtual Account
-    BRIVA bri_va = 5;                                        // BRI VA - Bank Rakyat Indonesia Virtual Account
-    CIMBVA cimb_va = 6;                                      // CIMB VA - CIMB Bank Virtual Account
-    DanamonVA danamon_va = 7;                                // Danamon VA - Bank Danamon Virtual Account
-    MandiriVA mandiri_va = 8;                                // Mandiri VA - Bank Mandiri Virtual Account
-    KNET knet = 9;                                           // KNET - Kuwait's national electronic banking service
-  }
-}
-*/
+// Note: Direct debit payment methods are defined as direct variants in PaymentMethod oneof
 
-// Other payment methods category - TODO: Not yet supported
-// Includes payment methods that don't fit in other categories
-/*
-message OtherPaymentMethodType {
-  oneof other_type {
-    ClassicReward classic_reward = 1;                        // Classic Reward - Loyalty/reward points payment
-    DirectCarrierBilling direct_carrier_billing = 2;         // Direct Carrier Billing - Mobile carrier billing
-    Interac interac = 3;                                     // Interac - Canadian debit card system
-    Multibanco multibanco = 4;                               // Multibanco - Portuguese payment method
-    RedCompra red_compra = 5;                                // RedCompra - Chilean debit card network
-    RedPagos red_pagos = 6;                                  // RedPagos - Uruguayan payment network
-  }
-}
-*/
+// Note: Other payment methods are defined as direct variants in PaymentMethod oneof
 
 // ============================================================================
 // PAYMENT METHOD DETAILS
@@ -1019,7 +924,7 @@ message Walley {
 */
 
 // ============================================================================
-// MOBILE PAYMENT METHODS - TODO: Not yet supported
+// MOBILE PAYMENT METHODS
 // ============================================================================
 
 // Bizum - Spanish mobile payment solution
@@ -1027,70 +932,10 @@ message Bizum {
   // Fields will be added as needed for Bizum integration
 }
 
-/*
-// DANA - Indonesian digital wallet
-message Dana {
-  // Fields will be added as needed for DANA integration
-}
-*/
-
 // DuitNow - Malaysian real-time payment platform
 message DuitNow {
   // Fields will be added as needed for DuitNow integration
 }
-
-/*
-
-// GoPay - Indonesian digital wallet by Gojek
-message GoPay {
-  // Fields will be added as needed for GoPay integration
-}
-
-// GCash - Filipino mobile wallet and payment platform
-message GCash {
-  // Fields will be added as needed for GCash integration
-}
-
-// KakaoPay - South Korean mobile payment service
-message KakaoPay {
-  // Fields will be added as needed for KakaoPay integration
-}
-
-// MobilePay - Nordic mobile payment platform
-message MobilePay {
-  // Fields will be added as needed for MobilePay integration
-}
-
-// MoMo - Vietnamese digital wallet
-message Momo {
-  // Fields will be added as needed for MoMo integration
-}
-
-// MoMo ATM - MoMo ATM transfer in Vietnam
-message MomoATM {
-  // Fields will be added as needed for MoMo ATM integration
-}
-
-// Swish - Swedish mobile payment system
-message Swish {
-  // Fields will be added as needed for Swish integration
-}
-
-// Touch 'n Go - Malaysian e-wallet
-message TouchNGo {
-  // Fields will be added as needed for Touch 'n Go integration
-}
-
-// TWINT - Swiss mobile payment app
-message Twint {
-  // Fields will be added as needed for TWINT integration
-}
-
-// Vipps - Norwegian mobile payment application
-message Vipps {
-  // Fields will be added as needed for Vipps integration
-}
-*/
 
 // ============================================================================
 // CRYPTOCURRENCY PAYMENT METHODS
@@ -1252,84 +1097,16 @@ message  Bacs {
 message SepaGuaranteedDebit {
   // International bank account number (iban)
   SecretString iban = 1;
-  
+
   // Owner name for bank debit
   optional SecretString bank_account_holder_name = 2;
 }
-
-/*
-
-// Benefit - Bahrain's national electronic wallet
-message Benefit {
-  // Fields will be added as needed for Benefit integration
-}
-
-// BNI VA - Bank Negara Indonesia Virtual Account
-message BNIVA {
-  // Fields will be added as needed for BNI VA integration
-}
-
-// BRI VA - Bank Rakyat Indonesia Virtual Account
-message BRIVA {
-  // Fields will be added as needed for BRI VA integration
-}
-
-// CIMB VA - CIMB Bank Virtual Account
-message CIMBVA {
-  // Fields will be added as needed for CIMB VA integration
-}
-
-// Danamon VA - Bank Danamon Virtual Account
-message DanamonVA {
-  // Fields will be added as needed for Danamon VA integration
-}
-
-// Mandiri VA - Bank Mandiri Virtual Account
-message MandiriVA {
-  // Fields will be added as needed for Mandiri VA integration
-}
-
-// KNET - Kuwait's national electronic banking service
-message KNET {
-  // Fields will be added as needed for KNET integration
-}
-*/
 
 // ============================================================================
 // OTHER PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
 
-/*
-
-// Classic Reward - Loyalty/reward points payment
-message ClassicReward {
-  // Fields will be added as needed for Classic Reward integration
-}
-
-// Direct Carrier Billing - Mobile carrier billing
-message DirectCarrierBilling {
-  // The phone number of the user
-  SecretString msisdn = 1 [(validate.rules).string = {min_len: 5}];
-  
-  // Unique user identifier
-  optional string client_uid = 2;
-}
-
-// Multibanco - Portuguese payment method
-message Multibanco {
-  // Fields will be added as needed for Multibanco integration
-}
-
-// RedCompra - Chilean debit card network
-message RedCompra {
-  // Fields will be added as needed for RedCompra integration
-}
-
-// RedPagos - Uruguayan payment network
-message RedPagos {
-  // Fields will be added as needed for RedPagos integration
-}
-*/
+// Note: ClassicReward, RedCompra, RedPagos are defined as active messages below
 
 // Flattened reward payment methods - extensible message types
 message ClassicReward {
@@ -1404,6 +1181,7 @@ enum BankNames {
   BankhausCarlSpangler = 43;
   BankhausSchelhammerUndSchatteraAg = 44;
   BankMillennium = 45;
+  reserved 46;  // Reserved for backward compatibility
   BawagPskAg = 47;
   BksBankAg = 48;
   BrullKallmusBankAg = 49;
@@ -1793,13 +1571,13 @@ enum CountryAlpha2 {
 }
 
 enum BankType {
-  BankType_UNSPECIFIED = 0;
-  Checking = 1;
-  Savings = 2;
+  BANK_TYPE_UNSPECIFIED = 0;
+  BANK_TYPE_CHECKING = 1;
+  BANK_TYPE_SAVINGS = 2;
 }
 
 enum BankHolderType {
-  BankHolderType_UNSPECIFIED = 0;
-  Personal = 1;
-  Business = 2;
+  BANK_HOLDER_TYPE_UNSPECIFIED = 0;
+  BANK_HOLDER_TYPE_PERSONAL = 1;
+  BANK_HOLDER_TYPE_BUSINESS = 2;
 }
