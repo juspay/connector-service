@@ -4,8 +4,8 @@ use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
     payments::{
-        composite_payment_service_server, dispute_service_server, payment_service_server,
-        refund_service_server,
+        composite_payment_service_server, dispute_service_server, event_service_server,
+        payment_service_server, refund_service_server,
     },
 };
 use std::{future::Future, net, sync::Arc};
@@ -106,7 +106,7 @@ pub struct Service {
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
     pub recurring_payment_service: crate::server::payments::RecurringPayments,
-    pub event_service: crate::server::payments::Events,
+    pub event_service: crate::server::events::EventServiceImpl,
     pub payment_method_service: crate::server::payments::PaymentMethod,
     pub merchant_authentication_service: crate::server::payments::MerchantAuthentication,
     pub customer_service: crate::server::payments::Customer,
@@ -148,7 +148,7 @@ impl Service {
             refunds_service: crate::server::refunds::Refunds,
             disputes_service: crate::server::disputes::Disputes,
             recurring_payment_service: crate::server::payments::RecurringPayments,
-            event_service: crate::server::payments::Events,
+            event_service: crate::server::events::EventServiceImpl,
             payment_method_service: crate::server::payments::PaymentMethod,
             merchant_authentication_service,
             customer_service,
@@ -272,6 +272,9 @@ impl Service {
             ))
             .add_service(dispute_service_server::DisputeServiceServer::new(
                 self.disputes_service,
+            ))
+            .add_service(event_service_server::EventServiceServer::new(
+                self.event_service,
             ))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;

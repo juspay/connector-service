@@ -98,8 +98,8 @@ pub fn process_webhook_event<
     };
 
     let webhook_status = match event_response.content {
-        Some(event_content::Content::IncompleteTransformation(_)) => EventStatus::EventStatusIncomplete,
-        _ => EventStatus::EventStatusComplete,
+        Some(event_content::Content::IncompleteTransformation(_)) => EventStatus::Incomplete,
+        _ => EventStatus::Complete,
     };
 
     let webhook_api_response = connector_data

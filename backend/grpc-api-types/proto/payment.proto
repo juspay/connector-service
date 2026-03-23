@@ -1507,7 +1507,6 @@ message PaymentServiceGetResponse {
   optional bool incremental_authorization_allowed = 27;
   // Payment method updates
   optional PaymentMethodUpdate payment_method_update = 28; // Updated payment method details, if present
-  optional PaymentMethodUpdate payment_method_update = 28; // Updated payment method details, if present
 }
 
 // Request message for voiding a payment

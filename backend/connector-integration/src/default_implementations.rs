@@ -42,16 +42,6 @@ macro_rules! default_impl_verify_webhook_source_v2 {
                 > for $connector<T>
             {
             }
-
-            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
-                SourceVerification<
-                    VerifyWebhookSource,
-                    VerifyWebhookSourceFlowData,
-                    VerifyWebhookSourceRequestData,
-                    VerifyWebhookSourceResponseData,
-                > for $connector<T>
-            {
-            }
         )*
     };
 }
@@ -131,5 +121,7 @@ default_impl_verify_webhook_source_v2!(
     Worldpay,
     Worldpayvantiv,
     Worldpayxml,
+    Xendit,
+    Zift
 );
 // PayPal has its own implementation in paypal.rs

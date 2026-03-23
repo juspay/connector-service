@@ -4908,7 +4908,6 @@ pub fn generate_payment_sync_response(
                     connector_response,
                     incremental_authorization_allowed,
                     payment_method_update: None,
-                    response_ref_id: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -4983,7 +4982,6 @@ pub fn generate_payment_sync_response(
                 redirection_data: None,
                 incremental_authorization_allowed: None,
                 payment_method_update: None,
-                response_ref_id: None,
             })
         }
     }
@@ -5770,11 +5768,6 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             redirection_data: None,
             incremental_authorization_allowed: None,
             payment_method_update: payment_method_update_grpc,
-            response_ref_id: value.connector_response_reference_id.map(|id| {
-                grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                }
-            }),
         })
     }
 }
