@@ -3,10 +3,11 @@
     "module": "CommonJS",
     "target": "ES2020",
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "strict": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "hs-playlib": ["./node_modules/hs-playlib/dist/src/index"],
       "hs-playlib/dist/src/payments/generated/proto": ["./node_modules/hs-playlib/dist/src/payments/generated/proto"]
