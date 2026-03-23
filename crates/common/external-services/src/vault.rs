@@ -345,6 +345,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_get_vault_headers_evervault() {
         let config = VaultConfig::Evervault(EvervaultConfig {
             team_id: "team123".to_string(),
@@ -362,6 +363,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_get_vault_headers_hyperswitch() {
         let config = VaultConfig::HyperswitchVault(HyperswitchVaultConfig {
             api_key: Secret::new("hs_key".to_string()),
@@ -376,6 +378,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_get_vault_headers_tokenex() {
         let config = VaultConfig::TokenEx(TokenExConfig {
             api_key: Secret::new("tx_key".to_string()),
@@ -390,6 +393,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_get_vault_headers_basis_theory() {
         let config = VaultConfig::BasisTheory(BasisTheoryConfig {
             api_key: Secret::new("bt_key".to_string()),
@@ -408,6 +412,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_get_vault_headers_vgs() {
         let config = VaultConfig::Vgs(VgsConfig {
             tenant_id: "tnt123".to_string(),

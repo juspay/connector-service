@@ -617,7 +617,7 @@ where
                             .response
                             .get("status_code")
                             .and_then(|v| v.as_u64())
-                            .map(|v| v as u16)
+                            .and_then(|v| u16::try_from(v).ok())
                             .unwrap_or(injector_response.status_code);
 
                         // Convert headers from HashMap<String, String> to reqwest::HeaderMap if present
@@ -1429,6 +1429,7 @@ fn apply_vault_config_to_injector(
 /// 1. Parse `x-external-vault-metadata` header from vault headers (runtime/per-request)
 /// 2. Fall back to TOML-derived `ExternalVaultProxyConfig` if provided (server config)
 #[cfg(feature = "injector-client")]
+#[allow(clippy::too_many_arguments)]
 fn build_injector_request(
     endpoint: String,
     http_method: HttpMethod,
