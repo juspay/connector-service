@@ -1652,3 +1652,39 @@ pub fn json_value_to_string(value: &serde_json::Value) -> String {
         _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
     }
 }
+
+// =============================================================================
+// MandateStatusCheck types
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RazorpayMandateStatusCheckRecurringDetails {
+    pub status: Option<String>,
+    pub failure_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RazorpayMandateStatusCheckResponse {
+    pub recurring_details: Option<RazorpayMandateStatusCheckRecurringDetails>,
+    pub error_description: Option<String>,
+}
+
+/// Maps a Razorpay recurring_details.status string to a MandateStatus.
+/// If the status is unknown or absent, returns the current mandate status (unchanged).
+pub fn map_razorpay_mandate_status(
+    response: &RazorpayMandateStatusCheckResponse,
+    current_status: &common_enums::MandateStatus,
+) -> common_enums::MandateStatus {
+    match response
+        .recurring_details
+        .as_ref()
+        .and_then(|rd| rd.status.as_deref())
+    {
+        Some("confirmed") => common_enums::MandateStatus::Active,
+        Some("initiated") => common_enums::MandateStatus::Created,
+        Some("rejected") => common_enums::MandateStatus::Failed,
+        Some("cancelled") => common_enums::MandateStatus::Revoked,
+        Some("paused") => common_enums::MandateStatus::Paused,
+        _ => current_status.clone(),
+    }
+}

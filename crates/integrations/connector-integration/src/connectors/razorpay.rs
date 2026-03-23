@@ -17,23 +17,23 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        MandateStatusCheck, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync,
+        Refund, SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        MandateRevokeRequestData, MandateRevokeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
-        PaymentsIncrementalAuthorizationData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSdkSessionTokenData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        MandateRevokeRequestData, MandateRevokeResponseData, MandateStatusCheckRequestData,
+        MandateStatusCheckResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData,
+        PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSdkSessionTokenData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -47,7 +47,7 @@ use domain_types::{
     },
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -217,6 +217,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Razorpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::MandateStatusCheckV2 for Razorpay<T>
 {
 }
 impl<T> Razorpay<T> {
@@ -1271,4 +1275,113 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         MandateRevokeResponseData,
     > for Razorpay<T>
 {
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        MandateStatusCheck,
+        PaymentFlowData,
+        MandateStatusCheckRequestData,
+        MandateStatusCheckResponseData,
+    > for Razorpay<T>
+{
+    fn get_http_method(&self) -> Method {
+        Method::Get
+    }
+
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            MandateStatusCheck,
+            PaymentFlowData,
+            MandateStatusCheckRequestData,
+            MandateStatusCheckResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_config)?;
+        header.append(&mut api_key);
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            MandateStatusCheck,
+            PaymentFlowData,
+            MandateStatusCheckRequestData,
+            MandateStatusCheckResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        let customer_id = req.request.connector_customer_id.peek();
+        let token_id = req.request.connector_mandate_id.peek();
+        Ok(format!(
+            "{base_url}v1/customers/{customer_id}/tokens/{token_id}"
+        ))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            MandateStatusCheck,
+            PaymentFlowData,
+            MandateStatusCheckRequestData,
+            MandateStatusCheckResponseData,
+        >,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            MandateStatusCheck,
+            PaymentFlowData,
+            MandateStatusCheckRequestData,
+            MandateStatusCheckResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let response: razorpay::RazorpayMandateStatusCheckResponse = res
+            .response
+            .parse_struct("RazorpayMandateStatusCheckResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        let mandate_status =
+            razorpay::map_razorpay_mandate_status(&response, &data.request.current_mandate_status);
+
+        let pg_error_message = response
+            .recurring_details
+            .as_ref()
+            .and_then(|rd| rd.failure_reason.clone())
+            .or(response.error_description.clone());
+
+        Ok(RouterDataV2 {
+            response: Ok(MandateStatusCheckResponseData {
+                mandate_status,
+                pg_error_code: Some("200".to_string()),
+                pg_error_message,
+            }),
+            ..data.clone()
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
