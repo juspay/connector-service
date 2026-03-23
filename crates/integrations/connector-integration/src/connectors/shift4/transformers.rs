@@ -15,7 +15,6 @@ use domain_types::{
     errors,
     payment_method_data::{
         BankDebitData, BankRedirectData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -504,16 +503,14 @@ impl<T: PaymentMethodDataTypes>
             }
         };
 
-        Ok(Shift4PaymentsRequest::Standard(
-            Shift4StandardPaymentsRequest {
-                amount: item.request.minor_amount,
-                currency: item.request.currency,
-                captured,
-                description: item.resource_common_data.description.clone(),
-                metadata: item.request.metadata.clone().expose_option(),
-                payment_method,
-            },
-        ))
+        Ok(Self::Standard(Shift4StandardPaymentsRequest {
+            amount: item.request.minor_amount,
+            currency: item.request.currency,
+            captured,
+            description: item.resource_common_data.description.clone(),
+            metadata: item.request.metadata.clone().expose_option(),
+            payment_method,
+        }))
     }
 }
 
