@@ -1,0 +1,16 @@
+{
+  "id": "task_488749ff",
+  "status": "pending",
+  "priority": "medium",
+  "created_at": "2026-03-23T11:25:55.125215Z",
+  "created_by": "developer",
+  "connector": "Nuvei",
+  "payment_flow": "cards-3ds",
+  "branch": "feat-Nuvei-cards-3ds",
+  "context": "",
+  "api_docs_urls": [],
+  "pr_url": null,
+  "workflow_stage": "pending",
+  "workflow_iteration": 0,
+  "max_iterations": 3
+}
