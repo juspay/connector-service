@@ -1,21 +1,36 @@
 #![allow(clippy::print_stderr, clippy::print_stdout, clippy::too_many_arguments)]
 
-//! Interactive UCS test runner.
+//! Interactive + non-interactive UCS test runner.
 //!
-//! This binary guides users through connector/suite/scenario/backend selection
-//! and executes the selected plan with optional report generation.
+//! ## Non-interactive mode (flags)
+//!
+//! ```
+//! cargo run -p ucs-connector-tests --bin test_ucs -- \
+//!     --connector stripe \
+//!     --suite authorize \
+//!     --scenario no3ds_auto_capture_credit_card \
+//!     --interface grpc \
+//!     --report
+//! ```
+//!
+//! | Flag | Description |
+//! |------|-------------|
+//! | `--connector <name>` | Run for a single connector (omit for all) |
+//! | `--all-connectors`   | Explicitly run all configured connectors |
+//! | `--suite <name>`     | Run a single suite (omit for all) |
+//! | `--scenario <name>`  | Run a single scenario within the selected suite |
+//! | `--interface grpc\|sdk` | Execution interface (default: grpc) |
+//! | `--endpoint <addr>`  | Override gRPC endpoint |
+//! | `--report`           | Write report.json + markdown test reports |
+//! | `--interactive`      | Open the step-by-step searchable TUI wizard |
 
-use std::{
-    collections::BTreeSet,
-    fs,
-    io::{self, Write},
-    path::PathBuf,
-};
+use std::{collections::BTreeSet, fs, path::PathBuf};
 
+use inquire::{list_option::ListOption, validator::Validation, Confirm, MultiSelect, Select, Text};
 use serde::Deserialize;
 use serde_json::Value;
 use ucs_connector_tests::harness::{
-    credentials::load_connector_auth,
+    credentials::load_connector_config,
     report::{
         append_report_best_effort, clear_report, extract_pm_and_pmt, now_epoch_ms, ReportEntry,
     },
@@ -31,62 +46,407 @@ use ucs_connector_tests::harness::{
     scenario_types::ScenarioError,
 };
 
-/// CLI entrypoint for interactive flow.
+// ── Entrypoint ─────────────────────────────────────────────────────────────────
+
 fn main() {
-    if let Err(error) = run_interactive() {
+    if let Err(error) = run() {
         eprintln!("[test_ucs] {error}");
         std::process::exit(1);
     }
 }
 
-/// Runs the end-to-end interactive prompt and execution sequence.
-fn run_interactive() -> Result<(), String> {
+fn run() -> Result<(), String> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+
+    // --interactive is now an explicit flag.
+    // Any other recognised non-interactive flag → non-interactive mode.
+    let wants_interactive = args.iter().any(|a| a == "--interactive");
+    let has_non_interactive_flag = args.iter().any(|arg| {
+        matches!(
+            arg.as_str(),
+            "--connector"
+                | "--all-connectors"
+                | "--suite"
+                | "--scenario"
+                | "--interface"
+                | "--endpoint"
+        )
+    });
+
+    // --help is handled inside both modes; check it up-front too.
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        print_usage();
+        return Ok(());
+    }
+
+    if wants_interactive {
+        run_interactive(&args)
+    } else if has_non_interactive_flag {
+        run_non_interactive(&args)
+    } else {
+        // No flags at all → run all connectors / all suites (non-interactive batch)
+        run_non_interactive(&args)
+    }
+}
+
+// ── Non-interactive mode ───────────────────────────────────────────────────────
+
+fn run_non_interactive(args: &[String]) -> Result<(), String> {
+    let mut connector: Option<String> = None;
+    let mut all_connectors = false;
+    let mut suite: Option<String> = None;
+    let mut scenario: Option<String> = None;
+    let mut interface_str: Option<String> = None;
+    let mut endpoint_flag: Option<String> = None;
     let mut report = false;
-    for arg in std::env::args().skip(1) {
+
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
         match arg.as_str() {
             "-h" | "--help" => {
                 print_usage();
                 return Ok(());
             }
-            "--report" => report = true,
-            _ => {
+            "--interactive" => {
+                // already handled in run(); ignore here
+            }
+            "--connector" => {
+                connector = Some(iter.next().ok_or("--connector requires a value")?.clone());
+            }
+            "--all-connectors" => {
+                all_connectors = true;
+            }
+            "--suite" => {
+                suite = Some(iter.next().ok_or("--suite requires a value")?.clone());
+            }
+            "--scenario" => {
+                scenario = Some(iter.next().ok_or("--scenario requires a value")?.clone());
+            }
+            "--interface" => {
+                interface_str = Some(
+                    iter.next()
+                        .ok_or("--interface requires a value (grpc or sdk)")?
+                        .clone(),
+                );
+            }
+            "--endpoint" => {
+                endpoint_flag = Some(iter.next().ok_or("--endpoint requires a value")?.clone());
+            }
+            "--report" => {
+                report = true;
+            }
+            other => {
                 return Err(format!(
-                    "unknown argument '{arg}'. this command is interactive."
+                    "unknown flag '{other}'. run with --help for usage."
+                ));
+            }
+        }
+    }
+
+    if scenario.is_some() && suite.is_none() {
+        return Err("--scenario requires --suite to be specified".to_string());
+    }
+
+    let backend = parse_backend(interface_str.as_deref().unwrap_or("grpc"))?;
+    let defaults = load_defaults();
+    let endpoint = endpoint_flag
+        .or_else(|| std::env::var("UCS_ENDPOINT").ok())
+        .or_else(|| defaults.endpoint.clone())
+        .unwrap_or_else(|| DEFAULT_ENDPOINT.to_string());
+
+    apply_creds_from_env_or_defaults(&defaults);
+
+    let options = SuiteRunOptions {
+        endpoint: Some(&endpoint),
+        merchant_id: None,
+        tenant_id: None,
+        plaintext: true,
+        backend,
+        report,
+    };
+
+    let connector_selection = if let Some(name) = connector {
+        ConnectorSelection::Specific(vec![name])
+    } else if all_connectors {
+        ConnectorSelection::All(runnable_configured_connectors()?)
+    } else {
+        ConnectorSelection::All(runnable_configured_connectors()?)
+    };
+
+    let connector_list = match &connector_selection {
+        ConnectorSelection::All(list) | ConnectorSelection::Specific(list) => list,
+    };
+    if connector_list.is_empty() {
+        return Err("no runnable connectors found".to_string());
+    }
+
+    let suite_selection = match suite {
+        Some(s) => SuiteSelection::Specific(vec![s]),
+        None => SuiteSelection::All,
+    };
+
+    let scenario_selection = match scenario {
+        Some(s) => ScenarioSelection::Specific(s),
+        None => ScenarioSelection::All,
+    };
+
+    println!("[test_ucs] non-interactive run starting...");
+    if report {
+        clear_report();
+    }
+
+    let (passed, failed, skipped) = execute_plan(
+        &connector_selection,
+        &suite_selection,
+        &scenario_selection,
+        options,
+        &endpoint,
+    )
+    .map_err(|e| e.to_string())?;
+
+    println!("\n[test_ucs] grand total: passed={passed} failed={failed} skipped={skipped}");
+    if failed > 0 {
+        return Err("one or more scenarios failed".to_string());
+    }
+
+    Ok(())
+}
+
+// ── Interactive mode ───────────────────────────────────────────────────────────
+
+fn run_interactive(args: &[String]) -> Result<(), String> {
+    // Accepted pre-flags: --interface, --report, --endpoint
+    // (interface selection is also offered in the wizard, but CLI can override)
+    let mut report_flag: Option<bool> = None;
+    let mut endpoint_flag: Option<String> = None;
+    let mut interface_flag: Option<String> = None;
+
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--interactive" | "-h" | "--help" => {}
+            "--report" => report_flag = Some(true),
+            "--endpoint" => {
+                endpoint_flag = Some(iter.next().ok_or("--endpoint requires a value")?.clone());
+            }
+            "--interface" => {
+                interface_flag = Some(iter.next().ok_or("--interface requires a value")?.clone());
+            }
+            other => {
+                return Err(format!(
+                    "unknown argument '{other}' in interactive mode. run with --help for usage."
                 ));
             }
         }
     }
 
     let defaults = load_defaults();
-    let endpoint = defaults
-        .endpoint
-        .unwrap_or_else(|| DEFAULT_ENDPOINT.to_string());
+    apply_creds_from_env_or_defaults(&defaults);
 
-    let creds_file = std::env::var("CONNECTOR_AUTH_FILE_PATH")
-        .ok()
-        .or_else(|| std::env::var("UCS_CREDS_PATH").ok())
-        .or(defaults.creds_file);
+    println!("\n=== UCS Connector Test Runner ===");
+    println!("Use arrow keys to navigate, type to filter, Enter to select.\n");
 
-    if let Some(creds_file) = creds_file {
-        std::env::set_var("CONNECTOR_AUTH_FILE_PATH", creds_file);
+    // ── Step 1: Connector scope ────────────────────────────────────────────────
+    let discovered = discover_all_connectors().map_err(|e| e.to_string())?;
+    if discovered.is_empty() {
+        return Err("no connectors found under connector_specs/".to_string());
     }
 
-    println!("\n=== Test UCS ===");
-    println!("Interactive connector test runner");
+    let connector_scope = Select::new(
+        "1. Connector scope:",
+        vec![
+            "All connectors",
+            "One connector",
+            "Multiple connectors (multi-select)",
+        ],
+    )
+    .prompt()
+    .map_err(|e| format!("connector scope: {e}"))?;
 
-    let discovered_connectors = discover_all_connectors().map_err(|error| error.to_string())?;
-    let connector_selection = prompt_connector_selection(&discovered_connectors)?;
-    let available_suites = suites_for_connector_selection(&connector_selection)?;
-    let suite_selection = prompt_suite_selection(&available_suites)?;
-
-    let scenario_selection = if let SuiteSelection::Specific(suite) = &suite_selection {
-        let scenario_names = scenario_names_for_suite(suite).map_err(|error| error.to_string())?;
-        prompt_scenario_selection(&scenario_names)?
-    } else {
-        ScenarioSelection::All
+    let connector_selection = match connector_scope {
+        "All connectors" => ConnectorSelection::All(runnable_configured_connectors()?),
+        "One connector" => {
+            let runnable = runnable_configured_connectors()?;
+            let name = Select::new("   Pick a connector:", runnable)
+                .prompt()
+                .map_err(|e| format!("connector pick: {e}"))?;
+            ConnectorSelection::Specific(vec![name])
+        }
+        _ => {
+            // Multi-select
+            let runnable = runnable_configured_connectors()?;
+            let chosen = MultiSelect::new(
+                "   Pick connectors (space to select, Enter when done):",
+                runnable,
+            )
+            .with_validator(|choices: &[ListOption<&String>]| {
+                if choices.is_empty() {
+                    Ok(Validation::Invalid("Select at least one connector.".into()))
+                } else {
+                    Ok(Validation::Valid)
+                }
+            })
+            .prompt()
+            .map_err(|e| format!("connector multi-select: {e}"))?;
+            ConnectorSelection::Specific(chosen)
+        }
     };
 
-    let backend = prompt_backend()?;
+    let selected_connectors = match &connector_selection {
+        ConnectorSelection::All(list) | ConnectorSelection::Specific(list) => list.clone(),
+    };
+    if selected_connectors.is_empty() {
+        return Err("no runnable connectors available (check credentials)".to_string());
+    }
+
+    // ── Step 2: Suite scope ────────────────────────────────────────────────────
+    let available_suites = suites_for_connectors(&selected_connectors)?;
+
+    let suite_scope = Select::new(
+        "2. Suite scope:",
+        vec!["All suites", "One suite", "Multiple suites (multi-select)"],
+    )
+    .prompt()
+    .map_err(|e| format!("suite scope: {e}"))?;
+
+    let suite_selection = match suite_scope {
+        "All suites" => SuiteSelection::All,
+        "One suite" => {
+            let name = Select::new("   Pick a suite:", available_suites.clone())
+                .prompt()
+                .map_err(|e| format!("suite pick: {e}"))?;
+            SuiteSelection::Specific(vec![name])
+        }
+        _ => {
+            let chosen = MultiSelect::new(
+                "   Pick suites (space to select, Enter when done):",
+                available_suites.clone(),
+            )
+            .with_validator(|choices: &[ListOption<&String>]| {
+                if choices.is_empty() {
+                    Ok(Validation::Invalid("Select at least one suite.".into()))
+                } else {
+                    Ok(Validation::Valid)
+                }
+            })
+            .prompt()
+            .map_err(|e| format!("suite multi-select: {e}"))?;
+            SuiteSelection::Specific(chosen)
+        }
+    };
+
+    // ── Step 3: Scenario scope ─────────────────────────────────────────────────
+    let scenario_selection = match &suite_selection {
+        SuiteSelection::Specific(suites) if suites.len() == 1 => {
+            let suite_name = &suites[0];
+            let all_scenarios = scenario_names_for_suite(suite_name).map_err(|e| e.to_string())?;
+
+            let scenario_scope = Select::new(
+                "3. Scenario scope:",
+                vec![
+                    "All scenarios",
+                    "One scenario",
+                    "Multiple scenarios (multi-select)",
+                ],
+            )
+            .prompt()
+            .map_err(|e| format!("scenario scope: {e}"))?;
+
+            match scenario_scope {
+                "All scenarios" => ScenarioSelection::All,
+                "One scenario" => {
+                    let name = Select::new("   Pick a scenario:", all_scenarios)
+                        .prompt()
+                        .map_err(|e| format!("scenario pick: {e}"))?;
+                    ScenarioSelection::Specific(name)
+                }
+                _ => {
+                    let chosen = MultiSelect::new(
+                        "   Pick scenarios (space to select, Enter when done):",
+                        all_scenarios,
+                    )
+                    .with_validator(|choices: &[ListOption<&String>]| {
+                        if choices.is_empty() {
+                            Ok(Validation::Invalid("Select at least one scenario.".into()))
+                        } else {
+                            Ok(Validation::Valid)
+                        }
+                    })
+                    .prompt()
+                    .map_err(|e| format!("scenario multi-select: {e}"))?;
+                    ScenarioSelection::Multiple(chosen)
+                }
+            }
+        }
+        _ => {
+            // All suites or multiple suites → run all scenarios
+            ScenarioSelection::All
+        }
+    };
+
+    // ── Step 4: Interface ──────────────────────────────────────────────────────
+    let (interface_label, backend) = if let Some(ref iface) = interface_flag {
+        // pre-selected via --interface flag, skip the wizard step
+        let iface = iface.as_str();
+        let label = if iface == "grpc" { "gRPC" } else { "SDK" };
+        let be = parse_backend(iface)?;
+        (label, be)
+    } else {
+        let label = Select::new("4. Interface:", vec!["gRPC", "SDK"])
+            .prompt()
+            .map_err(|e| format!("interface: {e}"))?;
+        let be = if label == "gRPC" {
+            ExecutionBackend::Grpcurl
+        } else {
+            ExecutionBackend::SdkFfi
+        };
+        (label, be)
+    };
+
+    // ── Step 5: Endpoint ───────────────────────────────────────────────────────
+    let default_endpoint = endpoint_flag
+        .or_else(|| std::env::var("UCS_ENDPOINT").ok())
+        .or_else(|| defaults.endpoint.clone())
+        .unwrap_or_else(|| DEFAULT_ENDPOINT.to_string());
+
+    let endpoint = Text::new("5. gRPC endpoint:")
+        .with_default(&default_endpoint)
+        .prompt()
+        .map_err(|e| format!("endpoint: {e}"))?;
+
+    // ── Step 6: Report ─────────────────────────────────────────────────────────
+    let report = if let Some(r) = report_flag {
+        r
+    } else {
+        Confirm::new("6. Generate test report?")
+            .with_default(true)
+            .prompt()
+            .map_err(|e| format!("report: {e}"))?
+    };
+
+    // ── Step 7: Show equivalent command ───────────────────────────────────────
+    let equivalent_cmd = build_equivalent_command(
+        &connector_selection,
+        &suite_selection,
+        &scenario_selection,
+        interface_label,
+        &endpoint,
+        report,
+    );
+    println!("\nEquivalent command:");
+    println!("  {equivalent_cmd}");
+
+    let confirmed = Confirm::new("\nRun the tests?")
+        .with_default(true)
+        .prompt()
+        .map_err(|e| format!("confirm: {e}"))?;
+
+    if !confirmed {
+        println!("[test_ucs] aborted.");
+        return Ok(());
+    }
+
+    // ── Execute ────────────────────────────────────────────────────────────────
     let options = SuiteRunOptions {
         endpoint: Some(&endpoint),
         merchant_id: None,
@@ -101,16 +461,16 @@ fn run_interactive() -> Result<(), String> {
         clear_report();
     }
 
-    let (passed, failed) = execute_plan(
+    let (passed, failed, skipped) = execute_plan(
         &connector_selection,
         &suite_selection,
         &scenario_selection,
         options,
         &endpoint,
     )
-    .map_err(|error| error.to_string())?;
+    .map_err(|e| e.to_string())?;
 
-    println!("\n[test_ucs] grand total: passed={passed} failed={failed}");
+    println!("\n[test_ucs] grand total: passed={passed} failed={failed} skipped={skipped}");
     if failed > 0 {
         return Err("one or more scenarios failed".to_string());
     }
@@ -118,63 +478,156 @@ fn run_interactive() -> Result<(), String> {
     Ok(())
 }
 
-/// Executes selected connectors/suites/scenarios and aggregates pass/fail counts.
+// ── Equivalent command builder ─────────────────────────────────────────────────
+
+fn build_equivalent_command(
+    connector_selection: &ConnectorSelection,
+    suite_selection: &SuiteSelection,
+    scenario_selection: &ScenarioSelection,
+    interface: &str,
+    endpoint: &str,
+    report: bool,
+) -> String {
+    let mut parts = vec!["make cargo ARGS=\"run -p ucs-connector-tests --bin test_ucs --".to_string()];
+
+    match connector_selection {
+        ConnectorSelection::All(_) => parts.push("--all-connectors".to_string()),
+        ConnectorSelection::Specific(list) if list.len() == 1 => {
+            parts.push(format!("--connector {}", list[0]));
+        }
+        ConnectorSelection::Specific(list) => {
+            // Multiple connectors: show first + note
+            parts.push(format!("--connector {}", list[0]));
+            parts.push(format!("# (+ {} more)", list.len() - 1));
+        }
+    }
+
+    match suite_selection {
+        SuiteSelection::All => {}
+        SuiteSelection::Specific(suites) if suites.len() == 1 => {
+            parts.push(format!("--suite {}", suites[0]));
+        }
+        SuiteSelection::Specific(suites) => {
+            parts.push(format!("--suite {}", suites[0]));
+            parts.push(format!("# (+ {} more)", suites.len() - 1));
+        }
+    }
+
+    match scenario_selection {
+        ScenarioSelection::All => {}
+        ScenarioSelection::Specific(s) => {
+            parts.push(format!("--scenario {s}"));
+        }
+        ScenarioSelection::Multiple(list) => {
+            parts.push(format!("--scenario {}", list[0]));
+            parts.push(format!("# (+ {} more)", list.len() - 1));
+        }
+    }
+
+    let interface_flag = if interface == "gRPC" { "grpc" } else { "sdk" };
+    parts.push(format!("--interface {interface_flag}"));
+    parts.push(format!("--endpoint {endpoint}"));
+
+    if report {
+        parts.push("--report".to_string());
+    }
+
+    format!("{}\"", parts.join(" \\\n    "))
+}
+
+// ── Execution ──────────────────────────────────────────────────────────────────
+
 fn execute_plan(
     connector_selection: &ConnectorSelection,
     suite_selection: &SuiteSelection,
     scenario_selection: &ScenarioSelection,
     options: SuiteRunOptions<'_>,
     endpoint: &str,
-) -> Result<(usize, usize), ScenarioError> {
+) -> Result<(usize, usize, usize), ScenarioError> {
     let mut passed = 0usize;
     let mut failed = 0usize;
+    let mut skipped = 0usize;
 
     let connectors = match connector_selection {
-        ConnectorSelection::All(connectors) => connectors.clone(),
-        ConnectorSelection::Specific(connector) => vec![connector.clone()],
+        ConnectorSelection::All(list) | ConnectorSelection::Specific(list) => list.clone(),
+    };
+
+    let suites_to_run: Option<Vec<String>> = match suite_selection {
+        SuiteSelection::All => None,
+        SuiteSelection::Specific(list) => Some(list.clone()),
     };
 
     for connector in connectors {
         println!("\n--- Connector: {connector} ---");
 
-        match suite_selection {
-            SuiteSelection::All => {
+        match &suites_to_run {
+            None => {
+                // All suites
                 let summary = run_all_suites_with_options(Some(&connector), options)?;
                 for suite_summary in &summary.suites {
                     print_suite_results(suite_summary, endpoint, options.report);
                 }
                 passed += summary.passed;
                 failed += summary.failed;
+                skipped += summary.skipped;
             }
-            SuiteSelection::Specific(suite) => {
-                if !is_suite_supported_for_connector(&connector, suite)? {
-                    println!(
-                        "[test_ucs] skipping unsupported suite '{}' for connector '{}'.",
-                        suite, connector
-                    );
-                    continue;
+            Some(suites) => {
+                for suite in suites {
+                    if !is_suite_supported_for_connector(&connector, suite)? {
+                        println!(
+                            "[test_ucs] skipping unsupported suite '{suite}' for connector '{connector}'."
+                        );
+                        continue;
+                    }
+
+                    let summary = match scenario_selection {
+                        ScenarioSelection::All => {
+                            run_suite_test_with_options(suite, Some(&connector), options)?
+                        }
+                        ScenarioSelection::Specific(scenario) => run_scenario_test_with_options(
+                            suite,
+                            scenario,
+                            Some(&connector),
+                            options,
+                        )?,
+                        ScenarioSelection::Multiple(scenarios) => {
+                            // Run each scenario in the suite individually and aggregate
+                            let mut agg = run_scenario_test_with_options(
+                                suite,
+                                &scenarios[0],
+                                Some(&connector),
+                                options,
+                            )?;
+                            for scenario in &scenarios[1..] {
+                                let s = run_scenario_test_with_options(
+                                    suite,
+                                    scenario,
+                                    Some(&connector),
+                                    options,
+                                )?;
+                                agg.results.extend(s.results);
+                                agg.passed += s.passed;
+                                agg.failed += s.failed;
+                                agg.skipped += s.skipped;
+                            }
+                            agg
+                        }
+                    };
+
+                    print_suite_results(&summary, endpoint, options.report);
+                    passed += summary.passed;
+                    failed += summary.failed;
+                    skipped += summary.skipped;
                 }
-
-                let summary = match scenario_selection {
-                    ScenarioSelection::All => {
-                        run_suite_test_with_options(suite, Some(&connector), options)?
-                    }
-                    ScenarioSelection::Specific(scenario) => {
-                        run_scenario_test_with_options(suite, scenario, Some(&connector), options)?
-                    }
-                };
-
-                print_suite_results(&summary, endpoint, options.report);
-                passed += summary.passed;
-                failed += summary.failed;
             }
         }
     }
 
-    Ok((passed, failed))
+    Ok((passed, failed, skipped))
 }
 
-/// Prints suite-level results and appends each scenario to report output.
+// ── Output helpers ─────────────────────────────────────────────────────────────
+
 fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) {
     if summary.results.is_empty() {
         println!(
@@ -199,7 +652,13 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
                 pm.as_deref(),
                 pmt.as_deref(),
                 result.is_dependency,
-                if result.passed { "PASS" } else { "FAIL" },
+                if result.passed {
+                    "PASS"
+                } else if result.skipped {
+                    "SKIP"
+                } else {
+                    "FAIL"
+                },
                 None,
                 result.error.clone(),
                 result.dependency.clone(),
@@ -215,6 +674,12 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
                 "[test_ucs] assertion result for '{}': PASS",
                 result.scenario
             );
+        } else if result.skipped {
+            println!(
+                "[test_ucs] assertion result for '{}': SKIP ({})",
+                result.scenario,
+                result.error.as_deref().unwrap_or("no reason given")
+            );
         } else {
             println!(
                 "[test_ucs] assertion result for '{}': FAIL ({})",
@@ -225,8 +690,8 @@ fn print_suite_results(summary: &SuiteRunSummary, endpoint: &str, report: bool) 
     }
 
     println!(
-        "[test_ucs] summary suite={} connector={} passed={} failed={}",
-        summary.suite, summary.connector, summary.passed, summary.failed
+        "[test_ucs] summary suite={} connector={} passed={} failed={} skipped={}",
+        summary.suite, summary.connector, summary.passed, summary.failed, summary.skipped
     );
 }
 
@@ -273,7 +738,6 @@ fn truncate_for_console(text: &str, max_chars: usize) -> String {
     }
 }
 
-/// Serializes one scenario execution into `ReportEntry` and appends it.
 fn write_report_entry(
     suite: &str,
     scenario: &str,
@@ -311,188 +775,37 @@ fn write_report_entry(
     });
 }
 
-/// Prompts user to run one connector or all configured connectors.
-fn prompt_connector_selection(
-    discovered_connectors: &[String],
-) -> Result<ConnectorSelection, String> {
-    println!("\n1) Connectors to test:");
-    let mode = prompt_choice(
-        "Select connector option",
-        &[
-            "Test all configured connectors",
-            "Test one specific connector",
-        ],
-    )?;
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-    if mode == 0 {
-        let connectors = runnable_configured_connectors()?;
-        if connectors.is_empty() {
-            return Err("no runnable connectors found from configured list".to_string());
-        }
-        println!("[test_ucs] selected connectors: {}", connectors.join(", "));
-        return Ok(ConnectorSelection::All(connectors));
-    }
-
-    if discovered_connectors.is_empty() {
-        return Err("no connectors discovered under connector_specs".to_string());
-    }
-
-    println!(
-        "[test_ucs] available connectors: {}",
-        discovered_connectors.join(", ")
-    );
-
-    loop {
-        let input = prompt_input("Enter connector name")?;
-        if !discovered_connectors
-            .iter()
-            .any(|connector| connector == &input)
-        {
-            println!("[test_ucs] invalid connector '{}'. try again.", input);
-            continue;
-        }
-
-        match load_connector_auth(&input) {
-            Ok(_) => return Ok(ConnectorSelection::Specific(input)),
-            Err(error) => {
-                println!(
-                    "[test_ucs] connector '{}' credentials unavailable: {}. try another connector.",
-                    input, error
-                );
-            }
-        }
+fn parse_backend(s: &str) -> Result<ExecutionBackend, String> {
+    match s {
+        "grpc" => Ok(ExecutionBackend::Grpcurl),
+        "sdk" => Ok(ExecutionBackend::SdkFfi),
+        other => Err(format!("unknown interface '{other}': use 'grpc' or 'sdk'")),
     }
 }
 
-/// Prompts user for suite mode (all or one specific suite).
-fn prompt_suite_selection(available_suites: &[String]) -> Result<SuiteSelection, String> {
-    println!("\n2) Suites to test:");
-    let mode = prompt_choice("Select suite option", &["All suites", "One specific suite"])?;
+fn apply_creds_from_env_or_defaults(defaults: &StoredDefaults) {
+    let creds_file = std::env::var("CONNECTOR_AUTH_FILE_PATH")
+        .ok()
+        .or_else(|| std::env::var("UCS_CREDS_PATH").ok())
+        .or_else(|| defaults.creds_file.clone());
 
-    if mode == 0 {
-        return Ok(SuiteSelection::All);
-    }
-
-    if available_suites.is_empty() {
-        return Err("no suites available for the selected connector scope".to_string());
-    }
-
-    println!(
-        "[test_ucs] available suites: {}",
-        available_suites.join(", ")
-    );
-
-    loop {
-        let suite = prompt_input("Enter suite name")?;
-        if available_suites.iter().any(|candidate| candidate == &suite) {
-            return Ok(SuiteSelection::Specific(suite));
-        }
-        println!("[test_ucs] invalid suite '{}'. try again.", suite);
+    if let Some(creds_file) = creds_file {
+        std::env::set_var("CONNECTOR_AUTH_FILE_PATH", creds_file);
     }
 }
 
-/// Prompts user for scenario mode (all or one specific scenario).
-fn prompt_scenario_selection(available_scenarios: &[String]) -> Result<ScenarioSelection, String> {
-    println!("\n3) Scenarios to test:");
-    let mode = prompt_choice(
-        "Select scenario option",
-        &["All scenarios in selected suite", "One specific scenario"],
-    )?;
-
-    if mode == 0 {
-        return Ok(ScenarioSelection::All);
-    }
-
-    if available_scenarios.is_empty() {
-        return Err("no scenarios available for the selected suite".to_string());
-    }
-
-    println!(
-        "[test_ucs] available scenarios: {}",
-        available_scenarios.join(", ")
-    );
-
-    loop {
-        let scenario = prompt_input("Enter scenario name")?;
-        if available_scenarios
-            .iter()
-            .any(|candidate| candidate == &scenario)
-        {
-            return Ok(ScenarioSelection::Specific(scenario));
-        }
-        println!("[test_ucs] invalid scenario '{}'. try again.", scenario);
-    }
-}
-
-/// Prompts execution backend selection (grpcurl or SDK/FFI).
-fn prompt_backend() -> Result<ExecutionBackend, String> {
-    println!("\n4) Interface:");
-    let mode = prompt_choice("Select interface", &["gRPC", "SDK"])?;
-    if mode == 0 {
-        Ok(ExecutionBackend::Grpcurl)
-    } else {
-        Ok(ExecutionBackend::SdkFfi)
-    }
-}
-
-/// Generic numbered-menu prompt helper.
-fn prompt_choice(label: &str, options: &[&str]) -> Result<usize, String> {
-    println!("{label}:");
-    for (index, option) in options.iter().enumerate() {
-        println!("  {}) {}", index + 1, option);
-    }
-
-    loop {
-        print!("> ");
-        io::stdout().flush().map_err(|error| error.to_string())?;
-
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .map_err(|error| error.to_string())?;
-        let trimmed = input.trim();
-
-        if let Ok(choice) = trimmed.parse::<usize>() {
-            if (1..=options.len()).contains(&choice) {
-                return Ok(choice - 1);
-            }
-        }
-
-        println!("Please enter a number between 1 and {}.", options.len());
-    }
-}
-
-/// Reads one line of user input from stdin.
-fn prompt_input(label: &str) -> Result<String, String> {
-    loop {
-        print!("{label}: ");
-        io::stdout().flush().map_err(|error| error.to_string())?;
-
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .map_err(|error| error.to_string())?;
-
-        let trimmed = input.trim();
-        if !trimmed.is_empty() {
-            return Ok(trimmed.to_string());
-        }
-
-        println!("Input cannot be empty.");
-    }
-}
-
-/// Returns configured connectors that currently have valid credentials.
 fn runnable_configured_connectors() -> Result<Vec<String>, String> {
     let connectors = configured_all_connectors();
     let mut runnable = Vec::new();
 
     for connector in connectors {
-        match load_connector_auth(&connector) {
+        match load_connector_config(&connector) {
             Ok(_) => runnable.push(connector),
-            Err(error) => println!(
+            Err(err) => println!(
                 "[test_ucs] skipping connector '{}' due to missing/invalid credentials: {}",
-                connector, error
+                connector, err
             ),
         }
     }
@@ -500,29 +813,21 @@ fn runnable_configured_connectors() -> Result<Vec<String>, String> {
     Ok(runnable)
 }
 
-/// Computes suite intersection/union based on connector selection mode.
-fn suites_for_connector_selection(selection: &ConnectorSelection) -> Result<Vec<String>, String> {
-    let connectors = match selection {
-        ConnectorSelection::All(connectors) => connectors.clone(),
-        ConnectorSelection::Specific(connector) => vec![connector.clone()],
-    };
-
+fn suites_for_connectors(connectors: &[String]) -> Result<Vec<String>, String> {
     let mut suites = BTreeSet::new();
     for connector in connectors {
-        for suite in
-            load_supported_suites_for_connector(&connector).map_err(|error| error.to_string())?
-        {
+        for suite in load_supported_suites_for_connector(connector).map_err(|e| e.to_string())? {
             suites.insert(suite);
         }
     }
-
     Ok(suites.into_iter().collect())
 }
 
-/// Lists scenario names for one suite in stable sort order.
 fn scenario_names_for_suite(suite: &str) -> Result<Vec<String>, ScenarioError> {
     Ok(load_suite_scenarios(suite)?.keys().cloned().collect())
 }
+
+// ── Persisted defaults ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Default, Clone, Deserialize)]
 struct StoredDefaults {
@@ -530,53 +835,89 @@ struct StoredDefaults {
     creds_file: Option<String>,
 }
 
-/// Returns persisted defaults path used by interactive runner.
 fn defaults_path() -> PathBuf {
     if let Ok(path) = std::env::var("UCS_RUN_TEST_DEFAULTS_PATH") {
         return PathBuf::from(path);
     }
-
     if let Ok(home) = std::env::var("HOME") {
         return PathBuf::from(home)
             .join(".config")
             .join("ucs-connector-tests")
             .join("run_test_defaults.json");
     }
-
     PathBuf::from(".ucs_run_test_defaults.json")
 }
 
-/// Loads persisted defaults (endpoint and creds file), if present.
 fn load_defaults() -> StoredDefaults {
     let path = defaults_path();
     let Ok(content) = fs::read_to_string(path) else {
         return StoredDefaults::default();
     };
-
     serde_json::from_str(&content).unwrap_or_default()
 }
 
-/// Prints usage/help text for interactive runner.
+// ── Usage ──────────────────────────────────────────────────────────────────────
+
 fn print_usage() {
     eprintln!(
-        "Usage:\n  cargo run -p ucs-connector-tests --bin test_ucs [--report]\n\nInteractive flow:\n  1) Select connectors (all or specific)\n  2) Select suites (all or specific)\n  3) If suite is specific: select scenarios (all or specific)\n  4) Select interface (gRPC or SDK)\n\nNotes:\n  - Pass --report to generate report.json + test_report/ markdown files\n  - Without --report, only test execution output is printed\n  - Exits with non-zero when any scenario fails"
+        r#"Usage:
+  test-prism [FLAGS]           ← preferred (installed by setup)
+  cargo run -p ucs-connector-tests --bin test_ucs [FLAGS]
+
+FLAGS
+  --interactive          Open the step-by-step searchable TUI wizard
+  --connector <name>     Run tests for a single connector
+  --all-connectors       Run tests for all configured connectors
+  --suite <name>         Run tests for a single suite
+  --scenario <name>      Run a single scenario (requires --suite)
+  --interface grpc|sdk   Execution interface (default: grpc)
+  --endpoint <addr>      Override gRPC endpoint
+  --report               Write report.json + markdown test_report/ files
+  -h, --help             Print this help and exit
+
+Default (no flags):
+  Runs all connectors / all suites / all scenarios (non-interactive batch).
+
+Interactive wizard (--interactive):
+  Step-by-step searchable selection for connector → suite → scenario →
+  interface → endpoint → report.  Shows equivalent cargo command before
+  executing so you can copy it for future non-interactive runs.
+
+Credential resolution order:
+  1. CONNECTOR_AUTH_FILE_PATH environment variable
+  2. UCS_CREDS_PATH environment variable
+  3. ~/.config/ucs-connector-tests/run_test_defaults.json
+  4. .github/test/creds.json (repo default)
+
+Examples:
+  test-prism                                   # full batch run
+  test-prism --interactive                     # TUI wizard
+  test-prism --connector stripe                # all suites for stripe
+  test-prism --interface sdk --connector stripe
+  test-prism --connector stripe --suite authorize
+  test-prism --connector stripe --suite authorize \
+      --scenario no3ds_auto_capture_credit_card --report
+"#
     );
 }
+
+// ── Types ──────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone)]
 enum ConnectorSelection {
     All(Vec<String>),
-    Specific(String),
+    Specific(Vec<String>),
 }
 
 #[derive(Debug, Clone)]
 enum SuiteSelection {
     All,
-    Specific(String),
+    Specific(Vec<String>),
 }
 
 #[derive(Debug, Clone)]
 enum ScenarioSelection {
     All,
     Specific(String),
+    Multiple(Vec<String>),
 }

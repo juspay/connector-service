@@ -301,18 +301,25 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 serde_json::from_value::<NexixpayRedirectPayload>(payload.peek().clone()).ok()
             })
             .and_then(|redirect_payload| redirect_payload.pa_res)
-            .map(|secret| secret.expose());
+            .map(|secret| secret.expose())
+            .filter(|value| !value.eq_ignore_ascii_case("notneeded"));
+
+        let authentication_value = authentication_data
+            .cavv
+            .as_ref()
+            .map(|c| c.peek().to_string());
 
         // Extract 3DS authentication data from authentication_data
         // IMPORTANT: NexiXPay /payment endpoint ONLY accepts PaRes and CAVV
         // Do NOT send eci or xid (causes 500 error)
-        let three_ds_auth_data = Some(NexixpayThreeDSAuthData {
-            three_d_s_auth_response: pa_res,
-            authentication_value: authentication_data
-                .cavv
-                .as_ref()
-                .map(|c| c.peek().to_string()),
-        });
+        let three_ds_auth_data = if pa_res.is_some() || authentication_value.is_some() {
+            Some(NexixpayThreeDSAuthData {
+                three_d_s_auth_response: pa_res,
+                authentication_value,
+            })
+        } else {
+            None
+        };
 
         // Build customer info with cardholder name and billing address
         let billing_address = item
@@ -375,8 +382,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         };
 
         // Build order data with customer_info
+        let connector_order_reference = item
+            .request
+            .merchant_order_id
+            .as_deref()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or(&item.resource_common_data.connector_request_reference_id);
+
         let order = NexixpayOrderData {
-            order_id: get_nexi_order_id(&item.resource_common_data.connector_request_reference_id)?,
+            order_id: get_nexi_order_id(connector_order_reference)?,
             amount: StringMinorUnitForConnector
                 .convert(item.request.minor_amount, item.request.currency)
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?,
@@ -1039,6 +1053,14 @@ pub struct NexixpayPreAuthenticateRequest {
     pub recurrence: Option<NexixpayRecurrence>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub action_type: Option<NexixpayPaymentRequestActionType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exemptions: Option<NexixpayExemptionType>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum NexixpayExemptionType {
+    ChallengeRequested,
 }
 
 #[derive(Debug, Serialize)]
@@ -1278,6 +1300,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             card,
             recurrence,
             action_type,
+            exemptions: Some(NexixpayExemptionType::ChallengeRequested),
         })
     }
 }
