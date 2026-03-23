@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2026.03.04.0-hotfix2
+
+### Features
+
+- **core:** Implement NTID flow for Decrypted Wallet Token and also Implement for checkout connector ([#668](https://github.com/juspay/connector-service/pull/668)) ([`fc03c97`](https://github.com/juspay/connector-service/commit/fc03c9734ef9fe844b0f17377688942007d59b73))
+
+**Full Changelog:** [`2026.03.04.0-hotfix1...2026.03.04.0-hotfix2`](https://github.com/juspay/connector-service/compare/2026.03.04.0-hotfix1...2026.03.04.0-hotfix2)
+
+- - -
+
 ## 2026.03.04.0-hotfix1
 
 ### Features
