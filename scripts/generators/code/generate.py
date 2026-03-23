@@ -463,6 +463,8 @@ def gen_javascript_grpc_example_flows() -> None:
 
 def gen_rust_grpc_client() -> None:
     """Generate _generated_grpc_client.rs from all proto RPCs (not filtered by FFI impl)."""
+    import subprocess
+
     all_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
 
     # Group all proto RPCs by service, preserving insertion order (sorted by service name).
@@ -481,6 +483,15 @@ def gen_rust_grpc_client() -> None:
         groups=groups,
         all_types=all_types,
     )
+
+    # Format with rustfmt so the file matches `cargo fmt` output exactly.
+    result = subprocess.run(
+        ["rustfmt", "--edition", "2021", str(RUST_GRPC_CLIENT_OUT)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(f"  warning: rustfmt failed: {result.stderr.strip()}")
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
