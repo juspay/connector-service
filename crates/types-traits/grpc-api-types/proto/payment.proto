@@ -739,6 +739,7 @@ enum Connector {
   FINIX = 111;
   PEACHPAYMENTS = 112;
   PPRO = 113;
+  FISERVCOMMERCEHUB = 114;
 }
 
 // Payment method types
