@@ -303,13 +303,11 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
     Ok(config)
 }
 
-fn print_non_sensitive_config(endpoint: &str, connector: &str, auth_type: &str) {
+fn print_non_sensitive_config(connector: &str) {
     println!("\n{}", "=".repeat(60));
     println!("{}", bold("gRPC Smoke Test"));
     println!("{}", "=".repeat(60));
-    println!("  Endpoint:  {}", endpoint);
     println!("  Connector: {}", connector);
-    println!("  Auth type: {}", auth_type);
     println!();
 }
 
@@ -324,7 +322,7 @@ async fn main() {
     });
 
     // Print only non-sensitive configuration fields.
-    print_non_sensitive_config(&config.endpoint, &config.connector, &config.auth_type);
+    print_non_sensitive_config(&config.connector);
 
     // ── Wait for server ───────────────────────────────────────────────────────
     println!("Waiting for gRPC server (up to 30s)…");
