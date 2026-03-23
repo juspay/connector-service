@@ -962,13 +962,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
                 // Parse the token string - expected format: "cst_xxx:mth_xxx"
                 let parts: Vec<&str> = token_str.split(':').collect();
-                if parts.len() != 2 {
-                    return Err(ConnectorError::InvalidDataFormat {
-                        field_name: "connector_mandate_id (expected format: customer_token:paymethod_token)",
+                match parts.as_slice() {
+                    [first, second] => (first.to_string(), second.to_string()),
+                    _ => {
+                        return Err(ConnectorError::InvalidDataFormat {
+                            field_name: "connector_mandate_id (expected format: customer_token:paymethod_token)",
+                        }
+                        .into());
                     }
-                    .into());
                 }
-                (parts[0].to_string(), parts[1].to_string())
             }
             _ => {
                 return Err(ConnectorError::MissingRequiredField {
