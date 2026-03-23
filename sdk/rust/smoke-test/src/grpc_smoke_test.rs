@@ -98,13 +98,21 @@ struct FlatCreds {
 
 impl From<FlatCreds> for GrpcConfig {
     fn from(c: FlatCreds) -> Self {
+        let api_secret = match c.api_secret {
+            Some(s) => Some(Secret::new(s)),
+            None => None,
+        };
+        let key1 = match c.key1 {
+            Some(s) => Some(Secret::new(s)),
+            None => None,
+        };
         GrpcConfig {
             endpoint: c.endpoint,
             connector: c.connector,
             auth_type: c.auth_type,
             api_key: Secret::new(c.api_key),
-            api_secret: c.api_secret.map(Secret::new),
-            key1: c.key1.map(Secret::new),
+            api_secret,
+            key1,
             merchant_id: c.merchant_id,
             tenant_id: c.tenant_id,
         }
@@ -289,11 +297,11 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
     if let Some(v) = args.api_key {
         config.api_key = Secret::new(v);
     }
-    if args.api_secret.is_some() {
-        config.api_secret = args.api_secret.map(Secret::new);
+    if let Some(secret) = args.api_secret {
+        config.api_secret = Some(Secret::new(secret));
     }
-    if args.key1.is_some() {
-        config.key1 = args.key1.map(Secret::new);
+    if let Some(key1) = args.key1 {
+        config.key1 = Some(Secret::new(key1));
     }
     if args.merchant_id.is_some() {
         config.merchant_id = args.merchant_id;
