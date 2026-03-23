@@ -1,0 +1,10 @@
+{
+  "connector": "Nuvei",
+  "payment_flow": "cards-3ds",
+  "context": "",
+  "urls": [
+    "https://docs.nuvei.com",
+    "https://developer.nuvei.com",
+    "https://docs.nuvei.com/api"
+  ]
+}

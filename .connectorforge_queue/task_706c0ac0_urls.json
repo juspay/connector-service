@@ -1,0 +1,10 @@
+{
+  "connector": "Worldpay",
+  "payment_flow": "cards-3ds",
+  "context": "",
+  "urls": [
+    "https://docs.worldpay.com",
+    "https://developer.worldpay.com",
+    "https://docs.worldpay.com/api"
+  ]
+}
