@@ -133,7 +133,7 @@ def load_probe_data(probe_path: Optional[Path]) -> dict[str, dict]:
         connector_names = manifest.get("connectors", [])
 
         # Load proto type map for wrapper-type detection (SecretString, CardNumberType, etc.)
-        proto_dir = probe_dir.parent.parent / "backend" / "grpc-api-types" / "proto"
+        proto_dir = probe_dir.parent.parent / "crates" / "types-traits" / "grpc-api-types" / "proto"
         if proto_dir.exists():
             snippets.load_proto_type_map(proto_dir)
 
