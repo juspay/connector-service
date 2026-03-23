@@ -6,7 +6,7 @@ Beyond the basic authorization and capture, the library handles complex payment 
 
 ## Payment Flows Overview
 
-Below are some sample real worls scenarious to try out quickly.
+Below are some sample real world scenarios to try out quickly.
 
 | Flow | Use Case | Key Operations |
 |------|----------|----------------|
@@ -21,7 +21,7 @@ Below are some sample real worls scenarious to try out quickly.
 
 ## Incremental Authorization
 
-Lets take hotels and car rentals. Such businesses will need to make an initial charge (like a security deposit) and then need to increase authorization amounts after the initial charge. When you use hyperswitch-prism the flow will work like this.
+Let's take hotels and car rentals. Such businesses will need to make an initial charge (like a security deposit) and then need to increase authorization amounts after the initial charge. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
 // 1. Initial authorization: $100 hold
@@ -47,7 +47,7 @@ See: [`incrementalAuthorization` API Reference](../../api-reference/services/pay
 
 ## Subscription / Recurring Payments
 
-Let take subnscription businesses like a email subscription or an AI subscription. Such businesses would want to store a payment method of a customer against a particular subscription plan, and charge it later:
+Let's take subscription businesses like an email subscription or an AI subscription. Such businesses would want to store a payment method of a customer against a particular subscription plan, and charge it later:
 
 ```javascript
 // 1. Set up recurring (store payment method)
@@ -68,7 +68,7 @@ See: [`setupRecurring`](../../api-reference/services/payment-service/setup-recur
 
 ## Partial Capture
 
-Lets take e-commerce businesses with multi-shipment orders. Such businesses may need to capture partial amounts as each shipment is fulfilled, rather than capturing the full authorized amount at once. When you use hyperswitch-prism the flow will work like this.
+Let's take e-commerce businesses with multi-shipment orders. Such businesses may need to capture partial amounts as each shipment is fulfilled, rather than capturing the full authorized amount at once. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
 // Authorized $100
@@ -94,7 +94,7 @@ See: [`capture`](../../api-reference/services/payment-service/capture.md)
 
 ## Void (Cancel Authorization)
 
-Lets take scenarios where a customer cancels an order before it ships, or inventory issues prevent fulfillment. Such businesses need to release the held funds without charging the customer. When you use hyperswitch-prism the flow will work like this.
+Let's take scenarios where a customer cancels an order before it ships, or inventory issues prevent fulfillment. Such businesses need to release the held funds without charging the customer. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
 // Customer cancels order before shipment
@@ -109,7 +109,7 @@ See: [`void`](../../api-reference/services/payment-service/void.md)
 
 ## Reverse (Refund Without Reference)
 
-Lets take scenarios where you need to refund a payment but don't have the original payment reference stored in your system. Such businesses may only have the connector transaction ID from a webhook or external system. When you use hyperswitch-prism the flow will work like this.
+Let's take scenarios where you need to refund a payment but don't have the original payment reference stored in your system. Such businesses may only have the connector transaction ID from a webhook or external system. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
 await client.payments.reverse({
@@ -122,7 +122,7 @@ See: [`reverse`](../../api-reference/services/payment-service/reverse.md)
 
 ## Webhook Handling
 
-Lets take businesses that need to process asynchronous payment events from multiple processors. Such businesses need a unified way to handle webhooks for payment status updates, refunds, disputes and more. When you use hyperswitch-prism the flow will work like this.
+Let's take businesses that need to process asynchronous payment events from multiple processors. Such businesses need a unified way to handle webhooks for payment status updates, refunds, disputes and more. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
 // Express route for webhooks
@@ -153,7 +153,7 @@ See: [`handle`](../../api-reference/services/event-service/handle.md)
 
 ## Dispute Handling
 
-Lets take scenarios where a customer disputes a charge with their bank or credit card company. Such businesses need to either accept the dispute and issue a refund, or defend it by providing evidence. When you use hyperswitch-prism the flow will work like this.
+Let's take scenarios where a customer disputes a charge with their bank or credit card company. Such businesses need to either accept the dispute and issue a refund, or defend it by providing evidence. When you use hyperswitch-prism the flow will work like this.
 
 ```javascript
 // Accept the dispute (refund immediately)
