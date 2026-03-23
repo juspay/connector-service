@@ -13,7 +13,7 @@ tracing = { workspace = true }
 once_cell = "1.19"
 chrono = "0.4.31"
 
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.11.24.0", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "02ed038e7492e3c1685ac6e229c97f96cac04712", package = "masking", default-features = false, features = ["alloc", "serde", "time"] }
 
 error-stack = "0.4.1"
 serde = { workspace = true }

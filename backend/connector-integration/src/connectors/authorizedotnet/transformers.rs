@@ -221,7 +221,7 @@ impl AuthorizedotnetRawCardNumber<DefaultPCIHolder> {
 
 impl AuthorizedotnetRawCardNumber<VaultTokenHolder> {
     pub fn from_token_string(token: String) -> Self {
-        Self(RawCardNumber(token))
+        Self(RawCardNumber(Secret::new(token)))
     }
 }
 

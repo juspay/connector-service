@@ -1017,7 +1017,7 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 [[package]]
 name = "common_enums"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "diesel",
  "masking",
@@ -1034,7 +1034,7 @@ dependencies = [
 [[package]]
 name = "common_utils"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "ammonia",
  "base64 0.22.1",
@@ -3508,7 +3508,7 @@ dependencies = [
 [[package]]
 name = "injector"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3936,7 +3936,7 @@ dependencies = [
 [[package]]
 name = "masking"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "bytes",
  "diesel",
@@ -5599,7 +5599,7 @@ dependencies = [
 [[package]]
 name = "router_derive"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "indexmap 2.11.1",
  "proc-macro2",
@@ -5612,7 +5612,7 @@ dependencies = [
 [[package]]
 name = "router_env"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "actix-web",
  "cargo_metadata 0.18.1",
@@ -6245,7 +6245,7 @@ checksum = "b7c388c1b5e93756d0c740965c41e8822f866621d41acbdf6336a6a168f8840c"
 [[package]]
 name = "smithy"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6256,7 +6256,7 @@ dependencies = [
 [[package]]
 name = "smithy-core"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=2025.11.24.0#19723f8c9c6c89057624061fef429f6f574dd358"
+source = "git+https://github.com/juspay/hyperswitch?rev=02ed038e7492e3c1685ac6e229c97f96cac04712#02ed038e7492e3c1685ac6e229c97f96cac04712"
 dependencies = [
  "proc-macro2",
  "serde",

@@ -41,5 +41,24 @@
           }
         }
       }
+    },
+    "vault_vgs": {
+      "vault_connector_type": "proxy",
+      "vault_connector_id": "vgs",
+      "metadata": {
+        "proxy_url": "https://USERNAME:PASSWORD@TENANT_ID.sandbox.verygoodproxy.com:8443",
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIID...base64...cert...\n-----END CERTIFICATE-----"
+      }
+    },
+    "vault_hyperswitch": {
+      "vault_connector_type": "transformation",
+      "vault_connector_id": "hyperswitch_vault",
+      "metadata": {
+        "vault_endpoint": "https://sandbox.hyperswitch.io/v2/proxy",
+        "vault_auth_data": {
+          "api_key": "test_hyperswitch_vault_api_key",
+          "api_secret": "test_hyperswitch_vault_profile_id"
+        }
+      }
     }
 }

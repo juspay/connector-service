@@ -171,6 +171,7 @@ impl DisputeService for Disputes {
                             common_enums::CallConnectorAction::Trigger,
                             None,
                             None,
+                            config.vault.as_ref(),
                         ),
                     )
                     .await
@@ -386,6 +387,7 @@ impl DisputeService for Disputes {
                             common_enums::CallConnectorAction::Trigger,
                             None,
                             None,
+                            config.vault.as_ref(),
                         ),
                     )
                     .await

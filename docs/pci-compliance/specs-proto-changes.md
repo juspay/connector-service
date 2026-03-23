@@ -1,6 +1,6 @@
-# Vault Configuration Implementation Spec
+# PCI Vault Integration - Implementation Spec
 
-> Configuration changes to support PCI vault providers (VGS, Evervault, Hyperswitch Vault, TokenEx, Basis Theory)
+> End-to-end implementation guide for PCI vault support in UCS (VGS, Evervault, Hyperswitch Vault, TokenEx, Basis Theory)
 
 ---
 
@@ -198,7 +198,7 @@ vault_proxy_override = { provider = "hyperswitch_vault", api_key = "...", profil
 
 ## Implementation Plan
 
-### Phase 1: Core Types (2-3 hours)
+### Phase 1: Core Types
 **Files:** `backend/domain_types/src/types.rs`
 
 1. Add `VaultConfig` enum with all provider variants
@@ -206,13 +206,13 @@ vault_proxy_override = { provider = "hyperswitch_vault", api_key = "...", profil
 3. Add environment enums (`VgsEnvironment`, `HyperswitchEnvironment`, `TokenExTokenScheme`)
 4. Update `ConnectorParams` with `enable_vault_proxy` and `vault_proxy_override`
 
-### Phase 2: Config Integration (30 min)
+### Phase 2: Config Integration
 **Files:** `backend/ucs_env/src/configs.rs`
 
 1. Add `vault: Option<VaultConfig>` to main `Config` struct
 2. Ensure config validation handles optional vault
 
-### Phase 3: Vault Resolution Logic (1-2 hours)
+### Phase 3: Vault Resolution Logic
 **Files:** `backend/domain_types/src/types.rs`
 
 1. Add helper method to resolve vault for a connector:
@@ -224,19 +224,225 @@ vault_proxy_override = { provider = "hyperswitch_vault", api_key = "...", profil
    }
    ```
 
-### Phase 4: HTTP Client Integration (3-4 hours)
+### Phase 4: HTTP Client Integration
 **Files:** TBD (likely `backend/connector_integration/` or `backend/external_services/`)
 
 1. Create vault-aware HTTP client wrapper
 2. For Network Proxy: Transform URLs (VGS) or use HTTP CONNECT (Evervault)
 3. For Application Proxy: Transform request body/headers
 
-### Phase 5: Validation & Tests (2-3 hours)
+### Phase 5: HTTP Client Integration
+**Files:** `backend/connector-integration/` or `backend/external-services/`
+
+1. Integrate `transform_connector_url()` into connector HTTP client's `base_url()` method
+2. Add vault header injection via `get_vault_headers()` before request dispatch
+3. Handle network proxy connection setup (Evervault HTTP CONNECT, VGS URL transformation)
+4. Error handling for vault connectivity failures
+
+**Design Decisions:**
+- Where to store vault-aware HTTP client (per-connector or shared service)
+- Timeout configuration for vault operations
+
+### Phase 6: Request/Response Transformation (Application Proxies)
+**Files:** Per-connector implementation
+
+**Description:** Application proxies require request body formatting with vault-specific syntax.
+
+**Examples:**
+- Hyperswitch Vault: `{{card_number}}`, `{{cvv}}` variables
+- Basis Theory: `{{card_number}}`, `{{token:bt_token_id}}` syntax
+- TokenEx: `{token:tokenex_token_id}` markers
+
+**Per-Connector Work:**
+1. Stripe (reference implementation)
+2. Checkout
+3. Adyen
+4. Cybersource
+5. (remaining connectors)
+
+### Phase 7: Validation & Tests
 **Files:** Various
 
 1. Add config validation on startup
 2. Unit tests for config deserialization
 3. Integration tests for vault routing
+4. Security audit (no secrets in logs)
+
+---
+
+## Testing Strategy
+
+### Overview
+
+Essential tests to ensure PCI vault integration is secure, correct, and backward compatible.
+
+---
+
+### 1. Unit Tests (PR #617) ✅
+
+**Location:** `backend/external-services/src/vault.rs`
+
+| Test | Purpose |
+|------|---------|
+| `test_vgs_url_transformation_sandbox` | VGS sandbox URL generation |
+| `test_vgs_url_transformation_production` | VGS production URL generation |
+| `test_vgs_url_with_query_params` | Query parameter preservation |
+| `test_is_network_proxy` | Proxy type classification |
+| `test_get_vault_headers_*` | Header generation for all 5 providers |
+
+**Run:** `cargo test --package external-services vault`
+
+---
+
+### 2. Configuration Tests
+
+**Config Deserialization:**
+```rust
+#[test]
+fn test_vault_config_parsing() {
+    let toml = r#"
+        [vault]
+        provider = "vgs"
+        tenant_id = "tnt123"
+        environment = "sandbox"
+    "#;
+    let config: Config = toml::from_str(toml).unwrap();
+    assert!(matches!(config.vault, Some(VaultConfig::Vgs(_))));
+}
+```
+
+**Backward Compatibility:**
+```rust
+#[test]
+fn test_backward_compat_no_vault() {
+    let config: Config = toml::from_str(r#"
+        [connectors.stripe]
+        base_url = "https://api.stripe.com"
+    "#).unwrap();
+    assert!(config.vault.is_none());
+    assert!(!config.connectors.stripe.enable_vault_proxy);
+}
+```
+
+**Validation Tests:**
+- Empty `tenant_id` should fail validation
+- Invalid `environment` value should error
+
+---
+
+### 3. Security Tests (Critical)
+
+**Secret Masking:**
+```rust
+#[test]
+fn test_vault_credentials_masked() {
+    let config = VaultConfig::HyperswitchVault(HyperswitchVaultConfig {
+        api_key: Secret::new("secret_key_123".to_string()),
+        // ...
+    });
+
+    let debug_output = format!("{:?}", config);
+    assert!(!debug_output.contains("secret_key_123"));
+    assert!(debug_output.contains("***"));
+}
+```
+
+**Log Inspection:**
+```bash
+# Ensure no sensitive data in logs
+cargo test 2>&1 | grep -E "(api_key|token|credential)" | wc -l
+# Expected: 0 (or only masked values)
+```
+
+---
+
+### 4. Connector Integration Tests (PR #2)
+
+**Mock Vault Server Tests:**
+```rust
+#[tokio::test]
+async fn test_stripe_via_vgs() {
+    let mock = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .and(path("/v1/payment_intents"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&mock)
+        .await;
+
+    let response = stripe_connector.authorize(payment_request).await;
+    assert!(response.is_success());
+}
+```
+
+**Test Matrix (Prioritized):**
+
+| Connector | VGS | Hyperswitch Vault | Priority |
+|-----------|-----|-------------------|----------|
+| Stripe | ✅ | ✅ | P0 |
+| Checkout | ⬜ | ⬜ | P1 |
+| Adyen | ⬜ | ⬜ | P2 |
+
+---
+
+### 5. End-to-End Scenarios
+
+```gherkin
+Feature: PCI Vault Integration
+
+  Scenario: Payment with VGS Network Proxy
+    Given merchant has VGS vault configured
+    When payment is authorized through Stripe connector
+    Then request URL should contain "verygoodproxy.com"
+    And card data should NOT appear in UCS logs
+    And payment should succeed
+
+  Scenario: Backward compatibility - no vault
+    Given merchant has no vault configured
+    When payment is authorized
+    Then request should go directly to PSP
+    And payment should succeed
+
+  Scenario: Vault configuration error
+    Given merchant has invalid vault configuration
+    When payment is attempted
+    Then error should indicate misconfiguration
+    And payment should NOT proceed
+```
+
+---
+
+### 6. Failure Mode Tests
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Vault timeout | Return 504, retryable error |
+| Vault auth failure | Return 401, no secrets in logs |
+| Invalid config | Clear error, fail-safe (no payment) |
+| TLS cert error | Clear validation error |
+
+---
+
+### CI/CD Checks
+
+```yaml
+# Essential pre-merge checks
+- cargo test --package external-services vault
+- cargo test --package ucs_env config
+- cargo test --test vault_integration
+- cargo clippy -- -D warnings
+```
+
+---
+
+### Pre-Merge Checklist
+
+- [ ] All unit tests pass
+- [ ] Config validation works
+- [ ] No secrets exposed in logs
+- [ ] Backward compatibility verified
+- [ ] Integration tests pass
+- [ ] Documentation updated
 
 ---
 

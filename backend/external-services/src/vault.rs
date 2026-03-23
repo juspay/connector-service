@@ -180,6 +180,86 @@ pub fn get_vault_aware_url(
     }
 }
 
+/// Bridge: Convert a TOML-based `VaultConfig` into the runtime `ExternalVaultProxyConfig`
+/// used by the injector call path. This enables the TOML config to serve as a fallback
+/// when no `x-external-vault-metadata` header is present in the gRPC request.
+///
+/// Currently supported:
+/// - `VaultConfig::Vgs` → `VaultConnectorType::Proxy` + `VgsMetadata`
+/// - `VaultConfig::HyperswitchVault` → `VaultConnectorType::Transformation` + `HyperswitchVaultMetadata`
+///
+/// Unsupported providers (Evervault, TokenEx, BasisTheory) return `None`.
+#[cfg(feature = "injector-client")]
+pub fn vault_config_to_external_proxy_config(
+    config: &VaultConfig,
+) -> Option<crate::service::ExternalVaultProxyConfig> {
+    use crate::service::{
+        ExternalVaultProxyConfig, ExternalVaultProxyMetadata, HyperswitchVaultMetadata,
+        VaultConnectorAuth, VaultConnectorType, VgsMetadata,
+    };
+    use url::Url;
+
+    match config {
+        VaultConfig::Vgs(vgs) => {
+            let environment_subdomain = match vgs.environment {
+                domain_types::types::VgsEnvironment::Sandbox => "sandbox",
+                domain_types::types::VgsEnvironment::Production => "live",
+            };
+            let proxy_url_str = format!(
+                "https://{}.{}.verygoodproxy.com",
+                vgs.tenant_id, environment_subdomain
+            );
+            let proxy_url = Url::parse(&proxy_url_str)
+                .inspect_err(|e| {
+                    tracing::warn!("Failed to parse VGS proxy URL: {:?}", e);
+                })
+                .ok()?;
+            let certificate = vgs
+                .ca_certificate
+                .clone()
+                .map(Secret::new)
+                .unwrap_or_else(|| Secret::new(String::new()));
+
+            Some(ExternalVaultProxyConfig {
+                vault_connector_type: VaultConnectorType::Proxy,
+                vault_connector_id: Some("vgs".to_string()),
+                metadata: ExternalVaultProxyMetadata::VgsMetadata(VgsMetadata {
+                    proxy_url,
+                    certificate,
+                }),
+            })
+        }
+        VaultConfig::HyperswitchVault(hsv) => {
+            let vault_endpoint = Url::parse(&hsv.proxy_url)
+                .inspect_err(|e| {
+                    tracing::warn!("Failed to parse HyperswitchVault endpoint URL: {:?}", e);
+                })
+                .ok()?;
+
+            Some(ExternalVaultProxyConfig {
+                vault_connector_type: VaultConnectorType::Transformation,
+                vault_connector_id: Some("hyperswitch_vault".to_string()),
+                metadata: ExternalVaultProxyMetadata::HyperswitchVaultMetadata(
+                    HyperswitchVaultMetadata {
+                        vault_endpoint,
+                        vault_auth_data: VaultConnectorAuth {
+                            api_key: hsv.api_key.clone(),
+                            // HyperswitchVault uses profile_id as the "secret" component
+                            api_secret: Secret::new(hsv.profile_id.clone()),
+                        },
+                    },
+                ),
+            })
+        }
+        VaultConfig::Evervault(_) | VaultConfig::TokenEx(_) | VaultConfig::BasisTheory(_) => {
+            tracing::warn!(
+                "TOML-to-ExternalVaultProxyConfig bridge not yet implemented for this vault provider"
+            );
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -274,7 +354,11 @@ mod tests {
 
         let headers = get_vault_headers(&config, None).unwrap();
         assert_eq!(headers.get("X-Evervault-App-ID").unwrap().peek(), "app456");
-        assert!(headers.get("Proxy-Authorization").unwrap().peek().starts_with("Bearer "));
+        assert!(headers
+            .get("Proxy-Authorization")
+            .unwrap()
+            .peek()
+            .starts_with("Bearer "));
     }
 
     #[test]
@@ -313,9 +397,13 @@ mod tests {
             proxy_id: Some("proxy_123".to_string()),
         });
 
-        let headers = get_vault_headers(&config, Some("https://api.stripe.com/v1/charges")).unwrap();
+        let headers =
+            get_vault_headers(&config, Some("https://api.stripe.com/v1/charges")).unwrap();
         assert_eq!(headers.get("BT-API-KEY").unwrap().peek(), "bt_key");
-        assert_eq!(headers.get("BT-PROXY-URL").unwrap().peek(), "https://api.stripe.com/v1/charges");
+        assert_eq!(
+            headers.get("BT-PROXY-URL").unwrap().peek(),
+            "https://api.stripe.com/v1/charges"
+        );
         assert_eq!(headers.get("BT-PROXY-ID").unwrap().peek(), "proxy_123");
     }
 
