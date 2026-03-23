@@ -4,7 +4,7 @@ SDK Code Generator — Generates type-safe client methods for all SDKs.
 
 This generator cross-references:
   1. services.proto (via protoc descriptor) → RPC definitions with types and docs
-  2. services/payments.rs → which flows have req_transformer implementations
+  2. services/*.rs → which flows have req_transformer implementations
 
 Generates flow methods (authorize, capture, refund, etc.) for each SDK,
 and the Rust FFI flow registration files.
@@ -32,7 +32,7 @@ SDK_ROOT = REPO_ROOT / "sdk"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 SERVICES_PROTO = REPO_ROOT / "crates/types-traits/grpc-api-types/proto/services.proto"
-FFI_SERVICES = REPO_ROOT / "crates/ffi/ffi/src/services/payments.rs"
+FFI_SERVICES_DIR = REPO_ROOT / "crates/ffi/ffi/src/services"
 PROTO_DESCRIPTOR = Path(__file__).parent / "services.desc"
 
 RUST_HANDLERS_OUT = REPO_ROOT / "crates/ffi/ffi/src/handlers/_generated_flow_registrations.rs"
@@ -102,59 +102,76 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
                     source_info[path] = location.leading_comments.strip()
 
         for svc_idx, service in enumerate(file_desc.service):
+            svc_name = service.name
+            if svc_name.endswith("Service"):
+                svc_prefix = to_snake_case(svc_name[:-7])
+            else:
+                svc_prefix = to_snake_case(svc_name)
+
             for method_idx, method in enumerate(service.method):
                 rpc_name = method.name
                 snake = to_snake_case(rpc_name)
+                full_snake = f"{svc_prefix}_{snake}"
+
+                # Extract type names (remove package prefix)
+                req_type = method.input_type.split('.')[-1]
+                res_type = method.output_type.split('.')[-1]
+
+                # Get doc comment if available
+                # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
+                path = (6, svc_idx, 2, method_idx)
+                comment = source_info.get(path, f"{service.name}.{rpc_name}")
+                # Normalize whitespace to single-line
+                comment = ' '.join(comment.split())
+
+                info = {
+                    "request": req_type,
+                    "response": res_type,
+                    "service": service.name,
+                    "rpc": rpc_name,
+                    "description": comment,
+                }
 
                 if snake not in rpcs:
-                    # Extract type names (remove package prefix)
-                    req_type = method.input_type.split('.')[-1]
-                    res_type = method.output_type.split('.')[-1]
-
-                    # Get doc comment if available
-                    # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
-                    path = (6, svc_idx, 2, method_idx)
-                    comment = source_info.get(path, f"{service.name}.{rpc_name}")
-                    # Normalize whitespace to single-line
-                    comment = ' '.join(comment.split())
-
-                    rpcs[snake] = {
-                        "request": req_type,
-                        "response": res_type,
-                        "service": service.name,
-                        "rpc": rpc_name,
-                        "description": comment,
-                    }
+                    rpcs[snake] = info
+                if full_snake not in rpcs:
+                    rpcs[full_snake] = info
 
     return rpcs
 
 
-def parse_service_flows(service_file: Path) -> set[str]:
+def parse_service_flows(services_dir: Path) -> set[str]:
     """
-    Scan services/payments.rs for every req_transformer! invocation.
+    Scan all .rs files in services directory for every req_transformer! invocation.
     Captures the flow name from `fn_name: {flow}_req_transformer`.
     """
-    text = service_file.read_text()
-    return {
-        m.group(1)
-        for m in re.finditer(
-            r"fn_name:\s*(\w+)_req_transformer\b", text
+    flows = set()
+    for f in services_dir.glob("*.rs"):
+        text = f.read_text()
+        flows.update(
+            m.group(1)
+            for m in re.finditer(
+                r"fn_name:\s*(\w+)_req_transformer\b", text
+            )
         )
-    }
+    return flows
 
 
-def parse_single_flows(service_file: Path) -> set[str]:
+def parse_single_flows(services_dir: Path) -> set[str]:
     """
-    Scan services/payments.rs for hand-written single-step transformers.
+    Scan all .rs files in services directory for hand-written single-step transformers.
     These are `pub fn {flow}_transformer` functions that are NOT req/res macros —
     they take the request directly and return the response without an HTTP round-trip
     (e.g. webhook processing via `handle_transformer`).
     """
-    text = service_file.read_text()
-    return {
-        m.group(1)
-        for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE)
-    }
+    flows = set()
+    for f in services_dir.glob("*.rs"):
+        text = f.read_text()
+        flows.update(
+            m.group(1)
+            for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE)
+        )
+    return flows
 
 
 def discover_flows() -> tuple[list[dict], list[dict]]:
@@ -164,14 +181,14 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
     Standard flows use req+HTTP+res; single flows call the transformer directly.
     """
     proto_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
-    service_flows = parse_service_flows(FFI_SERVICES)
-    single_flow_names = parse_single_flows(FFI_SERVICES)
+    service_flows = parse_service_flows(FFI_SERVICES_DIR)
+    single_flow_names = parse_single_flows(FFI_SERVICES_DIR)
 
     flows = []
     for flow in sorted(service_flows):
         if flow not in proto_rpcs:
             print(
-                f"  WARNING: '{flow}_req_transformer' exists in services/payments.rs but has no matching RPC in services.proto",
+                f"  WARNING: '{flow}_req_transformer' exists in services/*.rs but has no matching RPC in services.proto",
                 file=sys.stderr,
             )
             continue
@@ -181,7 +198,7 @@ def discover_flows() -> tuple[list[dict], list[dict]]:
     for flow in sorted(single_flow_names):
         if flow not in proto_rpcs:
             print(
-                f"  WARNING: '{flow}_transformer' exists in services/payments.rs but has no matching RPC in services.proto",
+                f"  WARNING: '{flow}_transformer' exists in services/*.rs but has no matching RPC in services.proto",
                 file=sys.stderr,
             )
             continue
@@ -371,7 +388,7 @@ def gen_rust_ffi_flows(flows: list[dict]) -> None:
 def main() -> None:
     import argparse
     parser = argparse.ArgumentParser(
-        description="SDK codegen — regenerate SDK clients from services.proto ∩ services/payments.rs"
+        description="SDK codegen — regenerate SDK clients from services.proto ∩ services/*.rs"
     )
 
     parser.add_argument(
@@ -385,7 +402,7 @@ def main() -> None:
     ensure_descriptor_exists()
 
     print(f"Parsing: {SERVICES_PROTO.relative_to(REPO_ROOT)}")
-    print(f"Parsing: {FFI_SERVICES.relative_to(REPO_ROOT)}")
+    print(f"Parsing: {FFI_SERVICES_DIR.relative_to(REPO_ROOT)}/*.rs")
     print()
 
     flows, single_flows = discover_flows()

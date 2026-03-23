@@ -37,13 +37,11 @@ use grpc_api_types::payments::{
     PaymentServiceSetupRecurringResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
+    PayoutServiceCreateRequest,
+    PayoutServiceCreateResponse,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RefundResponse,
-};
-use grpc_api_types::payouts::{
-    PayoutServiceCreateRequest,
-    PayoutServiceCreateResponse,
 };
 use crate::services::payments::{
     accept_req_transformer, accept_res_transformer,
@@ -57,6 +55,7 @@ use crate::services::payments::{
     create_session_token_req_transformer, create_session_token_res_transformer,
     defend_req_transformer, defend_res_transformer,
     get_req_transformer, get_res_transformer,
+    payout_create_req_transformer, payout_create_res_transformer,
     post_authenticate_req_transformer, post_authenticate_res_transformer,
     pre_authenticate_req_transformer, pre_authenticate_res_transformer,
     refund_req_transformer, refund_res_transformer,
@@ -65,9 +64,6 @@ use crate::services::payments::{
     submit_evidence_req_transformer, submit_evidence_res_transformer,
     tokenize_req_transformer, tokenize_res_transformer,
     void_req_transformer, void_res_transformer,
-};
-use crate::services::payouts::{
-    payout_create_req_transformer, payout_create_res_transformer,
 };
 
 // accept: DisputeService.Accept — Concede dispute and accepts chargeback loss. Acknowledges liability and stops dispute defense process when evidence is insufficient.
@@ -92,6 +88,8 @@ impl_flow_handlers!(create_session_token, MerchantAuthenticationServiceCreateSes
 impl_flow_handlers!(defend, DisputeServiceDefendRequest, DisputeServiceDefendResponse, defend_req_transformer, defend_res_transformer);
 // get: PaymentService.Get — Retrieve current payment status from the payment processor. Enables synchronization between your system and payment processors for accurate state tracking.
 impl_flow_handlers!(get, PaymentServiceGetRequest, PaymentServiceGetResponse, get_req_transformer, get_res_transformer);
+// payout_create: PayoutService.Create — Creates a payout.
+impl_flow_handlers!(payout_create, PayoutServiceCreateRequest, PayoutServiceCreateResponse, payout_create_req_transformer, payout_create_res_transformer);
 // post_authenticate: PaymentMethodAuthenticationService.PostAuthenticate — Validate authentication results with the issuing bank. Processes bank's authentication decision to determine if payment can proceed.
 impl_flow_handlers!(post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, post_authenticate_req_transformer, post_authenticate_res_transformer);
 // pre_authenticate: PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
@@ -108,6 +106,3 @@ impl_flow_handlers!(submit_evidence, DisputeServiceSubmitEvidenceRequest, Disput
 impl_flow_handlers!(tokenize, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse, tokenize_req_transformer, tokenize_res_transformer);
 // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 impl_flow_handlers!(void, PaymentServiceVoidRequest, PaymentServiceVoidResponse, void_req_transformer, void_res_transformer);
-
-// create_payout: PayoutService.Create — Create a payout.
-impl_flow_handlers!(create_payout, PayoutServiceCreateRequest, PayoutServiceCreateResponse, payout_create_req_transformer, payout_create_res_transformer);
