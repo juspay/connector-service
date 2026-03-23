@@ -85,7 +85,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .response
             .parse_struct("FinixErrorResponse")
             .change_context(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
         )?;
 
         with_error_response_body!(event_builder, response);

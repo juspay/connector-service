@@ -252,6 +252,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, FCD, PaymentsAuthorizeData<T>, Res>,
             bytes: bytes::Bytes,
+            status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
             if is_upi_collect_flow(&req.request) {
                 // For UPI collect flows, we need to return base64 decoded response
@@ -315,7 +316,7 @@ macros::macro_connector_implementation!(
             let response: PayuSyncResponse = res
                 .response
                 .parse_struct("PayU Sync ErrorResponse")
-                .change_context(ConnectorResponseError::response_handling_failed(None))?;
+                .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
 
             // Check if PayU returned error status (0 = error)
             if response.status == Some(0) {
@@ -393,7 +394,7 @@ macros::macro_connector_implementation!(
             let response: PayuPaymentResponse = res
                 .response
                 .parse_struct("PayU ErrorResponse")
-                        .change_context(ConnectorResponseError::response_handling_failed(None))?;
+                        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
 
             // Check if this is an error response
             if response.error.is_some() {

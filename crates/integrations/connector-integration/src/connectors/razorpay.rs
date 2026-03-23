@@ -261,7 +261,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayErrorResponse = res
             .response
             .parse_struct("ErrorResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
 
         with_error_response_body!(event_builder, response);
 
@@ -430,7 +430,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             res.status_code,
                             res.response.to_vec(),
                         ))
-                        .change_context(ConnectorResponseError::response_handling_failed(None))
+                        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
                     }
                     Err(_) => {
                         // Fall back to regular payment response
@@ -438,7 +438,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             .response
                             .parse_struct("RazorpayPaymentResponse")
                             .change_context(
-                                ConnectorResponseError::response_deserialization_failed(None),
+                                ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
                             )?;
 
                         with_response_body!(event_builder, response);
@@ -450,7 +450,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                             false,
                             data.request.payment_method_type,
                         ))
-                        .change_context(ConnectorResponseError::response_handling_failed(None))
+                        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
                     }
                 }
             }
@@ -459,7 +459,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 let response: razorpay::RazorpayResponse = res
                     .response
                     .parse_struct("RazorpayPaymentResponse")
-                    .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?;
+                    .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
 
                 with_response_body!(event_builder, response);
 
@@ -471,7 +471,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     false,
                     data.request.payment_method_type,
                 ))
-                .change_context(ConnectorResponseError::response_handling_failed(None))
+                .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
             }
         }
     }
@@ -574,7 +574,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseError::response_handling_failed(None))
+        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(
@@ -686,12 +686,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: razorpay::RazorpayOrderResponse = res
             .response
             .parse_struct("RazorpayOrderResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
 
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, false))
-            .change_context(ConnectorResponseError::response_handling_failed(None))
+            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(
@@ -767,7 +767,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(ConnectorResponseError::response_handling_failed(None))
+            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(
@@ -955,7 +955,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(ConnectorResponseError::response_handling_failed(None))
+            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(
@@ -1054,7 +1054,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(ConnectorResponseError::response_handling_failed(None))
+            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(

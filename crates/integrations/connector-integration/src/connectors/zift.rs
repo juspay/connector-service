@@ -411,14 +411,15 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
+            status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
             let url_encoded_response: Value = serde_urlencoded::from_bytes(&bytes)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                    .change_context(ConnectorResponseError::response_deserialization_failed(Some(status_code)))
                     .attach_printable("Failed to parse URL-encoded response from Zift")
                     .into_request_err()?;
 
             let json_bytes = serde_json::to_vec(&url_encoded_response)
-                    .change_context(ConnectorResponseError::response_deserialization_failed(None))
+                    .change_context(ConnectorResponseError::response_deserialization_failed(Some(status_code)))
                     .attach_printable("Failed to convert URL-encoded response to JSON")
                     .into_request_err()?;
 

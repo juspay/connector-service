@@ -377,7 +377,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: adyen::AdyenErrorResponse = res
             .response
             .parse_struct("ErrorResponse")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
 
         with_error_response_body!(event_builder, response);
 

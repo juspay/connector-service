@@ -437,7 +437,7 @@ macros::macro_connector_implementation!(
         let response: volt::VoltAuthErrorResponse = res
             .response
             .parse_struct("VoltAuthErrorResponse")
-            .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+            .change_context(ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
 
          with_error_response_body!(event_builder, response);
 

@@ -428,7 +428,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.status_code,
                     res.response.to_vec(),
                 ))
-                .change_context(ConnectorResponseError::response_handling_failed(None))
+                .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
             }
             Err(_) => {
                 // Fall back to regular payment response
@@ -450,7 +450,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     res.status_code,
                     res.response.to_vec(),
                 ))
-                .change_context(ConnectorResponseError::response_handling_failed(None))
+                .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
             }
         }
     }
@@ -741,7 +741,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseError::response_handling_failed(None))
+        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(
@@ -840,7 +840,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseError::response_handling_failed(None))
+        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(
@@ -932,7 +932,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             res.status_code,
             res.response.to_vec(),
         ))
-        .change_context(ConnectorResponseError::response_handling_failed(None))
+        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(

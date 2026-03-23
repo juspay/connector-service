@@ -439,7 +439,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let response: transformers::ResponseMessages = res
             .response
             .parse_struct("ResponseMessages")
-            .map_err(|_| ConnectorResponseError::response_deserialization_failed(None))?;
+            .map_err(|_| ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
 
         with_response_body!(event_builder, response);
 
@@ -537,6 +537,7 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
+            status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorResponseError> {
             // Check if the bytes begin with UTF-8 BOM (EF BB BF)
             let encoding = encoding_rs::UTF_8;

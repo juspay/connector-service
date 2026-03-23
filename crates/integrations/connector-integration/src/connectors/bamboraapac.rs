@@ -308,12 +308,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Bamb
         &self,
         _data: &RouterDataV2<F, FCD, Req, Res>,
         response_bytes: bytes::Bytes,
+        status_code: u16,
     ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
         use error_stack::ResultExt;
 
         let response_str = String::from_utf8(response_bytes.to_vec())
             .change_context(ConnectorResponseError::response_deserialization_failed(
-                None,
+                Some(status_code),
             ))
             .into_request_err()?;
 

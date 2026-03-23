@@ -122,19 +122,20 @@ pub trait BridgeRequestResponse: Send + Sync {
     fn response(
         &self,
         bytes: bytes::Bytes,
+        status_code: u16,
     ) -> CustomResult<Self::ResponseBody, ConnectorResponseError>
     where
         Self::ResponseBody: for<'a> serde::Deserialize<'a>,
     {
         if bytes.is_empty() {
             serde_json::from_str("{}").change_context(
-                ConnectorResponseError::response_deserialization_failed(None),
+                ConnectorResponseError::response_deserialization_failed(Some(status_code)),
             )
         } else {
             bytes
                 .parse_struct(std::any::type_name::<Self::ResponseBody>())
                 .change_context(ConnectorResponseError::response_deserialization_failed(
-                    None,
+                    Some(status_code),
                 ))
         }
     }
@@ -142,6 +143,7 @@ pub trait BridgeRequestResponse: Send + Sync {
     fn router_data(
         &self,
         response: ResponseRouterDataType<Self::ConnectorInputData, Self::ResponseBody>,
+        status_code: u16,
     ) -> CustomResult<RouterDataType<Self::ConnectorInputData>, ConnectorResponseError>
     where
         RouterDataType<Self::ConnectorInputData>: TryFrom<
@@ -150,7 +152,7 @@ pub trait BridgeRequestResponse: Send + Sync {
         >,
     {
         RouterDataType::<Self::ConnectorInputData>::try_from(response)
-            .change_context(ConnectorResponseError::response_handling_failed(None))
+            .change_context(ConnectorResponseError::response_handling_failed(Some(status_code)))
     }
 }
 
@@ -321,21 +323,21 @@ macro_rules! expand_fn_handle_response {
 
             // Apply preprocessing if specified in the macro
             let response_bytes = self
-                .preprocess_response_bytes(data, res.response)
+                .preprocess_response_bytes(data, res.response, res.status_code)
                 .change_context(
                     macro_types::ConnectorResponseError::response_handling_failed(Some(
                         res.status_code,
                     )),
                 )?;
 
-            let response_body = bridge.response(response_bytes)?;
+            let response_body = bridge.response(response_bytes, res.status_code)?;
             event_builder.map(|i| i.set_connector_response(&response_body));
             let response_router_data = ResponseRouterData {
                 response: response_body,
                 router_data: data.clone(),
                 http_code: res.status_code,
             };
-            let result = bridge.router_data(response_router_data)?;
+            let result = bridge.router_data(response_router_data, res.status_code)?;
             Ok(result)
         }
     };
@@ -352,14 +354,14 @@ macro_rules! expand_fn_handle_response {
             macro_types::ConnectorResponseError,
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
-            let response_body = bridge.response(res.response)?;
+            let response_body = bridge.response(res.response, res.status_code)?;
             event_builder.map(|i| i.set_connector_response(&response_body));
             let response_router_data = ResponseRouterData {
                 response: response_body,
                 router_data: data.clone(),
                 http_code: res.status_code,
             };
-            let result = bridge.router_data(response_router_data)?;
+            let result = bridge.router_data(response_router_data, res.status_code)?;
             Ok(result)
         }
     };
@@ -861,20 +863,21 @@ macro_rules! impl_templating_mixed {
                 fn response(
                     &self,
                     bytes: bytes::Bytes,
+                    status_code: u16,
                 ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorResponseError> {
                     use common_utils::ext_traits::XmlExt;
                     use error_stack::ResultExt;
 
                     if bytes.is_empty() {
                         return Err(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(None)
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code))
                                 .into(),
                         );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
                         )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
@@ -882,7 +885,7 @@ macro_rules! impl_templating_mixed {
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
                         )
                         .attach_printable("Failed to parse XML response")
                 }
@@ -911,20 +914,21 @@ macro_rules! impl_templating_mixed {
                 fn response(
                     &self,
                     bytes: bytes::Bytes,
+                    status_code: u16,
                 ) -> CustomResult<Self::ResponseBody, domain_types::errors::ConnectorResponseError> {
                     use common_utils::ext_traits::XmlExt;
                     use error_stack::ResultExt;
 
                     if bytes.is_empty() {
                         return Err(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(None)
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code))
                                 .into(),
                         );
                     }
 
                     let response_str = String::from_utf8(bytes.to_vec())
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
                         )
                         .attach_printable("Failed to convert response bytes to UTF-8 string")?;
 
@@ -932,7 +936,7 @@ macro_rules! impl_templating_mixed {
                         .as_str()
                         .parse_xml::<Self::ResponseBody>()
                         .change_context(
-                            domain_types::errors::ConnectorResponseError::response_handling_failed(None),
+                            domain_types::errors::ConnectorResponseError::response_handling_failed(Some(status_code)),
                         )
                         .attach_printable("Failed to parse XML response")
                 }

@@ -327,7 +327,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             }
         } else {
             res.response.parse_struct("ErrorResponse").change_context(
-                ConnectorResponseError::response_deserialization_failed(None),
+                ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
             )?
         };
 

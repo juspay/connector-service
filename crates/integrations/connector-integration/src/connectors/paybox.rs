@@ -172,6 +172,7 @@ macros::create_all_prerequisites!(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
+            status_code: u16,
         ) -> CustomResult<bytes::Bytes, ConnectorRequestError> {
             // Paybox can return responses in two formats:
             // 1. JSON-wrapped: {"response": "URLENCODED_DATA"}
@@ -210,7 +211,7 @@ macros::create_all_prerequisites!(
                 }
                 Err(e) => {
                     return Err(report_response_as_request(
-                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
+                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(Some(status_code)))
                             .attach_printable(format!("Failed to parse URL-encoded response from Paybox: {:?}", e)),
                     ));
                 }
@@ -222,7 +223,7 @@ macros::create_all_prerequisites!(
                 }
                 Err(e) => {
                     return Err(report_response_as_request(
-                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(None))
+                        error_stack::Report::from(ConnectorResponseError::response_deserialization_failed(Some(status_code)))
                             .attach_printable(format!("Failed to convert URL-encoded response to JSON: {:?}", e)),
                     ));
                 }

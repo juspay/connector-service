@@ -476,7 +476,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorResponseError,
     > {
         let response = String::from_utf8(res.response.to_vec()).change_context(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
         )?;
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
@@ -500,7 +500,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(None))?;
+        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
 
         Ok(router_data)
     }
@@ -657,7 +657,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         ConnectorResponseError,
     > {
         let response = String::from_utf8(res.response.to_vec()).change_context(
-            ConnectorResponseError::response_deserialization_failed(None),
+            ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
         )?;
         let response_data = html_escape::decode_html_entities(&response).to_ascii_lowercase();
         let response = response_data
@@ -677,7 +677,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 router_data: data.clone(),
                 http_code: res.status_code,
             })
-            .change_context(ConnectorResponseError::response_handling_failed(None))?;
+            .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))?;
 
         Ok(router_data)
     }

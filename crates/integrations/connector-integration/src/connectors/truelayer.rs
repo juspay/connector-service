@@ -544,7 +544,7 @@ macros::macro_connector_implementation!(
             let response: truelayer::TruelayerAccessTokenErrorResponse = res
                 .response
                 .parse_struct("TruelayerAccessTokenErrorResponse")
-                .change_context(ConnectorResponseError::response_deserialization_failed(None))?;
+                .change_context(ConnectorResponseError::response_deserialization_failed(Some(res.status_code)))?;
 
             with_error_response_body!(event_builder, response);
 
@@ -939,7 +939,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > {
         let response: truelayer::Jwks =
             res.response.parse_struct("truelayer Jwks").change_context(
-                ConnectorResponseError::response_deserialization_failed(None),
+                ConnectorResponseError::response_deserialization_failed(Some(res.status_code)),
             )?;
         if let Some(event) = event_builder {
             event.set_connector_response(&response)
@@ -950,7 +950,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             router_data: data.clone(),
             http_code: res.status_code,
         })
-        .change_context(ConnectorResponseError::response_handling_failed(None))
+        .change_context(ConnectorResponseError::response_handling_failed(Some(res.status_code)))
     }
 
     fn get_error_response_v2(
