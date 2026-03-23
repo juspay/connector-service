@@ -2,9 +2,9 @@ use common_utils::{ext_traits::OptionExt, request::Method, FloatMajorUnit, Strin
 use domain_types::{
     connector_flow::{Authorize, Capture, RepeatPayment},
     connector_types::{
-        ConnectorMandateReferenceId, MandateReferenceId, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId,
+        MandateReferenceId, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
