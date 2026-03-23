@@ -429,6 +429,10 @@ sdk/java/smoke-test/gradle*
 sdk/java/bin
 
 artifacts/
+sdk/tests/client_sanity/artifacts/
+
+.claude
+scripts/generators/code/services.desc
 
 # Local Netlify folder
 .netlify

@@ -1,7 +1,44 @@
 {
   "connector": "wellsfargo",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
+      "Ach": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "Affirm": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "Afterpay": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "ApplePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+      },
+      "Bacs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "Becs": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "Blik": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
       "Card": {
         "status": "supported",
         "proto_request": {
@@ -21,71 +58,61 @@
           },
           "capture_method": "AUTOMATIC",
           "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
+            "email": "test@example.com"
           },
           "address": {
-            "shipping_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            },
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
-          "return_url": "https://example.com/return",
-          "webhook_url": "https://example.com/webhook",
-          "complete_authorize_url": "https://example.com/complete",
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
-          }
+          "return_url": "https://example.com/return"
         },
         "sample": {
           "url": "https://apitest.cybersource.com/pts/v2/payments/",
           "method": "Post",
           "headers": {
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"2okHXi6gxjsvu8wnDRZ1WEYxWwMS7fd8AErOuNhGlnQ=\"",
-            "via": "HyperSwitch",
-            "v-c-merchant-id": "probe_merchant",
-            "host": "apitest.cybersource.com",
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
-            "digest": "SHA-256=fqTqk9B35tE4M8OYke80Qn0oB1T/YsaII4tdFksY40Y=",
-            "date": "2026-03-13 0:10:34.030064 +00:00:00"
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
-          "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":null,\"commerceIndicator\":\"internet\",\"capture\":true,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":\"001\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"locality\":\"Seattle\",\"administrativeArea\":\"WA\",\"postalCode\":\"98101\",\"country\":\"US\",\"email\":\"test@example.com\",\"phoneNumber\":\"+14155552671\"}},\"clientReferenceInformation\":{\"code\":\"probe_txn_001\"}}"
+          "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":null,\"commerceIndicator\":\"internet\",\"capture\":true,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":\"001\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":null,\"lastName\":null,\"address1\":null,\"locality\":null,\"administrativeArea\":null,\"postalCode\":null,\"country\":null,\"email\":\"test@example.com\"}},\"clientReferenceInformation\":{\"code\":\"probe_txn_001\"}}"
         }
+      },
+      "GooglePay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+      },
+      "Ideal": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "Klarna": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "PaypalRedirect": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+      },
+      "SamsungPay": {
+        "status": "not_implemented",
+        "error": "This step has not been implemented for: Payment method supported by connector but not yet implemented"
+      },
+      "Sepa": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
+      },
+      "UpiCollect": {
+        "status": "not_supported",
+        "error": "Payment method is not supported by Wellsfargo"
       }
     },
     "capture": {
@@ -103,23 +130,59 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/captures",
           "method": "Post",
           "headers": {
-            "content-type": "application/json;charset=utf-8",
             "accept": "application/hal+json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036051 +00:00:00",
-            "digest": "SHA-256=eaXs1anWth/S4PUGfo5bPj4B+HGHQrpxdg1deELl/RI=",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"yXMVwfBcc/ESLZIPFEAedorsJZUsW1rZERAzIKE6hcU=\"",
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
-            "via": "HyperSwitch",
-            "host": "apitest.cybersource.com"
+            "via": "HyperSwitch"
           },
           "body": "{\"processingInformation\":{\"actionList\":null,\"actionTokenTypes\":null,\"authorizationOptions\":null,\"commerceIndicator\":\"internet\",\"capture\":null,\"captureOptions\":{\"captureSequenceNumber\":1,\"totalCaptureCount\":1},\"paymentSolution\":null},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"billTo\":null},\"clientReferenceInformation\":{\"code\":\"probe_capture_001\"},\"merchantDefinedInformation\":null}"
         }
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_session_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -130,16 +193,31 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001",
           "method": "Get",
           "headers": {
-            "content-type": "application/json;charset=utf-8",
-            "via": "HyperSwitch",
-            "v-c-merchant-id": "probe_merchant",
-            "host": "apitest.cybersource.com",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"Aci8Xs1QAgWjeisChpNII+yPA+p6OHViuAf+faS9Eqs=\"",
             "accept": "application/hal+json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036625 +00:00:00"
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": null
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "refund": {
@@ -159,17 +237,22 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/refunds",
           "method": "Post",
           "headers": {
-            "digest": "SHA-256=7BHdZNNrtfkeSE7pxmXUWdKP3ayikeOY2qn4mlBmToY=",
-            "v-c-merchant-id": "probe_merchant",
-            "via": "HyperSwitch",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"/+RX8i9Iwmf/aCUMIH2qU8tDS/Iv+moVrlWBqT6x618=\"",
-            "host": "apitest.cybersource.com",
             "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036262 +00:00:00"
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"}},\"clientReferenceInformation\":{\"code\":\"probe_refund_001\"}}"
         }
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "setup_recurring": {
@@ -191,25 +274,10 @@
             }
           },
           "customer": {
-            "name": "John Doe",
-            "email": "test@example.com",
-            "id": "cust_probe_123",
-            "phone_number": "4155552671",
-            "phone_country_code": "+1"
+            "email": "test@example.com"
           },
           "address": {
-            "billing_address": {
-              "first_name": "John",
-              "last_name": "Doe",
-              "line1": "123 Main St",
-              "city": "Seattle",
-              "state": "WA",
-              "zip_code": "98101",
-              "country_alpha2_code": "US",
-              "email": "test@example.com",
-              "phone_number": "4155552671",
-              "phone_country_code": "+1"
-            }
+            "billing_address": {}
           },
           "auth_type": "NO_THREE_DS",
           "enrolled_for_3ds": false,
@@ -219,44 +287,33 @@
           "customer_acceptance": {
             "acceptance_type": "OFFLINE",
             "accepted_at": 0
-          },
-          "browser_info": {
-            "color_depth": 24,
-            "screen_height": 900,
-            "screen_width": 1440,
-            "java_enabled": false,
-            "java_script_enabled": true,
-            "language": "en-US",
-            "time_zone_offset_minutes": -480,
-            "accept_header": "application/json",
-            "user_agent": "Mozilla/5.0 (probe-bot)",
-            "accept_language": "en-US,en;q=0.9",
-            "ip_address": "1.2.3.4"
           }
         },
         "sample": {
           "url": "https://apitest.cybersource.com/pts/v2/payments",
           "method": "Post",
           "headers": {
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"VJabIXdLTWr1rMh9HLXtcSYXoG7c7k1p6wXwHmpRUP0=\"",
-            "digest": "SHA-256=OxpIeHwDOJW59BRYZJMPvdvutkBxLwU1MIFqXLzqyZk=",
-            "content-type": "application/json;charset=utf-8",
-            "date": "2026-03-13 0:10:34.036788 +00:00:00",
-            "via": "HyperSwitch",
             "accept": "application/hal+json;charset=utf-8",
+            "content-type": "application/json;charset=utf-8",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
+            "host": "apitest.cybersource.com",
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
             "v-c-merchant-id": "probe_merchant",
-            "host": "apitest.cybersource.com"
+            "via": "HyperSwitch"
           },
-          "body": "{\"processingInformation\":{\"actionList\":[\"TOKEN_CREATE\"],\"actionTokenTypes\":[\"paymentInstrument\",\"customer\"],\"authorizationOptions\":{\"initiator\":{\"type\":\"customer\",\"credentialStoredOnFile\":true,\"storedCredentialUsed\":null},\"merchantInitiatedTransaction\":null},\"commerceIndicator\":\"internet\",\"capture\":false,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":\"001\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"0\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":\"John\",\"lastName\":\"Doe\",\"address1\":\"123 Main St\",\"locality\":\"Seattle\",\"administrativeArea\":\"WA\",\"postalCode\":\"98101\",\"country\":\"US\",\"email\":\"test@example.com\",\"phoneNumber\":\"+14155552671\"}},\"clientReferenceInformation\":{\"code\":\"probe_mandate_001\"}}"
+          "body": "{\"processingInformation\":{\"actionList\":[\"TOKEN_CREATE\"],\"actionTokenTypes\":[\"paymentInstrument\",\"customer\"],\"authorizationOptions\":{\"initiator\":{\"type\":\"customer\",\"credentialStoredOnFile\":true,\"storedCredentialUsed\":null},\"merchantInitiatedTransaction\":null},\"commerceIndicator\":\"internet\",\"capture\":false,\"captureOptions\":null,\"paymentSolution\":null},\"paymentInformation\":{\"card\":{\"number\":\"4111111111111111\",\"expirationMonth\":\"03\",\"expirationYear\":\"2030\",\"securityCode\":\"737\",\"type\":\"001\"}},\"orderInformation\":{\"amountDetails\":{\"totalAmount\":\"0\",\"currency\":\"USD\"},\"billTo\":{\"firstName\":null,\"lastName\":null,\"address1\":null,\"locality\":null,\"administrativeArea\":null,\"postalCode\":null,\"country\":null,\"email\":\"test@example.com\"}},\"clientReferenceInformation\":{\"code\":\"probe_mandate_001\"}}"
         }
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "void": {
       "default": {
         "status": "supported",
-        "required_fields": [
-          "amount"
-        ],
         "proto_request": {
           "merchant_void_id": "probe_void_001",
           "connector_transaction_id": "probe_connector_txn_001",
@@ -269,14 +326,14 @@
           "url": "https://apitest.cybersource.com/pts/v2/payments/probe_connector_txn_001/reversals",
           "method": "Post",
           "headers": {
-            "date": "2026-03-13 0:10:34.03649 +00:00:00",
+            "accept": "application/hal+json;charset=utf-8",
             "content-type": "application/json;charset=utf-8",
-            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"NzBGHzQ8M/5HBIWxTUgUQyXgAerw7ggRYX0kDBNq8tE=\"",
-            "digest": "SHA-256=nSCdeq2Pt2omW+TfIaK0ccF3TrWcvuQk+jRd7GqTtpQ=",
-            "v-c-merchant-id": "probe_merchant",
+            "date": "2020-01-01T00:00:00+00:00",
+            "digest": "SHA-256=cHJvYmVfa2V5OnByb2JlX3NlY3JldA==",
             "host": "apitest.cybersource.com",
-            "via": "HyperSwitch",
-            "accept": "application/hal+json;charset=utf-8"
+            "signature": "keyid=\"probe_key\", algorithm=\"HmacSHA256\", headers=\"host date (request-target) digest v-c-merchant-id\", signature=\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"",
+            "v-c-merchant-id": "probe_merchant",
+            "via": "HyperSwitch"
           },
           "body": "{\"clientReferenceInformation\":{\"code\":\"probe_void_001\"},\"reversalInformation\":{\"amountDetails\":{\"totalAmount\":\"10.00\",\"currency\":\"USD\"},\"reason\":\"Cancellation requested\"}}"
         }

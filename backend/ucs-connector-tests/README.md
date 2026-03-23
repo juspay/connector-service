@@ -22,6 +22,7 @@ More details:
 - `grpcurl` installed for grpcurl backend runs.
 - Connector credentials file available (shape: `.github/test/template_creds.json`).
 
+<<<<<<< HEAD
 ## Primary entry point: `test-prism`
 
 Run setup once and `test-prism` is installed on your PATH automatically. No `./scripts/...` needed.
@@ -113,6 +114,13 @@ If you don't use `make cargo`, you'll need to manually export environment variab
 source .env.connector-tests
 
 # Then run cargo commands
+=======
+## Non-interactive usage (recommended)
+
+Run one scenario:
+
+```bash
+>>>>>>> origin/main
 cargo run -p ucs-connector-tests --bin run_test -- \
   --suite authorize \
   --scenario no3ds_auto_capture_credit_card \
@@ -122,34 +130,66 @@ cargo run -p ucs-connector-tests --bin run_test -- \
 Run one suite (all scenarios) for one connector:
 
 ```bash
+<<<<<<< HEAD
 make cargo ARGS="run -p ucs-connector-tests --bin suite_run_test -- \
   --suite authorize \
   --connector stripe"
+=======
+cargo run -p ucs-connector-tests --bin suite_run_test -- \
+  --suite authorize \
+  --connector stripe
+>>>>>>> origin/main
 ```
 
 Run all suites for one connector:
 
 ```bash
+<<<<<<< HEAD
 make cargo ARGS="run -p ucs-connector-tests --bin suite_run_test -- --all --connector stripe"
+=======
+cargo run -p ucs-connector-tests --bin suite_run_test -- --all --connector stripe
+>>>>>>> origin/main
 ```
 
 Run all suites for all configured connectors:
 
 ```bash
+<<<<<<< HEAD
 make cargo ARGS="run -p ucs-connector-tests --bin suite_run_test -- --all-connectors"
+=======
+cargo run -p ucs-connector-tests --bin suite_run_test -- --all-connectors
+>>>>>>> origin/main
 ```
 
 Run with SDK/FFI backend (non-interactive):
 
 ```bash
+<<<<<<< HEAD
 make cargo ARGS="run -p ucs-connector-tests --bin sdk_run_test -- --all --connector stripe"
+=======
+cargo run -p ucs-connector-tests --bin sdk_run_test -- --all --connector stripe
+>>>>>>> origin/main
 ```
 
 SDK-supported connectors today: `stripe`, `authorizedotnet`, `paypal`.
 
+<<<<<<< HEAD
 ## Interactive usage
 
 Use `test-prism --interactive`. See the [Primary entry point](#primary-entry-point-test-prism) section above.
+=======
+## Interactive usage (optional)
+
+```bash
+cargo run -p ucs-connector-tests --bin test_ucs
+```
+
+or:
+
+```bash
+make test-ucs
+```
+>>>>>>> origin/main
 
 ## Environment variables
 
@@ -157,7 +197,10 @@ Use `test-prism --interactive`. See the [Primary entry point](#primary-entry-poi
 |---|---|---|---|
 | `CONNECTOR_AUTH_FILE_PATH` | yes (or `UCS_CREDS_PATH`) | primary creds file path | `export CONNECTOR_AUTH_FILE_PATH="$PWD/.github/test/creds.json"` |
 | `UCS_CREDS_PATH` | yes (fallback) | secondary creds file path | `export UCS_CREDS_PATH="$PWD/.github/test/creds.json"` |
+<<<<<<< HEAD
 | `GPAY_HOSTED_URL` | optional | Google Pay token generator URL (auto-set by setup) | Stored in `.env.connector-tests` |
+=======
+>>>>>>> origin/main
 | `UCS_ALL_CONNECTORS` | optional | connector list for `--all-connectors` | `export UCS_ALL_CONNECTORS="stripe,paypal,authorizedotnet"` |
 | `UCS_CONNECTOR_LABEL_<CONNECTOR>` | optional | select nested connector account label | `export UCS_CONNECTOR_LABEL_PAYPAL=connector_1` |
 | `UCS_RUN_TEST_REPORT_PATH` | optional | custom report json path | `export UCS_RUN_TEST_REPORT_PATH="$PWD/backend/ucs-connector-tests/report.json"` |
@@ -168,8 +211,11 @@ Use `test-prism --interactive`. See the [Primary entry point](#primary-entry-poi
 | `UCS_DEBUG_EFFECTIVE_REQ` | optional | print effective request payload | `export UCS_DEBUG_EFFECTIVE_REQ=1` |
 | `UCS_SDK_ENVIRONMENT` | optional | SDK env (`sandbox` default / `production`) | `export UCS_SDK_ENVIRONMENT=sandbox` |
 
+<<<<<<< HEAD
 **Note**: When using `test-prism` or `make cargo`, environment variables from `.env.connector-tests` (like `GPAY_HOSTED_URL`) are automatically loaded. For direct `cargo` commands, source the file first: `source .env.connector-tests`
 
+=======
+>>>>>>> origin/main
 ### Local setup example
 
 ```bash

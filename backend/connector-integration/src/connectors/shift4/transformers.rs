@@ -244,7 +244,7 @@ impl<T: PaymentMethodDataTypes>
                     })
                     .ok_or_else(|| {
                         error_stack::report!(errors::ConnectorError::MissingRequiredField {
-                            field_name: "cardholder_name"
+                            field_name: "billing_address.first_name"
                         })
                     })?;
 

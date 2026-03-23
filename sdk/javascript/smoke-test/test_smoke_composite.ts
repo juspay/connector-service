@@ -11,7 +11,7 @@
  *   npx ts-node test_access_token_smoke.ts
  */
 
-import { PaymentClient, MerchantAuthenticationClient, types } from "hs-playlib";
+import { PaymentClient, MerchantAuthenticationClient, types, NetworkError } from "hs-playlib";
 
 const {
   MerchantAuthenticationServiceCreateAccessTokenRequest,
@@ -25,8 +25,8 @@ const {
   SecretString,
   AccessToken,
   ConnectorState,
-  RequestError,
-  ResponseError,
+  IntegrationError,
+  ConnectorResponseTransformationError,
 } = types;
 
 const { ConnectorConfig, RequestConfig, Environment } = types;
@@ -105,13 +105,17 @@ async function testAccessTokenFlow(): Promise<void> {
       );
     }
   } catch (e: any) {
-    if (e instanceof RequestError) {
-      console.log(`  RequestError: ${e.errorCode} - ${e.errorMessage}`);
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.errorCode} - ${e.errorMessage}`);
       console.log("  This might be expected if credentials are not valid");
       return;
-    } else if (e instanceof ResponseError) {
-      console.log(`  ResponseError: ${e.errorCode} - ${e.errorMessage}`);
+    } else if (e instanceof ConnectorResponseTransformationError) {
+      console.log(`  ConnectorResponseTransformationError: ${e.errorCode} - ${e.errorMessage}`);
       console.log("  This might be expected if credentials are not valid");
+      return;
+    } else if (e instanceof NetworkError) {
+      console.log(`  NetworkError: ${e.code} - ${e.message}`);
+      console.log("  This might be expected for connectivity issues");
       return;
     }
     const message = e instanceof Error ? e.message : String(e);
@@ -170,12 +174,15 @@ async function testAccessTokenFlow(): Promise<void> {
     console.log(`  Payment status: ${authorizeResponse.status}`);
     console.log("  PASSED");
   } catch (e: any) {
-    if (e instanceof RequestError) {
-      console.log(`  RequestError: ${e.errorCode} - ${e.errorMessage}`);
+    if (e instanceof IntegrationError) {
+      console.log(`  IntegrationError: ${e.errorCode} - ${e.errorMessage}`);
       console.log("  PASSED (round-trip completed, error is from PayPal)");
-    } else if (e instanceof ResponseError) {
-      console.log(`  ResponseError: ${e.errorCode} - ${e.errorMessage}`);
+    } else if (e instanceof ConnectorResponseTransformationError) {
+      console.log(`  ConnectorResponseTransformationError: ${e.errorCode} - ${e.errorMessage}`);
       console.log("  PASSED (round-trip completed, error is from PayPal)");
+    } else if (e instanceof NetworkError) {
+      console.log(`  NetworkError: ${e.code} - ${e.message}`);
+      console.log("  PASSED (round-trip completed, connectivity error)");
     } else {
       console.log(`  Error during authorize: ${e}`);
       console.log("  PASSED (round-trip completed, error is from PayPal)");

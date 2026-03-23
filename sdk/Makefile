@@ -57,6 +57,10 @@ install-deps: ## Install Python dependencies (skipped in Nix shell)
 			(echo "  → Installing mypy-protobuf..." && \
 			 pip3 install mypy-protobuf --quiet 2>/dev/null || \
 			 pip3 install mypy-protobuf --user --quiet); \
+		python3 -c "import jinja2" 2>/dev/null || \
+			(echo "  → Installing jinja2..." && \
+			 pip3 install jinja2 --quiet 2>/dev/null || \
+			 pip3 install jinja2 --user --quiet); \
 	fi
 	@echo "All required tools present."
 
@@ -112,7 +116,7 @@ build-all: ## Build for all supported platforms
 
 generate-rust: ## Regenerate Rust FFI flow registrations (handlers + bindings)
 	@echo "Generating Rust FFI flow registrations..."
-	@python3 $(MAKEFILE_DIR)codegen/generate.py --lang rust
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang rust
 
 generate-python: ## Regenerate Python SDK client (flows + protobuf stubs)
 	@$(MAKE) -C $(MAKEFILE_DIR)python generate-flows
@@ -130,15 +134,16 @@ generate-kotlin: ## Regenerate Kotlin SDK client (flows)
 # ---------------------------------------------------------------------------
 generate-descriptor:
 	@echo "Generating proto descriptor..."
+	@mkdir -p $(REPO_ROOT)/scripts/generators/code
 	@protoc \
 		--proto_path=$(REPO_ROOT)/backend/grpc-api-types/proto \
-		--descriptor_set_out=$(REPO_ROOT)/sdk/codegen/services.desc \
+		--descriptor_set_out=$(REPO_ROOT)/scripts/generators/code/services.desc \
 		--include_source_info \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/services.proto \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/payment.proto \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/payment_methods.proto \
 		$(REPO_ROOT)/backend/grpc-api-types/proto/sdk_config.proto
-	@echo "Descriptor written to sdk/codegen/services.desc"
+	@echo "Descriptor written to scripts/generators/code/services.desc"
 
 # ---------------------------------------------------------------------------
 # generate-client-python
@@ -213,7 +218,7 @@ dist-java: build-ffi-lib ## Build FFI → Build Java JAR
 clean: ## Clean all build artifacts
 	@echo "Cleaning build artifacts..."
 	@cd $(FFI_CRATE) && cargo clean
-	@rm -f $(REPO_ROOT)/sdk/codegen/services.desc
+	@rm -f $(REPO_ROOT)/scripts/generators/code/services.desc
 	@rm -f $(REPO_ROOT)/backend/ffi/src/handlers/_generated_flow_registrations.rs
 	@rm -f $(REPO_ROOT)/backend/ffi/src/bindings/_generated_ffi_flows.rs
 	@$(MAKE) -C $(REPO_ROOT)/sdk/python clean

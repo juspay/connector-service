@@ -1,5 +1,5 @@
-use crate::errors::FfiPaymentError;
 use external_services;
+use grpc_api_types::payments::ConnectorResponseTransformationError;
 use grpc_api_types::payments::{
     CustomerServiceCreateRequest, CustomerServiceCreateResponse, DisputeServiceAcceptRequest,
     DisputeServiceAcceptResponse, DisputeServiceDefendRequest, DisputeServiceDefendResponse,
@@ -478,36 +478,34 @@ pub fn handle_event_transformer(
     connector: domain_types::connector_types::ConnectorEnum,
     connector_config: domain_types::router_data::ConnectorSpecificConfig,
     _metadata: &common_utils::metadata::MaskedMetadata,
-) -> Result<EventServiceHandleResponse, FfiPaymentError> {
+) -> Result<EventServiceHandleResponse, ConnectorResponseTransformationError> {
     use domain_types::utils::ForeignTryFrom as _;
 
-    let request_details = payload.request_details.ok_or_else(|| {
-        FfiPaymentError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
-            Some("Missing required field: request_details".to_string()),
-            None,
-            Some(500),
-        )
-    })?;
+    let request_details =
+        payload
+            .request_details
+            .ok_or_else(|| ConnectorResponseTransformationError {
+                error_message: "Missing required field: request_details".to_string(),
+                error_code: "MISSING_REQUIRED_FIELD".to_string(),
+                http_status_code: None,
+            })?;
     let request_details = RequestDetails::foreign_try_from(request_details).map_err(|e| {
-        FfiPaymentError::new(
-            grpc_api_types::payments::PaymentStatus::Pending,
-            Some(format!("ForeignTryFrom failed: {e}")),
-            None,
-            Some(500),
-        )
+        ConnectorResponseTransformationError {
+            error_message: format!("ForeignTryFrom failed: {e}"),
+            error_code: "CONVERSION_FAILED".to_string(),
+            http_status_code: None,
+        }
     })?;
 
     let webhook_secrets = payload
         .webhook_secrets
         .map(|ws| {
             ConnectorWebhookSecrets::foreign_try_from(ws).map_err(|e| {
-                FfiPaymentError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("ForeignTryFrom failed: {e}")),
-                    None,
-                    Some(500),
-                )
+                ConnectorResponseTransformationError {
+                    error_message: format!("ForeignTryFrom failed: {e}"),
+                    error_code: "CONVERSION_FAILED".to_string(),
+                    http_status_code: None,
+                }
             })
         })
         .transpose()?;
@@ -535,12 +533,11 @@ pub fn handle_event_transformer(
     )
     .map_err(
         |e: error_stack::Report<domain_types::errors::ApplicationErrorResponse>| {
-            FfiPaymentError::new(
-                grpc_api_types::payments::PaymentStatus::Pending,
-                Some(e.to_string()),
-                None,
-                Some(500),
-            )
+            ConnectorResponseTransformationError {
+                error_message: format!("Error in Processing webhook events: {e}"),
+                error_code: "WEBHOOK_PROCESSING_ERROR".to_string(),
+                http_status_code: None,
+            }
         },
     )
 }

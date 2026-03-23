@@ -478,7 +478,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             cvn: card_data.card_cvc.clone(),
             card_holder_name: card_data.card_holder_name.clone().ok_or(
                 ConnectorError::MissingRequiredField {
-                    field_name: "card_holder_name",
+                    field_name: "payment_method.card.card_holder_name",
                 },
             )?,
             username: auth.username,
@@ -1225,7 +1225,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             exp_year: card_data.get_expiry_year_4_digit(),
             card_holder_name: card_data.card_holder_name.clone().ok_or(
                 ConnectorError::MissingRequiredField {
-                    field_name: "card_holder_name",
+                    field_name: "payment_method.card.card_holder_name",
                 },
             )?,
             username: auth.username,

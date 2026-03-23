@@ -73,7 +73,8 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
+    PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
@@ -128,7 +129,7 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
             card_number: self
                 .card_number
                 .as_ref()
-                .map(|cn| cn.to_string())
+                .map(|cn| cn.get_card_no())
                 .unwrap_or_default(),
             cvv: self
                 .card_cvc
@@ -2667,6 +2668,15 @@ impl PaymentMethodService for PaymentMethod {
             },
         )
         .await
+    }
+
+    async fn eligibility(
+        &self,
+        _request: tonic::Request<PayoutMethodEligibilityRequest>,
+    ) -> Result<tonic::Response<PayoutMethodEligibilityResponse>, tonic::Status> {
+        Err(tonic::Status::unimplemented(
+            "Eligibility check not implemented yet",
+        ))
     }
 }
 

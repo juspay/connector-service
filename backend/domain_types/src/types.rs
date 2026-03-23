@@ -294,6 +294,7 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
+    pub ppro: ConnectorParams,
     pub checkout: ConnectorParams,
     pub authorizedotnet: ConnectorParams, // Add your connector params
     pub mifinity: ConnectorParams,
@@ -362,6 +363,7 @@ pub struct Connectors {
     pub zift: ConnectorParams,
     pub revolv3: ConnectorParams,
     pub truelayer: ConnectorParams,
+    pub peachpayments: ConnectorParams,
     pub finix: ConnectorParams,
 }
 
@@ -880,6 +882,21 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::WeChatPayQr(_) => {
                     Ok(Self::Wallet(payment_method_data::WalletData::WeChatPayQr(
                         Box::new(payment_method_data::WeChatPayQr {}),
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::MbWay(
+                        payment_method_data::MbWayData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Satispay(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::Satispay(
+                        payment_method_data::SatispayData {},
+                    )))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Wero(_) => {
+                    Ok(Self::Wallet(payment_method_data::WalletData::Wero(
+                        payment_method_data::WeroData {},
                     )))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Mifinity(
@@ -1891,6 +1908,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<Paym
             grpc_api_types::payments::PaymentMethodType::InstantBankTransferPoland => {
                 Ok(Some(PaymentMethodType::InstantBankTransferPoland))
             }
+            grpc_api_types::payments::PaymentMethodType::MbWay => {
+                Ok(Some(PaymentMethodType::MbWay))
+            }
+            grpc_api_types::payments::PaymentMethodType::Satispay => {
+                Ok(Some(PaymentMethodType::Satispay))
+            }
+            grpc_api_types::payments::PaymentMethodType::Wero => Ok(Some(PaymentMethodType::Wero)),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
                 error_identifier: 400,
@@ -1976,6 +2000,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Bluecode(_) => Ok(Some(PaymentMethodType::Bluecode)),
                 grpc_api_types::payments::payment_method::PaymentMethod::Paze(_) => Ok(Some(PaymentMethodType::Paze)),
                 grpc_api_types::payments::payment_method::PaymentMethod::SamsungPay(_) => Ok(Some(PaymentMethodType::SamsungPay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::MbWay(_) => Ok(Some(PaymentMethodType::MbWay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Satispay(_) => Ok(Some(PaymentMethodType::Satispay)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Wero(_) => Ok(Some(PaymentMethodType::Wero)),
                 // ============================================================================
                 // BANK TRANSFERS - PaymentMethodType mappings
                 // ============================================================================
@@ -2569,13 +2596,7 @@ impl<
                         error_object: None,
                     })
                 })?,
-            )
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data construction failed".to_owned(),
-                error_object: None,
-            }))?,
+            )?,
             amount: common_utils::types::MinorUnit::new(amount.minor_amount),
             currency: common_enums::Currency::foreign_try_from(amount.currency())?,
             confirm: true,
@@ -3260,7 +3281,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             minor_amount_captured: None,
             minor_amount_capturable: None,
             access_token,
-            session_token: None,
+            session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
             payment_method_token: value
                 .payment_method_token
@@ -3421,9 +3442,7 @@ impl
             payment_method: PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: extract_connector_request_reference_id(&Some(
-                value.connector_transaction_id,
-            )),
+            connector_request_reference_id: value.merchant_transaction_id.unwrap_or_default(),
             customer_id: None,
             connector_customer: None,
             description: None,
@@ -4064,6 +4083,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(_)),
             } => Ok(Self::Card),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::NetworkToken(_)),
+            } => Ok(Self::NetworkToken),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Token(_)),
@@ -4970,7 +4993,7 @@ pub fn generate_payment_sync_response(
                 redirection_data,
                 connector_metadata: _,
                 network_txn_id,
-                connector_response_reference_id: _,
+                connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
                 status_code,
@@ -4995,6 +5018,7 @@ pub fn generate_payment_sync_response(
                     connector_transaction_id: extract_connector_request_reference_id(
                         &grpc_resource_id,
                     ),
+                    merchant_transaction_id: connector_response_reference_id,
                     redirection_data: redirection_data
                         .map(|form| grpc_api_types::payments::RedirectForm::foreign_try_from(*form))
                         .transpose()?,
@@ -5050,6 +5074,7 @@ pub fn generate_payment_sync_response(
                 connector_transaction_id: extract_connector_request_reference_id(
                     &e.connector_transaction_id,
                 ),
+                merchant_transaction_id: None,
                 mandate_reference: None,
                 status: status as i32,
                 error: Some(grpc_api_types::payments::ErrorInfo {
@@ -5273,6 +5298,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::AliPay => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::Cashapp => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethodType::RevolutPay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::MbWay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::Satispay => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethodType::Wero => Ok(Self::Wallet),
 
             grpc_api_types::payments::PaymentMethodType::UpiCollect => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethodType::UpiIntent => Ok(Self::Upi),
@@ -5684,7 +5712,9 @@ pub fn generate_refund_sync_response(
                 .resource_common_data
                 .get_connector_response_headers_as_map();
             Ok(RefundResponse {
-                connector_transaction_id: None,
+                connector_transaction_id: Some(
+                    router_data_v2.request.connector_transaction_id.clone(),
+                ),
                 connector_refund_id: response.connector_refund_id.clone(),
                 status: grpc_status as i32,
                 merchant_refund_id: Some(response.connector_refund_id.clone()),
@@ -5798,6 +5828,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     .transpose()?
                     .unwrap_or_default(),
             ),
+            merchant_transaction_id: value.connector_response_reference_id,
             status: status as i32,
             mandate_reference: mandate_reference_grpc,
             error: Some(grpc_api_types::payments::ErrorInfo {
@@ -6412,7 +6443,9 @@ pub fn generate_refund_response(
             let grpc_status = grpc_api_types::payments::RefundStatus::foreign_from(status);
 
             Ok(RefundResponse {
-                connector_transaction_id: None,
+                connector_transaction_id: Some(
+                    router_data_v2.request.connector_transaction_id.clone(),
+                ),
                 connector_refund_id: response.connector_refund_id,
                 status: grpc_status as i32,
                 merchant_refund_id: None,
@@ -7275,7 +7308,7 @@ impl<
         Ok(Self {
             currency: amount.currency,
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
+                value.payment_method.clone().ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
                         error_identifier: 400,
@@ -7284,7 +7317,7 @@ impl<
                     })
                 })?,
             )?,
-            amount: Some(0),
+            amount: Some(amount.amount.get_amount_as_i64()),
             confirm: true,
             customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
                 customer_acceptance.clone(),
@@ -7302,9 +7335,17 @@ impl<
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
             email,
-            customer_name: None,
+            customer_name: value
+                .customer
+                .as_ref()
+                .and_then(|customer| customer.name.clone()),
             return_url: value.return_url.clone(),
-            payment_method_type: None,
+            payment_method_type: value
+                .payment_method
+                .clone()
+                .map(<Option<common_enums::PaymentMethodType>>::foreign_try_from)
+                .transpose()?
+                .flatten(),
             request_incremental_authorization: false,
             metadata: value
                 .metadata
@@ -7313,7 +7354,7 @@ impl<
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
-            minor_amount: Some(common_utils::types::MinorUnit::new(0)),
+            minor_amount: Some(amount.amount),
             shipping_cost: None,
             customer_id: value
                 .customer
@@ -7658,6 +7699,8 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
                                 })
                         }),
                         metadata: None,
+                        amount_type: amount_data.amount_type,
+                        frequency: amount_data.frequency,
                     },
                 )),
                 Some(grpc_api_types::payments::mandate_type::MandateType::MultiUse(
@@ -7688,6 +7731,8 @@ impl ForeignTryFrom<grpc_api_types::payments::SetupMandateDetails> for MandateDa
                                 })
                         }),
                         metadata: None,
+                        amount_type: amount_data.amount_type,
+                        frequency: amount_data.frequency,
                     },
                 ))),
                 None => None,
@@ -7843,8 +7888,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
 
                 PaymentServiceSetupRecurringResponse {
                     connector_recurring_payment_id: Option::foreign_try_from(resource_id)?,
-                    redirection_data: redirection_data.map(
-                        |form| {
+                    redirection_data: redirection_data.map(|form| {
                             match *form {
                                 router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, Box<ApplicationErrorResponse>>(grpc_api_types::payments::RedirectForm {
@@ -8418,6 +8462,9 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+    MbWay,
+    Satispay,
+    Wero,
     SepaGuaranteedBankDebit,
     IndonesianBankTransfer,
 }
@@ -8787,7 +8834,7 @@ impl<
             amount: money.amount,
             currency,
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
+                value.payment_method.clone().ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
                         error_identifier: 400,
@@ -8865,7 +8912,7 @@ impl
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            connector_customer: value.customer.unwrap().id,
+            connector_customer: value.customer.and_then(|c| c.id),
             description: None,
             return_url: value.return_url,
             connector_feature_data: None,
@@ -9177,13 +9224,7 @@ impl<
         let payment_method_data = value
             .payment_method
             .map(PaymentMethodData::<T>::foreign_try_from)
-            .transpose()
-            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                error_identifier: 400,
-                error_message: "Payment method data construction failed".to_owned(),
-                error_object: None,
-            }))?
+            .transpose()?
             .unwrap_or(PaymentMethodData::MandatePayment);
 
         let billing_descriptor =
@@ -10101,13 +10142,7 @@ impl<
             payment_method_data: value
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .transpose()?,
             amount: amount.amount,
             currency: Some(amount.currency),
             email,
@@ -10227,13 +10262,7 @@ impl<
             payment_method_data: value
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .transpose()?,
             amount: amount.amount,
             email,
             currency: Some(amount.currency),
@@ -10356,13 +10385,7 @@ impl<
             payment_method_data: value
                 .payment_method
                 .map(PaymentMethodData::<T>::foreign_try_from)
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Payment method data construction failed".to_owned(),
-                    error_object: None,
-                }))?,
+                .transpose()?,
             amount: amount.amount,
             currency: Some(amount.currency),
             email,
