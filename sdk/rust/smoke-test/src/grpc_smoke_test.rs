@@ -245,9 +245,7 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
                     .auth_type
                     .clone()
                     .unwrap_or_else(|| "header-key".to_string()),
-                api_key: Secret::new(
-                    extract_creds_value(entry, &["api_key"]).unwrap_or_default(),
-                ),
+                api_key: Secret::new(extract_creds_value(entry, &["api_key"]).unwrap_or_default()),
                 api_secret: extract_creds_value(entry, &["api_secret"]).map(Secret::new),
                 key1: extract_creds_value(entry, &["key1"]).map(Secret::new),
                 merchant_id: extract_creds_value(entry, &["merchant_account", "merchant_id"]),

@@ -132,77 +132,190 @@ macro_rules! impl_grpc_client {
 
 // CustomerService
 impl_grpc_client!(
-    GrpcCustomerClient, CustomerServiceClient,
-    (create, CustomerServiceCreateRequest, CustomerServiceCreateResponse),
+    GrpcCustomerClient,
+    CustomerServiceClient,
+    (
+        create,
+        CustomerServiceCreateRequest,
+        CustomerServiceCreateResponse
+    ),
 );
 
 // DisputeService
 impl_grpc_client!(
-    GrpcDisputeClient, DisputeServiceClient,
-    (submit_evidence, DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse),
-    (defend, DisputeServiceDefendRequest, DisputeServiceDefendResponse),
-    (accept, DisputeServiceAcceptRequest, DisputeServiceAcceptResponse),
+    GrpcDisputeClient,
+    DisputeServiceClient,
+    (
+        submit_evidence,
+        DisputeServiceSubmitEvidenceRequest,
+        DisputeServiceSubmitEvidenceResponse
+    ),
+    (
+        defend,
+        DisputeServiceDefendRequest,
+        DisputeServiceDefendResponse
+    ),
+    (
+        accept,
+        DisputeServiceAcceptRequest,
+        DisputeServiceAcceptResponse
+    ),
 );
 
 // EventService
 impl_grpc_client!(
-    GrpcEventClient, EventServiceClient,
-    (handle_event, EventServiceHandleRequest, EventServiceHandleResponse),
+    GrpcEventClient,
+    EventServiceClient,
+    (
+        handle_event,
+        EventServiceHandleRequest,
+        EventServiceHandleResponse
+    ),
 );
 
 // MerchantAuthenticationService
 impl_grpc_client!(
-    GrpcMerchantAuthenticationClient, MerchantAuthenticationServiceClient,
-    (create_access_token, MerchantAuthenticationServiceCreateAccessTokenRequest, MerchantAuthenticationServiceCreateAccessTokenResponse),
-    (create_session_token, MerchantAuthenticationServiceCreateSessionTokenRequest, MerchantAuthenticationServiceCreateSessionTokenResponse),
-    (create_sdk_session_token, MerchantAuthenticationServiceCreateSdkSessionTokenRequest, MerchantAuthenticationServiceCreateSdkSessionTokenResponse),
+    GrpcMerchantAuthenticationClient,
+    MerchantAuthenticationServiceClient,
+    (
+        create_access_token,
+        MerchantAuthenticationServiceCreateAccessTokenRequest,
+        MerchantAuthenticationServiceCreateAccessTokenResponse
+    ),
+    (
+        create_session_token,
+        MerchantAuthenticationServiceCreateSessionTokenRequest,
+        MerchantAuthenticationServiceCreateSessionTokenResponse
+    ),
+    (
+        create_sdk_session_token,
+        MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
+        MerchantAuthenticationServiceCreateSdkSessionTokenResponse
+    ),
 );
 
 // PaymentMethodAuthenticationService
 impl_grpc_client!(
-    GrpcPaymentMethodAuthenticationClient, PaymentMethodAuthenticationServiceClient,
-    (pre_authenticate, PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse),
-    (authenticate, PaymentMethodAuthenticationServiceAuthenticateRequest, PaymentMethodAuthenticationServiceAuthenticateResponse),
-    (post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse),
+    GrpcPaymentMethodAuthenticationClient,
+    PaymentMethodAuthenticationServiceClient,
+    (
+        pre_authenticate,
+        PaymentMethodAuthenticationServicePreAuthenticateRequest,
+        PaymentMethodAuthenticationServicePreAuthenticateResponse
+    ),
+    (
+        authenticate,
+        PaymentMethodAuthenticationServiceAuthenticateRequest,
+        PaymentMethodAuthenticationServiceAuthenticateResponse
+    ),
+    (
+        post_authenticate,
+        PaymentMethodAuthenticationServicePostAuthenticateRequest,
+        PaymentMethodAuthenticationServicePostAuthenticateResponse
+    ),
 );
 
 // PaymentMethodService
 impl_grpc_client!(
-    GrpcPaymentMethodClient, PaymentMethodServiceClient,
-    (tokenize, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse),
-    (eligibility, PayoutMethodEligibilityRequest, PayoutMethodEligibilityResponse),
+    GrpcPaymentMethodClient,
+    PaymentMethodServiceClient,
+    (
+        tokenize,
+        PaymentMethodServiceTokenizeRequest,
+        PaymentMethodServiceTokenizeResponse
+    ),
+    (
+        eligibility,
+        PayoutMethodEligibilityRequest,
+        PayoutMethodEligibilityResponse
+    ),
 );
 
 // PaymentService
 impl_grpc_client!(
-    GrpcPaymentClient, PaymentServiceClient,
-    (authorize, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse),
+    GrpcPaymentClient,
+    PaymentServiceClient,
+    (
+        authorize,
+        PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse
+    ),
     (get, PaymentServiceGetRequest, PaymentServiceGetResponse),
     (void, PaymentServiceVoidRequest, PaymentServiceVoidResponse),
-    (reverse, PaymentServiceReverseRequest, PaymentServiceReverseResponse),
-    (capture, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse),
-    (create_order, PaymentServiceCreateOrderRequest, PaymentServiceCreateOrderResponse),
+    (
+        reverse,
+        PaymentServiceReverseRequest,
+        PaymentServiceReverseResponse
+    ),
+    (
+        capture,
+        PaymentServiceCaptureRequest,
+        PaymentServiceCaptureResponse
+    ),
+    (
+        create_order,
+        PaymentServiceCreateOrderRequest,
+        PaymentServiceCreateOrderResponse
+    ),
     (refund, PaymentServiceRefundRequest, RefundResponse),
-    (incremental_authorization, PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse),
-    (verify_redirect_response, PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse),
-    (setup_recurring, PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse),
+    (
+        incremental_authorization,
+        PaymentServiceIncrementalAuthorizationRequest,
+        PaymentServiceIncrementalAuthorizationResponse
+    ),
+    (
+        verify_redirect_response,
+        PaymentServiceVerifyRedirectResponseRequest,
+        PaymentServiceVerifyRedirectResponseResponse
+    ),
+    (
+        setup_recurring,
+        PaymentServiceSetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse
+    ),
 );
 
 // PayoutService
 impl_grpc_client!(
-    GrpcPayoutClient, PayoutServiceClient,
-    (transfer, PayoutServiceTransferRequest, PayoutServiceTransferResponse),
+    GrpcPayoutClient,
+    PayoutServiceClient,
+    (
+        transfer,
+        PayoutServiceTransferRequest,
+        PayoutServiceTransferResponse
+    ),
     (stage, PayoutServiceStageRequest, PayoutServiceStageResponse),
-    (create_link, PayoutServiceCreateLinkRequest, PayoutServiceCreateLinkResponse),
-    (create_recipient, PayoutServiceCreateRecipientRequest, PayoutServiceCreateRecipientResponse),
-    (enroll_disburse_account, PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse),
+    (
+        create_link,
+        PayoutServiceCreateLinkRequest,
+        PayoutServiceCreateLinkResponse
+    ),
+    (
+        create_recipient,
+        PayoutServiceCreateRecipientRequest,
+        PayoutServiceCreateRecipientResponse
+    ),
+    (
+        enroll_disburse_account,
+        PayoutServiceEnrollDisburseAccountRequest,
+        PayoutServiceEnrollDisburseAccountResponse
+    ),
 );
 
 // RecurringPaymentService
 impl_grpc_client!(
-    GrpcRecurringPaymentClient, RecurringPaymentServiceClient,
-    (charge, RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse),
-    (revoke, RecurringPaymentServiceRevokeRequest, RecurringPaymentServiceRevokeResponse),
+    GrpcRecurringPaymentClient,
+    RecurringPaymentServiceClient,
+    (
+        charge,
+        RecurringPaymentServiceChargeRequest,
+        RecurringPaymentServiceChargeResponse
+    ),
+    (
+        revoke,
+        RecurringPaymentServiceRevokeRequest,
+        RecurringPaymentServiceRevokeResponse
+    ),
 );
 
 // ── GrpcClient ────────────────────────────────────────────────────────────────
@@ -264,12 +377,21 @@ impl GrpcClient {
             customer: GrpcCustomerClient::new(channel.clone(), Arc::clone(&headers)),
             dispute: GrpcDisputeClient::new(channel.clone(), Arc::clone(&headers)),
             event: GrpcEventClient::new(channel.clone(), Arc::clone(&headers)),
-            merchant_authentication: GrpcMerchantAuthenticationClient::new(channel.clone(), Arc::clone(&headers)),
-            payment_method_authentication: GrpcPaymentMethodAuthenticationClient::new(channel.clone(), Arc::clone(&headers)),
+            merchant_authentication: GrpcMerchantAuthenticationClient::new(
+                channel.clone(),
+                Arc::clone(&headers),
+            ),
+            payment_method_authentication: GrpcPaymentMethodAuthenticationClient::new(
+                channel.clone(),
+                Arc::clone(&headers),
+            ),
             payment_method: GrpcPaymentMethodClient::new(channel.clone(), Arc::clone(&headers)),
             payment: GrpcPaymentClient::new(channel.clone(), Arc::clone(&headers)),
             payout: GrpcPayoutClient::new(channel.clone(), Arc::clone(&headers)),
-            recurring_payment: GrpcRecurringPaymentClient::new(channel.clone(), Arc::clone(&headers)),
+            recurring_payment: GrpcRecurringPaymentClient::new(
+                channel.clone(),
+                Arc::clone(&headers),
+            ),
         })
     }
 }
