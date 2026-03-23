@@ -21,7 +21,10 @@ bypass_proxy_urls = ["localhost", "local"]
 mitm_proxy_enabled = false
 
 [connectors]
+peachpayments.base_url = "https://api.bankint.peachpayments.com/v/1"
+finix.base_url = "https://finix.live-payments-api.com"
 revolv3.base_url = "https://api.revolv3.com"
+ppro.base_url = "https://api.eu.ppro.com"
 mollie.base_url = "https://api.mollie.com/v2"
 mollie.secondary_base_url = "https://api.cc.mollie.com/v1/"
 gigadat.base_url = "https://interac.express-connect.com/"
@@ -107,6 +110,8 @@ powertranz.base_url = "https://staging.ptranz.com/api"
 revolut.base_url = "https://oba-auth.revolut.com/"
 wellsfargo.base_url = "https://api.cybersource.com/"
 zift.base_url = "https://secure.zift.io/"
+truelayer.base_url = "https://api.truelayer.com"
+truelayer.secondary_base_url = "https://auth.truelayer.com"
 
 # Generic Events Configuration
 [events]
@@ -117,3 +122,7 @@ partition_key_field = "request_id"
 
 [unmasked_headers]
 keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id","x-shadow-mode"]
+
+# Connectors that require an external API call for webhook source verification
+[webhook_source_verification_call] # comma-separated list of connector names (case-insensitive)
+connectors_with_webhook_source_verification_call = "paypal, truelayer" 
