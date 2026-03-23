@@ -575,9 +575,8 @@ where
                             .collect();
 
                         // Parse vault metadata and build injector request
-                        let vault_headers = updated_router_data
-                            .resource_common_data
-                            .get_vault_headers();
+                        let vault_headers =
+                            updated_router_data.resource_common_data.get_vault_headers();
                         let backup_proxy_url = proxy
                             .https_url
                             .as_ref()
@@ -756,8 +755,7 @@ pub async fn call_connector_api(
     _flow_name: &str,
     test_mode: bool,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
-    let url =
-        Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
+    let url = Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
     let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
 
@@ -1391,20 +1389,17 @@ fn apply_vault_config_to_injector(
         });
 
     // Map vault_connector_id string to injector's VaultConnectors enum
-    injector_request.connection_config.vault_connector_id =
-        vault_cfg
-            .vault_connector_id
-            .as_deref()
-            .and_then(|id| match id.to_lowercase().as_str() {
-                "vgs" => Some(injector::VaultConnectors::VGS),
-                "hyperswitch_vault" => {
-                    Some(injector::VaultConnectors::HyperswitchVault)
-                }
-                _ => {
-                    tracing::warn!("Unknown vault_connector_id: {}", id);
-                    None
-                }
-            });
+    injector_request.connection_config.vault_connector_id = vault_cfg
+        .vault_connector_id
+        .as_deref()
+        .and_then(|id| match id.to_lowercase().as_str() {
+            "vgs" => Some(injector::VaultConnectors::VGS),
+            "hyperswitch_vault" => Some(injector::VaultConnectors::HyperswitchVault),
+            _ => {
+                tracing::warn!("Unknown vault_connector_id: {}", id);
+                None
+            }
+        });
 
     // Apply metadata-specific config (proxy_url/ca_cert or vault_endpoint/auth)
     match vault_cfg.metadata {

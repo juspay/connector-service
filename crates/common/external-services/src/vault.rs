@@ -265,7 +265,7 @@ mod tests {
     use super::*;
     use domain_types::types::{
         BasisTheoryConfig, EvervaultConfig, HyperswitchEnvironment, HyperswitchVaultConfig,
-        TokenExConfig, TokenExTokenScheme, VgsConfig, VgsEnvironment,
+        TokenExConfig, VgsConfig, VgsEnvironment,
     };
 
     #[test]

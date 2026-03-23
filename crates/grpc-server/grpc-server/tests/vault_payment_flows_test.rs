@@ -66,10 +66,9 @@ fn add_vgs_stripe_metadata<T>(request: &mut Request<T>) {
         _ => panic!("Expected HeaderKey auth type for Stripe"),
     };
 
-    request.metadata_mut().append(
-        "x-connector",
-        "stripe".parse().expect("parse x-connector"),
-    );
+    request
+        .metadata_mut()
+        .append("x-connector", "stripe".parse().expect("parse x-connector"));
     request
         .metadata_mut()
         .append("x-auth", "header-key".parse().expect("parse x-auth"));
@@ -86,10 +85,9 @@ fn add_vgs_stripe_metadata<T>(request: &mut Request<T>) {
             .parse()
             .expect("parse x-request-id"),
     );
-    request.metadata_mut().append(
-        "x-tenant-id",
-        "default".parse().expect("parse x-tenant-id"),
-    );
+    request
+        .metadata_mut()
+        .append("x-tenant-id", "default".parse().expect("parse x-tenant-id"));
     request.metadata_mut().append(
         "x-connector-request-reference-id",
         format!("vault_ref_{}", get_timestamp())
@@ -115,9 +113,9 @@ fn add_hs_vault_adyen_metadata<T>(request: &mut Request<T>) {
         domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
             (api_key.expose(), key1.expose())
         }
-        domain_types::router_data::ConnectorAuthType::SignatureKey {
-            api_key, key1, ..
-        } => (api_key.expose(), key1.expose()),
+        domain_types::router_data::ConnectorAuthType::SignatureKey { api_key, key1, .. } => {
+            (api_key.expose(), key1.expose())
+        }
         _ => panic!("Expected BodyKey or SignatureKey auth type for Adyen"),
     };
 
@@ -143,10 +141,9 @@ fn add_hs_vault_adyen_metadata<T>(request: &mut Request<T>) {
             .parse()
             .expect("parse x-request-id"),
     );
-    request.metadata_mut().append(
-        "x-tenant-id",
-        "default".parse().expect("parse x-tenant-id"),
-    );
+    request
+        .metadata_mut()
+        .append("x-tenant-id", "default".parse().expect("parse x-tenant-id"));
     request.metadata_mut().append(
         "x-connector-request-reference-id",
         format!("vault_ref_{}", get_timestamp())
@@ -226,8 +223,7 @@ fn create_vgs_authorize_request() -> PaymentServiceAuthorizeRequest {
 /// 1. Create a customer via `POST /v2/customers`
 /// 2. Tokenize card via `POST /v2/payment-methods` with that customer ID
 /// 3. Build authorize request using the payment method ID as the card token
-async fn create_hs_vault_adyen_authorize_request(
-) -> (PaymentServiceAuthorizeRequest, String) {
+async fn create_hs_vault_adyen_authorize_request() -> (PaymentServiceAuthorizeRequest, String) {
     let vault_creds = utils::credential_utils::load_vault_credentials("vault_hyperswitch")
         .expect("Failed to load Hyperswitch Vault credentials");
 

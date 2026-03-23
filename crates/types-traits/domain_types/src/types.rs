@@ -547,7 +547,7 @@ pub enum VaultConfig {
 }
 
 /// VGS (Very Good Security) Network Proxy configuration
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
+#[derive(Clone, Default, Deserialize, Serialize, Debug, PartialEq, config_patch_derive::Patch)]
 pub struct VgsConfig {
     /// VGS tenant identifier (e.g., "tntSANDBOX123")
     pub tenant_id: String,
@@ -558,16 +558,6 @@ pub struct VgsConfig {
     /// Not currently used - will be wired up in HTTP client integration phase
     #[serde(default)]
     pub ca_certificate: Option<String>,
-}
-
-impl Default for VgsConfig {
-    fn default() -> Self {
-        Self {
-            tenant_id: String::new(),
-            environment: VgsEnvironment::default(),
-            ca_certificate: None,
-        }
-    }
 }
 
 #[derive(
@@ -2507,11 +2497,11 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
             card_number: RawCardNumber(
                 // Card number token is already stored in token_data, so we replace with
                 // the internal transformation template value for the injector to substitute.
-                format!("{{{{$card_number}}}}").into(),
+                "{{$card_number}}".to_string().into(),
             ),
-            card_exp_month: format!("{{{{$card_exp_month}}}}").into(),
-            card_exp_year: format!("{{{{$card_exp_year}}}}").into(),
-            card_cvc: format!("{{{{$card_cvc}}}}").into(),
+            card_exp_month: "{{$card_exp_month}}".to_string().into(),
+            card_exp_year: "{{$card_exp_year}}".to_string().into(),
+            card_cvc: "{{$card_cvc}}".to_string().into(),
             card_issuer: card.card_issuer,
             card_network: None,
             card_type: card.card_type,

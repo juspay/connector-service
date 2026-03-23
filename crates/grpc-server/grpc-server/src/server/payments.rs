@@ -78,8 +78,8 @@ use grpc_api_types::payments::{
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
-use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, PeekInterface};
 use injector::TokenData;
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
