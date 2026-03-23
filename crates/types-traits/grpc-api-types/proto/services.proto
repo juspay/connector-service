@@ -160,7 +160,8 @@ service RefundService {
   // through processor settlement for accurate customer communication.
   rpc Get(RefundServiceGetRequest) returns (RefundResponse);
 
-  // Handle incoming webhooks from payment processor.
+  // Handle incoming webhooks from payment processor for refund-specific events.
+  // This delegates to EventService internally but provides a service-specific endpoint.
   rpc HandleEvent(EventServiceHandleRequest) returns (EventServiceHandleResponse);
 
 }
