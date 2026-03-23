@@ -3,8 +3,8 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::PayoutCreate,
     connector_types::PayoutFlowData,
+    payout_type_conversions::generate_payout_create_response,
     payout_types::{PayoutCreateRequest, PayoutCreateResponse},
-    types::generate_payout_create_response,
     utils::ForeignTryFrom,
 };
 use grpc_api_types::payouts::{
