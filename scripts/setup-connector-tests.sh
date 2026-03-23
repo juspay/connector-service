@@ -83,7 +83,7 @@ if [[ -d "${NODE_MODULES}" && -f "${LOCK_FILE}" ]]; then
 fi
 
 if "${needs_install}"; then
-  (cd "${BAE_DIR}" && npm install --prefer-offline 2>&1)
+  (cd "${BAE_DIR}" && npm install 2>&1)
   success "npm install complete"
 else
   success "node_modules up-to-date, skipping npm install"
@@ -226,6 +226,127 @@ if [[ -n "${GPAY_HOSTED_URL:-}" ]]; then
   SKIP_NETLIFY=1
 fi
 
+# ── Pre-flight: obtain a Netlify auth token if not already set ────────────────
+# Without a token the Netlify CLI blocks waiting for browser-based OAuth login,
+# causing the script to hang indefinitely.
+#
+# We use the Netlify CLI ticket-based auth flow:
+#   1. netlify login --request  → generates a one-time URL + ticket ID
+#   2. User opens the URL in a browser and clicks "Authorize" (no sign-up form,
+#      just one click if already logged in to netlify.com)
+#   3. We poll netlify login --check <ticket-id> until the token arrives
+#   4. Token is saved to NETLIFY_AUTH_TOKEN for the rest of this script
+#
+# The user never has to manually copy/paste a token.
+if [[ "${SKIP_NETLIFY}" != "1" && -z "${NETLIFY_AUTH_TOKEN:-}" ]]; then
+
+  # Resolve netlify command early so we can use it for auth
+  NETLIFY_CMD_AUTH=""
+  if command -v netlify &>/dev/null; then
+    NETLIFY_CMD_AUTH="netlify"
+  elif [[ -f "${BAE_DIR}/node_modules/.bin/netlify" ]]; then
+    NETLIFY_CMD_AUTH="${BAE_DIR}/node_modules/.bin/netlify"
+  else
+    NETLIFY_CMD_AUTH="npx --no -- netlify"
+  fi
+
+  echo ""
+  info "Netlify login required for Google Pay test setup."
+  echo ""
+  echo "  This is a one-time step. No account needed if you already have one."
+  echo "  If you don't have a Netlify account, sign up free at:"
+  echo "    https://app.netlify.com/signup"
+  echo ""
+  echo "  Press Enter to open the authorization URL, or type 's' to skip"
+  echo "  Google Pay tests and continue:"
+  echo ""
+  printf "  > "
+  read -r USER_INPUT </dev/tty
+
+  if [[ "${USER_INPUT}" == "s" || "${USER_INPUT}" == "S" ]]; then
+    warn "Skipping Netlify deploy — Google Pay tests will be disabled."
+    SKIP_NETLIFY=1
+  else
+    # Generate a login ticket
+    TICKET_JSON=$(cd "${BAE_DIR}" && ${NETLIFY_CMD_AUTH} login --request "ucs-connector-tests" --json 2>/dev/null || true)
+    TICKET_ID=$(echo "${TICKET_JSON}" | grep -o '"ticket_id": *"[^"]*"' | sed 's/"ticket_id": *"//;s/"//' || true)
+    AUTH_URL=$(echo "${TICKET_JSON}"  | grep -o '"url": *"[^"]*"'       | sed 's/"url": *"//;s/"//' || true)
+
+    if [[ -z "${TICKET_ID}" || -z "${AUTH_URL}" ]]; then
+      warn "Could not generate a Netlify login ticket."
+      warn "Skipping Netlify deploy — Google Pay tests will be disabled."
+      warn "To retry, re-run: make setup-connector-tests"
+      SKIP_NETLIFY=1
+    else
+      echo ""
+      info "Open this URL in your browser to authorize (one click):"
+      echo ""
+      echo "    ${AUTH_URL}"
+      echo ""
+      info "Waiting for authorization..."
+
+      # Poll until the user authorizes (up to 5 minutes).
+      # NOTE: netlify login --check returns {"status":"authorized","user":{...}}
+      # after the user clicks Authorize — it does NOT include the token in the
+      # JSON response.  The CLI writes the token to ~/.config/netlify/config.json
+      # internally.  We detect "authorized" status, then read the token from there.
+      POLL_TOKEN=""
+      POLL_DEADLINE=$(( $(date +%s) + 300 ))
+      while [[ $(date +%s) -lt ${POLL_DEADLINE} ]]; do
+        POLL_RESULT=$(cd "${BAE_DIR}" && ${NETLIFY_CMD_AUTH} login --check "${TICKET_ID}" --json 2>/dev/null || true)
+        POLL_STATUS=$(echo "${POLL_RESULT}" | grep -o '"status": *"[^"]*"' | sed 's/"status": *"//;s/"//' || true)
+
+        if [[ "${POLL_STATUS}" == "authorized" ]]; then
+          # Read the token from the netlify config file that the CLI just wrote
+          NETLIFY_CONFIG="${HOME}/.config/netlify/config.json"
+          if [[ -f "${NETLIFY_CONFIG}" ]]; then
+            POLL_TOKEN=$(python3 -c "
+import json, sys
+try:
+  cfg = json.load(open('${NETLIFY_CONFIG}'))
+  for uid, udata in cfg.get('users', {}).items():
+    tok = udata.get('auth', {}).get('token', '')
+    if tok:
+      print(tok)
+      sys.exit(0)
+except Exception:
+  pass
+" 2>/dev/null || true)
+          fi
+          break
+        fi
+
+        if [[ -n "${POLL_STATUS}" && "${POLL_STATUS}" != "pending" ]]; then
+          # denied or unknown — stop polling
+          break
+        fi
+
+        printf "."
+        sleep 3
+      done
+      echo ""
+
+      if [[ -n "${POLL_TOKEN}" ]]; then
+        export NETLIFY_AUTH_TOKEN="${POLL_TOKEN}"
+        success "Netlify authorization successful."
+
+        # Persist token to .env.connector-tests so future runs skip this step
+        if [[ -f "${ENV_FILE}" ]]; then
+          # Remove any existing token line before appending
+          grep -v 'NETLIFY_AUTH_TOKEN' "${ENV_FILE}" > "${ENV_FILE}.tmp" && mv "${ENV_FILE}.tmp" "${ENV_FILE}"
+        fi
+        echo "export NETLIFY_AUTH_TOKEN=\"${NETLIFY_AUTH_TOKEN}\"" >> "${ENV_FILE}"
+        success "Token saved to ${ENV_FILE} — future runs will skip this step."
+      else
+        warn "Authorization timed out or was not completed."
+        warn "Skipping Netlify deploy — Google Pay tests will be disabled."
+        warn "To retry, re-run: make setup-connector-tests"
+        SKIP_NETLIFY=1
+      fi
+    fi
+  fi
+fi
+
 if [[ "${SKIP_NETLIFY}" != "1" ]]; then
   info "Deploying GPay token-generator pages to Netlify..."
 
@@ -235,15 +356,13 @@ if [[ "${SKIP_NETLIFY}" != "1" ]]; then
     NETLIFY_CMD="netlify"
     info "Using global Netlify CLI"
   elif [[ -f "${BAE_DIR}/node_modules/.bin/netlify" ]]; then
-    NETLIFY_CMD="npx netlify"
+    NETLIFY_CMD="${BAE_DIR}/node_modules/.bin/netlify"
     info "Using locally installed Netlify CLI"
   elif (cd "${BAE_DIR}" && npx --no -- netlify --version &>/dev/null 2>&1); then
     NETLIFY_CMD="npx --no -- netlify"
     info "Using Netlify CLI via npx"
   else
     warn "Netlify CLI not found after installation attempt."
-    warn "This is unexpected - please report this issue."
-    warn ""
     warn "Manual workaround:"
     warn "  1) Install globally: npm install -g netlify-cli"
     warn "  2) Re-run setup"
@@ -255,10 +374,48 @@ fi
 
 if [[ "${SKIP_NETLIFY}" != "1" && -n "${NETLIFY_CMD}" ]]; then
 
+  NETLIFY_STATE="${BAE_DIR}/.netlify/state.json"
+
+  # ── Auto-create a Netlify site on first run if not already linked ────────────
+  if [[ ! -f "${NETLIFY_STATE}" ]]; then
+    info "No linked Netlify site found — creating one automatically..."
+
+    # Generate a stable site name from the machine hostname + repo name
+    SITE_SLUG="ucs-gpay-$(hostname -s | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/-*$//')-$(date +%s)"
+
+    CREATE_OUTPUT=$(cd "${BAE_DIR}" && NETLIFY_AUTH_TOKEN="${NETLIFY_AUTH_TOKEN}" \
+      ${NETLIFY_CMD} sites:create --name "${SITE_SLUG}" --json 2>&1) || {
+      warn "Could not create Netlify site automatically."
+      warn "Create one manually at https://app.netlify.com and then link it:"
+      warn "  cd browser-automation-engine && netlify link"
+      warn ""
+      warn "Skipping Netlify deploy — Google Pay tests will be skipped at runtime."
+      SKIP_NETLIFY=1
+    }
+
+    if [[ "${SKIP_NETLIFY}" != "1" ]]; then
+      SITE_ID=$(echo "${CREATE_OUTPUT}" | grep -o '"id": *"[^"]*"' | head -1 | sed 's/"id": *"//;s/"//')
+      if [[ -z "${SITE_ID}" ]]; then
+        warn "Could not extract site ID from create output. Raw output:"
+        echo "${CREATE_OUTPUT}" | sed 's/^/    /'
+        warn "Skipping Netlify deploy — Google Pay tests will be skipped at runtime."
+        SKIP_NETLIFY=1
+      else
+        mkdir -p "${BAE_DIR}/.netlify"
+        echo "{\"siteId\": \"${SITE_ID}\"}" > "${NETLIFY_STATE}"
+        success "Netlify site created: ${SITE_SLUG} (${SITE_ID})"
+      fi
+    fi
+  fi
+fi
+
+if [[ "${SKIP_NETLIFY}" != "1" && -n "${NETLIFY_CMD}" ]]; then
+
   info "Running: netlify deploy --prod (in browser-automation-engine/)"
-  DEPLOY_OUTPUT=$(cd "${BAE_DIR}" && ${NETLIFY_CMD} deploy --prod 2>&1) || {
+  DEPLOY_OUTPUT=$(cd "${BAE_DIR}" && NETLIFY_AUTH_TOKEN="${NETLIFY_AUTH_TOKEN}" \
+    ${NETLIFY_CMD} deploy --prod --auth "${NETLIFY_AUTH_TOKEN}" 2>&1) || {
     warn "Netlify deploy failed. Google Pay tests will be skipped at runtime."
-    warn "To fix, ensure NETLIFY_AUTH_TOKEN is set and your site is linked."
+    warn "To fix, ensure NETLIFY_AUTH_TOKEN is valid and re-run setup."
     warn "Raw output:"
     echo "${DEPLOY_OUTPUT}" | sed 's/^/    /'
     SKIP_NETLIFY=1
@@ -270,7 +427,8 @@ if [[ "${SKIP_NETLIFY}" != "1" && -n "${NETLIFY_CMD}" ]]; then
     DEPLOYED_URL=$(echo "${DEPLOY_OUTPUT}" | grep -Eo 'https://[a-zA-Z0-9._-]+\.netlify\.app' | head -1 || true)
     if [[ -z "${DEPLOYED_URL}" ]]; then
       warn "Could not extract Netlify URL from deploy output."
-      warn "Set GPAY_HOSTED_URL manually."
+      warn "Set GPAY_HOSTED_URL manually in .env.connector-tests:"
+      warn "  export GPAY_HOSTED_URL=https://<your-site>.netlify.app/gpay/gpay-token-gen.html"
     else
       GPAY_HOSTED_URL="${DEPLOYED_URL}/gpay/gpay-token-gen.html"
       success "Netlify deploy successful: ${GPAY_HOSTED_URL}"

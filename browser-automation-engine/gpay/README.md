@@ -34,8 +34,7 @@ the initial Google sign-in.
 |---|---|
 | Node.js | 18 or later |
 | npm | 9 or later |
-| Netlify CLI | any recent (`npm i -g netlify-cli`) |
-| Netlify account | free tier is fine |
+| Netlify account | free tier — sign up at https://app.netlify.com/signup |
 | Google account | any personal Gmail works in TEST mode |
 
 ---
@@ -43,20 +42,69 @@ the initial Google sign-in.
 ## Step 1 — Deploy the HTML page to Netlify
 
 The HTML page must be served over HTTPS. Netlify provides this for free.
+Google's `pay.js` refuses to load from `localhost`, so a real HTTPS URL is
+required.
+
+### Automatic setup via `make setup-connector-tests` (recommended)
+
+The setup script handles everything — login, site creation, deploy, and saving
+the URL. Just run:
 
 ```bash
-# From browser-automation-engine/
-npm install -g netlify-cli   # one-time
-netlify login                # one-time — opens browser for OAuth
-
-netlify deploy --prod
-# Netlify reads netlify.toml (publish = "gpay") automatically.
-# Prints: Website URL: https://your-site-name.netlify.app
+make setup-connector-tests
 ```
+
+When it reaches the Netlify step, it will:
+
+1. Print a one-time authorization URL in the terminal
+2. You open that URL in your browser and click **"Authorize"** (one click —
+   no forms if you are already logged in to netlify.com)
+3. The script detects the authorization automatically and continues
+4. The deployed URL is saved to `.env.connector-tests` — all future runs skip
+   this step entirely
+
+If you already have `NETLIFY_AUTH_TOKEN` set in your environment, the browser
+step is skipped and the deploy runs fully headlessly.
+
+**To skip Google Pay tests entirely** (no Netlify needed):
+
+```bash
+SKIP_NETLIFY_DEPLOY=1 make setup-connector-tests
+```
+
+---
+
+### Manual setup (alternative)
+
+If you prefer to set things up yourself outside of the setup script:
+
+**Option A — Personal Access Token (headless/CI-friendly)**
+
+1. Go to https://app.netlify.com/user/applications
+2. Under **Personal access tokens**, click **New access token**
+3. Give it a name (e.g. `ucs-connector-tests`) and copy the token
+4. Export it and deploy:
+
+```bash
+export NETLIFY_AUTH_TOKEN=<your-token>
+cd browser-automation-engine
+netlify deploy --prod
+```
+
+**Option B — Interactive browser login**
+
+```bash
+cd browser-automation-engine
+npm install -g netlify-cli
+netlify login          # opens browser for OAuth
+netlify deploy --prod
+```
+
+---
 
 Your page is now live at:
 ```
-https://your-site-name.netlify.app/gpay-token-gen.html
+https://your-site-name.netlify.app/gpay/gpay-token-gen.html
 ```
 
 You only need to redeploy if you change `gpay-token-gen.html`.
