@@ -16,7 +16,7 @@ How it works:
   3. Outputs docs-generated/connectors/{name}.md
 
 To add docs for a new connector:
-  - Run field-probe to generate probe data: cd backend/field-probe && cargo r
+  - Run field-probe to generate probe data: cd crates/internal/field-probe && cargo r
   - Run: python3 scripts/generators/docs/generate.py {name}
 """
 
@@ -220,7 +220,7 @@ def _probe_samples_for_flow(probe_connector: dict, flow_key: str) -> list[tuple[
 REPO_ROOT       = Path(__file__).parent.parent.parent.parent
 DOCS_DIR     = REPO_ROOT / "docs-generated/connectors"
 EXAMPLES_DIR = REPO_ROOT / "examples"
-PROTO_DIR    = REPO_ROOT / "backend/grpc-api-types/proto"
+PROTO_DIR    = REPO_ROOT / "crates/types-traits/grpc-api-types/proto"
 
 # Category order for grouping flows in documentation
 CATEGORY_ORDER = ["Payments", "Refunds", "Mandates", "Customers", "Disputes", "Authentication", "Session", "Other"]
@@ -1008,7 +1008,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     a("")
     a("This document provides a comprehensive overview of payment method support")
     a("across all connectors for each payment flow. Flow names follow the gRPC")
-    a("service definitions from `backend/grpc-api-types/proto/services.proto`.")
+    a("service definitions from `crates/types-traits/grpc-api-types/proto/services.proto`.")
     a("")
     
     # Get all connectors that have probe data
@@ -1158,7 +1158,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     # ── Payment Method Legend ─────────────────────────────────────────────────
     a("## Payment Methods")
     a("")
-    a("Payment methods probed for authorize flow (configured in `backend/field-probe/probe-config.toml`):")
+    a("Payment methods probed for authorize flow (configured in `crates/internal/field-probe/probe-config.toml`):")
     a("")
     a("| Key | Display Name | Description |")
     a("|-----|--------------|-------------|")
@@ -1182,7 +1182,7 @@ def generate_all_connector_doc(probe_data: dict[str, dict], output_dir: Path) ->
     # ── Services Reference ─────────────────────────────────────────────────────
     a("## Services Reference")
     a("")
-    a("Flow definitions are derived from `backend/grpc-api-types/proto/services.proto`:")
+    a("Flow definitions are derived from `crates/types-traits/grpc-api-types/proto/services.proto`:")
     a("")
     a("| Service | Description |")
     a("|---------|-------------|")

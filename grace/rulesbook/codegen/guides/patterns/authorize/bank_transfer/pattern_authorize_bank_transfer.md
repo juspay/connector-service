@@ -96,7 +96,7 @@ Bank Transfer is a payment method where customers transfer funds directly from t
 ### Rust Enum Definition
 
 ```rust
-// From backend/domain_types/src/payment_method_data.rs
+// From crates/types-traits/domain_types/src/payment_method_data.rs
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum BankTransferData {
     AchBankTransfer,
@@ -135,7 +135,7 @@ pub enum BankTransferData {
 #### Adyen Bank Transfer Request (Indonesian VA)
 
 ```rust
-// From backend/connector-integration/src/connectors/adyen/transformers.rs:1580-1618
+// From crates/integrations/connector-integration/src/connectors/adyen/transformers.rs:1580-1618
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     TryFrom<(
@@ -236,7 +236,7 @@ pub struct DokuBankData {
 #### Stripe Bank Transfer Request
 
 ```rust
-// From backend/connector-integration/src/connectors/stripe/transformers.rs:1354-1430
+// From crates/integrations/connector-integration/src/connectors/stripe/transformers.rs:1354-1430
 
 PaymentMethodData::BankTransfer(bank_transfer_data) => match bank_transfer_data.deref() {
     payment_method_data::BankTransferData::AchBankTransfer {} => Ok((
@@ -324,7 +324,7 @@ confirm=true
 #### Trustpay Multi-Method Pattern
 
 ```rust
-// From backend/connector-integration/src/connectors/trustpay/transformers.rs:1447-1473
+// From crates/integrations/connector-integration/src/connectors/trustpay/transformers.rs:1447-1473
 
 match item.router_data.request.payment_method_data {
     PaymentMethodData::Card(ref ccard) => Ok(get_card_request_data(
@@ -376,7 +376,7 @@ Rare for Bank Transfer - most implementations require async confirmation via web
 4. Webhook confirms payment completion
 
 ```rust
-// From backend/connector-integration/src/connectors/stripe/transformers.rs:2804-2895
+// From crates/integrations/connector-integration/src/connectors/stripe/transformers.rs:2804-2895
 
 fn get_next_action_response(
     next_action_response: Option<StripeNextActionResponse>,
