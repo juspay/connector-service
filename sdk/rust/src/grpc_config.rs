@@ -1,4 +1,35 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
+
+/// A credential string that never leaks through `Debug` or `Display`.
+///
+/// Use [`Secret::new`] to wrap a credential value and [`Secret::expose`] (crate-internal)
+/// to extract it only when writing headers.
+#[derive(Clone)]
+pub struct Secret(String);
+
+impl Secret {
+    /// Wrap a credential string.
+    pub fn new(value: String) -> Self {
+        Self(value)
+    }
+
+    /// Extract the inner value — only used internally when writing gRPC metadata.
+    pub(crate) fn expose(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Debug for Secret {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[REDACTED]")
+    }
+}
+
+impl fmt::Display for Secret {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[REDACTED]")
+    }
+}
 
 /// Configuration for connecting to the hosted connector-service gRPC server.
 ///
@@ -26,11 +57,11 @@ pub struct GrpcConfig {
     /// Auth mechanism the connector expects, e.g. `"header-key"`, `"signature-key"`.
     pub auth_type: String,
     /// Primary API key / access token for the connector.
-    pub api_key: String,
+    pub api_key: Secret,
     /// API secret — required by some connectors, `None` for others.
-    pub api_secret: Option<String>,
+    pub api_secret: Option<Secret>,
     /// Additional credential (`x-key1`) — connector-specific.
-    pub key1: Option<String>,
+    pub key1: Option<Secret>,
     /// Merchant identifier — required by some connectors.
     pub merchant_id: Option<String>,
     /// Tenant identifier — required by multi-tenant deployments.
@@ -42,12 +73,12 @@ impl GrpcConfig {
         let mut h = HashMap::new();
         h.insert("x-connector".into(), self.connector);
         h.insert("x-auth".into(), self.auth_type);
-        h.insert("x-api-key".into(), self.api_key);
+        h.insert("x-api-key".into(), self.api_key.expose().to_string());
         if let Some(v) = self.api_secret {
-            h.insert("x-api-secret".into(), v);
+            h.insert("x-api-secret".into(), v.expose().to_string());
         }
         if let Some(v) = self.key1 {
-            h.insert("x-key1".into(), v);
+            h.insert("x-key1".into(), v.expose().to_string());
         }
         if let Some(v) = self.merchant_id {
             h.insert("x-merchant-id".into(), v);

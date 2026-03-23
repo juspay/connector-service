@@ -22,7 +22,7 @@ mod connectors {
 include!(concat!(env!("OUT_DIR"), "/grpc_helpers.rs"));
 
 use grpc_api_types::health_check::{health_client::HealthClient, HealthCheckRequest};
-use hyperswitch_payments_client::{GrpcClient, GrpcConfig};
+use hyperswitch_payments_client::{GrpcClient, GrpcConfig, Secret};
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -102,9 +102,9 @@ impl From<FlatCreds> for GrpcConfig {
             endpoint: c.endpoint,
             connector: c.connector,
             auth_type: c.auth_type,
-            api_key: c.api_key,
-            api_secret: c.api_secret,
-            key1: c.key1,
+            api_key: Secret::new(c.api_key),
+            api_secret: c.api_secret.map(Secret::new),
+            key1: c.key1.map(Secret::new),
             merchant_id: c.merchant_id,
             tenant_id: c.tenant_id,
         }
@@ -245,9 +245,11 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
                     .auth_type
                     .clone()
                     .unwrap_or_else(|| "header-key".to_string()),
-                api_key: extract_creds_value(entry, &["api_key"]).unwrap_or_default(),
-                api_secret: extract_creds_value(entry, &["api_secret"]),
-                key1: extract_creds_value(entry, &["key1"]),
+                api_key: Secret::new(
+                    extract_creds_value(entry, &["api_key"]).unwrap_or_default(),
+                ),
+                api_secret: extract_creds_value(entry, &["api_secret"]).map(Secret::new),
+                key1: extract_creds_value(entry, &["key1"]).map(Secret::new),
                 merchant_id: extract_creds_value(entry, &["merchant_account", "merchant_id"]),
                 tenant_id: extract_creds_value(entry, &["tenant_id"]),
             }
@@ -266,12 +268,13 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
                 .auth_type
                 .clone()
                 .unwrap_or_else(|| "header-key".to_string()),
-            api_key: args
-                .api_key
-                .clone()
-                .ok_or("--api-key required when no creds file")?,
-            api_secret: args.api_secret.clone(),
-            key1: args.key1.clone(),
+            api_key: Secret::new(
+                args.api_key
+                    .clone()
+                    .ok_or("--api-key required when no creds file")?,
+            ),
+            api_secret: args.api_secret.clone().map(Secret::new),
+            key1: args.key1.clone().map(Secret::new),
             merchant_id: args.merchant_id.clone(),
             tenant_id: args.tenant_id.clone(),
         }
@@ -286,13 +289,13 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
         config.auth_type = v;
     }
     if let Some(v) = args.api_key {
-        config.api_key = v;
+        config.api_key = Secret::new(v);
     }
     if args.api_secret.is_some() {
-        config.api_secret = args.api_secret;
+        config.api_secret = args.api_secret.map(Secret::new);
     }
     if args.key1.is_some() {
-        config.key1 = args.key1;
+        config.key1 = args.key1.map(Secret::new);
     }
     if args.merchant_id.is_some() {
         config.merchant_id = args.merchant_id;
