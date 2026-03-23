@@ -17,6 +17,8 @@ use std::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::harness::scenario_loader::load_suite_spec;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -244,7 +246,11 @@ pub fn extract_pm_and_pmt(grpc_req: Option<&Value>) -> (Option<String>, Option<S
 const SUITE_ORDER: &[&str] = &[
     "create_access_token",
     "create_customer",
+    "pre_authenticate",
+    "authenticate",
+    "post_authenticate",
     "authorize",
+    "complete_authorize",
     "capture",
     "void",
     "refund",
@@ -254,20 +260,39 @@ const SUITE_ORDER: &[&str] = &[
     "recurring_charge",
 ];
 
-fn suite_service_name(suite: &str) -> &'static str {
-    match suite {
-        "create_access_token" => "MerchantAuthenticationService/CreateAccessToken",
-        "create_customer" => "CustomerService/Create",
-        "authorize" => "PaymentService/Authorize",
-        "capture" => "PaymentService/Capture",
-        "refund" => "PaymentService/Refund",
-        "void" => "PaymentService/Void",
-        "get" => "PaymentService/Get",
-        "refund_sync" => "RefundService/Get",
-        "setup_recurring" => "PaymentService/SetupRecurring",
-        "recurring_charge" => "RecurringPaymentService/Charge",
-        _ => "Unknown",
+fn suite_service_name(suite: &str) -> String {
+    let known = match suite {
+        "create_access_token" => Some("MerchantAuthenticationService/CreateAccessToken"),
+        "create_customer" => Some("CustomerService/Create"),
+        "pre_authenticate" => Some("PaymentMethodAuthenticationService/PreAuthenticate"),
+        "authenticate" => Some("PaymentMethodAuthenticationService/Authenticate"),
+        "post_authenticate" => Some("PaymentMethodAuthenticationService/PostAuthenticate"),
+        "authorize" => Some("PaymentService/Authorize"),
+        "complete_authorize" => Some("PaymentService/Authorize"),
+        "capture" => Some("PaymentService/Capture"),
+        "refund" => Some("PaymentService/Refund"),
+        "void" => Some("PaymentService/Void"),
+        "get" => Some("PaymentService/Get"),
+        "refund_sync" => Some("RefundService/Get"),
+        "setup_recurring" => Some("PaymentService/SetupRecurring"),
+        "recurring_charge" => Some("RecurringPaymentService/Charge"),
+        _ => None,
+    };
+
+    if let Some(name) = known {
+        return name.to_string();
     }
+
+    // For connector-specific suites not in the hardcoded map, derive the service
+    // name from the suite_spec's grpc_method field (strip the "types." prefix).
+    if let Ok(spec) = load_suite_spec(suite) {
+        if let Some(method) = spec.grpc_method {
+            let stripped = method.strip_prefix("types.").unwrap_or(&method);
+            return stripped.to_string();
+        }
+    }
+
+    "Unknown".to_string()
 }
 
 fn suite_sort_key(suite: &str) -> usize {

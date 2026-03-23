@@ -4,6 +4,7 @@ use serde_json::Value;
 
 use crate::harness::scenario_types::{FieldAssert, ScenarioError};
 
+mod cybersource;
 mod default;
 mod json_merge;
 mod loader;
@@ -12,7 +13,7 @@ mod loader;
 ///
 /// The default implementation is file-driven via JSON patches, but this trait
 /// also allows richer connector logic (request normalization, response shaping,
-/// scenario skipping, and deferred context paths).
+/// and deferred context paths).
 pub trait ConnectorOverride: Send + Sync {
     fn connector_name(&self) -> &str;
 
@@ -44,10 +45,6 @@ pub trait ConnectorOverride: Send + Sync {
 
     fn transform_response(&self, _suite: &str, _scenario: &str, _response: &mut Value) {}
 
-    fn should_skip_scenario(&self, _suite: &str, _scenario: &str) -> bool {
-        false
-    }
-
     fn extra_context_deferred_paths(&self) -> Vec<String> {
         Vec::new()
     }
@@ -67,6 +64,10 @@ impl OverrideRegistry {
     ///
     /// At the moment all connectors use the default file-backed strategy.
     pub fn resolve(&self, connector: &str) -> Box<dyn ConnectorOverride> {
+        if connector.eq_ignore_ascii_case("cybersource") {
+            return Box::new(cybersource::CybersourceConnectorOverride::new());
+        }
+
         Box::new(default::DefaultConnectorOverride::new(
             connector.to_string(),
         ))
@@ -105,12 +106,6 @@ pub fn transform_response_for_connector(
 ) {
     let strategy = OverrideRegistry::new().resolve(connector);
     strategy.transform_response(suite, scenario, response);
-}
-
-/// Returns whether a scenario should be skipped for a connector.
-pub fn should_skip_scenario_for_connector(connector: &str, suite: &str, scenario: &str) -> bool {
-    let strategy = OverrideRegistry::new().resolve(connector);
-    strategy.should_skip_scenario(suite, scenario)
 }
 
 /// Returns request paths that should defer auto-generation until dependency

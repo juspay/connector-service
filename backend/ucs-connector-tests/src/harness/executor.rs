@@ -1,19 +1,18 @@
 use tonic::Request;
 
 use crate::harness::{
-    credentials::{load_connector_auth, ConnectorAuth},
+    credentials::{load_connector_config, ConnectorConfig},
     metadata::add_connector_metadata,
     server::{spawn, UcsServer},
 };
 
-/// Lightweight helper that bundles a spawned UCS server with connector auth.
+/// Lightweight helper that bundles a spawned UCS server with connector config.
 ///
 /// This is primarily used by integration-style harness code that needs to build
 /// correctly-authenticated tonic requests repeatedly.
 pub struct ConnectorExecutor {
     server: UcsServer,
-    auth: ConnectorAuth,
-    connector: String,
+    config: ConnectorConfig,
     merchant_id: String,
     tenant_id: String,
 }
@@ -23,13 +22,12 @@ impl ConnectorExecutor {
     /// and loading the connector credentials from the configured auth source.
     pub async fn new(connector: &str) -> Self {
         let server = spawn().await.expect("UCS server should start");
-        let auth = load_connector_auth(connector)
+        let config = load_connector_config(connector)
             .unwrap_or_else(|_| panic!("{connector} creds should load"));
 
         Self {
             server,
-            auth,
-            connector: connector.to_string(),
+            config,
             merchant_id: "test_merchant".to_string(),
             tenant_id: "default".to_string(),
         }
@@ -45,7 +43,7 @@ impl ConnectorExecutor {
     }
 
     /// Wraps a payload into a tonic request and injects standard UCS metadata
-    /// headers (`x-connector`, auth headers, request ids, tenant/merchant ids).
+    /// headers (`x-connector-config`, request ids, tenant/merchant ids).
     pub fn request_with_ids<T>(
         &self,
         payload: T,
@@ -55,8 +53,7 @@ impl ConnectorExecutor {
         let mut request = Request::new(payload);
         add_connector_metadata(
             &mut request,
-            &self.connector,
-            &self.auth,
+            &self.config,
             &self.merchant_id,
             &self.tenant_id,
             request_id,

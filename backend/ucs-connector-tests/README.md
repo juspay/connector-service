@@ -22,11 +22,97 @@ More details:
 - `grpcurl` installed for grpcurl backend runs.
 - Connector credentials file available (shape: `.github/test/template_creds.json`).
 
-## Non-interactive usage (recommended)
+## Primary entry point: `test-prism`
 
-Run one scenario:
+Run setup once and `test-prism` is installed on your PATH automatically. No `./scripts/...` needed.
 
 ```bash
+# First run — installs test-prism and runs setup automatically
+./scripts/run-tests        # or: make test-ucs
+
+# After setup, just use:
+test-prism                 # full run, all connectors / suites / scenarios
+test-prism --interactive   # step-by-step TUI wizard
+test-prism --connector stripe
+test-prism --connector stripe --suite authorize
+test-prism --connector stripe --suite authorize --scenario no3ds_auto_capture_credit_card
+test-prism --all-connectors --report
+test-prism --interface sdk --connector stripe
+test-prism --setup         # re-run setup wizard
+test-prism --help          # full flag reference
+```
+
+`make test-ucs` is a convenience alias that calls `./scripts/run-tests` with no arguments.
+
+### First-run setup
+
+On first invocation, the script checks for `~/.config/ucs-connector-tests/setup.done`. If missing, it automatically runs `scripts/setup-connector-tests.sh` which:
+
+1. Checks Node/npm and installs browser-automation-engine dependencies
+2. Installs Playwright browsers
+3. **Auto-installs Netlify CLI locally** (if not already available)
+4. Deploys GPay token-generator to Netlify (optional - enables Google Pay tests)
+5. Verifies credentials file
+6. **Installs `test-prism` into the first writable directory on your `PATH`**
+7. Writes the `setup.done` sentinel
+
+**Netlify CLI Installation:**
+- Setup checks for Netlify CLI (global or local)
+- If missing, automatically installs it locally in `browser-automation-engine/`
+- You can also install globally: `npm install -g netlify-cli` (recommended for CI/CD)
+- Skip Netlify setup: `export SKIP_NETLIFY_DEPLOY=1` (disables Google Pay tests)
+
+Run `test-prism --setup` to force the wizard again at any time.
+
+### Interactive TUI wizard (`--interactive`)
+
+Step-by-step searchable selection wizard powered by the `inquire` crate:
+
+1. Connector scope: All / One / Multiple
+2. Connector picker (searchable)
+3. Suite scope: All / One / Multiple
+4. Suite picker (searchable)
+5. Scenario scope (shown when exactly one suite selected): All / One / Multiple
+6. Scenario picker (searchable)
+7. Backend: gRPC / SDK
+8. gRPC endpoint (text field with default)
+9. Generate report: Yes / No
+10. Shows the equivalent `make cargo` command (auto-loads environment)
+11. Confirm and execute
+
+**Note**: The displayed command uses `make cargo ARGS="..."` to automatically load environment variables from `.env.connector-tests`, ensuring Google Pay tests and other features work correctly when you copy and run the command.
+
+## Lower-level cargo invocations
+
+These bypass `test-prism` and are useful for individual scenario debugging.
+
+### Using `make cargo` (Recommended)
+
+For direct `cargo` commands, use the `make cargo` wrapper which automatically loads environment variables from `.env.connector-tests` (including `GPAY_HOSTED_URL` for Google Pay tests):
+
+```bash
+# Run one scenario with environment auto-loaded
+make cargo ARGS="run -p ucs-connector-tests --bin run_test -- \
+  --suite authorize \
+  --scenario no3ds_auto_capture_credit_card \
+  --connector stripe"
+
+# Build with environment
+make cargo ARGS="build --release"
+
+# Run tests with environment
+make cargo ARGS="test -p ucs-connector-tests"
+```
+
+### Direct cargo commands
+
+If you don't use `make cargo`, you'll need to manually export environment variables:
+
+```bash
+# Source environment variables first
+source .env.connector-tests
+
+# Then run cargo commands
 cargo run -p ucs-connector-tests --bin run_test -- \
   --suite authorize \
   --scenario no3ds_auto_capture_credit_card \
@@ -36,42 +122,34 @@ cargo run -p ucs-connector-tests --bin run_test -- \
 Run one suite (all scenarios) for one connector:
 
 ```bash
-cargo run -p ucs-connector-tests --bin suite_run_test -- \
+make cargo ARGS="run -p ucs-connector-tests --bin suite_run_test -- \
   --suite authorize \
-  --connector stripe
+  --connector stripe"
 ```
 
 Run all suites for one connector:
 
 ```bash
-cargo run -p ucs-connector-tests --bin suite_run_test -- --all --connector stripe
+make cargo ARGS="run -p ucs-connector-tests --bin suite_run_test -- --all --connector stripe"
 ```
 
 Run all suites for all configured connectors:
 
 ```bash
-cargo run -p ucs-connector-tests --bin suite_run_test -- --all-connectors
+make cargo ARGS="run -p ucs-connector-tests --bin suite_run_test -- --all-connectors"
 ```
 
 Run with SDK/FFI backend (non-interactive):
 
 ```bash
-cargo run -p ucs-connector-tests --bin sdk_run_test -- --all --connector stripe
+make cargo ARGS="run -p ucs-connector-tests --bin sdk_run_test -- --all --connector stripe"
 ```
 
 SDK-supported connectors today: `stripe`, `authorizedotnet`, `paypal`.
 
-## Interactive usage (optional)
+## Interactive usage
 
-```bash
-cargo run -p ucs-connector-tests --bin test_ucs
-```
-
-or:
-
-```bash
-make test-ucs
-```
+Use `test-prism --interactive`. See the [Primary entry point](#primary-entry-point-test-prism) section above.
 
 ## Environment variables
 
@@ -79,6 +157,7 @@ make test-ucs
 |---|---|---|---|
 | `CONNECTOR_AUTH_FILE_PATH` | yes (or `UCS_CREDS_PATH`) | primary creds file path | `export CONNECTOR_AUTH_FILE_PATH="$PWD/.github/test/creds.json"` |
 | `UCS_CREDS_PATH` | yes (fallback) | secondary creds file path | `export UCS_CREDS_PATH="$PWD/.github/test/creds.json"` |
+| `GPAY_HOSTED_URL` | optional | Google Pay token generator URL (auto-set by setup) | Stored in `.env.connector-tests` |
 | `UCS_ALL_CONNECTORS` | optional | connector list for `--all-connectors` | `export UCS_ALL_CONNECTORS="stripe,paypal,authorizedotnet"` |
 | `UCS_CONNECTOR_LABEL_<CONNECTOR>` | optional | select nested connector account label | `export UCS_CONNECTOR_LABEL_PAYPAL=connector_1` |
 | `UCS_RUN_TEST_REPORT_PATH` | optional | custom report json path | `export UCS_RUN_TEST_REPORT_PATH="$PWD/backend/ucs-connector-tests/report.json"` |
@@ -88,6 +167,8 @@ make test-ucs
 | `UCS_CONNECTOR_OVERRIDE_ROOT` | optional | custom override root | `export UCS_CONNECTOR_OVERRIDE_ROOT="$PWD/backend/ucs-connector-tests/src/connector_specs"` |
 | `UCS_DEBUG_EFFECTIVE_REQ` | optional | print effective request payload | `export UCS_DEBUG_EFFECTIVE_REQ=1` |
 | `UCS_SDK_ENVIRONMENT` | optional | SDK env (`sandbox` default / `production`) | `export UCS_SDK_ENVIRONMENT=sandbox` |
+
+**Note**: When using `test-prism` or `make cargo`, environment variables from `.env.connector-tests` (like `GPAY_HOSTED_URL`) are automatically loaded. For direct `cargo` commands, source the file first: `source .env.connector-tests`
 
 ### Local setup example
 

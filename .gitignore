@@ -429,3 +429,13 @@ sdk/java/smoke-test/gradle*
 sdk/java/bin
 
 artifacts/
+
+# Local Netlify folder
+.netlify
+
+# UCS Connector Test Runtime Artifacts
+backend/ucs-connector-tests/report.json
+*.test.log
+/tmp/*test*.log
+.grpc-server.pid
+.env.connector-tests

@@ -3,11 +3,9 @@ use std::{collections::BTreeSet, fs, path::PathBuf};
 use serde_json::Value;
 
 use crate::harness::scenario_types::{
-    ConnectorSuiteSpec, FieldAssert, ScenarioDef, ScenarioError, ScenarioFile, SuiteSpec,
+    ConnectorBrowserAutomationSpec, ConnectorSuiteSpec, FieldAssert, ScenarioDef, ScenarioError,
+    ScenarioFile, SuiteSpec,
 };
-
-/// Fallback connector set used by `--all-connectors` when env override is not set.
-const ALL_CONNECTORS_RUN_LIST: &[&str] = &["authorizedotnet", "paypal", "stripe"];
 
 /// Root directory containing `<suite>_suite/scenario.json` and `suite_spec.json`.
 pub fn scenario_root() -> PathBuf {
@@ -59,6 +57,11 @@ pub fn connector_spec_file_path(connector: &str) -> PathBuf {
     }
 }
 
+/// Path to connector browser automation hook config file.
+pub fn connector_browser_automation_spec_file_path(connector: &str) -> PathBuf {
+    connector_spec_dir(connector).join("browser_automation_spec.json")
+}
+
 /// Loads all scenarios for a suite from `scenario.json`.
 pub fn load_suite_scenarios(suite: &str) -> Result<ScenarioFile, ScenarioError> {
     let path = scenario_file_path(suite);
@@ -96,6 +99,33 @@ pub fn load_suite_spec(suite: &str) -> Result<SuiteSpec, ScenarioError> {
 
     serde_json::from_str::<SuiteSpec>(&content)
         .map_err(|source| ScenarioError::SuiteSpecParse { path, source })
+}
+
+/// Loads optional connector-specific browser automation hooks.
+pub fn load_connector_browser_automation_spec(
+    connector: &str,
+) -> Result<Option<ConnectorBrowserAutomationSpec>, ScenarioError> {
+    let path = connector_browser_automation_spec_file_path(connector);
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let content = fs::read_to_string(&path).map_err(|source| {
+        ScenarioError::ConnectorBrowserAutomationSpecRead {
+            path: path.clone(),
+            source,
+        }
+    })?;
+
+    let spec =
+        serde_json::from_str::<ConnectorBrowserAutomationSpec>(&content).map_err(|source| {
+            ScenarioError::ConnectorBrowserAutomationSpecParse {
+                path: path.clone(),
+                source,
+            }
+        })?;
+
+    Ok(Some(spec))
 }
 
 /// Returns the unique default scenario name for a suite.
@@ -205,6 +235,31 @@ pub fn load_supported_suites_for_connector(connector: &str) -> Result<Vec<String
     Ok(suites.into_iter().collect())
 }
 
+/// Loads the full connector spec (`specs.json`) for a connector.
+///
+/// Returns `None` when no spec file exists rather than an error, so callers
+/// can gracefully fall back to default behaviour.
+pub fn load_connector_spec(connector: &str) -> Result<Option<ConnectorSuiteSpec>, ScenarioError> {
+    let path = connector_spec_file_path(connector);
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let content = fs::read_to_string(&path).map_err(|source| ScenarioError::ConnectorSpecRead {
+        path: path.clone(),
+        source,
+    })?;
+
+    let spec = serde_json::from_str::<ConnectorSuiteSpec>(&content).map_err(|source| {
+        ScenarioError::ConnectorSpecParse {
+            path: path.clone(),
+            source,
+        }
+    })?;
+
+    Ok(Some(spec))
+}
+
 /// Discovers connector names by scanning `connector_specs/`.
 pub fn discover_all_connectors() -> Result<Vec<String>, ScenarioError> {
     let specs_dir = connector_specs_root();
@@ -255,6 +310,8 @@ pub fn discover_all_connectors() -> Result<Vec<String>, ScenarioError> {
 /// Resolves connector list for all-connector runs.
 ///
 /// Environment override format: `UCS_ALL_CONNECTORS=stripe,paypal,authorizedotnet`.
+/// When no override is set, the list is auto-discovered from `connector_specs/`
+/// directories that contain a `specs.json` file.
 pub fn configured_all_connectors() -> Vec<String> {
     if let Ok(raw) = std::env::var("UCS_ALL_CONNECTORS") {
         let connectors = raw
@@ -271,10 +328,7 @@ pub fn configured_all_connectors() -> Vec<String> {
         }
     }
 
-    ALL_CONNECTORS_RUN_LIST
-        .iter()
-        .map(|connector| connector.to_string())
-        .collect()
+    discover_all_connectors().unwrap_or_default()
 }
 
 /// Convenience accessor used by runners to load request template JSON.

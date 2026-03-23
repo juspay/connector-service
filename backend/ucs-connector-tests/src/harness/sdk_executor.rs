@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use connector_service_ffi::bindings::uniffi as ffi_bindings;
 use connector_service_ffi::errors::UniffiError;
 use grpc_api_types::payments::{
-    self, connector_specific_config, ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest,
-    FfiConnectorHttpResponse, FfiOptions, RequestError, ResponseError,
+    self, ConnectorSpecificConfig, Environment, FfiConnectorHttpRequest, FfiConnectorHttpResponse,
+    FfiOptions, RequestError, ResponseError,
 };
 use prost::Message;
 use reqwest::{blocking::Client, Method};
@@ -12,7 +12,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 
 use crate::harness::{
-    credentials::{load_connector_auth, ConnectorAuth},
+    credentials::{load_connector_config, ConnectorConfig},
     scenario_api::parse_tonic_payload,
     scenario_types::ScenarioError,
 };
@@ -27,6 +27,7 @@ pub fn supports_sdk_suite(suite: &str) -> bool {
         "create_access_token"
             | "create_customer"
             | "authorize"
+            | "complete_authorize"
             | "capture"
             | "void"
             | "refund"
@@ -48,13 +49,14 @@ pub fn execute_sdk_request_from_payload(
     grpc_req: &Value,
     connector: &str,
 ) -> Result<String, ScenarioError> {
-    // SDK path still uses the same credential loader as grpcurl/tonic paths.
-    let auth = load_connector_auth(connector).map_err(|error| ScenarioError::CredentialLoad {
-        connector: connector.to_string(),
-        message: error.to_string(),
-    })?;
+    // SDK path loads credentials via the unified connector config loader.
+    let config =
+        load_connector_config(connector).map_err(|error| ScenarioError::CredentialLoad {
+            connector: connector.to_string(),
+            message: error.to_string(),
+        })?;
 
-    let options = build_ffi_options(connector, &auth)?;
+    let options = build_ffi_options(connector, &config)?;
     let options_bytes = options.encode_to_vec();
 
     match suite {
@@ -82,7 +84,7 @@ pub fn execute_sdk_request_from_payload(
             ffi_bindings::create_req_transformer,
             ffi_bindings::create_res_transformer,
         ),
-        "authorize" => execute_sdk_flow::<
+        "authorize" | "complete_authorize" => execute_sdk_flow::<
             payments::PaymentServiceAuthorizeRequest,
             payments::PaymentServiceAuthorizeResponse,
         >(
@@ -326,15 +328,25 @@ fn parse_sdk_payload<T: DeserializeOwned>(
 }
 
 /// Builds FFI options bundle used by all request/response transformers.
+///
+/// Deserializes the `x-connector-config` JSON from [`ConnectorConfig`] directly
+/// into the proto [`ConnectorSpecificConfig`] type.  This avoids a separate
+/// auth-type → proto-field mapping layer.
 fn build_ffi_options(
     connector: &str,
-    connector_auth: &ConnectorAuth,
+    connector_config: &ConnectorConfig,
 ) -> Result<FfiOptions, ScenarioError> {
-    let connector_config = build_proto_connector_config(connector, connector_auth)?;
+    let proto_config: ConnectorSpecificConfig =
+        serde_json::from_str(connector_config.header_value()).map_err(|error| {
+            ScenarioError::CredentialLoad {
+                connector: connector.to_string(),
+                message: format!("failed to deserialize connector config JSON into proto: {error}"),
+            }
+        })?;
 
     Ok(FfiOptions {
         environment: environment_discriminant(ffi_environment()),
-        connector_config: Some(connector_config),
+        connector_config: Some(proto_config),
     })
 }
 
@@ -342,65 +354,6 @@ fn environment_discriminant(environment: Environment) -> i32 {
     match environment {
         Environment::Sandbox => 0,
         Environment::Production => 1,
-    }
-}
-
-/// Converts harness credential shape into connector-specific protobuf config oneof.
-fn build_proto_connector_config(
-    connector: &str,
-    connector_auth: &ConnectorAuth,
-) -> Result<ConnectorSpecificConfig, ScenarioError> {
-    match (connector, connector_auth) {
-        ("stripe", ConnectorAuth::HeaderKey { api_key }) => Ok(ConnectorSpecificConfig {
-            config: Some(connector_specific_config::Config::Stripe(
-                payments::StripeConfig {
-                    api_key: Some(api_key.to_string().into()),
-                    base_url: None,
-                },
-            )),
-        }),
-        ("authorizedotnet", ConnectorAuth::BodyKey { api_key, key1 }) => {
-            Ok(ConnectorSpecificConfig {
-                config: Some(connector_specific_config::Config::Authorizedotnet(
-                    payments::AuthorizedotnetConfig {
-                        name: Some(api_key.to_string().into()),
-                        transaction_key: Some(key1.to_string().into()),
-                        base_url: None,
-                    },
-                )),
-            })
-        }
-        ("paypal", ConnectorAuth::BodyKey { api_key, key1 }) => Ok(ConnectorSpecificConfig {
-            config: Some(connector_specific_config::Config::Paypal(
-                payments::PaypalConfig {
-                    client_id: Some(key1.to_string().into()),
-                    client_secret: Some(api_key.to_string().into()),
-                    payer_id: None,
-                    base_url: None,
-                },
-            )),
-        }),
-        (
-            "paypal",
-            ConnectorAuth::SignatureKey {
-                api_key,
-                key1,
-                api_secret,
-            },
-        ) => Ok(ConnectorSpecificConfig {
-            config: Some(connector_specific_config::Config::Paypal(
-                payments::PaypalConfig {
-                    client_id: Some(key1.to_string().into()),
-                    client_secret: Some(api_key.to_string().into()),
-                    payer_id: Some(api_secret.to_string().into()),
-                    base_url: None,
-                },
-            )),
-        }),
-        _ => Err(ScenarioError::CredentialLoad {
-            connector: connector.to_string(),
-            message: "unsupported connector auth shape for SDK harness".to_string(),
-        }),
     }
 }
 
@@ -489,14 +442,16 @@ fn convert_sdk_error_label(error: ScenarioError) -> ScenarioError {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        build_proto_connector_config, parse_sdk_payload, supports_sdk_connector, supports_sdk_suite,
-    };
-    use crate::harness::credentials::ConnectorAuth;
+    use super::{build_ffi_options, parse_sdk_payload, supports_sdk_connector, supports_sdk_suite};
+    use crate::harness::credentials::ConnectorConfig;
     use crate::harness::scenario_api::get_the_grpc_req_for_connector;
     use grpc_api_types::payments::connector_specific_config;
     use grpc_api_types::payments::identifier;
     use grpc_api_types::payments::{self, payment_method};
+
+    fn make_config(json: &str) -> ConnectorConfig {
+        ConnectorConfig::from_header_json(json.to_string())
+    }
 
     #[test]
     fn sdk_support_matrix_matches_current_scope() {
@@ -511,39 +466,26 @@ mod tests {
     }
 
     #[test]
-    fn stripe_auth_maps_to_proto_shape() {
-        let auth = ConnectorAuth::HeaderKey {
-            api_key: "sk_test_123".to_string(),
-        };
-        let proto = build_proto_connector_config("stripe", &auth).expect("stripe auth should map");
+    fn stripe_config_json_deserializes_to_proto_shape() {
+        let config = make_config(r#"{"config":{"Stripe":{"api_key":"sk_test_123"}}}"#);
+        let opts = build_ffi_options("stripe", &config).expect("stripe config should build");
         assert!(matches!(
-            proto.config,
+            opts.connector_config
+                .expect("connector_config should be set")
+                .config,
             Some(connector_specific_config::Config::Stripe(_))
         ));
     }
 
     #[test]
-    fn paypal_auth_accepts_body_and_signature_shapes() {
-        let body = ConnectorAuth::BodyKey {
-            api_key: "client_secret".to_string(),
-            key1: "client_id".to_string(),
-        };
-        let body_proto =
-            build_proto_connector_config("paypal", &body).expect("paypal body auth should map");
+    fn paypal_config_json_deserializes_to_proto_shape() {
+        let config =
+            make_config(r#"{"config":{"Paypal":{"client_id":"cid","client_secret":"csec"}}}"#);
+        let opts = build_ffi_options("paypal", &config).expect("paypal config should build");
         assert!(matches!(
-            body_proto.config,
-            Some(connector_specific_config::Config::Paypal(_))
-        ));
-
-        let sig = ConnectorAuth::SignatureKey {
-            api_key: "client_secret".to_string(),
-            key1: "client_id".to_string(),
-            api_secret: "payer_id".to_string(),
-        };
-        let sig_proto =
-            build_proto_connector_config("paypal", &sig).expect("paypal signature auth should map");
-        assert!(matches!(
-            sig_proto.config,
+            opts.connector_config
+                .expect("connector_config should be set")
+                .config,
             Some(connector_specific_config::Config::Paypal(_))
         ));
     }

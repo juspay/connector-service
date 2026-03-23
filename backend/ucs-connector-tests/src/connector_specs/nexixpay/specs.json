@@ -1,0 +1,11 @@
+{
+  "connector": "nexixpay",
+  "supported_suites": [
+    "pre_authenticate",
+    "post_authenticate",
+    "complete_authorize"
+  ],
+  "request_id_source_field": "merchant_order_id",
+  "request_id_prefix": "pay_",
+  "request_id_length": 12
+}
