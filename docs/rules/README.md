@@ -4,7 +4,7 @@ This directory contains the rules and prompts for generating consistent API refe
 
 ## Purpose
 
-These rules ensure that all API reference documentation follows a consistent format, making it easy for developers to understand and use the Universal Connector Service (UCS) APIs. The rules cover:
+These rules ensure that all API reference documentation follows a consistent format, making it easy for developers to understand and use the Universal Prism (UCS) APIs. The rules cover:
 
 - Front matter format for metadata
 - Business-focused overview sections

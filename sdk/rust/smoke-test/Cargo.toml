@@ -10,7 +10,7 @@ path = "src/grpc_smoke_test.rs"
 
 [dependencies]
 hyperswitch-payments-client = { path = ".." }
-grpc-api-types = { path = "../../../backend/grpc-api-types" }
+grpc-api-types = { path = "../../../crates/types-traits/grpc-api-types" }
 hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
 tonic = { workspace = true }
 tokio = { version = "1", features = ["full"] }

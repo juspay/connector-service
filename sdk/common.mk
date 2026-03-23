@@ -19,10 +19,10 @@ ifndef REPO_ROOT
 REPO_ROOT    := $(shell cd $(SDK_ROOT)../.. && pwd)
 endif
 
-FFI_CRATE         := $(REPO_ROOT)/backend/ffi
+FFI_CRATE     := $(REPO_ROOT)/crates/ffi/ffi
 GRPC_FFI_CRATE    := $(REPO_ROOT)/sdk/grpc-ffi
-PROTO_DIR         := $(REPO_ROOT)/backend/grpc-api-types/proto
-ARTIFACTS_DIR     := $(REPO_ROOT)/artifacts
+PROTO_DIR     := $(REPO_ROOT)/crates/types-traits/grpc-api-types/proto
+ARTIFACTS_DIR := $(REPO_ROOT)/artifacts
 
 # ---------------------------------------------------------------------------
 # Platform detection
