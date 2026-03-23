@@ -6,10 +6,10 @@ edition = "2021"
 [dependencies]
 # First-party dependencies
 grpc-api-types = { path = "../grpc-api-types" }
-common_enums = { path = "../common_enums", package = "ucs_common_enums" }
-common_utils = { path = "../common_utils", package = "ucs_common_utils" }
+common_enums = { path = "../../common/common_enums", package = "ucs_common_enums" }
+common_utils = { path = "../../common/common_utils", package = "ucs_common_utils" }
 domain_types = { path = "../domain_types" }
-ucs_env = { path = "../ucs_env" }
+ucs_env = { path = "../../common/ucs_env" }
 hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
 
 # Third-party dependencies

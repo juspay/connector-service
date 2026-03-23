@@ -5,7 +5,7 @@ If you have ever integrated a payment processor, you know the drill. You read th
 We have been living in this world for years building Hyperswitch, an open-source payment orchestrator. At some point we had integrations for 50+ connectors. The integrations worked well — but they were locked inside our orchestrator, not usable by anyone who just needed to talk to Stripe or Adyen without adopting an entire platform.
 We always felt the Payment APIs are not more complicated than database drivers. It it just that the industry has not arrived at a standard (and it never will!!) for payments. Hence, we decided to build an open interface for Developer and AI agents to use, rather than recreate it every time.
 
-This post is about how we did that: unbundling those integrations into a standalone library called the **Connector Service**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
+This post is about how we did that: unbundling those integrations into a standalone library called the **Prism**, and the engineering decisions we made along the way. Some of them are genuinely interesting.
 
 ---
 
@@ -25,7 +25,7 @@ So we separated the integration layer out. The result is a library with a well-d
 >
 > The core requirement was multi-language client generation. We needed Python developers, Java developers, TypeScript developers, and Rust developers to all be able to consume this library with first-class, type-safe APIs — without anyone hand-writing SDK code in each language. Protobuf has the most mature ecosystem for this: `prost` for Rust, `protoc-gen-java` for Java, `grpc_tools.protoc` for Python, and so on. It also doubles as our gRPC interface description when the library is deployed as a server, which turned out to be a natural fit for the two deployment modes we wanted to support (more on that below).
 
-The specification lives in `backend/grpc-api-types/proto/` and covers the full payment lifecycle across nine services:
+The specification lives in `crates/types-traits/grpc-api-types/proto/` and covers the full payment lifecycle across nine services:
 
 | Service | What it does |
 |---|---|
@@ -130,7 +130,7 @@ This is where things get interesting. We wanted the library to work both as an *
         │  in-process call         │  network call
         ▼                          ▼
  ┌──────────────────────────────────────────────┐
- │          Rust Core (connector-service)       │
+ │          Rust Core (Prism)       │
  │  req_transformer → [HTTP] → res_transformer  │
  └──────────────────────────────────────────────┘
 ```
@@ -139,7 +139,7 @@ This is where things get interesting. We wanted the library to work both as an *
 
 In SDK mode, the Rust core compiles into a native shared library (`.so` / `.dylib`) and is exposed to host languages via **UniFFI** — Mozilla's framework for generating language bindings from Rust automatically. When your Python code calls `authorize_req_transformer(request_bytes, options_bytes)`, that call crosses the FFI boundary directly into the Rust binary running in the same process.
 
-The FFI layer (`backend/ffi/`) is thin by design:
+The FFI layer (`crates/ffi/ffi/`) is thin by design:
 
 - `services/payments.rs` — the transformer implementations, wired to domain types via the macros above
 - `handlers/payments.rs` — loads the embedded config (yes, the connector URL config is baked into the binary) and delegates to the service transformers
@@ -153,7 +153,7 @@ Data crosses the language boundary as serialized protobuf bytes. This is intenti
 
 ### Mode 2: The gRPC server
 
-In gRPC mode, `backend/grpc-server` runs as a standalone async service built on **Tonic** (Rust's async gRPC framework). It implements all nine proto services, accepts gRPC connections from any language's generated stubs, makes the connector HTTP calls internally, and returns unified proto responses over the wire.
+In gRPC mode, `crates/grpc-server/grpc-server` runs as a standalone async service built on **Tonic** (Rust's async gRPC framework). It implements all nine proto services, accepts gRPC connections from any language's generated stubs, makes the connector HTTP calls internally, and returns unified proto responses over the wire.
 
 The gRPC server calls the same Rust core transformers as the FFI layer — just from a different entry point. The transformation logic is literally the same code path. The difference is that the HTTP client lives inside the server process, not in the caller's.
 
@@ -193,20 +193,20 @@ sdk/javascript/
 
 ## Code generation: the glue that holds it together
 
-Here is a problem we needed to solve: the connector service supports many payment flows (authorize, capture, void, refund, recurring charge, 3DS pre-auth, webhook handling, ...) and many SDK languages. Hand-maintaining typed client methods for each flow in each language is exactly the kind of work that introduces drift and bugs. So we do not do it.
+Here is a problem we needed to solve: the Prism supports many payment flows (authorize, capture, void, refund, recurring charge, 3DS pre-auth, webhook handling, ...) and many SDK languages. Hand-maintaining typed client methods for each flow in each language is exactly the kind of work that introduces drift and bugs. So we do not do it.
 
 The code generator at `sdk/codegen/generate.py` reads two sources of truth and emits all the SDK client boilerplate automatically.
 
 > **Q: What are the two sources of truth?**
 >
 > 1. `services.proto` compiled to a binary descriptor — this tells the generator every RPC name, its request type, its response type, and its doc comment.
-> 2. `backend/ffi/src/services/payments.rs` — this tells the generator which flows are actually implemented, by scanning for `req_transformer!` invocations.
+> 2. `crates/ffi/ffi/src/services/payments.rs` — this tells the generator which flows are actually implemented, by scanning for `req_transformer!` invocations.
 >
 > The generator takes their intersection. A flow in proto but not implemented in Rust? Warning, skipped — we don't ship unimplemented APIs. A transformer in Rust with no matching proto RPC? Also a warning — the spec is the authority, not the implementation.
 
 Running `make generate` produces:
 
-**In Rust** (`backend/ffi/src/`):
+**In Rust** (`crates/ffi/ffi/src/`):
 - `_generated_flow_registrations.rs` — the `impl_flow_handlers!` wiring for each flow
 - `_generated_ffi_flows.rs` — the `define_ffi_flow!` UniFFI exposure for each flow
 
@@ -246,7 +246,7 @@ services.proto
     ├── protoc (JS plugin)              → proto.js / proto.d.ts (JS proto stubs)
     └── protoc (binary descriptor)      → services.desc
                                                 │
-backend/ffi/src/services/payments.rs ──────────┤
+crates/ffi/ffi/src/services/payments.rs ──────────┤
     (req/res transformer registrations)         │
                                                 ▼
                                           generate.py

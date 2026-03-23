@@ -1,274 +1,459 @@
-# First Payment
+# First Payment with Error Handling
 
-This guide walks you through making your first payment using the Universal Connector Service (UCS).
+You will have `payment_method_id` from Stripe if you depend on your processor for PCI compliance. Alternatively if your Stripe API keys are enabled to accept PCI compliant raw card data, that will suffice to make the first payment.
 
-## Prerequisites
+Int he next few steps you will authorize the payment, handle errors, capture funds, and process refunds. And then you will be ready to send payment to any payment processor, without writing specialized code for each.
 
-Before you begin, ensure you have:
+## Authorize with Payment Method ID
 
-- Completed the [installation](./installation.md)
-- Set up your connector credentials (Stripe, Adyen, etc.)
-- Understanding of basic UCS [concepts](./concepts.md)
+Use the `payment_method_id` from [Quick Start](./quick-start.md) to authorize the payment:
 
-## Overview
+{% tabs %}
 
-In this tutorial, you will:
+{% tab title="Node.js" %}
 
-1. Create a payment order
-2. Authorize the payment
-3. Handle potential errors with user-friendly messages
-4. Capture the payment
+```javascript
+const { ConnectorClient, Currency, CaptureMethod } = require('@juspay/connector-service-node');
 
-## Step 1: Create a Payment Order
-
-First, create a payment order that represents the transaction:
-
-```rust
-use ucs::prelude::*;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize the UCS client
-    let client = UcsClient::new(Config::from_env()?)?;
-
-    // Create a payment order
-    let order = client
-        .payment_service()
-        .create_order(CreateOrderRequest {
-            amount: Amount {
-                value: 1000,  // $10.00 in cents
-                currency: Currency::USD,
-            },
-            merchant_reference: "order-12345".to_string(),
-            description: Some("Test payment".to_string()),
-            ..Default::default()
-        })
-        .await?;
-
-    println!("Created order: {}", order.id);
-    Ok(())
-}
-```
-
-## Step 2: Authorize the Payment
-
-Authorize the payment using a test card:
-
-```rust
-use ucs::types::payment_method::{Card, CardBrand};
-
-let authorize_response = client
-    .payment_service()
-    .authorize(AuthorizeRequest {
-        order_id: order.id.clone(),
-        payment_method: PaymentMethod::Card(Card {
-            number: "4242424242424242".to_string(), // Test card
-            expiry_month: 12,
-            expiry_year: 2027,
-            cvv: "123".to_string(),
-            brand: Some(CardBrand::Visa),
-            ..Default::default()
-        }),
-        ..Default::default()
-    })
-    .await?;
-
-println!("Authorization status: {:?}", authorize_response.status);
-```
-
-## Step 3: Error Handling
-
-UCS provides detailed, actionable error messages. Here's how to handle common errors:
-
-```rust
-match client.payment_service().authorize(request).await {
-    Ok(response) => {
-        println!("Payment authorized: {}", response.id);
-    }
-    Err(UcsError::ValidationError { field, message, suggestion }) => {
-        eprintln!("Validation error in '{}': {}", field, message);
-        eprintln!("Suggestion: {}", suggestion);
-        // Handle validation error (e.g., invalid card number)
-    }
-    Err(UcsError::ConnectorError { connector, code, message, connector_docs }) => {
-        eprintln!("{} error ({}): {}", connector, code, message);
-        eprintln!("See: {}", connector_docs);
-        // Handle connector-specific error
-    }
-    Err(UcsError::PaymentDeclined { reason, retryable }) => {
-        eprintln!("Payment declined: {}", reason);
-        if retryable {
-            eprintln!("You may retry with different payment method");
+async function authorizePayment(paymentMethodId) {
+    const client = new ConnectorClient({
+        connectors: {
+            stripe: { apiKey: process.env.STRIPE_API_KEY }
         }
-        // Handle declined payment
-    }
-    Err(e) => {
-        eprintln!("Unexpected error: {}", e);
-    }
-}
-```
+    });
 
-### Common Error Scenarios
-
-#### Invalid Card Number
-
-```
-Error: Validation failed for field 'card.number'
-Message: Card number failed Luhn check
-Suggestion: Verify the card number is entered correctly. Test with 4242424242424242 for Visa.
-Stripe docs: https://stripe.com/docs/testing#cards
-```
-
-#### Expired Card
-
-```
-Error: Payment declined
-Message: Your card has expired
-Suggestion: Check the expiry date or use a different card
-Retryable: true
-```
-
-#### Insufficient Funds
-
-```
-Error: Payment declined
-Message: Insufficient funds
-Suggestion: Use a different payment method or contact your bank
-Retryable: true
-```
-
-## Step 4: Capture the Payment
-
-Once authorized, capture the payment to complete the transaction:
-
-```rust
-let capture_response = client
-    .payment_service()
-    .capture(CaptureRequest {
-        payment_id: authorize_response.id,
-        amount: Some(Amount {
-            value: 1000,
-            currency: Currency::USD,
-        }), // Partial capture supported
-        ..Default::default()
-    })
-    .await?;
-
-println!("Captured: {:?}", capture_response.status);
-```
-
-## Complete Example
-
-Here's the complete flow in one example:
-
-```rust
-use ucs::prelude::*;
-
-async fn process_payment() -> Result<Payment, UcsError> {
-    let client = UcsClient::new(Config::from_env()?)?;
-
-    // 1. Create order
-    let order = client
-        .payment_service()
-        .create_order(CreateOrderRequest {
-            amount: Amount {
-                value: 1000,
-                currency: Currency::USD,
+    try {
+        // Authorize using the payment_method_id from Stripe.js
+        const auth = await client.payments.authorize({
+            amount: { minorAmount: 1000, currency: Currency.USD },
+            merchantOrderId: 'order-456',
+            paymentMethod: {
+                paymentMethodId: paymentMethodId  // e.g., 'pm_1234...'
             },
-            merchant_reference: "order-12345".to_string(),
-            ..Default::default()
-        })
-        .await?;
+            captureMethod: CaptureMethod.MANUAL  // Authorize only, capture later
+        });
 
-    // 2. Authorize
-    let auth = client
-        .payment_service()
-        .authorize(AuthorizeRequest {
-            order_id: order.id,
-            payment_method: PaymentMethod::Card(Card {
-                number: "4242424242424242".to_string(),
-                expiry_month: 12,
-                expiry_year: 2027,
-                cvv: "123".to_string(),
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-        .await?;
+        console.log('Authorized:', auth.paymentId, auth.status);  // AUTHORIZED
+        return auth;
 
-    // 3. Capture
-    let payment = client
-        .payment_service()
-        .capture(CaptureRequest {
-            payment_id: auth.id,
-            ..Default::default()
-        })
-        .await?;
+    } catch (error) {
+        handlePaymentError(error);
+    }
+}
 
-    Ok(payment)
+function handlePaymentError(error) {
+    switch (error.code) {
+        case 'PAYMENT_DECLINED':
+            console.error('Card declined:', error.message);
+            break;
+        case 'EXPIRED_CARD':
+            console.error('Card expired:', error.message);
+            break;
+        case 'INSUFFICIENT_FUNDS':
+            console.error('Insufficient funds:', error.message);
+            break;
+        case 'NETWORK_TIMEOUT':
+            console.error('Network issue:', error.message);
+            break;
+        default:
+            console.error('Payment failed:', error.message);
+            console.error('Request ID:', error.requestId);
+    }
 }
 ```
 
-## Next Steps
+{% endtab %}
 
-- Learn about [extending to more flows](./extending-to-more-flows.md)
-- Explore [refund operations](../api-reference/services/refund-service/README.md)
-- Set up [recurring payments](../api-reference/services/recurring-payment-service/README.md)
-- Read about [error handling](../architecture/error-handling.md) in depth
-
-## Language Examples
-
-### Node.js
-
-```typescript
-import { UcsClient } from '@juspay/ucs-node';
-
-const client = new UcsClient({
-  apiKey: process.env.UCS_API_KEY,
-  environment: 'sandbox'
-});
-
-const order = await client.payments.createOrder({
-  amount: { value: 1000, currency: 'USD' },
-  merchantReference: 'order-12345'
-});
-
-const payment = await client.payments.authorize({
-  orderId: order.id,
-  paymentMethod: {
-    type: 'card',
-    card: {
-      number: '4242424242424242',
-      expiryMonth: 12,
-      expiryYear: 2027,
-      cvv: '123'
-    }
-  }
-});
-```
-
-### Python
+{% tab title="Python" %}
 
 ```python
-from ucs import UcsClient
+import os
+from connector_service import ConnectorClient, Currency, CaptureMethod
+from connector_service.errors import PaymentDeclinedError, NetworkTimeoutError
 
-client = UcsClient(api_key=os.getenv("UCS_API_KEY"))
-
-order = client.payments.create_order(
-    amount={"value": 1000, "currency": "USD"},
-    merchant_reference="order-12345"
+client = ConnectorClient(
+    connectors={"stripe": {"api_key": os.environ["STRIPE_API_KEY"]}}
 )
 
-payment = client.payments.authorize(
-    order_id=order.id,
-    payment_method={
-        "type": "card",
-        "card": {
-            "number": "4242424242424242",
-            "expiry_month": 12,
-            "expiry_year": 2027,
-            "cvv": "123"
+def authorize_payment(payment_method_id):
+    try:
+        auth = client.payments.authorize(
+            amount={"minor_amount": 1000, "currency": Currency.USD},
+            merchant_order_id="order-456",
+            payment_method={
+                "payment_method_id": payment_method_id  # e.g., 'pm_1234...'
+            },
+            capture_method=CaptureMethod.MANUAL
+        )
+        print(f"Authorized: {auth.payment_id}, {auth.status}")
+        return auth
+
+    except PaymentDeclinedError as e:
+        print(f"Card declined: {e.message}")
+    except NetworkTimeoutError as e:
+        print(f"Network issue: {e.message}")
+    except Exception as e:
+        print(f"Payment failed: {e}")
+```
+
+{% endtab %}
+
+{% tab title="Java" %}
+
+```java
+import com.juspay.connectorservice.*;
+import com.juspay.connectorservice.errors.*;
+
+public class FirstPayment {
+    public ConnectorClient client = ConnectorClient.builder()
+        .connector("stripe", StripeConfig.builder()
+            .apiKey(System.getenv("STRIPE_API_KEY"))
+            .build())
+        .build();
+
+    public void authorizePayment(String paymentMethodId) {
+        try {
+            AuthorizeResponse auth = client.payments().authorize(
+                AuthorizeRequest.builder()
+                    .amount(Amount.of(1000, Currency.USD))
+                    .merchantOrderId("order-456")
+                    .paymentMethod(PaymentMethod.byId(paymentMethodId))
+                    .captureMethod(CaptureMethod.MANUAL)
+                    .build()
+            );
+            System.out.println("Authorized: " + auth.getPaymentId());
+
+        } catch (PaymentDeclinedError e) {
+            System.err.println("Card declined: " + e.getMessage());
+        } catch (NetworkTimeoutError e) {
+            System.err.println("Network issue: " + e.getMessage());
+        } catch (PaymentError e) {
+            System.err.println("Payment failed: " + e.getMessage());
+            System.err.println("Request ID: " + e.getRequestId());
         }
     }
+}
+```
+
+{% endtab %}
+
+{% tab title="PHP" %}
+
+```php
+<?php
+use ConnectorService\ConnectorClient;
+use ConnectorService\Enum\Currency;
+use ConnectorService\Enum\CaptureMethod;
+
+$client = new ConnectorClient([
+    'connectors' => [
+        'stripe' => ['api_key' => $_ENV['STRIPE_API_KEY']]
+    ]
+]);
+
+function authorizePayment($paymentMethodId) use ($client) {
+    try {
+        $auth = $client->payments()->authorize([
+            'amount' => ['minor_amount' => 1000, 'currency' => Currency::USD],
+            'merchant_order_id' => 'order-456',
+            'payment_method' => [
+                'payment_method_id' => $paymentMethodId  // e.g., 'pm_1234...'
+            ],
+            'capture_method' => CaptureMethod::MANUAL
+        ]);
+        echo "Authorized: " . $auth->getPaymentId() . "\n";
+        return $auth;
+
+    } catch (PaymentDeclinedException $e) {
+        echo "Card declined: " . $e->getMessage() . "\n";
+    } catch (NetworkTimeoutException $e) {
+        echo "Network issue: " . $e->getMessage() . "\n";
+    } catch (Exception $e) {
+        echo "Payment failed: " . $e->getMessage() . "\n";
+    }
+}
+```
+
+{% endtab %}
+
+{% endtabs %}
+
+## Authorize with Raw Card Details (PCI Compliant)
+
+If you're PCI compliant and collect card details directly:
+
+{% tabs %}
+
+{% tab title="Node.js" %}
+
+```javascript
+const auth = await client.payments.authorize({
+    amount: { minorAmount: 1000, currency: Currency.USD },
+    merchantOrderId: 'order-456',
+    paymentMethod: {
+        card: {
+            cardNumber: '4242424242424242',
+            expiryMonth: '12',
+            expiryYear: '2027',
+            cardHolderName: 'Jane Doe'
+        }
+    },
+    captureMethod: CaptureMethod.AUTOMATIC  // Charge immediately
+});
+```
+
+{% endtab %}
+
+{% tab title="Python" %}
+
+```python
+auth = client.payments.authorize(
+    amount={"minor_amount": 1000, "currency": Currency.USD},
+    merchant_order_id="order-456",
+    payment_method={
+        "card": {
+            "card_number": "4242424242424242",
+            "expiry_month": "12",
+            "expiry_year": "2027",
+            "card_holder_name": "Jane Doe"
+        }
+    },
+    capture_method=CaptureMethod.AUTOMATIC
 )
 ```
+
+{% endtab %}
+
+{% tab title="Java" %}
+
+```java
+AuthorizeResponse auth = client.payments().authorize(
+    AuthorizeRequest.builder()
+        .amount(Amount.of(1000, Currency.USD))
+        .merchantOrderId("order-456")
+        .paymentMethod(PaymentMethod.card(
+            "4242424242424242", "12", "2027", "Jane Doe"))
+        .captureMethod(CaptureMethod.AUTOMATIC)
+        .build()
+);
+```
+
+{% endtab %}
+
+{% tab title="PHP" %}
+
+```php
+$auth = $client->payments()->authorize([
+    'amount' => ['minor_amount' => 1000, 'currency' => Currency::USD],
+    'merchant_order_id' => 'order-456',
+    'payment_method' => [
+        'card' => [
+            'card_number' => '4242424242424242',
+            'expiry_month' => '12',
+            'expiry_year' => '2027',
+            'card_holder_name' => 'Jane Doe'
+        ]
+    ],
+    'capture_method' => CaptureMethod::AUTOMATIC
+]);
+```
+
+{% endtab %}
+
+{% endtabs %}
+
+## Complete Payment Flow
+
+After authorization, capture funds and handle refunds:
+
+{% tabs %}
+
+{% tab title="Node.js" %}
+
+```javascript
+// 1. Check payment status
+const status = await client.payments.get({
+    paymentId: auth.paymentId
+});
+console.log('Current status:', status.status);
+
+// 2. Capture the funds (when order ships)
+const capture = await client.payments.capture({
+    paymentId: auth.paymentId,
+    amount: { minorAmount: 1000, currency: Currency.USD }
+});
+console.log('Captured:', capture.status);  // CAPTURED
+
+// 3. Process a partial refund (customer returns item)
+const refund = await client.payments.refund({
+    paymentId: auth.paymentId,
+    amount: { minorAmount: 500, currency: Currency.USD },  // Refund $5
+    reason: 'Customer return'
+});
+console.log('Refund ID:', refund.refundId);
+```
+
+{% endtab %}
+
+{% tab title="Python" %}
+
+```python
+# 1. Check payment status
+status = client.payments.get(payment_id=auth.payment_id)
+print(f"Current status: {status.status}")
+
+# 2. Capture the funds
+capture = client.payments.capture(
+    payment_id=auth.payment_id,
+    amount={"minor_amount": 1000, "currency": Currency.USD}
+)
+print(f"Captured: {capture.status}")
+
+# 3. Process a partial refund
+refund = client.payments.refund(
+    payment_id=auth.payment_id,
+    amount={"minor_amount": 500, "currency": Currency.USD},
+    reason="Customer return"
+)
+print(f"Refund ID: {refund.refund_id}")
+```
+
+{% endtab %}
+
+{% tab title="Java" %}
+
+```java
+// 1. Check payment status
+PaymentResponse status = client.payments().get(
+    GetPaymentRequest.builder()
+        .paymentId(auth.getPaymentId())
+        .build()
+);
+System.out.println("Status: " + status.getStatus());
+
+// 2. Capture the funds
+CaptureResponse capture = client.payments().capture(
+    CaptureRequest.builder()
+        .paymentId(auth.getPaymentId())
+        .amount(Amount.of(1000, Currency.USD))
+        .build()
+);
+System.out.println("Captured: " + capture.getStatus());
+
+// 3. Process a partial refund
+RefundResponse refund = client.payments().refund(
+    RefundRequest.builder()
+        .paymentId(auth.getPaymentId())
+        .amount(Amount.of(500, Currency.USD))
+        .reason("Customer return")
+        .build()
+);
+System.out.println("Refund ID: " + refund.getRefundId());
+```
+
+{% endtab %}
+
+{% tab title="PHP" %}
+
+```php
+// 1. Check payment status
+$status = $client->payments()->get(['payment_id' => $auth->getPaymentId()]);
+echo "Status: " . $status->getStatus() . "\n";
+
+// 2. Capture the funds
+$capture = $client->payments()->capture([
+    'payment_id' => $auth->getPaymentId(),
+    'amount' => ['minor_amount' => 1000, 'currency' => Currency::USD]
+]);
+echo "Captured: " . $capture->getStatus() . "\n";
+
+// 3. Process a partial refund
+$refund = $client->payments()->refund([
+    'payment_id' => $auth->getPaymentId(),
+    'amount' => ['minor_amount' => 500, 'currency' => Currency::USD],
+    'reason' => 'Customer return'
+]);
+echo "Refund ID: " . $refund->getRefundId() . "\n";
+```
+
+{% endtab %}
+
+{% endtabs %}
+
+## Error Scenarios
+
+### Declined Card
+
+```javascript
+// Using test card: 4000000000000002 (declined)
+const auth = await client.payments.authorize({
+    paymentMethod: { paymentMethodId: 'pm_declined' }
+});
+// Throws: PaymentDeclinedError with code 'PAYMENT_DECLINED'
+```
+
+### Network Timeout
+
+```javascript
+try {
+    const auth = await client.payments.authorize({...});
+} catch (error) {
+    if (error.code === 'NETWORK_TIMEOUT') {
+        // Retry with exponential backoff
+        await retryWithBackoff(() => client.payments.authorize(request));
+    }
+}
+```
+
+## Business Use Cases
+
+### E-commerce: Two-Step Flow
+
+Authorize at checkout. Capture when you ship.
+
+```javascript
+// Checkout: authorize only
+const auth = await client.payments.authorize({
+    amount: { minorAmount: 9999, currency: Currency.USD },
+    captureMethod: CaptureMethod.MANUAL
+});
+
+// Later: when order ships
+await client.payments.capture({
+    paymentId: auth.paymentId,
+    amount: { minorAmount: 9999, currency: Currency.USD }
+});
+```
+
+### SaaS: Immediate Capture
+
+For digital goods, capture immediately.
+
+```javascript
+const payment = await client.payments.authorize({
+    amount: { minorAmount: 2900, currency: Currency.USD },
+    captureMethod: CaptureMethod.AUTOMATIC
+});
+// Status: CAPTURED
+```
+
+### Marketplace: Partial Refund
+
+Customer returns one item from a multi-item order.
+
+```javascript
+await client.payments.refund({
+    paymentId: 'pay_abc123',
+    amount: { minorAmount: 2500, currency: Currency.USD },
+    reason: 'Item damaged in shipping'
+});
+```
+
+## Key Takeaways
+
+- **One error handler** works for all connectors
+- **Unified error codes** tell you exactly what happened
+- **Request IDs** enable support to trace issues
+- **Same code** works for Stripe, Adyen, PayPal, and 50+ more
+
+See [extending payment flows](./extending-to-more-flows.md) for subscriptions, 3D Secure, and more.

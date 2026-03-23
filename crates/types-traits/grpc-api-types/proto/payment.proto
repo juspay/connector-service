@@ -60,7 +60,7 @@ message Money {
 // ErrorInfo provides structured error information for API responses
 message ErrorInfo {
   optional UnifiedErrorDetails unified_details = 1;                    // Machine-readable error code
-  optional IssuerErrorDetails issuer_details = 2;                 // Human-readable error message
+  optional IssuerErrorDetails issuer_details = 2;                       // Human-readable error message
   optional ConnectorErrorDetails connector_details = 3;                 // Detailed explanation
 }
 

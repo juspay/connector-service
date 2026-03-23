@@ -5,22 +5,22 @@ edition = "2021"
 
 [dependencies]
 # First-party dependencies
-grpc-api-types = { path = "../grpc-api-types" }
-connector-integration = { path = "../connector-integration" }
-external-services = { path = "../external-services" }
-domain_types = { path = "../domain_types" }
-interfaces = { path = "../interfaces" }
-cards = { path = "../cards", package = "ucs_cards" }
-common_enums = { path = "../common_enums", package = "ucs_common_enums" }
-common_utils = { path = "../common_utils", package = "ucs_common_utils" }
-composite-service = { path = "../composite-service" }
-config_patch_derive = { path = "../config_patch_derive" }
+grpc-api-types = { path = "../../types-traits/grpc-api-types" }
+connector-integration = { path = "../../integrations/connector-integration" }
+external-services = { path = "../../common/external-services" }
+domain_types = { path = "../../types-traits/domain_types" }
+interfaces = { path = "../../types-traits/interfaces" }
+cards = { path = "../../types-traits/cards", package = "ucs_cards" }
+common_enums = { path = "../../common/common_enums", package = "ucs_common_enums" }
+common_utils = { path = "../../common/common_utils", package = "ucs_common_utils" }
+composite-service = { path = "../../internal/composite-service" }
+config_patch_derive = { path = "../../common/config_patch_derive" }
 hyperswitch_masking = { version = "0.0.1", default-features = false, features = ["alloc", "serde", "time"] }
 # TODO! update to latest Hyperswitch Tag once hyperswitch_masking crate changes are merged to hyperswitch main
 injector = { git = "https://github.com/juspay/hyperswitch",  branch = "solve-injector-masking-cyclic-dependency" }
-tracing-kafka = { path = "../tracing-kafka", optional = true }
-ucs_env = { path = "../ucs_env" }
-ucs_interface_common = { path = "../ucs_interface_common" }
+tracing-kafka = { path = "../../common/tracing-kafka", optional = true }
+ucs_env = { path = "../../common/ucs_env" }
+ucs_interface_common = { path = "../../types-traits/ucs_interface_common" }
 
 # Third-party dependencies
 config = "0.14.0"

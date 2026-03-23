@@ -1,7 +1,7 @@
 //! Build script - dynamically discovers flows from FFI source
 //!
 //! This script:
-//! 1. Parses backend/ffi/src/services/payments.rs for req_transformer! macros
+//! 1. Parses crates/ffi/ffi/src/services/payments.rs for req_transformer! macros
 //! 2. Extracts function_name and request_type
 //! 3. Maps request_type to service/rpc by naming convention
 //! 4. Generates flow_runners.rs with all probe functions
@@ -15,8 +15,8 @@ use std::io::Write;
 use std::path::Path;
 
 fn main() {
-    println!("cargo:rerun-if-changed=../ffi/src/services/payments.rs");
-    println!("cargo:rerun-if-changed=../grpc-api-types/proto/services.proto");
+    println!("cargo:rerun-if-changed=../../ffi/ffi/src/services/payments.rs");
+    println!("cargo:rerun-if-changed=../../types-traits/grpc-api-types/proto/services.proto");
 
     let flows = discover_flows_from_ffi();
     generate_flow_runners(&flows);
@@ -38,7 +38,7 @@ struct FlowInfo {
 }
 
 fn discover_flows_from_ffi() -> Vec<FlowInfo> {
-    let ffi_path = Path::new("../ffi/src/services/payments.rs");
+    let ffi_path = Path::new("../../ffi/ffi/src/services/payments.rs");
     let content = fs::read_to_string(ffi_path).expect("Failed to read FFI payments.rs");
 
     let mut flows = Vec::new();

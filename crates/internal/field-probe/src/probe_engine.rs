@@ -110,7 +110,7 @@ where
         Req,
     ) -> Result<
         Option<common_utils::request::Request>,
-        grpc_api_types::payments::RequestError,
+        grpc_api_types::payments::IntegrationError,
     >,
 {
     let mut required_fields: Vec<String> = Vec::new();
@@ -154,7 +154,7 @@ where
         Req,
     ) -> Result<
         Option<common_utils::request::Request>,
-        grpc_api_types::payments::RequestError,
+        grpc_api_types::payments::IntegrationError,
     >,
 {
     match call(req.clone()) {
@@ -171,7 +171,7 @@ where
         }
         Ok(None) => ProbeAttemptResult::NotImplemented,
         Err(e) => {
-            let msg = e.error_message.unwrap_or_default();
+            let msg = e.error_message;
             ProbeAttemptResult::Error(msg)
         }
     }

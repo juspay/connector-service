@@ -1,7 +1,7 @@
 # Documentation Strategy
 
 
-This document outlines the documentation structure, organization, and strategy for the Unified Connector Service (UCS) project.
+This document outlines the documentation structure, organization, and strategy for the Unified Prism (UCS) project.
 
 
 ## Vision
@@ -196,8 +196,8 @@ on:
    branches: [main]
    paths:
      - 'docs/**'
-     - 'backend/grpc-api-types/**'
-     - 'backend/connector-integration/**'
+     - 'crates/types-traits/grpc-api-types/**'
+     - 'crates/integrations/connector-integration/**'
      - 'sdk/**'
  release:
    types: [published]
@@ -304,7 +304,7 @@ hyperswitch-docs/
 ├── getting-started/              # Cross-project getting started
 ├── architecture/                 # Cross-project architecture
 │
-└── ucs/                          # Connector Service docs (merged)
+└── ucs/                          # Prism docs (merged)
    ├── README.md                 # UCS landing page
    ├── SUMMARY.md                # UCS-specific navigation
    │

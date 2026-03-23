@@ -64,6 +64,7 @@ syntax = "proto3";
 package types;
 
 import "payment.proto";
+import "payouts.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
@@ -202,6 +203,9 @@ service PaymentMethodService {
 
   // // Retrieves payment method details from the payment processor or vault.
   // rpc Get(PaymentMethodServiceGetRequest) returns (PaymentMethodServiceGetResponse);
+
+  // Check if the payout method is eligible for the transaction
+  rpc Eligibility(PayoutMethodEligibilityRequest) returns (PayoutMethodEligibilityResponse);
 }
 
 // ============================================================================
@@ -260,4 +264,30 @@ service PaymentMethodAuthenticationService {
   // Validate authentication results with the issuing bank. Processes bank's
   // authentication decision to determine if payment can proceed.
   rpc PostAuthenticate(PaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
+}
+
+service PayoutService {
+  // Creates a payout.
+  rpc Create(PayoutServiceCreateRequest) returns (PayoutServiceCreateResponse);
+
+  // Creates a payout fund transfer.
+  rpc Transfer(PayoutServiceTransferRequest) returns (PayoutServiceTransferResponse);
+
+  // Retrieve payout details.
+  rpc Get(PayoutServiceGetRequest) returns (PayoutServiceGetResponse);
+
+  // Void a payout.
+  rpc Void(PayoutServiceVoidRequest) returns (PayoutServiceVoidResponse);
+
+  // Stage the payout.
+  rpc Stage(PayoutServiceStageRequest) returns (PayoutServiceStageResponse);
+  
+  // Creates a link between the recipient and the payout.
+  rpc CreateLink(PayoutServiceCreateLinkRequest) returns (PayoutServiceCreateLinkResponse);
+
+  // Create payout recipient.
+  rpc CreateRecipient(PayoutServiceCreateRecipientRequest) returns (PayoutServiceCreateRecipientResponse);
+
+  // Enroll disburse account.
+  rpc EnrollDisburseAccount(PayoutServiceEnrollDisburseAccountRequest) returns (PayoutServiceEnrollDisburseAccountResponse);
 }

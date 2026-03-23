@@ -150,10 +150,10 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
 pub fn parse_services_proto() -> Vec<FlowMetadata> {
     // Try to find services.proto
     let proto_paths = [
-        "backend/grpc-api-types/proto/services.proto",
+        "crates/types-traits/grpc-api-types/proto/services.proto",
         concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../grpc-api-types/proto/services.proto"
+            "/../../types-traits/grpc-api-types/proto/services.proto"
         ),
     ];
 
@@ -358,8 +358,11 @@ const SCALAR_TYPES: &[&str] = &[
 /// `parse_services_proto` (repo-relative path first, then CARGO_MANIFEST_DIR).
 pub fn parse_message_schemas() -> BTreeMap<String, MessageSchema> {
     let proto_dirs = [
-        "backend/grpc-api-types/proto",
-        concat!(env!("CARGO_MANIFEST_DIR"), "/../grpc-api-types/proto"),
+        "crates/types-traits/grpc-api-types/proto",
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../types-traits/grpc-api-types/proto"
+        ),
     ];
 
     for dir in &proto_dirs {

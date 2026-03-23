@@ -47,7 +47,7 @@ static PATCH_CONFIG: OnceLock<PatchConfig> = OnceLock::new();
 pub(crate) fn get_patch_config() -> &'static PatchConfig {
     PATCH_CONFIG.get_or_init(|| {
         let paths = [
-            "backend/field-probe/patch-config.toml",
+            "crates/internal/field-probe/patch-config.toml",
             "patch-config.toml",
             concat!(env!("CARGO_MANIFEST_DIR"), "/patch-config.toml"),
         ];
@@ -113,7 +113,7 @@ pub(crate) struct OAuthConnector {
 impl ProbeConfig {
     pub(crate) fn load() -> Self {
         let config_paths = [
-            "backend/field-probe/probe-config.toml",
+            "crates/internal/field-probe/probe-config.toml",
             "probe-config.toml",
             concat!(env!("CARGO_MANIFEST_DIR"), "/probe-config.toml"),
         ];
