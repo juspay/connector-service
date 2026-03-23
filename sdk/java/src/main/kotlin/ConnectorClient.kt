@@ -18,16 +18,16 @@ import com.google.protobuf.MessageLite
 import com.google.protobuf.Parser
 
 /**
- * Exception raised when req_transformer fails.
- * Wraps RequestError and provides access to proto fields.
+ * Exception raised when req_transformer fails (integration error).
+ * Wraps IntegrationError and provides access to proto fields.
  */
-class RequestError(val proto: types.SdkConfig.RequestError) : Exception(proto.getErrorMessage())
+class IntegrationError(val proto: types.SdkConfig.IntegrationError) : Exception(proto.getErrorMessage())
 
 /**
- * Exception raised when res_transformer fails.
- * Wraps ResponseError and provides access to proto fields.
+ * Exception raised when res_transformer fails (response transformation error).
+ * Wraps ConnectorResponseTransformationError and provides access to proto fields.
  */
-class ResponseError(val proto: types.SdkConfig.ResponseError) : Exception(proto.getErrorMessage())
+class ConnectorResponseTransformationError(val proto: types.SdkConfig.ConnectorResponseTransformationError) : Exception(proto.getErrorMessage())
 
 open class ConnectorClient(
     val config: ConnectorConfig,
@@ -76,16 +76,16 @@ open class ConnectorClient(
      *
      * @param resultBytes Raw bytes returned by the req_transformer FFI call
      * @return FfiConnectorHttpRequest on success (HTTP_REQUEST type)
-     * @throws RequestError if result type is REQUEST_ERROR
-     * @throws ResponseError if result type is RESPONSE_ERROR
+     * @throws IntegrationError if result type is INTEGRATION_ERROR
+     * @throws ConnectorResponseTransformationError if result type is CONNECTOR_RESPONSE_TRANSFORMATION_ERROR
      * @throws IllegalStateException if result type is unknown
      */
     private fun checkReq(resultBytes: ByteArray): FfiConnectorHttpRequest {
         val result = types.SdkConfig.FfiResult.parseFrom(resultBytes)
         return when (result.getType()) {
             types.SdkConfig.FfiResult.Type.HTTP_REQUEST -> result.getHttpRequest()
-            types.SdkConfig.FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.getRequestError())
-            types.SdkConfig.FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.getResponseError())
+            types.SdkConfig.FfiResult.Type.INTEGRATION_ERROR -> throw IntegrationError(result.getIntegrationError())
+            types.SdkConfig.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR -> throw ConnectorResponseTransformationError(result.getConnectorResponseTransformationError())
             else -> throw IllegalStateException("Unknown result type: ${result.getType()}")
         }
     }
@@ -95,16 +95,16 @@ open class ConnectorClient(
      *
      * @param resultBytes Raw bytes returned by the res_transformer FFI call
      * @return FfiConnectorHttpResponse on success (HTTP_RESPONSE type)
-     * @throws ResponseError if result type is RESPONSE_ERROR
-     * @throws RequestError if result type is REQUEST_ERROR
+     * @throws ConnectorResponseTransformationError if result type is CONNECTOR_RESPONSE_TRANSFORMATION_ERROR
+     * @throws IntegrationError if result type is INTEGRATION_ERROR
      * @throws IllegalStateException if result type is unknown
      */
     private fun checkRes(resultBytes: ByteArray): FfiConnectorHttpResponse {
         val result = types.SdkConfig.FfiResult.parseFrom(resultBytes)
         return when (result.getType()) {
             types.SdkConfig.FfiResult.Type.HTTP_RESPONSE -> result.getHttpResponse()
-            types.SdkConfig.FfiResult.Type.RESPONSE_ERROR -> throw ResponseError(result.getResponseError())
-            types.SdkConfig.FfiResult.Type.REQUEST_ERROR -> throw RequestError(result.getRequestError())
+            types.SdkConfig.FfiResult.Type.CONNECTOR_RESPONSE_TRANSFORMATION_ERROR -> throw ConnectorResponseTransformationError(result.getConnectorResponseTransformationError())
+            types.SdkConfig.FfiResult.Type.INTEGRATION_ERROR -> throw IntegrationError(result.getIntegrationError())
             else -> throw IllegalStateException("Unknown result type: ${result.getType()}")
         }
     }
