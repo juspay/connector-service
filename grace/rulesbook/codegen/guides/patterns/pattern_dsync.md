@@ -193,7 +193,7 @@ This is the current recommended approach using the macro framework for maximum c
 ### Main Connector File Pattern (Dsync Flow Addition)
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 // In the imports section, ensure Dsync flow is included:
 use domain_types::{
@@ -323,7 +323,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 ### Transformers File Pattern (Dsync Flow)
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 // Add Dsync-specific imports to existing imports:
 use domain_types::{

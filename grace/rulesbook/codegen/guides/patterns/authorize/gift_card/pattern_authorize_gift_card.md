@@ -41,7 +41,7 @@ Gift Card payments are prepaid payment methods where customers use stored value 
 ### Domain Types Definition
 
 ```rust
-// backend/domain_types/src/payment_method_data.rs
+// crates/types-traits/domain_types/src/payment_method_data.rs
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -63,7 +63,7 @@ pub struct GiftCardDetails {
 ### Proto Definition
 
 ```protobuf
-// backend/grpc-api-types/proto/payment_methods.proto
+// crates/types-traits/grpc-api-types/proto/payment_methods.proto
 
 // Givex - Gift card and loyalty program provider
 message Givex {
@@ -303,7 +303,7 @@ impl From<AdyenPaymentStatus> for common_enums::AttemptStatus {
 ### Full Connector Implementation (Adyen Pattern)
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}.rs
 
 pub mod transformers;
 
@@ -485,7 +485,7 @@ macros::macro_connector_implementation!(
 ### Transformers Implementation
 
 ```rust
-// File: backend/connector-integration/src/connectors/{connector_name}/transformers.rs
+// File: crates/integrations/connector-integration/src/connectors/{connector_name}/transformers.rs
 
 use domain_types::{
     payment_method_data::{GiftCardData, GiftCardDetails, PaymentMethodData},
@@ -815,6 +815,6 @@ mod integration_tests {
 
 ## Cross-References
 
-- [Adyen Connector](/backend/connector-integration/src/connectors/adyen/transformers.rs:1394) - Full Gift Card implementation reference
-- [Payment Method Data](/backend/domain_types/src/payment_method_data.rs:308) - GiftCardData enum definition
-- [Proto Definitions](/backend/grpc-api-types/proto/payment_methods.proto:1220) - Givex and PaySafeCard proto messages
+- [Adyen Connector](/crates/integrations/connector-integration/src/connectors/adyen/transformers.rs:1394) - Full Gift Card implementation reference
+- [Payment Method Data](/crates/types-traits/domain_types/src/payment_method_data.rs:308) - GiftCardData enum definition
+- [Proto Definitions](/crates/types-traits/grpc-api-types/proto/payment_methods.proto:1220) - Givex and PaySafeCard proto messages
