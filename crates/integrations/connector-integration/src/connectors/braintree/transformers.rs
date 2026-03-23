@@ -183,6 +183,7 @@ pub struct BraintreeAuthType {
     pub(super) gpay_allowed_auth_methods: Vec<String>,
     pub(super) gpay_allowed_card_networks: Vec<String>,
     pub(super) paypal_client_id: Option<String>,
+    pub(super) gpay_gateway_merchant_id: Option<String>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for BraintreeAuthType {
@@ -202,6 +203,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BraintreeAuthType {
             gpay_allowed_auth_methods,
             gpay_allowed_card_networks,
             paypal_client_id,
+            gpay_gateway_merchant_id,
             ..
         } = item
         {
@@ -218,6 +220,7 @@ impl TryFrom<&ConnectorSpecificConfig> for BraintreeAuthType {
                 gpay_allowed_auth_methods: gpay_allowed_auth_methods.clone(),
                 gpay_allowed_card_networks: gpay_allowed_card_networks.clone(),
                 paypal_client_id: paypal_client_id.clone(),
+                gpay_gateway_merchant_id: gpay_gateway_merchant_id.clone(),
             })
         } else {
             Err(ConnectorError::FailedToObtainAuthType)?
@@ -1897,9 +1900,9 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
 
         match response {
             BraintreeSessionResponse::SessionTokenResponse(res) => {
+                let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
                 let session_token = match item.router_data.request.payment_method_type {
                     Some(common_enums::PaymentMethodType::ApplePay) => {
-                        let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
                         let payment_request_data = PaymentRequestMetadata {
                             supported_networks: auth.apple_pay_supported_networks,
                             merchant_capabilities: auth.apple_pay_merchant_capabilities,
@@ -1952,8 +1955,6 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         }))
                     }
                     Some(common_enums::PaymentMethodType::GooglePay) => {
-                        let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
-
                         SessionToken::GooglePay(Box::new(
                             GpaySessionTokenResponse::GooglePaySession(GooglePaySessionResponse {
                                 merchant_info: GpayMerchantInfo {
@@ -1978,7 +1979,9 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                                         token_specification_type: "PAYMENT_GATEWAY".to_string(),
                                         parameters: GpayTokenParameters {
                                             gateway: Some("braintree".to_string()),
-                                            gateway_merchant_id: None,
+                                            gateway_merchant_id: auth
+                                                .gpay_gateway_merchant_id
+                                                .clone(),
                                             protocol_version: None,
                                             public_key: None,
                                         },
@@ -2007,7 +2010,6 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
                         ))
                     }
                     Some(common_enums::PaymentMethodType::Paypal) => {
-                        let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
                         let paypal_client_id = auth.paypal_client_id.ok_or(
                             ConnectorError::InvalidConnectorConfig {
                                 config: "paypal_client_id",

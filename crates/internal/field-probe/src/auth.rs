@@ -259,6 +259,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             gpay_allowed_auth_methods: vec![],
             gpay_allowed_card_networks: vec![],
             paypal_client_id: None,
+            gpay_gateway_merchant_id: None,
         },
         ConnectorEnum::Truelayer => ConnectorSpecificConfig::Truelayer {
             client_id: id(),

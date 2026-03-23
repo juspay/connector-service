@@ -418,6 +418,7 @@ pub enum ConnectorSpecificConfig {
         gpay_allowed_auth_methods: Vec<String>,
         gpay_allowed_card_networks: Vec<String>,
         paypal_client_id: Option<String>,
+        gpay_gateway_merchant_id: Option<String>,
     },
     Truelayer {
         client_id: Secret<String>,
@@ -1422,6 +1423,7 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorSpecificConfig> for Conne
                 gpay_allowed_auth_methods: braintree.gpay_allowed_auth_methods,
                 gpay_allowed_card_networks: braintree.gpay_allowed_card_networks,
                 paypal_client_id: braintree.paypal_client_id,
+                gpay_gateway_merchant_id: braintree.gpay_gateway_merchant_id,
             }),
             AuthType::Cashtocode(cashtocode) => Ok(Self::Cashtocode {
                 auth_key_map: serde_json::to_value(cashtocode.auth_key_map)
@@ -2283,6 +2285,7 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     gpay_allowed_auth_methods: vec![],
                     gpay_allowed_card_networks: vec![],
                     paypal_client_id: None,
+                    gpay_gateway_merchant_id: None,
                 }),
                 _ => Err(err().into()),
             },
