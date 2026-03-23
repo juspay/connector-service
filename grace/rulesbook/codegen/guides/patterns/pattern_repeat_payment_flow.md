@@ -173,7 +173,7 @@ let mandate_id = req.request.mandate_reference;
 
 ### Stripe
 
-**File**: `backend/connector-integration/src/connectors/stripe.rs`
+**File**: `crates/integrations/connector-integration/src/connectors/stripe.rs`
 
 **Key Characteristics**:
 - **Request Type Reuse**: Uses `PaymentIntentRequest` (same as Authorize flow)
@@ -223,7 +223,7 @@ impl GetRequestIncrementalAuthorization for RepeatPaymentData {
 
 ### ACI
 
-**File**: `backend/connector-integration/src/connectors/aci.rs`
+**File**: `crates/integrations/connector-integration/src/connectors/aci.rs`
 
 **Key Characteristics**:
 - **Request Type**: `AciRepeatPaymentRequest<T>` (unique structure)
@@ -292,7 +292,7 @@ impl GetCaptureMethod for RepeatPaymentData {
 
 ### Cybersource
 
-**File**: `backend/connector-integration/src/connectors/cybersource.rs`
+**File**: `crates/integrations/connector-integration/src/connectors/cybersource.rs`
 
 **Key Characteristics**:
 - **Request Type**: `CybersourceRepeatPaymentRequest` (unique structure)
