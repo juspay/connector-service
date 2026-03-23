@@ -1146,8 +1146,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .request
             .metadata
             .as_ref()
-            .map(|m| m.peek().as_object().cloned())
-            .flatten();
+            .and_then(|m| m.peek().as_object().cloned());
 
         let payment_product = metadata
             .as_ref()
