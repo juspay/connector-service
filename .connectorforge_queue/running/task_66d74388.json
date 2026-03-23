@@ -1,0 +1,18 @@
+{
+  "id": "task_66d74388",
+  "status": "running",
+  "priority": "medium",
+  "created_at": "2026-03-23T11:04:14.473782Z",
+  "created_by": "developer",
+  "connector": "Worldpay",
+  "payment_flow": "cards-3ds",
+  "branch": "feat-Worldpay-cards-3ds",
+  "context": "",
+  "api_docs_urls": [],
+  "pr_url": null,
+  "workflow_stage": "pending",
+  "workflow_iteration": 0,
+  "max_iterations": 3,
+  "started_at": "2026-03-23T11:04:28.017018Z",
+  "worker_id": "worker_15580_7642ee06"
+}

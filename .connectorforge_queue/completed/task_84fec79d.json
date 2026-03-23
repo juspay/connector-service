@@ -1,0 +1,27 @@
+{
+  "id": "task_84fec79d",
+  "status": "completed",
+  "priority": "medium",
+  "created_at": "2026-03-23T10:38:02.274495Z",
+  "created_by": "developer",
+  "connector": "Nuvei",
+  "payment_flow": "cards-3ds",
+  "branch": "feat-Nuvei-cards-3ds",
+  "context": "",
+  "api_docs_urls": [
+    "https://docs.nuvei.com",
+    "https://developer.nuvei.com",
+    "https://docs.nuvei.com/api"
+  ],
+  "pr_url": "",
+  "workflow_stage": "pending",
+  "workflow_iteration": 0,
+  "max_iterations": 3,
+  "result": {
+    "success": true,
+    "pr_url": ""
+  },
+  "started_at": "2026-03-23T10:38:05.251288Z",
+  "completed_at": "2026-03-23T10:56:54.157735Z",
+  "worker_id": "worker_1786_b306a923"
+}
