@@ -198,6 +198,12 @@ export class GrpcPaymentMethodClient {
       req, types.PaymentMethodServiceTokenizeRequest, types.PaymentMethodServiceTokenizeResponse);
   }
 
+  /** PaymentMethodService.Eligibility — Check if the payout method is eligible for the transaction */
+  async eligibility(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payment_method/eligibility",
+      req, types.PayoutMethodEligibilityRequest, types.PayoutMethodEligibilityResponse);
+  }
+
 }
 
 // PaymentService
@@ -266,6 +272,42 @@ export class GrpcPaymentClient {
 
 }
 
+// PayoutService
+export class GrpcPayoutClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** PayoutService.Transfer — Creates a payout fund transfer. */
+  async transfer(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payout/transfer",
+      req, types.PayoutServiceTransferRequest, types.PayoutServiceTransferResponse);
+  }
+
+  /** PayoutService.Stage — Stage the payout. */
+  async stage(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payout/stage",
+      req, types.PayoutServiceStageRequest, types.PayoutServiceStageResponse);
+  }
+
+  /** PayoutService.CreateLink — Creates a link between the recipient and the payout. */
+  async createLink(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payout/create_link",
+      req, types.PayoutServiceCreateLinkRequest, types.PayoutServiceCreateLinkResponse);
+  }
+
+  /** PayoutService.CreateRecipient — Create payout recipient. */
+  async createRecipient(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payout/create_recipient",
+      req, types.PayoutServiceCreateRecipientRequest, types.PayoutServiceCreateRecipientResponse);
+  }
+
+  /** PayoutService.EnrollDisburseAccount — Enroll disburse account. */
+  async enrollDisburseAccount(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "payout/enroll_disburse_account",
+      req, types.PayoutServiceEnrollDisburseAccountRequest, types.PayoutServiceEnrollDisburseAccountResponse);
+  }
+
+}
+
 // RecurringPaymentService
 export class GrpcRecurringPaymentClient {
   constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
@@ -314,6 +356,7 @@ export class GrpcClient {
   public paymentMethodAuthentication: GrpcPaymentMethodAuthenticationClient;
   public paymentMethod: GrpcPaymentMethodClient;
   public payment: GrpcPaymentClient;
+  public payout: GrpcPayoutClient;
   public recurringPayment: GrpcRecurringPaymentClient;
 
   constructor(config: GrpcConfig, libPath?: string) {
@@ -325,6 +368,7 @@ export class GrpcClient {
     this.paymentMethodAuthentication = new GrpcPaymentMethodAuthenticationClient(ffi, config);
     this.paymentMethod = new GrpcPaymentMethodClient(ffi, config);
     this.payment = new GrpcPaymentClient(ffi, config);
+    this.payout = new GrpcPayoutClient(ffi, config);
     this.recurringPayment = new GrpcRecurringPaymentClient(ffi, config);
   }
 }

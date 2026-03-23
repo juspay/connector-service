@@ -85,6 +85,13 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
     })).unwrap_or_default()
 }
 
+pub fn build_reverse_request() -> PaymentServiceReverseRequest {
+    serde_json::from_value::<PaymentServiceReverseRequest>(serde_json::json!({
+    "merchant_reverse_id": "probe_reverse_001",  // Identification
+    "connector_transaction_id": "probe_connector_txn_001",
+    })).unwrap_or_default()
+}
+
 pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
     "merchant_void_id": "probe_void_001",  // Identification
@@ -229,10 +236,7 @@ pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) ->
 // Flow: PaymentService.Reverse
 #[allow(dead_code)]
 pub async fn reverse(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.reverse(serde_json::from_value::<PaymentServiceReverseRequest>(serde_json::json!({
-    "merchant_reverse_id": "probe_reverse_001",  // Identification
-    "connector_transaction_id": "probe_connector_txn_001",
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.reverse(build_reverse_request(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 

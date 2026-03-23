@@ -13,7 +13,7 @@ unsafe_code = "allow"
 [dependencies]
 # Intentionally NOT depending on hyperswitch-payments-client (pulls in ffi + all connectors).
 # We talk directly to the tonic-generated stubs in grpc-api-types.
-grpc-api-types = { path = "../../backend/grpc-api-types" }
+grpc-api-types = { path = "../../crates/types-traits/grpc-api-types" }
 tonic           = { workspace = true }
 tokio           = { version = "1", features = ["rt-multi-thread", "macros"] }
 serde           = { version = "1", features = ["derive"] }

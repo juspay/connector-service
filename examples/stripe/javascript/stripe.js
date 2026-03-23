@@ -78,7 +78,7 @@ function _buildGetRequest(connectorTransactionId) {
 function _buildRecurringChargeRequest() {
     return {
         "connectorRecurringPaymentId": {  // Reference to existing mandate
-            "connectorMandateId": {  // mandate_id sent by the connector
+            "mandateIdType": {
                 "connectorMandateId": "probe-mandate-123"
             }
         },

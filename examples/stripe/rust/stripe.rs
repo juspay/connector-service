@@ -84,7 +84,7 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
 pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
     serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
     "connector_recurring_payment_id": {  // Reference to existing mandate
-        "connector_mandate_id": {  // mandate_id sent by the connector
+        "mandate_id_type": {
             "connector_mandate_id": "probe-mandate-123",
         },
     },

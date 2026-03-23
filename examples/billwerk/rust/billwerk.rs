@@ -87,6 +87,30 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
     })).unwrap_or_default()
 }
 
+pub fn build_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
+    serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
+    "amount": {  // Payment Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {  // Generic card payment
+                "card_number": "4111111111111111",  // Card Identification
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",  // Cardholder Information
+            },
+        }
+    },
+    "address": {  // Address Information
+        "billing_address": {
+        },
+    },
+    })).unwrap_or_default()
+}
+
 pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
     "merchant_void_id": "probe_void_001",  // Identification
@@ -349,27 +373,7 @@ pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) ->
 // Flow: PaymentMethodService.Tokenize
 #[allow(dead_code)]
 pub async fn tokenize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.tokenize(serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
-    "amount": {  // Payment Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {
-        "payment_method": {
-            "card": {  // Generic card payment
-                "card_number": "4111111111111111",  // Card Identification
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information
-            },
-        }
-    },
-    "address": {  // Address Information
-        "billing_address": {
-        },
-    },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.tokenize(build_tokenize_request(), &HashMap::new(), None).await?;
     Ok(format!("token: {}", response.payment_method_token))
 }
 

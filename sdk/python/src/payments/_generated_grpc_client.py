@@ -265,6 +265,14 @@ class GrpcPaymentMethodClient:
             req, payment_pb2.PaymentMethodServiceTokenizeResponse,
         )
 
+    def eligibility(self, req: payment_pb2.PayoutMethodEligibilityRequest) -> payment_pb2.PayoutMethodEligibilityResponse:
+        """PaymentMethodService.Eligibility — Check if the payout method is eligible for the transaction"""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payment_method/eligibility",
+            req, payment_pb2.PayoutMethodEligibilityResponse,
+        )
+
 
 class GrpcPaymentClient:
     """PaymentService — gRPC sub-client."""
@@ -354,6 +362,54 @@ class GrpcPaymentClient:
         )
 
 
+class GrpcPayoutClient:
+    """PayoutService — gRPC sub-client."""
+
+    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
+        self._ffi    = ffi
+        self._config = config
+
+    def transfer(self, req: payment_pb2.PayoutServiceTransferRequest) -> payment_pb2.PayoutServiceTransferResponse:
+        """PayoutService.Transfer — Creates a payout fund transfer."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/transfer",
+            req, payment_pb2.PayoutServiceTransferResponse,
+        )
+
+    def stage(self, req: payment_pb2.PayoutServiceStageRequest) -> payment_pb2.PayoutServiceStageResponse:
+        """PayoutService.Stage — Stage the payout."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/stage",
+            req, payment_pb2.PayoutServiceStageResponse,
+        )
+
+    def create_link(self, req: payment_pb2.PayoutServiceCreateLinkRequest) -> payment_pb2.PayoutServiceCreateLinkResponse:
+        """PayoutService.CreateLink — Creates a link between the recipient and the payout."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/create_link",
+            req, payment_pb2.PayoutServiceCreateLinkResponse,
+        )
+
+    def create_recipient(self, req: payment_pb2.PayoutServiceCreateRecipientRequest) -> payment_pb2.PayoutServiceCreateRecipientResponse:
+        """PayoutService.CreateRecipient — Create payout recipient."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/create_recipient",
+            req, payment_pb2.PayoutServiceCreateRecipientResponse,
+        )
+
+    def enroll_disburse_account(self, req: payment_pb2.PayoutServiceEnrollDisburseAccountRequest) -> payment_pb2.PayoutServiceEnrollDisburseAccountResponse:
+        """PayoutService.EnrollDisburseAccount — Enroll disburse account."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "payout/enroll_disburse_account",
+            req, payment_pb2.PayoutServiceEnrollDisburseAccountResponse,
+        )
+
+
 class GrpcRecurringPaymentClient:
     """RecurringPaymentService — gRPC sub-client."""
 
@@ -408,6 +464,7 @@ class GrpcClient:
     payment_method_authentication: GrpcPaymentMethodAuthenticationClient
     payment_method: GrpcPaymentMethodClient
     payment: GrpcPaymentClient
+    payout: GrpcPayoutClient
     recurring_payment: GrpcRecurringPaymentClient
 
     def __init__(self, config: GrpcConfig, lib_path: Optional[str] = None) -> None:
@@ -419,4 +476,5 @@ class GrpcClient:
         self.payment_method_authentication = GrpcPaymentMethodAuthenticationClient(ffi, config)
         self.payment_method = GrpcPaymentMethodClient(ffi, config)
         self.payment = GrpcPaymentClient(ffi, config)
+        self.payout = GrpcPayoutClient(ffi, config)
         self.recurring_payment = GrpcRecurringPaymentClient(ffi, config)

@@ -62,6 +62,15 @@ pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCa
     })).unwrap_or_default()
 }
 
+pub fn build_create_customer_request() -> CustomerServiceCreateRequest {
+    serde_json::from_value::<CustomerServiceCreateRequest>(serde_json::json!({
+    "merchant_customer_id": "cust_probe_123",  // Identification
+    "customer_name": "John Doe",  // Name of the customer
+    "email": "test@example.com",  // Email address of the customer
+    "phone_number": "4155552671",  // Phone number of the customer
+    })).unwrap_or_default()
+}
+
 pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
@@ -83,6 +92,33 @@ pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRef
         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
     },
     "reason": "customer_request",  // Reason for the refund
+    })).unwrap_or_default()
+}
+
+pub fn build_tokenize_request() -> PaymentMethodServiceTokenizeRequest {
+    serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
+    "amount": {  // Payment Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {
+        "payment_method": {
+            "card": {  // Generic card payment
+                "card_number": "4111111111111111",  // Card Identification
+                "card_exp_month": "03",
+                "card_exp_year": "2030",
+                "card_cvc": "737",
+                "card_holder_name": "John Doe",  // Cardholder Information
+            },
+        }
+    },
+    "customer": {  // Customer Information
+        "id": "cust_probe_123",  // Internal customer ID
+    },
+    "address": {  // Address Information
+        "billing_address": {
+        },
+    },
     })).unwrap_or_default()
 }
 
@@ -352,12 +388,7 @@ pub async fn capture(client: &ConnectorClient, _merchant_transaction_id: &str) -
 // Flow: CustomerService.Create
 #[allow(dead_code)]
 pub async fn create_customer(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.create_customer(serde_json::from_value::<CustomerServiceCreateRequest>(serde_json::json!({
-    "merchant_customer_id": "cust_probe_123",  // Identification
-    "customer_name": "John Doe",  // Name of the customer
-    "email": "test@example.com",  // Email address of the customer
-    "phone_number": "4155552671",  // Phone number of the customer
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.create_customer(build_create_customer_request(), &HashMap::new(), None).await?;
     Ok(format!("customer_id: {}", response.connector_customer_id))
 }
 
@@ -378,30 +409,7 @@ pub async fn refund(client: &ConnectorClient, _merchant_transaction_id: &str) ->
 // Flow: PaymentMethodService.Tokenize
 #[allow(dead_code)]
 pub async fn tokenize(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.tokenize(serde_json::from_value::<PaymentMethodServiceTokenizeRequest>(serde_json::json!({
-    "amount": {  // Payment Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {
-        "payment_method": {
-            "card": {  // Generic card payment
-                "card_number": "4111111111111111",  // Card Identification
-                "card_exp_month": "03",
-                "card_exp_year": "2030",
-                "card_cvc": "737",
-                "card_holder_name": "John Doe",  // Cardholder Information
-            },
-        }
-    },
-    "customer": {  // Customer Information
-        "id": "cust_probe_123",  // Internal customer ID
-    },
-    "address": {  // Address Information
-        "billing_address": {
-        },
-    },
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.tokenize(build_tokenize_request(), &HashMap::new(), None).await?;
     Ok(format!("token: {}", response.payment_method_token))
 }
 

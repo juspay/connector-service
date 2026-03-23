@@ -94,7 +94,7 @@ def _build_recurring_charge_request():
     return ParseDict(
         {
             "connector_recurring_payment_id": {  # Reference to existing mandate
-                "connector_mandate_id": {  # mandate_id sent by the connector
+                "mandate_id_type": {
                     "connector_mandate_id": "probe-mandate-123"
                 }
             },

@@ -73,6 +73,35 @@ pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetReq
     })).unwrap_or_default()
 }
 
+pub fn build_recurring_charge_request() -> RecurringPaymentServiceChargeRequest {
+    serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
+    "connector_recurring_payment_id": {  // Reference to existing mandate
+        "mandate_id_type": {
+            "connector_mandate_id": "probe-mandate-123",
+        },
+    },
+    "amount": {  // Amount Information
+        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
+    },
+    "payment_method": {  // Optional payment Method Information (for network transaction flows)
+        "payment_method": {
+            "token": "probe_pm_token",  // Payment tokens
+        }
+    },
+    "return_url": "https://example.com/recurring-return",
+    "address": {  // Address Information
+        "billing_address": {
+            "first_name": "John",  // Personal Information
+            "email": "test@example.com",  // Contact Information
+        },
+    },
+    "connector_customer_id": "cust_probe_123",
+    "payment_method_type": "PAY_PAL",
+    "off_session": true,  // Behavioral Flags and Preferences
+    })).unwrap_or_default()
+}
+
 pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification
@@ -273,32 +302,7 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
 // Flow: RecurringPaymentService.Charge
 #[allow(dead_code)]
 pub async fn recurring_charge(client: &ConnectorClient, _merchant_transaction_id: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let response = client.recurring_charge(serde_json::from_value::<RecurringPaymentServiceChargeRequest>(serde_json::json!({
-    "connector_recurring_payment_id": {  // Reference to existing mandate
-        "mandate_id_type": {
-            "connector_mandate_id": "probe-mandate-123",
-        },
-    },
-    "amount": {  // Amount Information
-        "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-        "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
-    },
-    "payment_method": {  // Optional payment Method Information (for network transaction flows)
-        "payment_method": {
-            "token": "probe_pm_token",  // Payment tokens
-        }
-    },
-    "return_url": "https://example.com/recurring-return",
-    "address": {  // Address Information
-        "billing_address": {
-            "first_name": "John",  // Personal Information
-            "email": "test@example.com",  // Contact Information
-        },
-    },
-    "connector_customer_id": "cust_probe_123",
-    "payment_method_type": "PAY_PAL",
-    "off_session": true,  // Behavioral Flags and Preferences
-    })).unwrap_or_default(), &HashMap::new(), None).await?;
+    let response = client.recurring_charge(build_recurring_charge_request(), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
 

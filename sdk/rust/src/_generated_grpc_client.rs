@@ -12,6 +12,7 @@ use grpc_api_types::payments::{
     payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
     payment_method_service_client::PaymentMethodServiceClient,
     payment_service_client::PaymentServiceClient,
+    payout_service_client::PayoutServiceClient,
     recurring_payment_service_client::RecurringPaymentServiceClient,
     // request / response types (all unique types across all services)
     CustomerServiceCreateRequest,
@@ -57,6 +58,18 @@ use grpc_api_types::payments::{
     PaymentServiceVerifyRedirectResponseResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
+    PayoutMethodEligibilityRequest,
+    PayoutMethodEligibilityResponse,
+    PayoutServiceCreateLinkRequest,
+    PayoutServiceCreateLinkResponse,
+    PayoutServiceCreateRecipientRequest,
+    PayoutServiceCreateRecipientResponse,
+    PayoutServiceEnrollDisburseAccountRequest,
+    PayoutServiceEnrollDisburseAccountResponse,
+    PayoutServiceStageRequest,
+    PayoutServiceStageResponse,
+    PayoutServiceTransferRequest,
+    PayoutServiceTransferResponse,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RecurringPaymentServiceRevokeRequest,
@@ -157,6 +170,7 @@ impl_grpc_client!(
 impl_grpc_client!(
     GrpcPaymentMethodClient, PaymentMethodServiceClient,
     (tokenize, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse),
+    (eligibility, PayoutMethodEligibilityRequest, PayoutMethodEligibilityResponse),
 );
 
 // PaymentService
@@ -172,6 +186,16 @@ impl_grpc_client!(
     (incremental_authorization, PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse),
     (verify_redirect_response, PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse),
     (setup_recurring, PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse),
+);
+
+// PayoutService
+impl_grpc_client!(
+    GrpcPayoutClient, PayoutServiceClient,
+    (transfer, PayoutServiceTransferRequest, PayoutServiceTransferResponse),
+    (stage, PayoutServiceStageRequest, PayoutServiceStageResponse),
+    (create_link, PayoutServiceCreateLinkRequest, PayoutServiceCreateLinkResponse),
+    (create_recipient, PayoutServiceCreateRecipientRequest, PayoutServiceCreateRecipientResponse),
+    (enroll_disburse_account, PayoutServiceEnrollDisburseAccountRequest, PayoutServiceEnrollDisburseAccountResponse),
 );
 
 // RecurringPaymentService
@@ -217,6 +241,7 @@ pub struct GrpcClient {
     pub payment_method_authentication: GrpcPaymentMethodAuthenticationClient,
     pub payment_method: GrpcPaymentMethodClient,
     pub payment: GrpcPaymentClient,
+    pub payout: GrpcPayoutClient,
     pub recurring_payment: GrpcRecurringPaymentClient,
 }
 
@@ -243,6 +268,7 @@ impl GrpcClient {
             payment_method_authentication: GrpcPaymentMethodAuthenticationClient::new(channel.clone(), Arc::clone(&headers)),
             payment_method: GrpcPaymentMethodClient::new(channel.clone(), Arc::clone(&headers)),
             payment: GrpcPaymentClient::new(channel.clone(), Arc::clone(&headers)),
+            payout: GrpcPayoutClient::new(channel.clone(), Arc::clone(&headers)),
             recurring_payment: GrpcRecurringPaymentClient::new(channel.clone(), Arc::clone(&headers)),
         })
     }
