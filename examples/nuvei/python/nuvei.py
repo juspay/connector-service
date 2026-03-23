@@ -81,6 +81,17 @@ def _build_capture_request(connector_transaction_id: str):
         payment_pb2.PaymentServiceCaptureRequest(),
     )
 
+def _build_create_session_token_request():
+    return ParseDict(
+        {
+            "amount": {  # Amount Information
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            }
+        },
+        payment_pb2.MerchantAuthenticationServiceCreateSessionTokenRequest(),
+    )
+
 def _build_get_request(connector_transaction_id: str):
     return ParseDict(
         {
@@ -92,6 +103,21 @@ def _build_get_request(connector_transaction_id: str):
             }
         },
         payment_pb2.PaymentServiceGetRequest(),
+    )
+
+def _build_refund_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification
+            "connector_transaction_id": connector_transaction_id,
+            "payment_amount": 1000,  # Amount Information
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "reason": "customer_request"  # Reason for the refund
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
     )
 
 def _build_void_request(connector_transaction_id: str):
@@ -167,19 +193,7 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Refund — return funds to the customer
-    refund_response = await payment_client.refund(ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification
-            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
-            "payment_amount": 1000,  # Amount Information
-            "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "reason": "customer_request"  # Reason for the refund
-        },
-        payment_pb2.PaymentServiceRefundRequest(),
-    ))
+    refund_response = await payment_client.refund(_build_refund_request(authorize_response.connector_transaction_id))
 
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
@@ -253,16 +267,7 @@ async def create_session_token(merchant_transaction_id: str, config: sdk_config_
     """Flow: MerchantAuthenticationService.CreateSessionToken"""
     merchantauthentication_client = MerchantAuthenticationClient(config)
 
-    # Step 1: create_session_token
-    create_response = await merchantauthentication_client.create_session_token(ParseDict(
-        {
-            "amount": {  # Amount Information
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            }
-        },
-        payment_pb2.MerchantAuthenticationServiceCreateSessionTokenRequest(),
-    ))
+    create_response = await merchantauthentication_client.create_session_token(_build_create_session_token_request())
 
     return {"status": create_response.status}
 
@@ -274,6 +279,15 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     get_response = await payment_client.get(_build_get_request("probe_connector_txn_001"))
 
     return {"status": get_response.status}
+
+
+async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Refund"""
+    payment_client = PaymentClient(config)
+
+    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
+
+    return {"status": refund_response.status}
 
 
 async def void(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):

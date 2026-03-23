@@ -15,6 +15,7 @@ members = [
   "backend/cards",
   "sdk/rust",
   "sdk/rust/smoke-test",
+  "sdk/grpc-ffi",
   "backend/composite-service",
   "backend/ucs_env",
   "backend/ucs_interface_common",

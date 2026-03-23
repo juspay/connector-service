@@ -76,6 +76,30 @@ def _build_get_request(connector_transaction_id: str):
         payment_pb2.PaymentServiceGetRequest(),
     )
 
+def _build_refund_request(connector_transaction_id: str):
+    return ParseDict(
+        {
+            "merchant_refund_id": "probe_refund_001",  # Identification
+            "connector_transaction_id": connector_transaction_id,
+            "payment_amount": 1000,  # Amount Information
+            "refund_amount": {
+                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
+                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
+            },
+            "reason": "customer_request"  # Reason for the refund
+        },
+        payment_pb2.PaymentServiceRefundRequest(),
+    )
+
+def _build_reverse_request():
+    return ParseDict(
+        {
+            "merchant_reverse_id": "probe_reverse_001",  # Identification
+            "connector_transaction_id": "probe_connector_txn_001"
+        },
+        payment_pb2.PaymentServiceReverseRequest(),
+    )
+
 def _build_void_request(connector_transaction_id: str):
     return ParseDict(
         {
@@ -145,19 +169,7 @@ async def process_refund(merchant_transaction_id: str, config: sdk_config_pb2.Co
         return {"status": "pending", "transaction_id": authorize_response.connector_transaction_id}
 
     # Step 2: Refund — return funds to the customer
-    refund_response = await payment_client.refund(ParseDict(
-        {
-            "merchant_refund_id": "probe_refund_001",  # Identification
-            "connector_transaction_id": authorize_response.connector_transaction_id,  # from Authorize response
-            "payment_amount": 1000,  # Amount Information
-            "refund_amount": {
-                "minor_amount": 1000,  # Amount in minor units (e.g., 1000 = $10.00)
-                "currency": "USD"  # ISO 4217 currency code (e.g., "USD", "EUR")
-            },
-            "reason": "customer_request"  # Reason for the refund
-        },
-        payment_pb2.PaymentServiceRefundRequest(),
-    ))
+    refund_response = await payment_client.refund(_build_refund_request(authorize_response.connector_transaction_id))
 
     if refund_response.status == "FAILED":
         raise RuntimeError(f"Refund failed: {refund_response.error}")
@@ -236,18 +248,20 @@ async def get(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConf
     return {"status": get_response.status}
 
 
+async def refund(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
+    """Flow: PaymentService.Refund"""
+    payment_client = PaymentClient(config)
+
+    refund_response = await payment_client.refund(_build_refund_request("probe_connector_txn_001"))
+
+    return {"status": refund_response.status}
+
+
 async def reverse(merchant_transaction_id: str, config: sdk_config_pb2.ConnectorConfig = _default_config):
     """Flow: PaymentService.Reverse"""
     payment_client = PaymentClient(config)
 
-    # Step 1: reverse
-    reverse_response = await payment_client.reverse(ParseDict(
-        {
-            "merchant_reverse_id": "probe_reverse_001",  # Identification
-            "connector_transaction_id": "probe_connector_txn_001"
-        },
-        payment_pb2.PaymentServiceReverseRequest(),
-    ))
+    reverse_response = await payment_client.reverse(_build_reverse_request())
 
     return {"status": reverse_response.status}
 

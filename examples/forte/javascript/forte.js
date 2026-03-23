@@ -3,7 +3,7 @@
 // Regenerate: python3 scripts/generate-connector-docs.py forte
 //
 // Forte — all integration scenarios and flows in one file.
-// Run a scenario:  node forte.js checkout_card
+// Run a scenario:  node forte.js checkout_autocapture
 'use strict';
 
 const { PaymentClient } = require('hs-playlib');
@@ -63,6 +63,8 @@ function _buildVoidRequest(connectorTransactionId) {
     };
 }
 
+
+// ANCHOR: scenario_functions
 // Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
 async function processCheckoutAutocapture(merchantTransactionId, config = _defaultConfig) {
@@ -194,7 +196,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutAutocapture, processCheckoutBank, processVoidPayment, processGetPayment, authorize, get, voidPayment };
+module.exports = { processCheckoutAutocapture, processCheckoutBank, processVoidPayment, processGetPayment, authorize, get, voidPayment, _buildAuthorizeRequest, _buildGetRequest, _buildVoidRequest };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_autocapture';

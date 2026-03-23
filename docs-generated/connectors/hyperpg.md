@@ -108,19 +108,19 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L66) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L61) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L81) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L81)
+**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L81) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L76) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L81) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L82)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L85) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L80) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L97) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L97)
+**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L100) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L95) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L97) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L98)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L122) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L115) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L119) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L120)
+**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L125) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L121) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L119) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L121)
 
 ## API Reference
 
@@ -177,7 +177,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L144) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L136) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L137) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L138)
+**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L147) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L142) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L137) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L139)
 
 #### PaymentService.Get
 
@@ -188,7 +188,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L153) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L145) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L149) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L150)
+**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L156) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L151) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L149) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L151)
 
 #### PaymentService.Refund
 
@@ -199,4 +199,4 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L85) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L80) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L157) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L157)
+**Examples:** [Python](../../examples/hyperpg/python/hyperpg.py#L165) · [JavaScript](../../examples/hyperpg/javascript/hyperpg.js#L160) · [Kotlin](../../examples/hyperpg/kotlin/hyperpg.kt#L157) · [Rust](../../examples/hyperpg/rust/hyperpg.rs#L158)

@@ -3,7 +3,7 @@
 // Regenerate: python3 scripts/generate-connector-docs.py mollie
 //
 // Mollie — all integration scenarios and flows in one file.
-// Run a scenario:  node mollie.js checkout_card
+// Run a scenario:  node mollie.js checkout_autocapture
 'use strict';
 
 const { PaymentClient } = require('hs-playlib');
@@ -56,6 +56,19 @@ function _buildGetRequest(connectorTransactionId) {
     };
 }
 
+function _buildRefundRequest(connectorTransactionId) {
+    return {
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": connectorTransactionId,
+        "paymentAmount": 1000,  // Amount Information
+        "refundAmount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "reason": "customer_request"  // Reason for the refund
+    };
+}
+
 function _buildVoidRequest(connectorTransactionId) {
     return {
         "merchantVoidId": "probe_void_001",  // Identification
@@ -63,6 +76,8 @@ function _buildVoidRequest(connectorTransactionId) {
     };
 }
 
+
+// ANCHOR: scenario_functions
 // Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
 async function processCheckoutAutocapture(merchantTransactionId, config = _defaultConfig) {
@@ -99,16 +114,7 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
     }
 
     // Step 2: Refund — return funds to the customer
-    const refundResponse = await paymentClient.refund({
-        "merchantRefundId": "probe_refund_001",  // Identification
-        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
-        "paymentAmount": 1000,  // Amount Information
-        "refundAmount": {
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "reason": "customer_request"  // Reason for the refund
-    });
+    const refundResponse = await paymentClient.refund(_buildRefundRequest(authorizeResponse.connectorTransactionId));
 
     if (refundResponse.status === 'FAILED') {
         throw new Error(`Refund failed: ${refundResponse.error?.message}`);
@@ -179,6 +185,15 @@ async function get(merchantTransactionId, config = _defaultConfig) {
     return { status: getResponse.status };
 }
 
+// Flow: PaymentService.Refund
+async function refund(merchantTransactionId, config = _defaultConfig) {
+    const paymentClient = new PaymentClient(config);
+
+    const refundResponse = await paymentClient.refund(_buildRefundRequest('probe_connector_txn_001'));
+
+    return { status: refundResponse.status };
+}
+
 // Flow: PaymentService.Void
 async function voidPayment(merchantTransactionId, config = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -189,7 +204,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutAutocapture, processRefund, processVoidPayment, processGetPayment, authorize, get, voidPayment };
+module.exports = { processCheckoutAutocapture, processRefund, processVoidPayment, processGetPayment, authorize, get, refund, voidPayment, _buildAuthorizeRequest, _buildGetRequest, _buildRefundRequest, _buildVoidRequest };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_autocapture';

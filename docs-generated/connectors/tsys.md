@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L87) · [JavaScript](../../examples/tsys/javascript/tsys.js#L78) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L100) · [Rust](../../examples/tsys/rust/tsys.rs#L98)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L102) · [JavaScript](../../examples/tsys/javascript/tsys.js#L93) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L100) · [Rust](../../examples/tsys/rust/tsys.rs#L99)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,25 +122,25 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L112) · [JavaScript](../../examples/tsys/javascript/tsys.js#L104) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L122) · [Rust](../../examples/tsys/rust/tsys.rs#L121)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L127) · [JavaScript](../../examples/tsys/javascript/tsys.js#L119) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L122) · [Rust](../../examples/tsys/rust/tsys.rs#L122)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L131) · [JavaScript](../../examples/tsys/javascript/tsys.js#L123) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L138) · [Rust](../../examples/tsys/rust/tsys.rs#L137)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L146) · [JavaScript](../../examples/tsys/javascript/tsys.js#L138) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L138) · [Rust](../../examples/tsys/rust/tsys.rs#L138)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L168) · [JavaScript](../../examples/tsys/javascript/tsys.js#L158) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L160) · [Rust](../../examples/tsys/rust/tsys.rs#L160)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L171) · [JavaScript](../../examples/tsys/javascript/tsys.js#L164) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L160) · [Rust](../../examples/tsys/rust/tsys.rs#L161)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L190) · [JavaScript](../../examples/tsys/javascript/tsys.js#L180) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L179) · [Rust](../../examples/tsys/rust/tsys.rs#L179)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L193) · [JavaScript](../../examples/tsys/javascript/tsys.js#L186) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L179) · [Rust](../../examples/tsys/rust/tsys.rs#L180)
 
 ## API Reference
 
@@ -199,7 +199,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L212) · [JavaScript](../../examples/tsys/javascript/tsys.js#L201) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L197) · [Rust](../../examples/tsys/rust/tsys.rs#L197)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L215) · [JavaScript](../../examples/tsys/javascript/tsys.js#L207) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L197) · [Rust](../../examples/tsys/rust/tsys.rs#L198)
 
 #### PaymentService.Capture
 
@@ -210,7 +210,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L221) · [JavaScript](../../examples/tsys/javascript/tsys.js#L210) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L209) · [Rust](../../examples/tsys/rust/tsys.rs#L209)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L224) · [JavaScript](../../examples/tsys/javascript/tsys.js#L216) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L209) · [Rust](../../examples/tsys/rust/tsys.rs#L210)
 
 #### PaymentService.Get
 
@@ -221,7 +221,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L230) · [JavaScript](../../examples/tsys/javascript/tsys.js#L219) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L219) · [Rust](../../examples/tsys/rust/tsys.rs#L216)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L233) · [JavaScript](../../examples/tsys/javascript/tsys.js#L225) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L219) · [Rust](../../examples/tsys/rust/tsys.rs#L217)
 
 #### PaymentService.Refund
 
@@ -232,7 +232,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L131) · [JavaScript](../../examples/tsys/javascript/tsys.js#L123) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L227) · [Rust](../../examples/tsys/rust/tsys.rs#L223)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L242) · [JavaScript](../../examples/tsys/javascript/tsys.js#L234) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L227) · [Rust](../../examples/tsys/rust/tsys.rs#L224)
 
 #### PaymentService.Void
 
@@ -243,4 +243,4 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/tsys/python/tsys.py#L239) · [JavaScript](../../examples/tsys/javascript/tsys.js#L228) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L237) · [Rust](../../examples/tsys/rust/tsys.rs#L230)
+**Examples:** [Python](../../examples/tsys/python/tsys.py#L251) · [JavaScript](../../examples/tsys/javascript/tsys.js#L243) · [Kotlin](../../examples/tsys/kotlin/tsys.kt#L237) · [Rust](../../examples/tsys/rust/tsys.rs#L231)

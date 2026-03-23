@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification
     "amount": {  // The amount for the payment
@@ -46,10 +46,11 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
     },
     "auth_type": "NO_THREE_DS",  // Authentication Details
     "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
+    "order_details": []  // Order Details
     })).unwrap_or_default()
 }
 
-fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
+pub fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptureRequest {
     serde_json::from_value::<PaymentServiceCaptureRequest>(serde_json::json!({
     "merchant_capture_id": "probe_capture_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -60,7 +61,7 @@ fn build_capture_request(connector_transaction_id: &str) -> PaymentServiceCaptur
     })).unwrap_or_default()
 }
 
-fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
+pub fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundRequest {
     serde_json::from_value::<PaymentServiceRefundRequest>(serde_json::json!({
     "merchant_refund_id": "probe_refund_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -73,7 +74,7 @@ fn build_refund_request(connector_transaction_id: &str) -> PaymentServiceRefundR
     })).unwrap_or_default()
 }
 
-fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
+pub fn build_void_request(connector_transaction_id: &str) -> PaymentServiceVoidRequest {
     serde_json::from_value::<PaymentServiceVoidRequest>(serde_json::json!({
     "merchant_void_id": "probe_void_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -234,7 +235,6 @@ pub async fn void(client: &ConnectorClient, _merchant_transaction_id: &str) -> R
     let response = client.void(build_void_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
-
 
 #[allow(dead_code)]
 #[tokio::main]

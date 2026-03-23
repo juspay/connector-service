@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification
     "amount": {  // The amount for the payment
@@ -43,10 +43,11 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
     "auth_type": "NO_THREE_DS",  // Authentication Details
     "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "session_token": "probe_session_token",  // Session and Token Information
+    "order_details": []  // Order Details
     })).unwrap_or_default()
 }
 
-fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
+pub fn build_get_request(connector_transaction_id: &str) -> PaymentServiceGetRequest {
     serde_json::from_value::<PaymentServiceGetRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_merchant_txn_001",  // Identification
     "connector_transaction_id": connector_transaction_id,
@@ -88,7 +89,6 @@ pub async fn get(client: &ConnectorClient, _merchant_transaction_id: &str) -> Re
     let response = client.get(build_get_request("probe_connector_txn_001"), &HashMap::new(), None).await?;
     Ok(format!("status: {:?}", response.status()))
 }
-
 
 #[allow(dead_code)]
 #[tokio::main]

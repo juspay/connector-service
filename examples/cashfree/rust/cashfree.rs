@@ -21,7 +21,7 @@ fn build_client() -> ConnectorClient {
     ConnectorClient::new(config, None).unwrap()
 }
 
-fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
+pub fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeRequest {
     serde_json::from_value::<PaymentServiceAuthorizeRequest>(serde_json::json!({
     "merchant_transaction_id": "probe_txn_001",  // Identification
     "amount": {  // The amount for the payment
@@ -43,6 +43,7 @@ fn build_authorize_request(capture_method: &str) -> PaymentServiceAuthorizeReque
     "auth_type": "NO_THREE_DS",  // Authentication Details
     "return_url": "https://example.com/return",  // URLs for Redirection and Webhooks
     "merchant_order_id": "probe_order_001",
+    "order_details": []  // Order Details
     })).unwrap_or_default()
 }
 
@@ -58,7 +59,6 @@ pub async fn authorize(client: &ConnectorClient, _merchant_transaction_id: &str)
         _  => Ok(format!("Authorized: {}", response.connector_transaction_id.as_deref().unwrap_or(""))),
     }
 }
-
 
 #[allow(dead_code)]
 #[tokio::main]

@@ -108,13 +108,13 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L71) · [JavaScript](../../examples/helcim/javascript/helcim.js#L66) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L72) · [Rust](../../examples/helcim/rust/helcim.rs#L73)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L71) · [JavaScript](../../examples/helcim/javascript/helcim.js#L68) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L72) · [Rust](../../examples/helcim/rust/helcim.rs#L74)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L90) · [JavaScript](../../examples/helcim/javascript/helcim.js#L85) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L88) · [Rust](../../examples/helcim/rust/helcim.rs#L89)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L90) · [JavaScript](../../examples/helcim/javascript/helcim.js#L87) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L88) · [Rust](../../examples/helcim/rust/helcim.rs#L90)
 
 ## API Reference
 
@@ -170,7 +170,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L112) · [JavaScript](../../examples/helcim/javascript/helcim.js#L106) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L106) · [Rust](../../examples/helcim/rust/helcim.rs#L107)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L112) · [JavaScript](../../examples/helcim/javascript/helcim.js#L108) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L106) · [Rust](../../examples/helcim/rust/helcim.rs#L108)
 
 #### PaymentService.Get
 
@@ -181,4 +181,4 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/helcim/python/helcim.py#L121) · [JavaScript](../../examples/helcim/javascript/helcim.js#L115) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L118) · [Rust](../../examples/helcim/rust/helcim.rs#L119)
+**Examples:** [Python](../../examples/helcim/python/helcim.py#L121) · [JavaScript](../../examples/helcim/javascript/helcim.js#L117) · [Kotlin](../../examples/helcim/kotlin/helcim.kt#L118) · [Rust](../../examples/helcim/rust/helcim.rs#L120)
