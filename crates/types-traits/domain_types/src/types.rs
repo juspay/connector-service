@@ -11278,12 +11278,20 @@ impl
             status: common_enums::PayoutStatus::Pending,
             payout_id: value.merchant_payout_id.clone().unwrap_or_default(),
             connectors,
-            connector_request_reference_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            connector_request_reference_id: crate::utils::extract_connector_request_reference_id(
+                &value.merchant_payout_id,
+            ),
             raw_connector_response: None,
             connector_response_headers: None,
             raw_connector_request: None,
-            access_token: value.access_token.clone(),
-            connector_meta_data: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            connector_feature_data: None,
             test_mode: None,
         })
     }
@@ -11523,7 +11531,16 @@ impl ForeignTryFrom<grpc_api_types::payouts::CardPayout> for crate::payout_types
             .transpose()?;
         Ok(crate::payout_types::CardPayout {
             card_number: std::str::FromStr::from_str(
-                &card.card_number.unwrap_or_default().peek().clone(),
+                &card.card_number.ok_or_else(|| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "MISSING_CARD_NUMBER".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Card number is required for card payout".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?.peek().clone(),
             )
             .map_err(|_| {
                 error_stack::report!(ApplicationErrorResponse::BadRequest(
@@ -11537,13 +11554,33 @@ impl ForeignTryFrom<grpc_api_types::payouts::CardPayout> for crate::payout_types
             })?,
             expiry_month: ::hyperswitch_masking::Secret::new(
                 card.card_exp_month
-                    .map(|m| m.peek().to_string())
-                    .unwrap_or_default(),
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_CARD_EXPIRY_MONTH".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card expiry month is required".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             expiry_year: ::hyperswitch_masking::Secret::new(
                 card.card_exp_year
-                    .map(|m| m.peek().to_string())
-                    .unwrap_or_default(),
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_CARD_EXPIRY_YEAR".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card expiry year is required".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             card_holder_name: card
                 .card_holder_name
@@ -11756,7 +11793,19 @@ impl ForeignTryFrom<grpc_api_types::payouts::SepaBankTransferPayout>
             bank_country_code,
             bank_city: sepa.bank_city,
             iban: ::hyperswitch_masking::Secret::new(
-                sepa.iban.map(|i| i.peek().to_string()).unwrap_or_default(),
+                sepa.iban
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_IBAN".to_owned(),
+                                error_identifier: 400,
+                                error_message: "IBAN is required for SEPA".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             bic: sepa
                 .bic
@@ -11797,13 +11846,33 @@ impl ForeignTryFrom<grpc_api_types::payouts::PixBankTransferPayout>
             bank_branch: pix.bank_branch,
             bank_account_number: ::hyperswitch_masking::Secret::new(
                 pix.bank_account_number
-                    .map(|a| a.peek().to_string())
-                    .unwrap_or_default(),
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_BANK_ACCOUNT_NUMBER".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Bank account number is required for Pix".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             pix_key: ::hyperswitch_masking::Secret::new(
                 pix.pix_key
-                    .map(|k| k.peek().to_string())
-                    .unwrap_or_default(),
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_PIX_KEY".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Pix key is required for Pix".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             tax_id: pix
                 .tax_id
@@ -11836,28 +11905,59 @@ impl ForeignTryFrom<grpc_api_types::payouts::ApplePayDecrypt>
             })
             .transpose()?;
         Ok(crate::payout_types::ApplePayDecrypt {
-            dpan: std::str::FromStr::from_str(&apple.dpan.unwrap_or_default().peek().clone())
-                .map_err(|_| {
+            dpan: std::str::FromStr::from_str(
+                &apple.dpan.ok_or_else(|| {
                     error_stack::report!(ApplicationErrorResponse::BadRequest(
                         crate::errors::ApiError {
-                            sub_code: "INVALID_DPAN".to_owned(),
+                            sub_code: "MISSING_DPAN".to_owned(),
                             error_identifier: 400,
-                            error_message: "Invalid dpan".to_owned(),
+                            error_message: "DPAN is required for ApplePayDecrypt".to_owned(),
                             error_object: None,
                         }
                     ))
-                })?,
+                })?.peek().clone()
+            )
+            .map_err(|_| {
+                error_stack::report!(ApplicationErrorResponse::BadRequest(
+                    crate::errors::ApiError {
+                        sub_code: "INVALID_DPAN".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid dpan".to_owned(),
+                        error_object: None,
+                    }
+                ))
+            })?,
             expiry_month: ::hyperswitch_masking::Secret::new(
                 apple
                     .expiry_month
-                    .map(|m| m.peek().to_string())
-                    .unwrap_or_default(),
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_CARD_EXPIRY_MONTH".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card expiry month is required".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             expiry_year: ::hyperswitch_masking::Secret::new(
                 apple
                     .expiry_year
-                    .map(|m| m.peek().to_string())
-                    .unwrap_or_default(),
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_CARD_EXPIRY_YEAR".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card expiry year is required".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             card_holder_name: apple
                 .card_holder_name
@@ -11873,7 +11973,21 @@ impl ForeignTryFrom<grpc_api_types::payouts::Paypal> for crate::payout_types::Pa
         paypal: grpc_api_types::payouts::Paypal,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(crate::payout_types::Paypal {
-            email: paypal.email.map(|e| e.peek().to_string().parse().unwrap()),
+            email: paypal
+                .email
+                .map(|e| {
+                    e.peek().to_string().parse().map_err(|_| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "INVALID_EMAIL".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Invalid email".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })
+                })
+                .transpose()?,
             telephone_number: paypal
                 .telephone_number
                 .map(|t| ::hyperswitch_masking::Secret::new(t.peek().to_string())),
@@ -11905,8 +12019,29 @@ impl ForeignTryFrom<grpc_api_types::payouts::InteracPayout> for crate::payout_ty
         Ok(crate::payout_types::Interac {
             email: interac
                 .email
-                .map(|e| e.peek().to_string().parse().unwrap())
-                .unwrap_or_else(|| "".parse().unwrap()),
+                .ok_or_else(|| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "MISSING_EMAIL".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Email is required for Interac".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?
+                .peek()
+                .to_string()
+                .parse()
+                .map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_EMAIL".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid email".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?,
         })
     }
 }
@@ -11921,11 +12056,33 @@ impl ForeignTryFrom<grpc_api_types::payouts::OpenBankingUkPayout>
         Ok(crate::payout_types::OpenBankingUk {
             account_holder_name: ::hyperswitch_masking::Secret::new(
                 obuk.account_holder_name
-                    .map(|a| a.peek().to_string())
-                    .unwrap_or_default(),
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_ACCOUNT_HOLDER_NAME".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Account holder name is required for OpenBankingUK".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
             iban: ::hyperswitch_masking::Secret::new(
-                obuk.iban.map(|i| i.peek().to_string()).unwrap_or_default(),
+                obuk.iban
+                    .ok_or_else(|| {
+                        error_stack::report!(ApplicationErrorResponse::BadRequest(
+                            crate::errors::ApiError {
+                                sub_code: "MISSING_IBAN".to_owned(),
+                                error_identifier: 400,
+                                error_message: "IBAN is required for OpenBankingUK".to_owned(),
+                                error_object: None,
+                            }
+                        ))
+                    })?
+                    .peek()
+                    .to_string(),
             ),
         })
     }

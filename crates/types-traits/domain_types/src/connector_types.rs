@@ -1710,8 +1710,8 @@ pub struct PayoutFlowData {
     pub raw_connector_response: Option<Secret<String>>,
     pub connector_response_headers: Option<http::HeaderMap>,
     pub raw_connector_request: Option<Secret<String>>,
-    pub access_token: Option<Secret<String>>,
-    pub connector_meta_data: Option<SecretSerdeValue>,
+    pub access_token: Option<AccessTokenResponseData>,
+    pub connector_feature_data: Option<SecretSerdeValue>,
     pub test_mode: Option<bool>,
 }
 
@@ -1746,12 +1746,18 @@ impl ConnectorResponseHeaders for PayoutFlowData {
 impl PayoutFlowData {
     pub fn get_access_token(&self) -> Result<String, Error> {
         self.access_token
-            .clone()
-            .map(|token| token.expose())
+            .as_ref()
+            .map(|token_data| token_data.access_token.clone().expose())
             .ok_or_else(missing_field_err("access_token"))
     }
 
-    pub fn set_access_token(mut self, access_token: Option<Secret<String>>) -> Self {
+    pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
+        self.access_token
+            .clone()
+            .ok_or_else(missing_field_err("access_token"))
+    }
+
+    pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
         self.access_token = access_token;
         self
     }
