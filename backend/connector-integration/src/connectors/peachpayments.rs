@@ -5,11 +5,7 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::CurrencyUnit;
-use common_utils::{
-    errors::CustomResult,
-    events,
-    ext_traits::{ByteSliceExt, StringExt},
-};
+use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::*,
@@ -657,12 +653,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
-        let body = String::from_utf8(request.body.clone())
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
-
-        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
-            .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        let webhook_body: responses::PeachpaymentsIncomingWebhook =
+            transformers::get_webhook_object_from_body(&request.body)?;
 
         let description = webhook_body
             .transaction
@@ -720,12 +712,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
-        let body = String::from_utf8(request.body.clone())
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
-
-        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
-            .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        let webhook_body: responses::PeachpaymentsIncomingWebhook =
+            transformers::get_webhook_object_from_body(&request.body)?;
 
         let transaction = webhook_body
             .transaction
@@ -774,12 +762,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorSpecificConfig>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
-        let body = String::from_utf8(request.body.clone())
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
-
-        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
-            .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        let webhook_body: responses::PeachpaymentsIncomingWebhook =
+            transformers::get_webhook_object_from_body(&request.body)?;
 
         let transaction = webhook_body
             .transaction
@@ -825,12 +809,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
         error_stack::Report<errors::ConnectorError>,
     > {
-        let body = String::from_utf8(request.body.clone())
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
-
-        let webhook_body: responses::PeachpaymentsIncomingWebhook = body
-            .parse_struct("PeachpaymentsIncomingWebhook")
-            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+        let webhook_body: responses::PeachpaymentsIncomingWebhook =
+            transformers::get_webhook_object_from_body(&request.body)?;
 
         Ok(Box::new(webhook_body))
     }

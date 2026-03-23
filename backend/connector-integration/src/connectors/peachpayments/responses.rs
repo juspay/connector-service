@@ -197,21 +197,3 @@ pub struct PeachpaymentsTransactionType {
     pub value: i32,
     pub description: String,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum FailureReason {
-    UnableToSend,
-    Timeout,
-    SecurityError,
-    IssuerUnavailable,
-    TooLateResponse,
-    Malfunction,
-    UnableToComplete,
-    OnlineDeclined,
-    SuspectedFraud,
-    CardDeclined,
-    Partial,
-    OfflineDeclined,
-    CustomerCancel,
-}
