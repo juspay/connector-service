@@ -115,7 +115,10 @@ fn add_hs_vault_adyen_metadata<T>(request: &mut Request<T>) {
         domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
             (api_key.expose(), key1.expose())
         }
-        _ => panic!("Expected BodyKey auth type for Adyen"),
+        domain_types::router_data::ConnectorAuthType::SignatureKey {
+            api_key, key1, ..
+        } => (api_key.expose(), key1.expose()),
+        _ => panic!("Expected BodyKey or SignatureKey auth type for Adyen"),
     };
 
     request
