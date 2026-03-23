@@ -254,8 +254,7 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
         }
     } else {
         Err(format!(
-            "Credentials file '{creds_file}' not found. Provide it with --creds-file or create it with the following format:\n\
-             {{\n  \"{connector}\": {{\n    \"api_key\": {{\"value\": \"your_api_key_here\"}},\n    \"api_secret\": {{\"value\": \"your_api_secret_here\"}},\n    \"key1\": {{\"value\": \"your_key1_here\"}},\n    \"merchant_account\": {{\"value\": \"your_merchant_id_here\"}},\n    \"tenant_id\": {{\"value\": \"your_tenant_id_here\"}}\n  }}\n}}"
+            "Credentials file '{creds_file}' not found. Provide it with --creds-file"
         ))?
     };
     if let Some(v) = args.endpoint {
