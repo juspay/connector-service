@@ -43,10 +43,18 @@ impl GrpcConfig {
         h.insert("x-connector".into(), self.connector);
         h.insert("x-auth".into(), self.auth_type);
         h.insert("x-api-key".into(), self.api_key);
-        if let Some(v) = self.api_secret  { h.insert("x-api-secret".into(), v); }
-        if let Some(v) = self.key1        { h.insert("x-key1".into(), v); }
-        if let Some(v) = self.merchant_id { h.insert("x-merchant-id".into(), v); }
-        if let Some(v) = self.tenant_id   { h.insert("x-tenant-id".into(), v); }
+        if let Some(v) = self.api_secret {
+            h.insert("x-api-secret".into(), v);
+        }
+        if let Some(v) = self.key1 {
+            h.insert("x-key1".into(), v);
+        }
+        if let Some(v) = self.merchant_id {
+            h.insert("x-merchant-id".into(), v);
+        }
+        if let Some(v) = self.tenant_id {
+            h.insert("x-tenant-id".into(), v);
+        }
         h
     }
 }

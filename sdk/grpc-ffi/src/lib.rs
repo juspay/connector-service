@@ -20,24 +20,21 @@ use std::{
 };
 
 use grpc_api_types::payments::{
-    customer_service_client::CustomerServiceClient,
-    event_service_client::EventServiceClient,
+    customer_service_client::CustomerServiceClient, event_service_client::EventServiceClient,
     merchant_authentication_service_client::MerchantAuthenticationServiceClient,
     payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
     payment_method_service_client::PaymentMethodServiceClient,
     payment_service_client::PaymentServiceClient,
-    recurring_payment_service_client::RecurringPaymentServiceClient,
-    CustomerServiceCreateRequest, EventServiceHandleRequest,
-    MerchantAuthenticationServiceCreateAccessTokenRequest,
+    recurring_payment_service_client::RecurringPaymentServiceClient, CustomerServiceCreateRequest,
+    EventServiceHandleRequest, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
     PaymentMethodAuthenticationServiceAuthenticateRequest,
     PaymentMethodAuthenticationServicePostAuthenticateRequest,
-    PaymentMethodAuthenticationServicePreAuthenticateRequest,
-    PaymentMethodServiceTokenizeRequest, PaymentServiceAuthorizeRequest,
-    PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-    PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest, PaymentServiceVoidRequest,
-    RecurringPaymentServiceChargeRequest,
+    PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,
+    PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+    PaymentServiceRefundRequest, PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
+    PaymentServiceVoidRequest, RecurringPaymentServiceChargeRequest,
 };
 use prost::Message;
 use serde::Deserialize;
@@ -88,25 +85,33 @@ fn get_channel(endpoint: &str) -> Result<Channel, String> {
 
 #[derive(Deserialize)]
 struct GrpcConfigInput {
-    endpoint:    String,
-    connector:   String,
-    auth_type:   String,
-    api_key:     String,
-    api_secret:  Option<String>,
-    key1:        Option<String>,
+    endpoint: String,
+    connector: String,
+    auth_type: String,
+    api_key: String,
+    api_secret: Option<String>,
+    key1: Option<String>,
     merchant_id: Option<String>,
-    tenant_id:   Option<String>,
+    tenant_id: Option<String>,
 }
 
 fn build_headers(cfg: &GrpcConfigInput) -> Arc<HashMap<String, String>> {
     let mut h = HashMap::new();
     h.insert("x-connector".into(), cfg.connector.clone());
-    h.insert("x-auth".into(),      cfg.auth_type.clone());
-    h.insert("x-api-key".into(),   cfg.api_key.clone());
-    if let Some(v) = &cfg.api_secret  { h.insert("x-api-secret".into(), v.clone()); }
-    if let Some(v) = &cfg.key1        { h.insert("x-key1".into(), v.clone()); }
-    if let Some(v) = &cfg.merchant_id { h.insert("x-merchant-id".into(), v.clone()); }
-    if let Some(v) = &cfg.tenant_id   { h.insert("x-tenant-id".into(), v.clone()); }
+    h.insert("x-auth".into(), cfg.auth_type.clone());
+    h.insert("x-api-key".into(), cfg.api_key.clone());
+    if let Some(v) = &cfg.api_secret {
+        h.insert("x-api-secret".into(), v.clone());
+    }
+    if let Some(v) = &cfg.key1 {
+        h.insert("x-key1".into(), v.clone());
+    }
+    if let Some(v) = &cfg.merchant_id {
+        h.insert("x-merchant-id".into(), v.clone());
+    }
+    if let Some(v) = &cfg.tenant_id {
+        h.insert("x-tenant-id".into(), v.clone());
+    }
     Arc::new(h)
 }
 
@@ -145,31 +150,74 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
 
     macro_rules! call {
         ($stub:ident, $rpc:ident, $req_ty:ty) => {{
-            let req  = <$req_ty>::decode(req_bytes).map_err(|e| e.to_string())?;
+            let req = <$req_ty>::decode(req_bytes).map_err(|e| e.to_string())?;
             let mut client = $stub::new(channel.clone());
-            let res  = client.$rpc(inject(req, &headers)).await.map_err(|s| s.to_string())?;
+            let res = client
+                .$rpc(inject(req, &headers))
+                .await
+                .map_err(|s| s.to_string())?;
             Ok(res.into_inner().encode_to_vec())
         }};
     }
 
     match method {
-        "payment/authorize"    => call!(PaymentServiceClient, authorize, PaymentServiceAuthorizeRequest),
-        "payment/capture"      => call!(PaymentServiceClient, capture,   PaymentServiceCaptureRequest),
-        "payment/void"         => call!(PaymentServiceClient, void,      PaymentServiceVoidRequest),
-        "payment/get"          => call!(PaymentServiceClient, get,       PaymentServiceGetRequest),
-        "payment/refund"       => call!(PaymentServiceClient, refund,    PaymentServiceRefundRequest),
-        "payment/reverse"      => call!(PaymentServiceClient, reverse,   PaymentServiceReverseRequest),
-        "payment/setup_recurring" => call!(PaymentServiceClient, setup_recurring, PaymentServiceSetupRecurringRequest),
-        "customer/create"      => call!(CustomerServiceClient, create,        CustomerServiceCreateRequest),
-        "payment_method/tokenize" => call!(PaymentMethodServiceClient, tokenize, PaymentMethodServiceTokenizeRequest),
-        "payment_method_authentication/pre_authenticate"  => call!(PaymentMethodAuthenticationServiceClient, pre_authenticate,  PaymentMethodAuthenticationServicePreAuthenticateRequest),
-        "payment_method_authentication/authenticate"      => call!(PaymentMethodAuthenticationServiceClient, authenticate,      PaymentMethodAuthenticationServiceAuthenticateRequest),
-        "payment_method_authentication/post_authenticate" => call!(PaymentMethodAuthenticationServiceClient, post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest),
-        "event/handle_event"   => call!(EventServiceClient, handle_event, EventServiceHandleRequest),
-        "merchant_authentication/create_access_token"      => call!(MerchantAuthenticationServiceClient, create_access_token,      MerchantAuthenticationServiceCreateAccessTokenRequest),
-        "merchant_authentication/create_session_token"     => call!(MerchantAuthenticationServiceClient, create_session_token,     MerchantAuthenticationServiceCreateSessionTokenRequest),
-        "merchant_authentication/create_sdk_session_token" => call!(MerchantAuthenticationServiceClient, create_sdk_session_token, MerchantAuthenticationServiceCreateSdkSessionTokenRequest),
-        "recurring_payment/charge" => call!(RecurringPaymentServiceClient, charge, RecurringPaymentServiceChargeRequest),
+        "payment/authorize" => call!(
+            PaymentServiceClient,
+            authorize,
+            PaymentServiceAuthorizeRequest
+        ),
+        "payment/capture" => call!(PaymentServiceClient, capture, PaymentServiceCaptureRequest),
+        "payment/void" => call!(PaymentServiceClient, void, PaymentServiceVoidRequest),
+        "payment/get" => call!(PaymentServiceClient, get, PaymentServiceGetRequest),
+        "payment/refund" => call!(PaymentServiceClient, refund, PaymentServiceRefundRequest),
+        "payment/reverse" => call!(PaymentServiceClient, reverse, PaymentServiceReverseRequest),
+        "payment/setup_recurring" => call!(
+            PaymentServiceClient,
+            setup_recurring,
+            PaymentServiceSetupRecurringRequest
+        ),
+        "customer/create" => call!(CustomerServiceClient, create, CustomerServiceCreateRequest),
+        "payment_method/tokenize" => call!(
+            PaymentMethodServiceClient,
+            tokenize,
+            PaymentMethodServiceTokenizeRequest
+        ),
+        "payment_method_authentication/pre_authenticate" => call!(
+            PaymentMethodAuthenticationServiceClient,
+            pre_authenticate,
+            PaymentMethodAuthenticationServicePreAuthenticateRequest
+        ),
+        "payment_method_authentication/authenticate" => call!(
+            PaymentMethodAuthenticationServiceClient,
+            authenticate,
+            PaymentMethodAuthenticationServiceAuthenticateRequest
+        ),
+        "payment_method_authentication/post_authenticate" => call!(
+            PaymentMethodAuthenticationServiceClient,
+            post_authenticate,
+            PaymentMethodAuthenticationServicePostAuthenticateRequest
+        ),
+        "event/handle_event" => call!(EventServiceClient, handle_event, EventServiceHandleRequest),
+        "merchant_authentication/create_access_token" => call!(
+            MerchantAuthenticationServiceClient,
+            create_access_token,
+            MerchantAuthenticationServiceCreateAccessTokenRequest
+        ),
+        "merchant_authentication/create_session_token" => call!(
+            MerchantAuthenticationServiceClient,
+            create_session_token,
+            MerchantAuthenticationServiceCreateSessionTokenRequest
+        ),
+        "merchant_authentication/create_sdk_session_token" => call!(
+            MerchantAuthenticationServiceClient,
+            create_sdk_session_token,
+            MerchantAuthenticationServiceCreateSdkSessionTokenRequest
+        ),
+        "recurring_payment/charge" => call!(
+            RecurringPaymentServiceClient,
+            charge,
+            RecurringPaymentServiceChargeRequest
+        ),
         other => Err(format!("unknown gRPC method: \"{other}\"")),
     }
 }
@@ -177,7 +225,9 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
 // ── C ABI helpers ─────────────────────────────────────────────────────────────
 
 unsafe fn to_raw_buf(bytes: Vec<u8>, out_len: *mut u32) -> *mut u8 {
-    unsafe { *out_len = bytes.len() as u32; }
+    unsafe {
+        *out_len = bytes.len() as u32;
+    }
     let boxed: Box<[u8]> = bytes.into_boxed_slice();
     Box::into_raw(boxed) as *mut u8
 }
@@ -208,27 +258,33 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
     method_ptr: *const c_char,
     config_ptr: *const u8,
     config_len: u32,
-    req_ptr:    *const u8,
-    req_len:    u32,
-    out_len:    *mut u32,
+    req_ptr: *const u8,
+    req_len: u32,
+    out_len: *mut u32,
 ) -> *mut u8 {
     let method = match unsafe { std::ffi::CStr::from_ptr(method_ptr) }.to_str() {
         Ok(s) => s,
-        Err(e) => return unsafe { to_raw_buf(encode_err(&format!("invalid method string: {e}")), out_len) },
+        Err(e) => {
+            return unsafe {
+                to_raw_buf(encode_err(&format!("invalid method string: {e}")), out_len)
+            }
+        }
     };
 
     let config_bytes = unsafe { std::slice::from_raw_parts(config_ptr, config_len as usize) };
-    let req_bytes    = unsafe { std::slice::from_raw_parts(req_ptr,    req_len    as usize) };
+    let req_bytes = unsafe { std::slice::from_raw_parts(req_ptr, req_len as usize) };
 
     let cfg: GrpcConfigInput = match serde_json::from_slice(config_bytes) {
         Ok(c) => c,
-        Err(e) => return unsafe { to_raw_buf(encode_err(&format!("invalid config JSON: {e}")), out_len) },
+        Err(e) => {
+            return unsafe { to_raw_buf(encode_err(&format!("invalid config JSON: {e}")), out_len) }
+        }
     };
 
     let res = RT.block_on(dispatch(method, cfg, req_bytes));
 
     let bytes = match res {
-        Ok(b)  => encode_ok(b),
+        Ok(b) => encode_ok(b),
         Err(e) => encode_err(&e),
     };
 
@@ -244,7 +300,10 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
 pub unsafe extern "C" fn hyperswitch_grpc_free(ptr: *mut u8, len: u32) {
     if !ptr.is_null() {
         unsafe {
-            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, len as usize)));
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+                ptr,
+                len as usize,
+            )));
         }
     }
 }

@@ -2,6 +2,13 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
+/// Type alias for gRPC module tuple to avoid complex type warning
+/// (connector_name, Vec<(flow_key, grpc_field, grpc_method, builder_fn, needs_txn, self_auth)>)
+type GrpcModule<'a> = (
+    String,
+    Vec<(&'a str, &'a str, &'a str, &'a str, bool, bool)>,
+);
+
 /// Extracts the content of a JSON object block starting at the first `{` in `text`.
 /// Returns (block_content_without_outer_braces, length_consumed).
 fn extract_brace_block(text: &str) -> Option<(&str, usize)> {
@@ -48,10 +55,23 @@ fn load_supported_flows(examples_dir: &Path, connector: &str) -> Option<HashSet<
     // Within the flows block, each top-level key is a flow name.
     // Scan by finding `"flow_key":` patterns and extracting the variants block.
     let all_flow_keys = [
-        "authorize", "capture", "void", "get", "refund", "reverse",
-        "create_customer", "tokenize", "setup_recurring", "recurring_charge",
-        "pre_authenticate", "authenticate", "post_authenticate", "handle_event",
-        "create_access_token", "create_session_token", "create_sdk_session_token",
+        "authorize",
+        "capture",
+        "void",
+        "get",
+        "refund",
+        "reverse",
+        "create_customer",
+        "tokenize",
+        "setup_recurring",
+        "recurring_charge",
+        "pre_authenticate",
+        "authenticate",
+        "post_authenticate",
+        "handle_event",
+        "create_access_token",
+        "create_session_token",
+        "create_sdk_session_token",
     ];
     let mut supported = HashSet::new();
     for flow_key in all_flow_keys {
@@ -74,24 +94,24 @@ fn main() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let examples_dir = Path::new(&manifest_dir).join("../../../examples");
     let out_dir = std::env::var("OUT_DIR").unwrap();
-    let connectors_path     = format!("{out_dir}/connectors.rs");
-    let scenarios_path      = format!("{out_dir}/connector_scenarios.rs");
+    let connectors_path = format!("{out_dir}/connectors.rs");
+    let scenarios_path = format!("{out_dir}/connector_scenarios.rs");
     let grpc_scenarios_path = format!("{out_dir}/grpc_scenarios.rs");
-    let grpc_helpers_path   = format!("{out_dir}/grpc_helpers.rs");
+    let grpc_helpers_path = format!("{out_dir}/grpc_helpers.rs");
 
     // Known FFI scenario function names (subset may be present in any connector).
     let all_scenarios: &[(&str, &str)] = &[
         ("checkout_autocapture", "process_checkout_autocapture"),
-        ("checkout_card",        "process_checkout_card"),
-        ("checkout_wallet",      "process_checkout_wallet"),
-        ("checkout_bank",        "process_checkout_bank"),
-        ("refund",               "process_refund"),
-        ("recurring",            "process_recurring"),
-        ("void_payment",         "process_void_payment"),
-        ("get_payment",          "process_get_payment"),
-        ("create_customer",      "process_create_customer"),
-        ("tokenize",             "process_tokenize"),
-        ("authentication",       "process_authentication"),
+        ("checkout_card", "process_checkout_card"),
+        ("checkout_wallet", "process_checkout_wallet"),
+        ("checkout_bank", "process_checkout_bank"),
+        ("refund", "process_refund"),
+        ("recurring", "process_recurring"),
+        ("void_payment", "process_void_payment"),
+        ("get_payment", "process_get_payment"),
+        ("create_customer", "process_create_customer"),
+        ("tokenize", "process_tokenize"),
+        ("authentication", "process_authentication"),
     ];
 
     // Flow metadata for gRPC dispatch via builder functions.
@@ -99,23 +119,128 @@ fn main() {
     //   needs_txn_id : receives connector_transaction_id from the shared AUTOMATIC authorize pre-run
     //   self_auth    : must run its own MANUAL authorize inline (capture, void)
     let flow_meta: &[(&str, &str, &str, &str, bool, bool)] = &[
-        ("authorize",                "payment",          "authorize",              "build_authorize_request",              false, false),
-        ("capture",                  "payment",          "capture",                "build_capture_request",                false, true ),
-        ("void",                     "payment",          "void",                   "build_void_request",                   false, true ),
-        ("get",                      "payment",          "get",                    "build_get_request",                    true,  false),
-        ("refund",                   "payment",          "refund",                 "build_refund_request",                 true,  false),
-        ("reverse",                  "payment",          "reverse",                "build_reverse_request",                true,  false),
-        ("create_customer",          "customer",         "create",                 "build_create_customer_request",        false, false),
-        ("tokenize",                 "payment_method",   "tokenize",               "build_tokenize_request",               false, false),
-        ("setup_recurring",          "payment",          "setup_recurring",        "build_setup_recurring_request",        false, false),
-        ("recurring_charge",         "recurring_payment","charge",                 "build_recurring_charge_request",       false, false),
-        ("pre_authenticate",         "payment",          "pre_authenticate",       "build_pre_authenticate_request",       false, false),
-        ("authenticate",             "payment",          "authenticate",           "build_authenticate_request",           false, false),
-        ("post_authenticate",        "payment",          "post_authenticate",      "build_post_authenticate_request",      false, false),
-        ("handle_event",             "payment",          "handle_event",           "build_handle_event_request",           false, false),
-        ("create_access_token",      "payment",          "create_access_token",    "build_create_access_token_request",    false, false),
-        ("create_session_token",     "payment",          "create_session_token",   "build_create_session_token_request",   false, false),
-        ("create_sdk_session_token", "payment",          "create_sdk_session_token","build_create_sdk_session_token_request",false,false),
+        (
+            "authorize",
+            "payment",
+            "authorize",
+            "build_authorize_request",
+            false,
+            false,
+        ),
+        (
+            "capture",
+            "payment",
+            "capture",
+            "build_capture_request",
+            false,
+            true,
+        ),
+        ("void", "payment", "void", "build_void_request", false, true),
+        ("get", "payment", "get", "build_get_request", true, false),
+        (
+            "refund",
+            "payment",
+            "refund",
+            "build_refund_request",
+            true,
+            false,
+        ),
+        (
+            "reverse",
+            "payment",
+            "reverse",
+            "build_reverse_request",
+            true,
+            false,
+        ),
+        (
+            "create_customer",
+            "customer",
+            "create",
+            "build_create_customer_request",
+            false,
+            false,
+        ),
+        (
+            "tokenize",
+            "payment_method",
+            "tokenize",
+            "build_tokenize_request",
+            false,
+            false,
+        ),
+        (
+            "setup_recurring",
+            "payment",
+            "setup_recurring",
+            "build_setup_recurring_request",
+            false,
+            false,
+        ),
+        (
+            "recurring_charge",
+            "recurring_payment",
+            "charge",
+            "build_recurring_charge_request",
+            false,
+            false,
+        ),
+        (
+            "pre_authenticate",
+            "payment",
+            "pre_authenticate",
+            "build_pre_authenticate_request",
+            false,
+            false,
+        ),
+        (
+            "authenticate",
+            "payment",
+            "authenticate",
+            "build_authenticate_request",
+            false,
+            false,
+        ),
+        (
+            "post_authenticate",
+            "payment",
+            "post_authenticate",
+            "build_post_authenticate_request",
+            false,
+            false,
+        ),
+        (
+            "handle_event",
+            "payment",
+            "handle_event",
+            "build_handle_event_request",
+            false,
+            false,
+        ),
+        (
+            "create_access_token",
+            "payment",
+            "create_access_token",
+            "build_create_access_token_request",
+            false,
+            false,
+        ),
+        (
+            "create_session_token",
+            "payment",
+            "create_session_token",
+            "build_create_session_token_request",
+            false,
+            false,
+        ),
+        (
+            "create_sdk_session_token",
+            "payment",
+            "create_sdk_session_token",
+            "build_create_sdk_session_token_request",
+            false,
+            false,
+        ),
     ];
 
     let allowed_connectors: Vec<String> = std::env::var("CONNECTORS")
@@ -123,16 +248,18 @@ fn main() {
         .map(|s| s.split(',').map(|s| s.trim().to_string()).collect())
         .unwrap_or_else(|| vec!["stripe".to_string()]);
 
-    let mut modules:      Vec<(String, Vec<(&'static str, &'static str)>)> = Vec::new();
+    let mut modules: Vec<(String, Vec<(&'static str, &'static str)>)> = Vec::new();
     // grpc_modules: connector_name -> list of present (flow_key, grpc_field, grpc_method, builder_fn, needs_txn, self_auth)
-    let mut grpc_modules: Vec<(String, Vec<(&str, &str, &str, &str, bool, bool)>)> = Vec::new();
+    let mut grpc_modules: Vec<GrpcModule> = Vec::new();
 
     for connector_name in &allowed_connectors {
         let rs_file = examples_dir
             .join(connector_name)
             .join("rust")
             .join(format!("{connector_name}.rs"));
-        if !rs_file.exists() { continue; }
+        if !rs_file.exists() {
+            continue;
+        }
 
         println!("cargo:rerun-if-changed={}", rs_file.display());
         let content = fs::read_to_string(&rs_file).unwrap_or_default();
@@ -140,7 +267,10 @@ fn main() {
         // Load field_probe supported flows — used as authoritative filter (same as JS smoke test).
         let field_probe_supported = load_supported_flows(&examples_dir, connector_name);
         if let Some(ref supported) = field_probe_supported {
-            println!("cargo:warning=field_probe[{connector_name}]: {} supported flows", supported.len());
+            println!(
+                "cargo:warning=field_probe[{connector_name}]: {} supported flows",
+                supported.len()
+            );
         }
 
         // Discover FFI process_* functions.
@@ -165,7 +295,14 @@ fn main() {
                 }
             }
             if content.contains(&format!("fn {builder_fn}(")) {
-                grpc_present.push((flow_key, grpc_field, grpc_method, builder_fn, needs_txn, self_auth));
+                grpc_present.push((
+                    flow_key,
+                    grpc_field,
+                    grpc_method,
+                    builder_fn,
+                    needs_txn,
+                    self_auth,
+                ));
             }
         }
         if !grpc_present.is_empty() {
@@ -181,7 +318,9 @@ fn main() {
 
         let mut all_names: Vec<&String> = modules.iter().map(|(n, _)| n).collect();
         for (n, _) in &grpc_modules {
-            if !all_names.contains(&n) { all_names.push(n); }
+            if !all_names.contains(&n) {
+                all_names.push(n);
+            }
         }
 
         for name in &all_names {
@@ -231,25 +370,33 @@ fn main() {
 
         for (name, flows) in &grpc_modules {
             for &(flow_key, grpc_field, grpc_method, builder_fn, _needs_txn, self_auth) in flows {
-                if !self_auth { continue; }
+                if !self_auth {
+                    continue;
+                }
                 let ret = match flow_key {
                     "capture" | "void" | "reverse" =>
-                        format!("format!(\"txn_id: {{}}, status_code: {{}}\", response.connector_transaction_id, response.status_code)"),
-                    _ => format!("format!(\"status_code: {{}}\", response.status_code)"),
+                        "format!(\"txn_id: {}, status_code: {}\", response.connector_transaction_id, response.status_code)".to_string(),
+                    _ => "format!(\"status_code: {}\", response.status_code)".to_string(),
                 };
-                helpers.push_str(&format!("#[allow(dead_code)]\n"));
+                helpers.push_str("#[allow(dead_code)]\n");
                 helpers.push_str(&format!("async fn _run_grpc_{flow_key}_{name}(\n"));
                 helpers.push_str("    client: &hyperswitch_payments_client::GrpcClient,\n");
-                helpers.push_str(&format!(") -> Result<String, Box<dyn std::error::Error>> {{\n"));
+                helpers.push_str(") -> Result<String, Box<dyn std::error::Error>> {\n");
                 helpers.push_str(&format!("    let auth = client.{grpc_field}.authorize(\n"));
-                helpers.push_str(&format!("        connectors::{name}::build_authorize_request(\"MANUAL\")\n"));
+                helpers.push_str(&format!(
+                    "        connectors::{name}::build_authorize_request(\"MANUAL\")\n"
+                ));
                 helpers.push_str("    ).await.map_err(|e| e.to_string())?;\n");
                 helpers.push_str("    if auth.status_code >= 400 {\n");
                 helpers.push_str("        return Err(hyperswitch_payments_client::grpc_response_err(auth.status_code, &auth.error));\n");
                 helpers.push_str("    }\n");
                 helpers.push_str("    let conn_txn = auth.connector_transaction_id.as_deref().unwrap_or(\"\");\n");
-                helpers.push_str(&format!("    let response = client.{grpc_field}.{grpc_method}(\n"));
-                helpers.push_str(&format!("        connectors::{name}::{builder_fn}(conn_txn)\n"));
+                helpers.push_str(&format!(
+                    "    let response = client.{grpc_field}.{grpc_method}(\n"
+                ));
+                helpers.push_str(&format!(
+                    "        connectors::{name}::{builder_fn}(conn_txn)\n"
+                ));
                 helpers.push_str("    ).await.map_err(|e| e.to_string())?;\n");
                 helpers.push_str("    if response.status_code >= 400 {\n");
                 helpers.push_str("        return Err(hyperswitch_payments_client::grpc_response_err(response.status_code, &response.error));\n");
@@ -272,7 +419,7 @@ fn main() {
         code.push_str("match connector_name {\n");
 
         for (name, flows) in &grpc_modules {
-            let has_authorize  = flows.iter().any(|&(k, ..)| k == "authorize");
+            let has_authorize = flows.iter().any(|&(k, ..)| k == "authorize");
             let has_dependents = flows.iter().any(|&(_, _, _, _, needs_txn, _)| needs_txn);
 
             code.push_str(&format!("    \"{name}\" => {{\n"));
@@ -283,32 +430,22 @@ fn main() {
                 code.push_str(&format!(
                     "        let pre_auth_res = client.payment.authorize(connectors::{name}::build_authorize_request(\"AUTOMATIC\")).await;\n"
                 ));
-                code.push_str(
-                    "        let authorize_txn_id = pre_auth_res.as_ref().ok()\n"
-                );
-                code.push_str(
-                    "            .and_then(|r| r.connector_transaction_id.as_deref())\n"
-                );
-                code.push_str(
-                    "            .unwrap_or(\"probe_connector_txn_001\").to_string();\n"
-                );
-                code.push_str(
-                    "        results.push((\"authorize\".to_string(), pre_auth_res\n"
-                );
-                code.push_str(
-                    "            .map(|r| format!(\"txn_id: {}, status_code: {}\",\n"
-                );
+                code.push_str("        let authorize_txn_id = pre_auth_res.as_ref().ok()\n");
+                code.push_str("            .and_then(|r| r.connector_transaction_id.as_deref())\n");
+                code.push_str("            .unwrap_or(\"probe_connector_txn_001\").to_string();\n");
+                code.push_str("        results.push((\"authorize\".to_string(), pre_auth_res\n");
+                code.push_str("            .map(|r| format!(\"txn_id: {}, status_code: {}\",\n");
                 code.push_str(
                     "                r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code))\n"
                 );
-                code.push_str(
-                    "            .map_err(|e| e.to_string().into())));\n"
-                );
+                code.push_str("            .map_err(|e| e.to_string().into())));\n");
             }
 
             for &(flow_key, grpc_field, grpc_method, builder_fn, needs_txn, self_auth) in flows {
                 // Skip authorize — already handled in the pre-run block above.
-                if flow_key == "authorize" && has_authorize && has_dependents { continue; }
+                if flow_key == "authorize" && has_authorize && has_dependents {
+                    continue;
+                }
 
                 if self_auth {
                     code.push_str(&format!(
@@ -323,7 +460,7 @@ fn main() {
                     } else if needs_txn {
                         "&authorize_txn_id".to_string()
                     } else {
-                        String::new()  // no-param builder
+                        String::new() // no-param builder
                     };
 
                     let ret = match flow_key {

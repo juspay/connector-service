@@ -1,4 +1,4 @@
-/**
+/*
  * gRPC smoke test for the hyperswitch-payments Rust gRPC SDK.
  *
  * For each supported flow (filtered by data/field_probe/{connector}.json),
@@ -35,13 +35,27 @@ fn no_color() -> bool {
             && std::env::var("TERM").map_or(true, |t| t.is_empty() || t == "dumb"))
 }
 fn c(code: &str, text: &str) -> String {
-    if no_color() { text.to_string() } else { format!("\x1b[{code}m{text}\x1b[0m") }
+    if no_color() {
+        text.to_string()
+    } else {
+        format!("\x1b[{code}m{text}\x1b[0m")
+    }
 }
-fn green(t: &str) -> String { c("32", t) }
-fn yellow(t: &str) -> String { c("33", t) }
-fn red(t: &str) -> String { c("31", t) }
-fn grey(t: &str) -> String { c("90", t) }
-fn bold(t: &str) -> String { c("1", t) }
+fn green(t: &str) -> String {
+    c("32", t)
+}
+fn yellow(t: &str) -> String {
+    c("33", t)
+}
+fn red(t: &str) -> String {
+    c("31", t)
+}
+fn grey(t: &str) -> String {
+    c("90", t)
+}
+fn bold(t: &str) -> String {
+    c("1", t)
+}
 
 // ── Credentials loading ───────────────────────────────────────────────────────
 
@@ -106,12 +120,20 @@ async fn wait_for_server(endpoint: &str, max_secs: u32) -> Result<(), String> {
             .connect_lazy();
 
         let mut health = HealthClient::new(channel);
-        match health.check(HealthCheckRequest { service: String::new() }).await {
+        match health
+            .check(HealthCheckRequest {
+                service: String::new(),
+            })
+            .await
+        {
             Ok(_) => return Ok(()),
             Err(s) if s.code() == TonicCode::Unavailable => {
-                eprintln!("  {}", grey(&format!(
-                    "attempt {attempt}/{max_secs}: server not ready yet, retrying…"
-                )));
+                eprintln!(
+                    "  {}",
+                    grey(&format!(
+                        "attempt {attempt}/{max_secs}: server not ready yet, retrying…"
+                    ))
+                );
                 sleep(Duration::from_secs(1)).await;
             }
             Err(_) => return Ok(()), // any other status → server is up
@@ -151,22 +173,34 @@ struct Args {
 fn parse_args() -> Args {
     let raw: Vec<String> = std::env::args().skip(1).collect();
     let mut args = Args {
-        creds_file: None, endpoint: None, connector: None, auth_type: None,
-        api_key: None, api_secret: None, key1: None, merchant_id: None, tenant_id: None,
+        creds_file: None,
+        endpoint: None,
+        connector: None,
+        auth_type: None,
+        api_key: None,
+        api_secret: None,
+        key1: None,
+        merchant_id: None,
+        tenant_id: None,
     };
     let mut i = 0usize;
     while i < raw.len() {
-        macro_rules! next { () => {{ i += 1; raw.get(i).cloned().unwrap_or_default() }}; }
+        macro_rules! next {
+            () => {{
+                i += 1;
+                raw.get(i).cloned().unwrap_or_default()
+            }};
+        }
         match raw[i].as_str() {
-            "--creds-file"  => args.creds_file  = Some(next!()),
-            "--endpoint"    => args.endpoint    = Some(next!()),
-            "--connector"   => args.connector   = Some(next!()),
-            "--auth-type"   => args.auth_type   = Some(next!()),
-            "--api-key"     => args.api_key     = Some(next!()),
-            "--api-secret"  => args.api_secret  = Some(next!()),
-            "--key1"        => args.key1        = Some(next!()),
+            "--creds-file" => args.creds_file = Some(next!()),
+            "--endpoint" => args.endpoint = Some(next!()),
+            "--connector" => args.connector = Some(next!()),
+            "--auth-type" => args.auth_type = Some(next!()),
+            "--api-key" => args.api_key = Some(next!()),
+            "--api-secret" => args.api_secret = Some(next!()),
+            "--key1" => args.key1 = Some(next!()),
             "--merchant-id" => args.merchant_id = Some(next!()),
-            "--tenant-id"   => args.tenant_id   = Some(next!()),
+            "--tenant-id" => args.tenant_id = Some(next!()),
             "--help" | "-h" => {
                 println!("Usage: grpc-smoke-test [options]");
                 println!("  --creds-file <path>   JSON creds file (default: creds.json)");
@@ -198,40 +232,85 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
         } else {
             // creds.json format: { "<connector>": { "api_key": {"value": "..."}, ... } }
             let connector = args.connector.as_deref().unwrap_or("stripe");
-            let entry = raw.get(connector)
+            let entry = raw
+                .get(connector)
                 .ok_or_else(|| format!("Connector '{connector}' not found in {creds_file}"))?;
             GrpcConfig {
-                endpoint:    args.endpoint.clone().unwrap_or_else(|| "http://localhost:8000".to_string()),
-                connector:   connector.to_string(),
-                auth_type:   args.auth_type.clone().unwrap_or_else(|| "header-key".to_string()),
-                api_key:     extract_creds_value(entry, &["api_key"]).unwrap_or_default(),
-                api_secret:  extract_creds_value(entry, &["api_secret"]),
-                key1:        extract_creds_value(entry, &["key1"]),
+                endpoint: args
+                    .endpoint
+                    .clone()
+                    .unwrap_or_else(|| "http://localhost:8000".to_string()),
+                connector: connector.to_string(),
+                auth_type: args
+                    .auth_type
+                    .clone()
+                    .unwrap_or_else(|| "header-key".to_string()),
+                api_key: extract_creds_value(entry, &["api_key"]).unwrap_or_default(),
+                api_secret: extract_creds_value(entry, &["api_secret"]),
+                key1: extract_creds_value(entry, &["key1"]),
                 merchant_id: extract_creds_value(entry, &["merchant_account", "merchant_id"]),
-                tenant_id:   extract_creds_value(entry, &["tenant_id"]),
+                tenant_id: extract_creds_value(entry, &["tenant_id"]),
             }
         }
     } else {
         GrpcConfig {
-            endpoint:  args.endpoint.clone().ok_or("--endpoint required when no creds file")?,
-            connector: args.connector.clone().ok_or("--connector required when no creds file")?,
-            auth_type: args.auth_type.clone().unwrap_or_else(|| "header-key".to_string()),
-            api_key:   args.api_key.clone().ok_or("--api-key required when no creds file")?,
+            endpoint: args
+                .endpoint
+                .clone()
+                .ok_or("--endpoint required when no creds file")?,
+            connector: args
+                .connector
+                .clone()
+                .ok_or("--connector required when no creds file")?,
+            auth_type: args
+                .auth_type
+                .clone()
+                .unwrap_or_else(|| "header-key".to_string()),
+            api_key: args
+                .api_key
+                .clone()
+                .ok_or("--api-key required when no creds file")?,
             api_secret: args.api_secret.clone(),
             key1: args.key1.clone(),
             merchant_id: args.merchant_id.clone(),
             tenant_id: args.tenant_id.clone(),
         }
     };
-    if let Some(v) = args.endpoint   { config.endpoint   = v; }
-    if let Some(v) = args.connector  { config.connector  = v; }
-    if let Some(v) = args.auth_type  { config.auth_type  = v; }
-    if let Some(v) = args.api_key    { config.api_key    = v; }
-    if args.api_secret.is_some()  { config.api_secret  = args.api_secret; }
-    if args.key1.is_some()        { config.key1        = args.key1; }
-    if args.merchant_id.is_some() { config.merchant_id = args.merchant_id; }
-    if args.tenant_id.is_some()   { config.tenant_id   = args.tenant_id; }
+    if let Some(v) = args.endpoint {
+        config.endpoint = v;
+    }
+    if let Some(v) = args.connector {
+        config.connector = v;
+    }
+    if let Some(v) = args.auth_type {
+        config.auth_type = v;
+    }
+    if let Some(v) = args.api_key {
+        config.api_key = v;
+    }
+    if args.api_secret.is_some() {
+        config.api_secret = args.api_secret;
+    }
+    if args.key1.is_some() {
+        config.key1 = args.key1;
+    }
+    if args.merchant_id.is_some() {
+        config.merchant_id = args.merchant_id;
+    }
+    if args.tenant_id.is_some() {
+        config.tenant_id = args.tenant_id;
+    }
     Ok(config)
+}
+
+fn print_non_sensitive_config(endpoint: &str, connector: &str, auth_type: &str) {
+    println!("\n{}", "=".repeat(60));
+    println!("{}", bold("gRPC Smoke Test"));
+    println!("{}", "=".repeat(60));
+    println!("  Endpoint:  {}", endpoint);
+    println!("  Connector: {}", connector);
+    println!("  Auth type: {}", auth_type);
+    println!();
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -244,13 +323,8 @@ async fn main() {
         std::process::exit(1);
     });
 
-    println!("\n{}", "=".repeat(60));
-    println!("{}", bold("gRPC Smoke Test"));
-    println!("{}", "=".repeat(60));
-    println!("  Endpoint:  {}", config.endpoint);
-    println!("  Connector: {}", config.connector);
-    println!("  Auth type: {}", config.auth_type);
-    println!();
+    // Print only non-sensitive configuration fields.
+    print_non_sensitive_config(&config.endpoint, &config.connector, &config.auth_type);
 
     // ── Wait for server ───────────────────────────────────────────────────────
     println!("Waiting for gRPC server (up to 30s)…");
@@ -273,11 +347,16 @@ async fn main() {
     let scenario_results = run_grpc_scenarios(&connector_name, &client).await;
 
     if scenario_results.is_empty() {
-        println!("{}", yellow(&format!(
-            "  SKIPPED — no supported gRPC flows found for {connector_name}"
-        )));
+        println!(
+            "{}",
+            yellow(&format!(
+                "  SKIPPED — no supported gRPC flows found for {connector_name}"
+            ))
+        );
         println!("  Add `pub fn build_*_request(...)` builder functions in examples/{connector_name}/rust/{connector_name}.rs");
-        println!("  and ensure flows are marked as supported in data/field_probe/{connector_name}.json.");
+        println!(
+            "  and ensure flows are marked as supported in data/field_probe/{connector_name}.json."
+        );
         std::process::exit(0);
     }
 
@@ -300,7 +379,11 @@ async fn main() {
                     println!("{} {}", red("✗ FAILED"), grey(&format!("— {detail}")));
                     failed = true;
                 } else {
-                    println!("{} {}", yellow("~ connector error"), grey(&format!("— {detail}")));
+                    println!(
+                        "{} {}",
+                        yellow("~ connector error"),
+                        grey(&format!("— {detail}"))
+                    );
                 }
             }
         }
@@ -309,7 +392,10 @@ async fn main() {
     // ── Result ────────────────────────────────────────────────────────────────
     println!();
     if failed {
-        println!("{}", red("gRPC smoke test FAILED (transport error — server unreachable or crashed)"));
+        println!(
+            "{}",
+            red("gRPC smoke test FAILED (transport error — server unreachable or crashed)")
+        );
         std::process::exit(1);
     }
     println!(
