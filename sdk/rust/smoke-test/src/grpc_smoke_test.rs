@@ -266,7 +266,10 @@ fn build_config(args: Args) -> Result<GrpcConfig, String> {
                 .auth_type
                 .clone()
                 .unwrap_or_else(|| "header-key".to_string()),
-            api_key: args.api_key.clone().ok_or("--api-key required when no creds file")?,
+            api_key: args
+                .api_key
+                .clone()
+                .ok_or("--api-key required when no creds file")?,
             api_secret: args.api_secret.clone(),
             key1: args.key1.clone(),
             merchant_id: args.merchant_id.clone(),
