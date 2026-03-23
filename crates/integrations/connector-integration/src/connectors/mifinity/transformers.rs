@@ -15,7 +15,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::Date;
 
@@ -43,8 +43,23 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for MifinityConnectorMetadataObject
 }
 
 #[derive(Debug, Serialize, PartialEq)]
+#[serde(untagged)]
+pub enum MifinityPaymentsRequest {
+    Wallet(MifinityWalletPaymentsRequest),
+    Card(MifinityCardPaymentsRequest),
+}
+
+/// Indicates whether the Authorize request is a card (PAC) or wallet flow.
+/// Used by the connector to select the correct URL endpoint.
+#[derive(Debug, Clone, PartialEq)]
+pub enum MifinityPaymentMethodKind {
+    Card,
+    Wallet,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct MifinityPaymentsRequest {
+pub struct MifinityWalletPaymentsRequest {
     money: Money,
     client: MifinityClient,
     address: MifinityAddress,
@@ -57,6 +72,39 @@ pub struct MifinityPaymentsRequest {
     return_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     language_preference: Option<String>,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MifinityCardPaymentsRequest {
+    pub money: MifinityPacMoney,
+    pub source_account: Secret<String>,
+    pub trace_id: String,
+    pub card_number: Secret<String>,
+    pub expiry_date: Secret<String>,
+    pub card_name: Secret<String>,
+    pub card_holder_country_code: String,
+    pub card_holder_nationality: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dob: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_street: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_holder_state: Option<String>,
+}
+
+#[derive(Debug, Serialize, PartialEq)]
+pub struct MifinityPacMoney {
+    pub amount: f64,
+    pub currency: Currency,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -110,18 +158,120 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
-            item.router_data
-                .resource_common_data
-                .connector_feature_data
-                .clone(),
-        )
-        .change_context(ConnectorError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-        })?;
         match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::Card(card_data) => {
+                let metadata: MifinityConnectorMetadataObject =
+                    utils::to_connector_meta_from_secret(
+                        item.router_data
+                            .resource_common_data
+                            .connector_feature_data
+                            .clone(),
+                    )
+                    .change_context(
+                        ConnectorError::InvalidConnectorConfig {
+                            config: "merchant_connector_account.metadata",
+                        },
+                    )?;
+
+                let amount_major = item
+                    .connector
+                    .amount_converter
+                    .convert(
+                        item.router_data.request.minor_amount,
+                        item.router_data.request.currency,
+                    )
+                    .change_context(ConnectorError::RequestEncodingFailed)?;
+                // Parse the StringMajorUnit to f64 for the PAC API
+                let amount_f64: f64 = amount_major
+                    .get_amount_as_string()
+                    .parse::<f64>()
+                    .map_err(|_| ConnectorError::RequestEncodingFailed)?;
+
+                let billing_country = item
+                    .router_data
+                    .resource_common_data
+                    .get_billing_country()?;
+                let country_code_str = billing_country.to_string();
+
+                let trace_id = item
+                    .router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone();
+
+                let expiry_date =
+                    card_data.get_card_expiry_month_year_2_digit_with_delimiter("/".to_string())?;
+
+                let card_name = card_data
+                    .card_holder_name
+                    .clone()
+                    .or_else(|| {
+                        item.router_data
+                            .resource_common_data
+                            .get_optional_billing_full_name()
+                    })
+                    .ok_or(ConnectorError::MissingRequiredField {
+                        field_name: "card_holder_name or billing name",
+                    })?;
+
+                let card_holder_email = item
+                    .router_data
+                    .request
+                    .email
+                    .as_ref()
+                    .map(|e| e.peek().to_string());
+
+                Ok(MifinityPaymentsRequest::Card(MifinityCardPaymentsRequest {
+                    money: MifinityPacMoney {
+                        amount: amount_f64,
+                        currency: item.router_data.request.currency,
+                    },
+                    source_account: metadata.destination_account_number,
+                    trace_id,
+                    card_number: Secret::new(card_data.card_number.peek().to_string()),
+                    expiry_date,
+                    card_name,
+                    card_holder_country_code: country_code_str.clone(),
+                    card_holder_nationality: country_code_str,
+                    description: None,
+                    card_holder_email,
+                    dob: None,
+                    card_holder_address: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_billing_line1()
+                        .map(|s| s.peek().to_string()),
+                    card_holder_street: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_billing_line1()
+                        .map(|s| s.peek().to_string()),
+                    card_holder_city: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_billing_city()
+                        .map(|s| s.peek().to_string()),
+                    card_holder_state: item
+                        .router_data
+                        .resource_common_data
+                        .get_optional_billing_state()
+                        .map(|s| s.peek().to_string()),
+                }))
+            }
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 WalletData::Mifinity(data) => {
+                    let metadata: MifinityConnectorMetadataObject =
+                        utils::to_connector_meta_from_secret(
+                            item.router_data
+                                .resource_common_data
+                                .connector_feature_data
+                                .clone(),
+                        )
+                        .change_context(
+                            ConnectorError::InvalidConnectorConfig {
+                                config: "merchant_connector_account.metadata",
+                            },
+                        )?;
                     let money = Money {
                         amount: item
                             .connector
@@ -183,19 +333,21 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                         .clone();
                     let brand_id = metadata.brand_id;
                     let language_preference = data.language_preference;
-                    Ok(Self {
-                        money,
-                        client,
-                        address,
-                        validation_key,
-                        client_reference,
-                        trace_id: trace_id.clone(),
-                        description: trace_id.clone(), //Connector recommend to use the traceId for a better experience in the BackOffice application later.
-                        destination_account_number,
-                        brand_id,
-                        return_url: item.router_data.request.get_router_return_url()?,
-                        language_preference,
-                    })
+                    Ok(MifinityPaymentsRequest::Wallet(
+                        MifinityWalletPaymentsRequest {
+                            money,
+                            client,
+                            address,
+                            validation_key,
+                            client_reference,
+                            trace_id: trace_id.clone(),
+                            description: trace_id.clone(),
+                            destination_account_number,
+                            brand_id,
+                            return_url: item.router_data.request.get_router_return_url()?,
+                            language_preference,
+                        },
+                    ))
                 }
                 WalletData::AliPayQr(_)
                 | WalletData::BluecodeRedirect {}
@@ -234,8 +386,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 )
                 .into()),
             },
-            PaymentMethodData::Card(_)
-            | PaymentMethodData::CardRedirect(_)
+            PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::BankRedirect(_)
             | PaymentMethodData::PayLater(_)
             | PaymentMethodData::BankDebit(_)
@@ -278,16 +429,65 @@ impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
     }
 }
 
+/// Unified response type that handles both wallet (init-iframe) and card (PAC) responses.
+/// The wallet response contains `initialization_token`, while the PAC response contains
+/// `transactionReference` and `transactionStatus`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MifinityPaymentsResponse {
-    payload: Vec<MifinityPayload>,
+#[serde(untagged)]
+pub enum MifinityPaymentsResponse {
+    Card(MifinityPacResponse),
+    Wallet(MifinityWalletPaymentsResponse),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MifinityWalletPaymentsResponse {
+    payload: Vec<MifinityWalletPayload>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MifinityPayload {
+pub struct MifinityWalletPayload {
     trace_id: String,
     initialization_token: Secret<String>,
+}
+
+/// PAC (Pay Any Card) response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MifinityPacResponse {
+    pub payload: Vec<MifinityPacPayload>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MifinityPacPayload {
+    pub transaction_reference: String,
+    pub transaction_status: i32,
+    pub transaction_status_description: String,
+    pub trace_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_last_updated: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arn: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_message: Option<String>,
+}
+
+/// Maps MiFinity PAC transaction status codes to AttemptStatus.
+/// Status codes from spec:
+/// 1 = Received, 2 = Internal Error, 3 = Submitted, 4 = Processed by PSP,
+/// 5 = Processed by acquirer, 6 = Rejected, 7 = In Progress, 8 = On Hold KYC
+fn pac_transaction_status_to_attempt_status(status: i32) -> enums::AttemptStatus {
+    match status {
+        1 => enums::AttemptStatus::Pending, // Received
+        2 => enums::AttemptStatus::Failure, // Internal Error
+        3 => enums::AttemptStatus::Charged, // Submitted (funds movement happens here)
+        4 => enums::AttemptStatus::Charged, // Processed by PSP
+        5 => enums::AttemptStatus::Charged, // Processed by acquirer
+        6 => enums::AttemptStatus::Failure, // Rejected
+        7 => enums::AttemptStatus::Pending, // In Progress
+        8 => enums::AttemptStatus::Pending, // On Hold KYC
+        _ => enums::AttemptStatus::Pending,
+    }
 }
 
 impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
@@ -298,48 +498,99 @@ impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Se
     fn try_from(
         item: ResponseRouterData<MifinityPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let payload = item.response.payload.first();
-        match payload {
-            Some(payload) => {
-                let trace_id = payload.trace_id.clone();
-                let initialization_token = payload.initialization_token.clone();
-                Ok(Self {
-                    response: Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(trace_id.clone()),
-                        redirection_data: Some(Box::new(RedirectForm::Mifinity {
-                            initialization_token: initialization_token.expose(),
-                        })),
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: Some(trace_id),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
+        match item.response {
+            MifinityPaymentsResponse::Card(pac_response) => {
+                let payload = pac_response.payload.first();
+                match payload {
+                    Some(payload) => {
+                        let status =
+                            pac_transaction_status_to_attempt_status(payload.transaction_status);
+                        let transaction_reference = payload.transaction_reference.clone();
+                        let trace_id = payload.trace_id.clone();
+                        Ok(Self {
+                            response: Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(
+                                    transaction_reference,
+                                ),
+                                redirection_data: None,
+                                mandate_reference: None,
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: Some(trace_id),
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
+                            }),
+                            resource_common_data: PaymentFlowData {
+                                status,
+                                ..item.router_data.resource_common_data
+                            },
+                            ..item.router_data
+                        })
+                    }
+                    None => Ok(Self {
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::NoResponseId,
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: None,
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        }),
+                        resource_common_data: PaymentFlowData {
+                            status: enums::AttemptStatus::Pending,
+                            ..item.router_data.resource_common_data
+                        },
+                        ..item.router_data
                     }),
-                    resource_common_data: PaymentFlowData {
-                        status: enums::AttemptStatus::AuthenticationPending,
-                        ..item.router_data.resource_common_data
-                    },
-                    ..item.router_data
-                })
+                }
             }
-            None => Ok(Self {
-                response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::NoResponseId,
-                    redirection_data: None,
-                    mandate_reference: None,
-                    connector_metadata: None,
-                    network_txn_id: None,
-                    connector_response_reference_id: None,
-                    incremental_authorization_allowed: None,
-                    status_code: item.http_code,
-                }),
-                resource_common_data: PaymentFlowData {
-                    status: enums::AttemptStatus::AuthenticationPending,
-                    ..item.router_data.resource_common_data
-                },
-                ..item.router_data
-            }),
+            MifinityPaymentsResponse::Wallet(wallet_response) => {
+                let payload = wallet_response.payload.first();
+                match payload {
+                    Some(payload) => {
+                        let trace_id = payload.trace_id.clone();
+                        let initialization_token = payload.initialization_token.clone();
+                        Ok(Self {
+                            response: Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(trace_id.clone()),
+                                redirection_data: Some(Box::new(RedirectForm::Mifinity {
+                                    initialization_token: initialization_token.expose(),
+                                })),
+                                mandate_reference: None,
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: Some(trace_id),
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
+                            }),
+                            resource_common_data: PaymentFlowData {
+                                status: enums::AttemptStatus::AuthenticationPending,
+                                ..item.router_data.resource_common_data
+                            },
+                            ..item.router_data
+                        })
+                    }
+                    None => Ok(Self {
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::NoResponseId,
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: None,
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        }),
+                        resource_common_data: PaymentFlowData {
+                            status: enums::AttemptStatus::AuthenticationPending,
+                            ..item.router_data.resource_common_data
+                        },
+                        ..item.router_data
+                    }),
+                }
+            }
         }
     }
 }

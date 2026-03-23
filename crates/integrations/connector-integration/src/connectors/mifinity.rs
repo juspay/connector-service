@@ -48,6 +48,7 @@ use crate::{
     types::ResponseRouterData,
     utils,
 };
+use domain_types::payment_method_data::PaymentMethodData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -258,7 +259,15 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(format!("{}pegasus-ci/api/gateway/init-iframe", self.connector_base_url_payments(req)))
+            let base_url = self.connector_base_url_payments(req);
+            match &req.request.payment_method_data {
+                PaymentMethodData::Card(_) => {
+                    Ok(format!("{}api/payments/pac", base_url))
+                }
+                _ => {
+                    Ok(format!("{}pegasus-ci/api/gateway/init-iframe", base_url))
+                }
+            }
         }
         fn get_5xx_error_response(
         &self,
