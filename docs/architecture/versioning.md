@@ -2,6 +2,8 @@
 
 Prism follows [Semantic Versioning 2.0.0](https://semver.org/). A minor version upgrade or a patch will never break your existing integration.
 
+It is recommended to **Pin to `MAJOR.MINOR.*`. Get fixes automatically. Control features manually. Sleep soundly.**
+
 ```
 MAJOR.MINOR.PATCH
   1    .2    .3
@@ -17,11 +19,11 @@ MAJOR.MINOR.PATCH
 
 ## Pinning for Automatic Bug Fixes
 
-It is strongly recommended You want security patches and critical fixes without manual updates. Pin your dependency to accept patch increments automatically.
+It is strongly recommended pull security patches and critical fixes without manual updates. Pin your dependency to accept patch increments automatically.
 
 <!-- tabs:start -->
 
-#### **Node.js (package.json)**
+#### **Node.js**
 
 ```json
 {
@@ -31,12 +33,12 @@ It is strongly recommended You want security patches and critical fixes without 
 }
 ```
 
-This accepts: `1.2.0`, `1.2.1`, `1.2.4`, `1.2.15`  
+This accepts: `1.2.0`, `1.2.1`, `1.2.4`, `1.2.15`
 This rejects: `1.3.0`, `2.0.0`
 
-#### **Python (requirements.txt)**
+#### **Python**
 
-```
+```text
 hyperswitch-prism==1.2.*
 ```
 
@@ -47,7 +49,7 @@ Or in `pyproject.toml`:
 hyperswitch-prism = "1.2.*"
 ```
 
-#### **Java (Maven)**
+#### **Java**
 
 ```xml
 <dependency>
@@ -59,14 +61,17 @@ hyperswitch-prism = "1.2.*"
 
 The `[1.2.0,1.3.0)` syntax means: 1.2.0 inclusive, 1.3.0 exclusive.
 
-#### **Rust (Cargo.toml)**
+#### **PHP**
 
-```toml
-[dependencies]
-hyperswitch-prism = "1.2"
+```json
+{
+  "require": {
+    "juspay/hyperswitch-prism": "1.2.*"
+  }
+}
 ```
 
-Cargo treats `1.2` as `^1.2.0`, which accepts `1.2.0` through `1.2.999` but not `1.3.0`.
+This accepts any `1.2.x` version but not `1.3.0` or `2.0.0`.
 
 <!-- tabs:end -->
 
@@ -122,26 +127,26 @@ This accepts any version, including `2.0.0` with breaking changes. Your CI passe
 
 ## Recommended Strategy
 
-Pin to minor version for active development:
+It is strongly recommended to pin to minor version for active development:
 
 ```
 1.2.*
 ```
 
-This gives you:
+This gives you the ability to:
 - Automatic security patches
 - Automatic bug fixes
-- No surprise breaking changes
 - Control over when new features arrive
 
-Update minor versions intentionally when you need new connectors or features. Read the changelog. Run your integration tests. Then bump the pin.
+You may update minor versions intentionally when you need new connectors or features. 
+Read the changelog. Run your integration tests. Bump the pin.
 
 ## Version Compatibility Matrix
 
 Prism maintains compatibility across SDK languages for the same minor version:
 
-| Prism Version | Node.js SDK | Python SDK | Java SDK | Rust SDK |
-|---------------------------|-------------|------------|----------|----------|
+| Prism Version | Node.js SDK | Python SDK | Java SDK | PHP SDK |
+|---------------------------|-------------|------------|----------|---------|
 | 1.2.x | 1.2.x | 1.2.x | 1.2.x | 1.2.x |
 | 1.3.x | 1.3.x | 1.3.x | 1.3.x | 1.3.x |
 
@@ -151,7 +156,7 @@ All SDKs for version `1.2.x` speak the same protocol, support the same connector
 
 ```bash
 # Node.js
-npm list hyperswitch-prism
+npm list @juspay-tech/hyperswitch-prism
 
 # Python
 pip show hyperswitch-prism
@@ -159,8 +164,8 @@ pip show hyperswitch-prism
 # Java
 mvn dependency:tree | grep hyperswitch-prism
 
-# Rust
-cargo tree | grep hyperswitch-prism
+# PHP
+composer show juspay/hyperswitch-prism
 ```
 
 ## Deprecation Policy
@@ -171,7 +176,3 @@ Prism maintains deprecated APIs for one full major version. When `2.0.0` release
 - Automated codemods are provided where possible
 
 You have the entire `1.x` lifecycle to update your code before breaking changes arrive.
-
----
-
-**Pin to `MAJOR.MINOR.*`. Get fixes automatically. Control features manually. Sleep soundly.**
