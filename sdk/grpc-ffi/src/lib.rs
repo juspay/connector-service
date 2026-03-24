@@ -132,6 +132,10 @@ fn build_headers(cfg: &GrpcConfigInput) -> Arc<HashMap<String, String>> {
     Arc::new(h)
 }
 
+/// Inject headers into a gRPC request.
+///
+/// Creates a new gRPC request with the given payload and injects all headers
+/// from the provided map as metadata. Invalid header keys or values are silently skipped.
 fn inject<T>(payload: T, headers: &HashMap<String, String>) -> Request<T> {
     let mut req = Request::new(payload);
     for (k, v) in headers {
