@@ -218,7 +218,6 @@ default_impl_mandate_status_check_v2!(
     Payu,
     Paypal,
     Peachpayments,
-    Phonepe,
     Placetopay,
     Powertranz,
     Rapyd,
