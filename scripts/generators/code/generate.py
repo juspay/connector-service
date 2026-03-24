@@ -219,7 +219,14 @@ def service_to_client_name(service: str) -> str:
 
 
 def group_by_service(flows: list[dict]) -> dict[str, list[dict]]:
-    """Group flows by their proto service name. Returns {service_name: [flow, ...]}."""
+    """Group flows by their proto service name.
+
+    Args:
+        flows: List of flow dictionaries containing service information.
+
+    Returns:
+        Dictionary mapping service names to lists of flows.
+    """
     groups: dict[str, list[dict]] = {}
     for f in flows:
         groups.setdefault(f["service"], []).append(f)
@@ -227,34 +234,77 @@ def group_by_service(flows: list[dict]) -> dict[str, list[dict]]:
 
 
 def to_camel(snake: str) -> str:
-    """'create_access_token' -> 'createAccessToken'"""
+    """Convert snake_case to camelCase.
+
+    Args:
+        snake: The snake_case string (e.g., "create_access_token").
+
+    Returns:
+        The camelCase string (e.g., "createAccessToken").
+    """
     return re.sub(r"_([a-z])", lambda m: m.group(1).upper(), snake)
 
 
 def service_to_tonic_mod(service: str) -> str:
-    """'PaymentService' -> 'payment_service_client'"""
+    """Convert a service name to its tonic module name.
+
+    Args:
+        service: The service name (e.g., "PaymentService").
+
+    Returns:
+        The tonic module name (e.g., "payment_service_client").
+    """
     return to_snake_case(service) + "_client"
 
 
 def service_to_grpc_struct(service: str) -> str:
-    """'PaymentService' -> 'GrpcPaymentClient'"""
+    """Convert a service name to its gRPC client struct name.
+
+    Args:
+        service: The service name (e.g., "PaymentService").
+
+    Returns:
+        The gRPC client struct name (e.g., "GrpcPaymentClient").
+    """
     base = service[:-7] if service.endswith("Service") else service
     return f"Grpc{base}Client"
 
 
 def service_to_grpc_field(service: str) -> str:
-    """'PaymentService' -> 'payment'  |  'RecurringPaymentService' -> 'recurring_payment'"""
+    """Convert a service name to its gRPC field name (snake_case).
+
+    Args:
+        service: The service name (e.g., "PaymentService").
+
+    Returns:
+        The snake_case field name (e.g., "payment" or "recurring_payment").
+    """
     base = service[:-7] if service.endswith("Service") else service
     return to_snake_case(base)
 
 
 def service_to_grpc_js_field(service: str) -> str:
-    """'RecurringPaymentService' -> 'recurringPayment' (camelCase JS field on GrpcClient)"""
+    """Convert a service name to its JavaScript field name (camelCase).
+
+    Args:
+        service: The service name (e.g., "RecurringPaymentService").
+
+    Returns:
+        The camelCase field name (e.g., "recurringPayment").
+    """
     return to_camel(service_to_grpc_field(service))
 
 
 def grpc_method_path(service: str, rpc_name: str) -> str:
-    """{service_field}/{rpc_name} — matches the Rust FFI dispatch table."""
+    """Build the gRPC method path for FFI dispatch.
+
+    Args:
+        service: The service name.
+        rpc_name: The RPC method name.
+
+    Returns:
+        The method path in the format "{service_field}/{rpc_name}".
+    """
     return f"{service_to_grpc_field(service)}/{rpc_name}"
 
 
@@ -267,7 +317,15 @@ _GRPC_EXAMPLE_FN_OVERRIDES: dict[tuple[str, str], str] = {
 
 
 def grpc_example_fn_name(service: str, rpc_name: str) -> str:
-    """Canonical grpc_* smoke-test function suffix for a (service, rpc) pair."""
+    """Get the canonical gRPC example function name for a (service, rpc) pair.
+
+    Args:
+        service: The service name.
+        rpc_name: The RPC method name.
+
+    Returns:
+        The example function name, using overrides if defined.
+    """
     return _GRPC_EXAMPLE_FN_OVERRIDES.get((service, rpc_name), rpc_name)
 
 
