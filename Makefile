@@ -25,7 +25,7 @@ GRPC_PID_FILE := .grpc-server.pid
 
 .PHONY: all fmt check clippy test nextest ci help \
         proto-format proto-generate proto-build proto-lint proto-clean \
-        generate field-probe docs docs-check \
+        generate certify-client-sanity field-probe docs docs-check all-connectors-doc \
         setup-connector-tests \
         start-grpc stop-grpc \
         test-prism test-ucs test-connector test-scenario cargo
@@ -207,6 +207,7 @@ proto-generate:
 	buf generate
 
 # Validate proto files
+# This can catch issues before generating code or compiling
 proto-build:
 	@echo "Building/validating proto files..."
 	buf build
@@ -228,20 +229,40 @@ generate:
 	@echo "▶ Generating SDK flows from services.proto…"
 	@$(MAKE) -C sdk generate
 
+## SDK Certification: Run HTTP client sanity suite across all supported languages
+certify-client-sanity:
+	@echo "Cleaning previous client sanity artifacts..."
+	@rm -rf sdk/tests/client_sanity/artifacts || true
+	@mkdir -p sdk/tests/client_sanity/artifacts
+	@echo "Starting Client Sanity Certification..."
+	@pkill -f "[/]echo_server\\.js" || true
+	@pkill -f "[/]simple_proxy\\.js" || true
+	@node sdk/tests/client_sanity/simple_proxy.js > /dev/null 2>&1 & sleep 2
+	@echo "Generating golden captures from manifest..."
+	@node sdk/tests/client_sanity/generate_golden.js
+	@echo "[CERTIFICATION]: Running client sanity suite..."
+	@node sdk/tests/client_sanity/run_client_certification.js rust python node kotlin
+	@pkill -f "[/]echo_server\\.js"; pkill -f "[/]simple_proxy\\.js" || true
+
 ## Run field-probe to generate connector flow data
 field-probe:
 	@echo "▶ Running field-probe to generate connector flow data…"
-	cargo run -p field-probe
+	-cargo run -p field-probe
 
 ## Generate connector docs from source code (all connectors)
 docs: field-probe
 	@echo "▶ Generating connector docs…"
-	python3 scripts/generate-connector-docs.py --all --probe data/field_probe
+	python3 scripts/generators/docs/generate.py --all --probe-path data/field_probe
+
+## Generate the all-connectors coverage document
+all-connectors-doc: field-probe
+	@echo "▶ Generating all-connectors coverage doc…"
+	python3 scripts/generators/docs/generate.py --all-connectors-doc --probe-path data/field_probe
 
 ## Report annotation coverage for connector docs
 docs-check:
 	@echo "▶ Checking connector annotation coverage…"
-	python3 scripts/generate-connector-docs.py --check
+	python3 scripts/generators/docs/generate.py --check
 
 # ── Help ───────────────────────────────────────────────────────────────────────
 
@@ -311,11 +332,15 @@ help:
 	@echo "  proto-clean      Clean generated proto files"
 	@echo ""
 	@echo "SDK Codegen Targets:"
-	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin)"
+	@echo "  generate         Generate SDK flow bindings (Python, JS, Kotlin) from services.proto"
 	@echo ""
 	@echo "Docs Targets:"
-	@echo "  docs         Regenerate all connector docs from source"
-	@echo "  docs-check   Report which connectors are missing annotation files"
+	@echo "  docs               Regenerate all connector docs from source"
+	@echo "  all-connectors-doc Generate the all-connectors coverage document"
+	@echo "  docs-check         Report which connectors are missing annotation files"
+	@echo ""
+	@echo "Certification Targets:"
+	@echo "  certify-client-sanity  Run cross-language transport parity certification"
 	@echo ""
 	@echo "Other:"
 	@echo "  help     Show this help message"
