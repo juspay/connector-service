@@ -19,6 +19,23 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+// ── Header name constants ─────────────────────────────────────────────────────
+
+/// Header name for the connector identifier.
+const HEADER_CONNECTOR: &str = "x-connector";
+/// Header name for the authentication type.
+const HEADER_AUTH: &str = "x-auth";
+/// Header name for the API key.
+const HEADER_API_KEY: &str = "x-api-key";
+/// Header name for the API secret.
+const HEADER_API_SECRET: &str = "x-api-secret";
+/// Header name for the key1 field.
+const HEADER_KEY1: &str = "x-key1";
+/// Header name for the merchant identifier.
+const HEADER_MERCHANT_ID: &str = "x-merchant-id";
+/// Header name for the tenant identifier.
+const HEADER_TENANT_ID: &str = "x-tenant-id";
+
 use grpc_api_types::payments::{
     customer_service_client::CustomerServiceClient, event_service_client::EventServiceClient,
     merchant_authentication_service_client::MerchantAuthenticationServiceClient,
@@ -105,29 +122,29 @@ struct GrpcConfigInput {
 /// Build the gRPC metadata headers from the config.
 ///
 /// Maps config fields to their corresponding header names:
-/// - `connector` → `x-connector`
-/// - `auth_type` → `x-auth`
-/// - `api_key` → `x-api-key`
-/// - `api_secret` → `x-api-secret` (optional)
-/// - `key1` → `x-key1` (optional)
-/// - `merchant_id` → `x-merchant-id` (optional)
-/// - `tenant_id` → `x-tenant-id` (optional)
+/// - `connector` → [`HEADER_CONNECTOR`]
+/// - `auth_type` → [`HEADER_AUTH`]
+/// - `api_key` → [`HEADER_API_KEY`]
+/// - `api_secret` → [`HEADER_API_SECRET`] (optional)
+/// - `key1` → [`HEADER_KEY1`] (optional)
+/// - `merchant_id` → [`HEADER_MERCHANT_ID`] (optional)
+/// - `tenant_id` → [`HEADER_TENANT_ID`] (optional)
 fn build_headers(cfg: &GrpcConfigInput) -> Arc<HashMap<String, String>> {
     let mut h = HashMap::new();
-    h.insert("x-connector".into(), cfg.connector.clone());
-    h.insert("x-auth".into(), cfg.auth_type.clone());
-    h.insert("x-api-key".into(), cfg.api_key.clone());
+    h.insert(HEADER_CONNECTOR.into(), cfg.connector.clone());
+    h.insert(HEADER_AUTH.into(), cfg.auth_type.clone());
+    h.insert(HEADER_API_KEY.into(), cfg.api_key.clone());
     if let Some(v) = &cfg.api_secret {
-        h.insert("x-api-secret".into(), v.clone());
+        h.insert(HEADER_API_SECRET.into(), v.clone());
     }
     if let Some(v) = &cfg.key1 {
-        h.insert("x-key1".into(), v.clone());
+        h.insert(HEADER_KEY1.into(), v.clone());
     }
     if let Some(v) = &cfg.merchant_id {
-        h.insert("x-merchant-id".into(), v.clone());
+        h.insert(HEADER_MERCHANT_ID.into(), v.clone());
     }
     if let Some(v) = &cfg.tenant_id {
-        h.insert("x-tenant-id".into(), v.clone());
+        h.insert(HEADER_TENANT_ID.into(), v.clone());
     }
     Arc::new(h)
 }
@@ -309,10 +326,9 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
     let method = match unsafe { std::ffi::CStr::from_ptr(method_ptr) }.to_str() {
         Ok(s) => s,
         Err(e) => {
+            let err_bytes = encode_err(&format!("invalid method string: {e}"));
             // SAFETY: Caller guarantees `out_len` is valid (see `to_raw_buf` safety docs).
-            return unsafe {
-                to_raw_buf(encode_err(&format!("invalid method string: {e}")), out_len)
-            };
+            return unsafe { to_raw_buf(err_bytes, out_len) };
         }
     };
 
@@ -324,7 +340,9 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
     let cfg: GrpcConfigInput = match serde_json::from_slice(config_bytes) {
         Ok(c) => c,
         Err(e) => {
-            return unsafe { to_raw_buf(encode_err(&format!("invalid config JSON: {e}")), out_len) }
+            let err_bytes = encode_err(&format!("invalid config JSON: {e}"));
+            // SAFETY: Caller guarantees `out_len` is valid (see `to_raw_buf` safety docs).
+            return unsafe { to_raw_buf(err_bytes, out_len) };
         }
     };
 
