@@ -82,11 +82,11 @@ jobs:
           echo "Total files synced:"
           find "$TARGET_DIR" -type f | wc -l
 
-      - name: Generate unified SUMMARY.md
-        working-directory: hyperswitch-docs/prism
+      - name: Generate SUMMARY.md files
+        working-directory: hyperswitch-docs
         run: |
-          # Create a unified SUMMARY.md that combines docs and docs-generated
-          cat > SUMMARY.md << 'EOF'
+          # Create prism/SUMMARY.md
+          cat > prism/SUMMARY.md << 'EOF'
           # Summary
 
           ## Getting Started
@@ -254,7 +254,30 @@ jobs:
           - [LLMs.txt](llms.txt)
           EOF
 
-          echo "Generated unified SUMMARY.md"
+          echo "Generated prism/SUMMARY.md"
+
+          # Update root SUMMARY.md to include PRISM section
+          if [ -f "SUMMARY.md" ]; then
+            # Check if PRISM section already exists
+            if grep -q "## PRISM" SUMMARY.md; then
+              echo "PRISM section already exists in root SUMMARY.md"
+            else
+              # Add PRISM section at the end of root SUMMARY.md
+              cat >> SUMMARY.md << 'PRISM_SECTION'
+
+          ## PRISM
+          - [Overview](prism/README.md)
+          - [Getting Started](prism/getting-started/installation.md)
+          - [Architecture](prism/architecture/README.md)
+          - [API Reference](prism/api-reference/README.md)
+          - [Connectors](prism/connectors/README.md)
+          - [SDKs](prism/sdks/node/README.md)
+          PRISM_SECTION
+              echo "Added PRISM section to root SUMMARY.md"
+            fi
+          else
+            echo "WARNING: Root SUMMARY.md not found"
+          fi
 
       - name: Commit and push changes
         if: ${{ !inputs.dry_run }}
@@ -264,6 +287,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add prism/
+          git add SUMMARY.md
 
           # Check if there are any staged changes
           if git diff --cached --quiet; then
