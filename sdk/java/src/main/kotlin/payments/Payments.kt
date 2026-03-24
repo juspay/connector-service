@@ -14,102 +14,110 @@ package payments
 // ---------------------------------------------------------------------------
 // Request / Response types
 // ---------------------------------------------------------------------------
-typealias PaymentServiceAuthorizeRequest = ucs.v2.Payment.PaymentServiceAuthorizeRequest
-typealias PaymentServiceAuthorizeResponse = ucs.v2.Payment.PaymentServiceAuthorizeResponse
-typealias PaymentServiceCaptureRequest = ucs.v2.Payment.PaymentServiceCaptureRequest
-typealias PaymentServiceCaptureResponse = ucs.v2.Payment.PaymentServiceCaptureResponse
-typealias PaymentServiceVoidRequest = ucs.v2.Payment.PaymentServiceVoidRequest
-typealias PaymentServiceVoidResponse = ucs.v2.Payment.PaymentServiceVoidResponse
-typealias PaymentServiceRefundRequest = ucs.v2.Payment.PaymentServiceRefundRequest
-typealias RefundResponse = ucs.v2.Payment.RefundResponse
-typealias PaymentServiceReverseRequest = ucs.v2.Payment.PaymentServiceReverseRequest
-typealias PaymentServiceReverseResponse = ucs.v2.Payment.PaymentServiceReverseResponse
-typealias PaymentServiceGetRequest = ucs.v2.Payment.PaymentServiceGetRequest
-typealias PaymentServiceGetResponse = ucs.v2.Payment.PaymentServiceGetResponse
-typealias PaymentServiceCreateOrderRequest = ucs.v2.Payment.PaymentServiceCreateOrderRequest
-typealias PaymentServiceCreateOrderResponse = ucs.v2.Payment.PaymentServiceCreateOrderResponse
-typealias PaymentServiceSetupRecurringRequest = ucs.v2.Payment.PaymentServiceSetupRecurringRequest
-typealias PaymentServiceSetupRecurringResponse = ucs.v2.Payment.PaymentServiceSetupRecurringResponse
-typealias PaymentServiceIncrementalAuthorizationRequest = ucs.v2.Payment.PaymentServiceIncrementalAuthorizationRequest
-typealias PaymentServiceIncrementalAuthorizationResponse = ucs.v2.Payment.PaymentServiceIncrementalAuthorizationResponse
-typealias PaymentServiceVerifyRedirectResponseRequest = ucs.v2.Payment.PaymentServiceVerifyRedirectResponseRequest
-typealias PaymentServiceVerifyRedirectResponseResponse = ucs.v2.Payment.PaymentServiceVerifyRedirectResponseResponse
-typealias PaymentServiceDisputeRequest = ucs.v2.Payment.PaymentServiceDisputeRequest
-typealias DisputeResponse = ucs.v2.Payment.DisputeResponse
+typealias PaymentServiceAuthorizeRequest = types.Payment.PaymentServiceAuthorizeRequest
+typealias PaymentServiceAuthorizeResponse = types.Payment.PaymentServiceAuthorizeResponse
+typealias PaymentServiceCaptureRequest = types.Payment.PaymentServiceCaptureRequest
+typealias PaymentServiceCaptureResponse = types.Payment.PaymentServiceCaptureResponse
+typealias PaymentServiceVoidRequest = types.Payment.PaymentServiceVoidRequest
+typealias PaymentServiceVoidResponse = types.Payment.PaymentServiceVoidResponse
+typealias PaymentServiceRefundRequest = types.Payment.PaymentServiceRefundRequest
+typealias RefundResponse = types.Payment.RefundResponse
+typealias PaymentServiceReverseRequest = types.Payment.PaymentServiceReverseRequest
+typealias PaymentServiceReverseResponse = types.Payment.PaymentServiceReverseResponse
+typealias PaymentServiceGetRequest = types.Payment.PaymentServiceGetRequest
+typealias PaymentServiceGetResponse = types.Payment.PaymentServiceGetResponse
+typealias PaymentServiceCreateOrderRequest = types.Payment.PaymentServiceCreateOrderRequest
+typealias PaymentServiceCreateOrderResponse = types.Payment.PaymentServiceCreateOrderResponse
+typealias PaymentServiceSetupRecurringRequest = types.Payment.PaymentServiceSetupRecurringRequest
+typealias PaymentServiceSetupRecurringResponse = types.Payment.PaymentServiceSetupRecurringResponse
+typealias PaymentServiceIncrementalAuthorizationRequest = types.Payment.PaymentServiceIncrementalAuthorizationRequest
+typealias PaymentServiceIncrementalAuthorizationResponse = types.Payment.PaymentServiceIncrementalAuthorizationResponse
+typealias PaymentServiceVerifyRedirectResponseRequest = types.Payment.PaymentServiceVerifyRedirectResponseRequest
+typealias PaymentServiceVerifyRedirectResponseResponse = types.Payment.PaymentServiceVerifyRedirectResponseResponse
+typealias PaymentServiceDisputeRequest = types.Payment.PaymentServiceDisputeRequest
+typealias DisputeResponse = types.Payment.DisputeResponse
+typealias DisputeServiceAcceptRequest = types.Payment.DisputeServiceAcceptRequest
+typealias DisputeServiceAcceptResponse = types.Payment.DisputeServiceAcceptResponse
+typealias DisputeServiceDefendRequest = types.Payment.DisputeServiceDefendRequest
+typealias DisputeServiceDefendResponse = types.Payment.DisputeServiceDefendResponse
+typealias DisputeServiceSubmitEvidenceRequest = types.Payment.DisputeServiceSubmitEvidenceRequest
+typealias DisputeServiceSubmitEvidenceResponse = types.Payment.DisputeServiceSubmitEvidenceResponse
 
 // Authentication service
-typealias MerchantAuthenticationServiceCreateAccessTokenRequest = ucs.v2.Payment.MerchantAuthenticationServiceCreateAccessTokenRequest
-typealias MerchantAuthenticationServiceCreateAccessTokenResponse = ucs.v2.Payment.MerchantAuthenticationServiceCreateAccessTokenResponse
-typealias MerchantAuthenticationServiceCreateSessionTokenRequest = ucs.v2.Payment.MerchantAuthenticationServiceCreateSessionTokenRequest
-typealias MerchantAuthenticationServiceCreateSessionTokenResponse = ucs.v2.Payment.MerchantAuthenticationServiceCreateSessionTokenResponse
-typealias MerchantAuthenticationServiceCreateSdkSessionTokenRequest = ucs.v2.Payment.MerchantAuthenticationServiceCreateSdkSessionTokenRequest
-typealias MerchantAuthenticationServiceCreateSdkSessionTokenResponse = ucs.v2.Payment.MerchantAuthenticationServiceCreateSdkSessionTokenResponse
+typealias MerchantAuthenticationServiceCreateAccessTokenRequest = types.Payment.MerchantAuthenticationServiceCreateAccessTokenRequest
+typealias MerchantAuthenticationServiceCreateAccessTokenResponse = types.Payment.MerchantAuthenticationServiceCreateAccessTokenResponse
+typealias MerchantAuthenticationServiceCreateSessionTokenRequest = types.Payment.MerchantAuthenticationServiceCreateSessionTokenRequest
+typealias MerchantAuthenticationServiceCreateSessionTokenResponse = types.Payment.MerchantAuthenticationServiceCreateSessionTokenResponse
+typealias MerchantAuthenticationServiceCreateSdkSessionTokenRequest = types.Payment.MerchantAuthenticationServiceCreateSdkSessionTokenRequest
+typealias MerchantAuthenticationServiceCreateSdkSessionTokenResponse = types.Payment.MerchantAuthenticationServiceCreateSdkSessionTokenResponse
 
 // Payment method authentication
-typealias PaymentMethodAuthenticationServicePreAuthenticateRequest = ucs.v2.Payment.PaymentMethodAuthenticationServicePreAuthenticateRequest
-typealias PaymentMethodAuthenticationServicePreAuthenticateResponse = ucs.v2.Payment.PaymentMethodAuthenticationServicePreAuthenticateResponse
-typealias PaymentMethodAuthenticationServiceAuthenticateRequest = ucs.v2.Payment.PaymentMethodAuthenticationServiceAuthenticateRequest
-typealias PaymentMethodAuthenticationServiceAuthenticateResponse = ucs.v2.Payment.PaymentMethodAuthenticationServiceAuthenticateResponse
+typealias PaymentMethodAuthenticationServicePreAuthenticateRequest = types.Payment.PaymentMethodAuthenticationServicePreAuthenticateRequest
+typealias PaymentMethodAuthenticationServicePreAuthenticateResponse = types.Payment.PaymentMethodAuthenticationServicePreAuthenticateResponse
+typealias PaymentMethodAuthenticationServiceAuthenticateRequest = types.Payment.PaymentMethodAuthenticationServiceAuthenticateRequest
+typealias PaymentMethodAuthenticationServiceAuthenticateResponse = types.Payment.PaymentMethodAuthenticationServiceAuthenticateResponse
+typealias PaymentMethodAuthenticationServicePostAuthenticateRequest = types.Payment.PaymentMethodAuthenticationServicePostAuthenticateRequest
+typealias PaymentMethodAuthenticationServicePostAuthenticateResponse = types.Payment.PaymentMethodAuthenticationServicePostAuthenticateResponse
 
 // Tokenization
-typealias PaymentMethodServiceTokenizeRequest = ucs.v2.Payment.PaymentMethodServiceTokenizeRequest
-typealias PaymentMethodServiceTokenizeResponse = ucs.v2.Payment.PaymentMethodServiceTokenizeResponse
+typealias PaymentMethodServiceTokenizeRequest = types.Payment.PaymentMethodServiceTokenizeRequest
+typealias PaymentMethodServiceTokenizeResponse = types.Payment.PaymentMethodServiceTokenizeResponse
 
 // Recurring payments
-typealias RecurringPaymentServiceChargeRequest = ucs.v2.Payment.RecurringPaymentServiceChargeRequest
-typealias RecurringPaymentServiceChargeResponse = ucs.v2.Payment.RecurringPaymentServiceChargeResponse
+typealias RecurringPaymentServiceChargeRequest = types.Payment.RecurringPaymentServiceChargeRequest
+typealias RecurringPaymentServiceChargeResponse = types.Payment.RecurringPaymentServiceChargeResponse
 
 // Customer service
-typealias CustomerServiceCreateRequest = ucs.v2.Payment.CustomerServiceCreateRequest
-typealias CustomerServiceCreateResponse = ucs.v2.Payment.CustomerServiceCreateResponse
+typealias CustomerServiceCreateRequest = types.Payment.CustomerServiceCreateRequest
+typealias CustomerServiceCreateResponse = types.Payment.CustomerServiceCreateResponse
 
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------
-typealias Money = ucs.v2.Payment.Money
-typealias ErrorInfo = ucs.v2.Payment.ErrorInfo
-typealias Customer = ucs.v2.Payment.Customer
-typealias PaymentAddress = ucs.v2.Payment.PaymentAddress
-typealias Address = ucs.v2.Payment.Address
-typealias Identifier = ucs.v2.Payment.Identifier
-typealias ConnectorState = ucs.v2.Payment.ConnectorState
-typealias AccessToken = ucs.v2.Payment.AccessToken
-typealias SecretString = ucs.v2.PaymentMethods.SecretString
-typealias BrowserInformation = ucs.v2.Payment.BrowserInformation
-typealias CustomerAcceptance = ucs.v2.Payment.CustomerAcceptance
-typealias SessionToken = ucs.v2.Payment.SessionToken
-typealias ConnectorResponseData = ucs.v2.Payment.ConnectorResponseData
-typealias CardConnectorResponse = ucs.v2.Payment.CardConnectorResponse
-typealias AuthenticationData = ucs.v2.Payment.AuthenticationData
-typealias Metadata = ucs.v2.Payment.Metadata
-typealias ConnectorAuth = ucs.v2.Payment.ConnectorAuth
+typealias Money = types.Payment.Money
+typealias ErrorInfo = types.Payment.ErrorInfo
+typealias Customer = types.Payment.Customer
+typealias PaymentAddress = types.Payment.PaymentAddress
+typealias Address = types.Payment.Address
+typealias Identifier = types.Payment.Identifier
+typealias ConnectorState = types.Payment.ConnectorState
+typealias AccessToken = types.Payment.AccessToken
+typealias SecretString = types.PaymentMethods.SecretString
+typealias BrowserInformation = types.Payment.BrowserInformation
+typealias CustomerAcceptance = types.Payment.CustomerAcceptance
+typealias SessionToken = types.Payment.SessionToken
+typealias ConnectorResponseData = types.Payment.ConnectorResponseData
+typealias CardConnectorResponse = types.Payment.CardConnectorResponse
+typealias AuthenticationData = types.Payment.AuthenticationData
+typealias Metadata = types.Payment.Metadata
+typealias ConnectorSpecificConfig = types.Payment.ConnectorSpecificConfig
 
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
-typealias Currency = ucs.v2.Payment.Currency
-typealias CaptureMethod = ucs.v2.Payment.CaptureMethod
-typealias AuthenticationType = ucs.v2.Payment.AuthenticationType
-typealias PaymentMethodType = ucs.v2.Payment.PaymentMethodType
-typealias PaymentStatus = ucs.v2.Payment.PaymentStatus
-typealias RefundStatus = ucs.v2.Payment.RefundStatus
-typealias DisputeStatus = ucs.v2.Payment.DisputeStatus
-typealias MandateStatus = ucs.v2.Payment.MandateStatus
-typealias AuthorizationStatus = ucs.v2.Payment.AuthorizationStatus
-typealias OperationStatus = ucs.v2.Payment.OperationStatus
-typealias HttpMethod = ucs.v2.Payment.HttpMethod
-typealias FutureUsage = ucs.v2.Payment.FutureUsage
-typealias PaymentExperience = ucs.v2.Payment.PaymentExperience
-typealias PaymentChannel = ucs.v2.Payment.PaymentChannel
-typealias Connector = ucs.v2.Payment.Connector
-typealias ProductType = ucs.v2.Payment.ProductType
-typealias DisputeStage = ucs.v2.Payment.DisputeStage
-typealias Tokenization = ucs.v2.Payment.Tokenization
-typealias WebhookEventType = ucs.v2.Payment.WebhookEventType
-typealias ThreeDsCompletionIndicator = ucs.v2.Payment.ThreeDsCompletionIndicator
-typealias TransactionStatus = ucs.v2.Payment.TransactionStatus
-typealias ExemptionIndicator = ucs.v2.Payment.ExemptionIndicator
-typealias MitCategory = ucs.v2.Payment.MitCategory
-typealias SyncRequestType = ucs.v2.Payment.SyncRequestType
-typealias AcceptanceType = ucs.v2.Payment.AcceptanceType
-typealias CavvAlgorithm = ucs.v2.Payment.CavvAlgorithm
+typealias Currency = types.Payment.Currency
+typealias CaptureMethod = types.Payment.CaptureMethod
+typealias AuthenticationType = types.Payment.AuthenticationType
+typealias PaymentMethodType = types.Payment.PaymentMethodType
+typealias PaymentStatus = types.Payment.PaymentStatus
+typealias RefundStatus = types.Payment.RefundStatus
+typealias DisputeStatus = types.Payment.DisputeStatus
+typealias MandateStatus = types.Payment.MandateStatus
+typealias AuthorizationStatus = types.Payment.AuthorizationStatus
+typealias OperationStatus = types.Payment.OperationStatus
+typealias HttpMethod = types.Payment.HttpMethod
+typealias FutureUsage = types.Payment.FutureUsage
+typealias PaymentExperience = types.Payment.PaymentExperience
+typealias PaymentChannel = types.Payment.PaymentChannel
+typealias Connector = types.Payment.Connector
+typealias ProductType = types.Payment.ProductType
+typealias DisputeStage = types.Payment.DisputeStage
+typealias Tokenization = types.Payment.Tokenization
+typealias WebhookEventType = types.Payment.WebhookEventType
+typealias ThreeDsCompletionIndicator = types.Payment.ThreeDsCompletionIndicator
+typealias TransactionStatus = types.Payment.TransactionStatus
+typealias ExemptionIndicator = types.Payment.ExemptionIndicator
+typealias MitCategory = types.Payment.MitCategory
+typealias SyncRequestType = types.Payment.SyncRequestType
+typealias AcceptanceType = types.Payment.AcceptanceType
+typealias CavvAlgorithm = types.Payment.CavvAlgorithm
