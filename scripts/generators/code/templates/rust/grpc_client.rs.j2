@@ -120,7 +120,7 @@ impl GrpcClient {
     /// # Panics
     /// Panics if the config fails validation (empty endpoint, connector, etc.).
     pub async fn new(config: GrpcConfig) -> Result<Self, tonic::transport::Error> {
-        // Validate config before attempting connection - panic on invalid config
+        // Validate config before attempting connection
         if let Err(e) = config.validate() {
             panic!("GrpcConfig validation failed: {e}");
         }
