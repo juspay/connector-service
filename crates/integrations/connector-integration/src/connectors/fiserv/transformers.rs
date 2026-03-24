@@ -2,7 +2,6 @@ use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
 use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::ValueExt,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
 use domain_types::{
@@ -19,8 +18,7 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
-use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
-use serde_json::Value;
+use serde::{Deserialize, Serialize, Serializer};
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize> Serialize
     for FiservCheckoutChargesRequest<T>
@@ -405,26 +403,6 @@ pub struct ReferenceTransactionDetails {
     pub reference_transaction_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct FiservSessionObject {
-    #[serde(deserialize_with = "deserialize_terminal_id")]
-    pub terminal_id: Secret<String>,
-}
-
-fn deserialize_terminal_id<'de, D>(deserializer: D) -> Result<Secret<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value: Value = Deserialize::deserialize(deserializer)?;
-    let id_str = match value {
-        Value::String(s) => Ok(s),
-        Value::Number(n) => Ok(n.to_string()),
-        _ => Err(Error::custom("invalid type for terminal_id")),
-    }?;
-
-    Ok(id_str.into())
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FiservVoidRequest {
@@ -598,22 +576,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
 
-        let metadata = router_data
-            .resource_common_data
-            .connector_feature_data
-            .clone()
-            .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
-        let session: FiservSessionObject = metadata
-            .expose()
-            .parse_value("FiservSessionObject")
-            .change_context(ConnectorRequestError::InvalidConnectorConfig {
-                config: "Merchant connector account metadata",
-                context: Default::default()
-            })?;
-
         let merchant_details = MerchantDetails {
             merchant_id: auth.merchant_account.clone(),
-            terminal_id: Some(session.terminal_id.clone()),
+            terminal_id: auth.terminal_id.clone(),
         };
 
         let total = item
@@ -713,24 +678,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let router_data = &item.router_data;
         let auth: FiservAuthType = FiservAuthType::try_from(&router_data.connector_config)?;
 
-        // Get session information
-        let metadata = router_data
-            .resource_common_data
-            .connector_feature_data
-            .clone()
-            .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?;
-        let session: FiservSessionObject = metadata
-            .expose()
-            .parse_value("FiservSessionObject")
-            .change_context(ConnectorRequestError::InvalidConnectorConfig {
-                config: "Merchant connector account metadata",
-                context: Default::default()
-            })?;
-
         Ok(Self {
             merchant_details: MerchantDetails {
                 merchant_id: auth.merchant_account.clone(),
-                terminal_id: Some(session.terminal_id.clone()),
+                terminal_id: auth.terminal_id.clone(),
             },
             reference_transaction_details: ReferenceTransactionDetails {
                 reference_transaction_id: router_data.request.connector_transaction_id.clone(),

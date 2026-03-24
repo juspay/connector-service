@@ -1043,9 +1043,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .unwrap_or("internet")
             .to_string();
 
-        let connector_merchant_config = CybersourceConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_feature_data,
-        )?;
+        let auth = CybersourceAuthType::try_from(&item.router_data.connector_config)?;
+        let connector_merchant_config = CybersourceConnectorMetadataObject {
+            disable_avs: auth.disable_avs,
+            disable_cvn: auth.disable_cvn,
+        };
 
         let (action_list, action_token_types, authorization_options) = if item
             .router_data

@@ -6,6 +6,7 @@
     "moduleResolution": "node",
     "skipLibCheck": true,
     "strict": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "hs-playlib": ["./node_modules/hs-playlib/dist/src/index"],

@@ -1284,6 +1284,7 @@ pub struct AdyenAuthType {
     pub(super) merchant_account: Secret<String>,
     #[allow(dead_code)]
     pub(super) review_key: Option<Secret<String>>,
+    pub(super) endpoint_prefix: Option<String>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for AdyenAuthType {
@@ -1294,11 +1295,13 @@ impl TryFrom<&ConnectorSpecificConfig> for AdyenAuthType {
                 api_key,
                 merchant_account,
                 review_key,
+                endpoint_prefix,
                 ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 merchant_account: merchant_account.to_owned(),
                 review_key: review_key.to_owned(),
+                endpoint_prefix: endpoint_prefix.clone(),
             }),
             _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }),
         }

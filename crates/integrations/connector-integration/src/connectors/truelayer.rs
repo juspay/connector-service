@@ -475,9 +475,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
-            let metadata = truelayer::TruelayerMetadata::try_from(
-                &req.resource_common_data.connector_feature_data,
-            )?;
+            let metadata = truelayer::TruelayerMetadata::try_from(&req.connector_config)?;
             let private_key = metadata.private_key.expose().clone();
             let kid = metadata.kid.expose().clone();
             let path = "/v3/payments".to_string();
@@ -634,9 +632,7 @@ macros::macro_connector_implementation!(
                 .access_token
                 .clone()
                 .ok_or(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })?;
-            let metadata = truelayer::TruelayerMetadata::try_from(
-                &req.resource_common_data.connector_feature_data,
-            )?;
+            let metadata = truelayer::TruelayerMetadata::try_from(&req.connector_config)?;
             let private_key = metadata.private_key.expose().clone();
             let kid = metadata.kid.expose().clone();
             let connector_payment_id = req.request.connector_transaction_id.clone();

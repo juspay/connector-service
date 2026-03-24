@@ -16,7 +16,10 @@ use domain_types::{
 
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{custom_serde, types::MinorUnit};
+use common_utils::{
+    custom_serde,
+    types::{MinorUnit, Money},
+};
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -640,6 +643,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .as_ref()
             .map(|url| Box::new(RedirectForm::Uri { uri: url.clone() }));
 
+        let merchant_reference = response
+            .merchant_order_data
+            .as_ref()
+            .and_then(|m| m.reference.clone());
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
@@ -647,7 +655,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(response.id),
+                connector_response_reference_id: merchant_reference,
                 incremental_authorization_allowed: None,
                 status_code: 200,
             }),
@@ -670,30 +678,37 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let response = item.response;
 
-        let (status, payment_id) = match &response.payments {
+        let status = match &response.payments {
             Some(payments) => match payments.first() {
-                Some(first_payment) => {
-                    let status = match first_payment.state {
-                        RevolutPaymentState::Authorised => AttemptStatus::Authorized,
-                        RevolutPaymentState::Captured | RevolutPaymentState::Completed => {
-                            AttemptStatus::Charged
-                        }
-                        RevolutPaymentState::Failed | RevolutPaymentState::Declined => {
-                            AttemptStatus::Failure
-                        }
-                        RevolutPaymentState::Cancelled => AttemptStatus::Voided,
-                        RevolutPaymentState::Pending => AttemptStatus::Pending,
-                        RevolutPaymentState::AuthenticationChallenge => {
-                            AttemptStatus::AuthenticationPending
-                        }
-                        _ => AttemptStatus::Pending,
-                    };
-                    (status, Some(first_payment.id.clone()))
-                }
-                None => (map_order_state(response.state), None),
+                Some(first_payment) => match first_payment.state {
+                    RevolutPaymentState::Authorised => AttemptStatus::Authorized,
+                    RevolutPaymentState::Captured | RevolutPaymentState::Completed => {
+                        AttemptStatus::Charged
+                    }
+                    RevolutPaymentState::Failed | RevolutPaymentState::Declined => {
+                        AttemptStatus::Failure
+                    }
+                    RevolutPaymentState::Cancelled => AttemptStatus::Voided,
+                    RevolutPaymentState::Pending => AttemptStatus::Pending,
+                    RevolutPaymentState::AuthenticationChallenge => {
+                        AttemptStatus::AuthenticationPending
+                    }
+                    _ => AttemptStatus::Pending,
+                },
+                None => map_order_state(response.state),
             },
-            None => (map_order_state(response.state), None),
+            None => map_order_state(response.state),
         };
+
+        let amount = Some(Money {
+            amount: response.amount,
+            currency: response.currency,
+        });
+
+        let merchant_reference = response
+            .merchant_order_data
+            .as_ref()
+            .and_then(|m| m.reference.clone());
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -702,12 +717,13 @@ impl TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
                 mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: payment_id.or_else(|| Some(response.id.clone())),
+                connector_response_reference_id: merchant_reference,
                 incremental_authorization_allowed: None,
                 status_code: 200,
             }),
             resource_common_data: PaymentFlowData {
                 status,
+                amount,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
@@ -916,13 +932,18 @@ impl<F> TryFrom<ResponseRouterData<RevolutOrderCreateResponse, Self>>
             .and_then(|payments| payments.first().map(|p| p.id.clone()))
             .unwrap_or_else(|| response.id.clone());
 
+        let merchant_reference = response
+            .merchant_order_data
+            .as_ref()
+            .and_then(|m| m.reference.clone());
+
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
                 redirection_data: None,
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(response.id),
+                connector_response_reference_id: merchant_reference,
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
                 status_code: http_code,

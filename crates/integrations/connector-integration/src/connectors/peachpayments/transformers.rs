@@ -99,6 +99,8 @@ fn get_webhook_response(
 pub struct PeachpaymentsAuthType {
     pub api_key: Secret<String>,
     pub tenant_id: Secret<String>,
+    pub client_merchant_reference_id: Option<Secret<String>>,
+    pub merchant_payment_method_route_id: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -158,10 +160,16 @@ impl TryFrom<&ConnectorSpecificConfig> for PeachpaymentsAuthType {
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorSpecificConfig::Peachpayments {
-                api_key, tenant_id, ..
+                api_key,
+                tenant_id,
+                client_merchant_reference_id,
+                merchant_payment_method_route_id,
+                ..
             } => Ok(Self {
                 api_key: api_key.to_owned(),
                 tenant_id: tenant_id.to_owned(),
+                client_merchant_reference_id: client_merchant_reference_id.clone(),
+                merchant_payment_method_route_id: merchant_payment_method_route_id.clone(),
             }),
             _ => Err(error_stack::report!(
                 ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }
@@ -205,9 +213,19 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .into());
         }
 
-        let connector_meta_data = PeachpaymentsConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_feature_data,
-        )?;
+        let auth = PeachpaymentsAuthType::try_from(&item.router_data.connector_config)?;
+        let connector_meta_data = PeachpaymentsConnectorMetadataObject {
+            client_merchant_reference_id: auth.client_merchant_reference_id.ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "client_merchant_reference_id",
+                },
+            )?,
+            merchant_payment_method_route_id: auth.merchant_payment_method_route_id.ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "merchant_payment_method_route_id",
+                },
+            )?,
+        };
 
         let transaction_data = match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card_info) => {

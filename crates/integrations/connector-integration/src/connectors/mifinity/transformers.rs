@@ -1,8 +1,5 @@
 use common_enums::{enums, Currency};
-use common_utils::{
-    pii::{self, Email},
-    types::StringMajorUnit,
-};
+use common_utils::{pii::Email, types::StringMajorUnit};
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{
@@ -29,18 +26,6 @@ pub mod auth_headers {
 pub struct MifinityConnectorMetadataObject {
     pub brand_id: Secret<String>,
     pub destination_account_number: Secret<String>,
-}
-
-impl TryFrom<&Option<pii::SecretSerdeValue>> for MifinityConnectorMetadataObject {
-    type Error = error_stack::Report<ConnectorRequestError>;
-    fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(ConnectorRequestError::InvalidConnectorConfig {
-                config: "merchant_connector_account.metadata",
-                context: Default::default()
-            })?;
-        Ok(metadata)
-    }
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -111,16 +96,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
-            item.router_data
-                .resource_common_data
-                .connector_feature_data
-                .clone(),
-        )
-        .change_context(ConnectorRequestError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-                context: Default::default()
-        })?;
+        let auth = MifinityAuthType::try_from(&item.router_data.connector_config)?;
+        let metadata = MifinityConnectorMetadataObject {
+            brand_id: auth.brand_id.ok_or(ConnectorRequestError::InvalidConnectorConfig {
+                config: "brand_id",
+                context: Default::default(),
+            })?,
+            destination_account_number: auth.destination_account_number.ok_or(
+                ConnectorRequestError::InvalidConnectorConfig {
+                    config: "destination_account_number",
+                    context: Default::default(),
+                },
+            )?,
+        };
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 WalletData::Mifinity(data) => {
@@ -267,14 +255,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 // Auth Struct
 pub struct MifinityAuthType {
     pub(super) key: Secret<String>,
+    pub(super) brand_id: Option<Secret<String>>,
+    pub(super) destination_account_number: Option<Secret<String>>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for MifinityAuthType {
     type Error = error_stack::Report<ConnectorRequestError>;
     fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorSpecificConfig::Mifinity { key, .. } => Ok(Self {
+            ConnectorSpecificConfig::Mifinity {
+                key,
+                brand_id,
+                destination_account_number,
+                ..
+            } => Ok(Self {
                 key: key.to_owned(),
+                brand_id: brand_id.clone(),
+                destination_account_number: destination_account_number.clone(),
             }),
             _ => Err(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() }.into()),
         }

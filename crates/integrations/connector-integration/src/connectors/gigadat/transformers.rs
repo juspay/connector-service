@@ -56,6 +56,7 @@ pub struct GigadatAuthType {
     pub campaign_id: Secret<String>,
     pub access_token: Secret<String>,
     pub security_token: Secret<String>,
+    pub site: Option<String>,
 }
 
 impl TryFrom<&ConnectorSpecificConfig> for GigadatAuthType {
@@ -67,11 +68,13 @@ impl TryFrom<&ConnectorSpecificConfig> for GigadatAuthType {
                 campaign_id,
                 access_token,
                 security_token,
+                site,
                 ..
             } => Ok(Self {
                 security_token: security_token.to_owned(),
                 access_token: access_token.to_owned(),
                 campaign_id: campaign_id.to_owned(),
+                site: site.clone(),
             }),
             _ => Err(Report::new(ConnectorRequestError::FailedToObtainAuthType { context: Default::default() })),
         }
@@ -242,28 +245,28 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Get metadata for site from connector_feature_data, then fallback to request metadata
-        let metadata = GigadatConnectorMetadataObject::try_from(
-            &item.router_data.resource_common_data.connector_feature_data,
-        )
-        .or_else(|_| {
-            // Try to get site from request metadata
-            item.router_data
-                .request
-                .metadata
-                .as_ref()
-                .and_then(|m| m.peek().get("site"))
-                .and_then(|v| v.as_str())
-                .map(|site| GigadatConnectorMetadataObject {
-                    site: site.to_string(),
-                })
-                .ok_or_else(|| {
-                    Report::from(ConnectorRequestError::InvalidConnectorConfig {
-                        config: "missing 'site' in connector_feature_data or metadata",
-                context: Default::default()
+        // Get site from connector config, then fallback to request metadata
+        let auth = GigadatAuthType::try_from(&item.router_data.connector_config)?;
+        let metadata = match auth.site {
+            Some(site) => GigadatConnectorMetadataObject { site },
+            None => {
+                item.router_data
+                    .request
+                    .metadata
+                    .as_ref()
+                    .and_then(|m| m.peek().get("site"))
+                    .and_then(|v| v.as_str())
+                    .map(|site| GigadatConnectorMetadataObject {
+                        site: site.to_string(),
                     })
-                })
-        })?;
+                    .ok_or_else(|| {
+                        Report::from(ConnectorRequestError::InvalidConnectorConfig {
+                            config: "missing 'site' in connector config or metadata",
+                            context: Default::default(),
+                        })
+                    })?
+            }
+        };
 
         // Validate payment method is Interac bank redirect
         match &item.router_data.request.payment_method_data {

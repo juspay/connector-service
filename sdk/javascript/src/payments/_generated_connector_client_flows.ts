@@ -178,6 +178,17 @@ export class PaymentClient extends _ConnectorClientBase {
 
 }
 
+export class PayoutClient extends _ConnectorClientBase {
+  /** PayoutService.Create — Creates a payout. */
+  async payoutCreate(
+    requestMsg: types.IPayoutServiceCreateRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PayoutServiceCreateResponse> {
+    return this._executeFlow('payout_create', requestMsg, options, 'PayoutServiceCreateRequest', 'PayoutServiceCreateResponse') as Promise<types.PayoutServiceCreateResponse>;
+  }
+
+}
+
 export class RecurringPaymentClient extends _ConnectorClientBase {
   /** RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details. */
   async charge(

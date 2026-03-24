@@ -3164,6 +3164,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -3290,6 +3291,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: value.session_token,
             reference_id: value.merchant_order_id.clone(),
@@ -3389,6 +3391,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -3466,6 +3469,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: value.connector_order_reference_id.clone(),
@@ -3537,6 +3541,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> fo
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -4075,6 +4080,41 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         }
     };
     Ok(response)
+}
+
+pub fn generate_payout_create_response(
+    router_data_v2: crate::router_data_v2::RouterDataV2<
+        crate::connector_flow::PayoutCreate,
+        crate::payouts::payouts_types::PayoutFlowData,
+        crate::payouts::payouts_types::PayoutCreateRequest,
+        crate::payouts::payouts_types::PayoutCreateResponse,
+    >,
+) -> Result<
+    grpc_api_types::payouts::PayoutServiceCreateResponse,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    match router_data_v2.response {
+        Ok(response) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse::from(
+            response,
+        )),
+        Err(err) => Ok(grpc_api_types::payouts::PayoutServiceCreateResponse {
+            merchant_payout_id: Some(router_data_v2.resource_common_data.payout_id),
+            payout_status: Some(
+                grpc_api_types::payouts::payout_enums::PayoutStatus::Pending as i32,
+            ),
+            connector_payout_id: err.connector_transaction_id.clone(),
+            error: Some(grpc_api_types::payouts::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payouts::ConnectorErrorDetails {
+                    code: Some(err.code.clone()),
+                    message: Some(err.message.clone()),
+                    reason: err.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: u32::from(err.status_code),
+        }),
+    }
 }
 
 // ForeignTryFrom for PaymentMethod gRPC enum to internal enum
@@ -5027,6 +5067,20 @@ pub fn generate_payment_sync_response(
                             }))
                     });
 
+                let amount = router_data_v2
+                    .resource_common_data
+                    .amount
+                    .as_ref()
+                    .map(|money| {
+                        grpc_api_types::payments::Currency::foreign_try_from(money.currency).map(
+                            |currency| grpc_api_types::payments::Money {
+                                minor_amount: money.amount.get_amount_as_i64(),
+                                currency: currency as i32,
+                            },
+                        )
+                    })
+                    .transpose()?;
+
                 Ok(PaymentServiceGetResponse {
                     connector_transaction_id: extract_connector_request_reference_id(
                         &grpc_resource_id,
@@ -5039,7 +5093,7 @@ pub fn generate_payment_sync_response(
                     mandate_reference: mandate_reference_grpc,
                     error: None,
                     network_transaction_id: network_txn_id,
-                    amount: None,
+                    amount,
                     captured_amount: router_data_v2.resource_common_data.amount_captured,
                     payment_method_type: None,
                     capture_method: None,
@@ -6009,6 +6063,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -6120,6 +6175,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -6698,6 +6754,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -6766,6 +6823,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -7110,6 +7168,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: value.session_token,
             reference_id: None,
@@ -7216,6 +7275,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: value.session_token,
             reference_id: None,
@@ -8263,6 +8323,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token,
             session_token: None,
             reference_id: None,
@@ -8763,6 +8824,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -8943,6 +9005,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -9091,6 +9154,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -10510,6 +10574,7 @@ impl
             amount_captured: None,
             minor_amount_captured: None,
             minor_amount_capturable: None,
+            amount: None,
             access_token: None,
             session_token: None,
             reference_id: None,
@@ -10614,6 +10679,7 @@ impl
             vault_headers,
             raw_connector_request: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -10711,6 +10777,7 @@ impl
             vault_headers,
             raw_connector_request: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
@@ -10787,6 +10854,7 @@ impl
             connector_response_headers: None,
             vault_headers: None,
             minor_amount_capturable: None,
+            amount: None,
             connector_response: None,
             recurring_mandate_payment_data: None,
             order_details: None,
