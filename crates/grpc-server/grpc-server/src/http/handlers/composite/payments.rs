@@ -7,6 +7,7 @@ use grpc_api_types::payments::{
     composite_payment_service_server::CompositePaymentService, CompositeAuthorizeRequest,
     CompositeAuthorizeResponse, CompositeCaptureRequest, CompositeCaptureResponse,
     CompositeGetRequest, CompositeGetResponse, CompositeRefundRequest, CompositeRefundResponse,
+    CompositeVerifyRedirectResponseRequest, CompositeVerifyRedirectResponseResponse,
     CompositeVoidRequest, CompositeVoidResponse,
 };
 use std::sync::Arc;
@@ -39,6 +40,14 @@ http_handler!(
     CompositeRefundRequest,
     CompositeRefundResponse,
     refund,
+    composite_payments_service
+);
+
+http_handler!(
+    verify_redirect_response,
+    CompositeVerifyRedirectResponseRequest,
+    CompositeVerifyRedirectResponseResponse,
+    verify_redirect_response,
     composite_payments_service
 );
 

@@ -12,12 +12,14 @@ use grpc_api_types::payments::{
     CompositeAuthorizeRequest, CompositeAuthorizeResponse, CompositeCaptureRequest,
     CompositeCaptureResponse, CompositeGetRequest, CompositeGetResponse, CompositeRefundGetRequest,
     CompositeRefundGetResponse, CompositeRefundRequest, CompositeRefundResponse,
+    CompositeVerifyRedirectResponseRequest, CompositeVerifyRedirectResponseResponse,
     CompositeVoidRequest, CompositeVoidResponse, ConnectorState, CustomerServiceCreateResponse,
     MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateAccessTokenResponse, PaymentMethod,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
     PaymentServiceCaptureResponse, PaymentServiceGetResponse, PaymentServiceRefundRequest,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
+    PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
 };
 
 use crate::transformers::ForeignFrom;
@@ -557,6 +559,31 @@ where
             capture_response: Some(capture_response),
         }))
     }
+
+    async fn process_composite_verify_redirect_response(
+        &self,
+        request: tonic::Request<CompositeVerifyRedirectResponseRequest>,
+    ) -> Result<tonic::Response<CompositeVerifyRedirectResponseResponse>, tonic::Status> {
+        let (metadata, extensions, payload) = request.into_parts();
+
+        let verify_payload = PaymentServiceVerifyRedirectResponseRequest::foreign_from(&payload);
+
+        let mut verify_request = tonic::Request::new(verify_payload);
+        *verify_request.metadata_mut() = metadata;
+        *verify_request.extensions_mut() = extensions;
+
+        let verify_response = self
+            .payment_service
+            .verify_redirect_response(verify_request)
+            .await?
+            .into_inner();
+
+        Ok(tonic::Response::new(
+            CompositeVerifyRedirectResponseResponse {
+                verify_redirect_response: Some(verify_response),
+            },
+        ))
+    }
 }
 
 #[tonic::async_trait]
@@ -600,6 +627,14 @@ where
         request: tonic::Request<CompositeCaptureRequest>,
     ) -> Result<tonic::Response<CompositeCaptureResponse>, tonic::Status> {
         self.process_composite_capture(request).await
+    }
+
+    async fn verify_redirect_response(
+        &self,
+        request: tonic::Request<CompositeVerifyRedirectResponseRequest>,
+    ) -> Result<tonic::Response<CompositeVerifyRedirectResponseResponse>, tonic::Status> {
+        self.process_composite_verify_redirect_response(request)
+            .await
     }
 }
 

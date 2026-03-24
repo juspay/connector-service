@@ -25,6 +25,10 @@ pub fn create_router(state: AppState) -> Router {
             post(handlers::composite::refunds::refund_get),
         )
         .route(
+            "/composite/payments/verify_redirect_response",
+            post(handlers::composite::payments::verify_redirect_response),
+        )
+        .route(
             "/composite/payments/void",
             post(handlers::composite::payments::void),
         )
