@@ -131,9 +131,10 @@ async function main(): Promise<void> {
       .evaluate(() => document.body?.innerText ?? "")
       .catch(() => "");
     const currentUrl = page.url();
+    const currentHostname = (() => { try { return new URL(currentUrl).hostname; } catch { return ""; } })();
 
     const isSignedIn =
-      currentUrl.includes("myaccount.google.com") ||
+      currentHostname === "myaccount.google.com" ||
       pageText.includes("Google Account") && (
         pageText.includes("Personal info") ||
         pageText.includes("Security") ||
@@ -158,13 +159,14 @@ async function main(): Promise<void> {
 
       while (Date.now() < deadline && !signedIn) {
         const url = page.url();
+        const hostname = (() => { try { return new URL(url).hostname; } catch { return ""; } })();
         const text = await page
           .evaluate(() => document.body?.innerText ?? "")
           .catch(() => "");
 
         signedIn =
-          url.includes("myaccount.google.com") ||
-          (url.includes("accounts.google.com") &&
+          hostname === "myaccount.google.com" ||
+          (hostname === "accounts.google.com" &&
             !url.includes("signin") &&
             !url.includes("ServiceLogin") &&
             (text.includes("Personal info") ||

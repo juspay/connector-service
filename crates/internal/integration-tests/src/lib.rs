@@ -1,4 +1,9 @@
-#![allow(clippy::expect_used, clippy::missing_panics_doc, clippy::panic)]
+#![allow(
+    clippy::expect_used,
+    clippy::missing_panics_doc,
+    clippy::panic,
+    clippy::unwrap_used
+)]
 
 //! Library entrypoint for the connector integration test harness.
 //!

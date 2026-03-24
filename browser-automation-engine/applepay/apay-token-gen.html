@@ -84,16 +84,32 @@
       initiativeContext:   params.get("initiativeContext")  || window.location.hostname,
     };
 
-    // ── Render config summary ────────────────────────────────────────────────
-    document.getElementById("config-summary").innerHTML = [
-      "<dt>Merchant ID:</dt><dd>"      + config.merchantId            + "</dd>",
-      "<dt>Merchant:</dt><dd>"         + config.merchantName          + "</dd>",
-      "<dt>Amount:</dt><dd>"           + config.amount + " " + config.currency + "</dd>",
-      "<dt>Country:</dt><dd>"          + config.countryCode           + "</dd>",
-      "<dt>Networks:</dt><dd>"         + config.supportedNetworks.join(", ") + "</dd>",
-      "<dt>Capabilities:</dt><dd>"     + config.merchantCapabilities.join(", ") + "</dd>",
-      "<dt>Domain:</dt><dd>"           + config.initiativeContext     + "</dd>",
-    ].join("<br>");
+    // ── Render config summary (using textContent to avoid XSS) ─────────────
+    (function renderConfigSummary() {
+      var el = document.getElementById("config-summary");
+      el.innerHTML = "";
+      var dl = document.createElement("dl");
+
+      function addRow(label, value) {
+        var dt = document.createElement("dt");
+        dt.textContent = label;
+        var dd = document.createElement("dd");
+        dd.textContent = value;
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+        dl.appendChild(document.createElement("br"));
+      }
+
+      addRow("Merchant ID:", config.merchantId);
+      addRow("Merchant:",    config.merchantName);
+      addRow("Amount:",      config.amount + " " + config.currency);
+      addRow("Country:",     config.countryCode);
+      addRow("Networks:",    config.supportedNetworks.join(", "));
+      addRow("Capabilities:", config.merchantCapabilities.join(", "));
+      addRow("Domain:",      config.initiativeContext);
+
+      el.appendChild(dl);
+    })();
 
     // ── Status helper ────────────────────────────────────────────────────────
     function setStatus(message, type) {

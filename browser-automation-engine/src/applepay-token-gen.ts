@@ -317,7 +317,7 @@ function startValidationServer(
         } catch (err) {
           console.error("[apay] Validation server error:", err);
           res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: String(err) }));
+          res.end(JSON.stringify({ error: "Internal server error" }));
         }
       });
       return;

@@ -89,17 +89,33 @@
       environment:      params.get("environment")      || "TEST"
     };
 
-    // ---- Render config summary ----
-    document.getElementById("config-summary").innerHTML = [
-      "<dt>Gateway:</dt><dd>"            + config.gateway            + "</dd>",
-      "<dt>Gateway Merchant ID:</dt><dd>"+ config.gatewayMerchantId  + "</dd>",
-      "<dt>Merchant:</dt><dd>"           + config.merchantName       + "</dd>",
-      "<dt>Amount:</dt><dd>"             + config.amount + " " + config.currency + "</dd>",
-      "<dt>Country:</dt><dd>"            + config.countryCode        + "</dd>",
-      "<dt>Networks:</dt><dd>"           + config.cardNetworks.join(", ") + "</dd>",
-      "<dt>Auth Methods:</dt><dd>"       + config.authMethods.join(", ")  + "</dd>",
-      "<dt>Environment:</dt><dd>"        + config.environment        + "</dd>"
-    ].join("<br>");
+    // ---- Render config summary (using textContent to avoid XSS) ----
+    (function renderConfigSummary() {
+      var el = document.getElementById("config-summary");
+      el.innerHTML = "";
+      var dl = document.createElement("dl");
+
+      function addRow(label, value) {
+        var dt = document.createElement("dt");
+        dt.textContent = label;
+        var dd = document.createElement("dd");
+        dd.textContent = value;
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+        dl.appendChild(document.createElement("br"));
+      }
+
+      addRow("Gateway:",            config.gateway);
+      addRow("Gateway Merchant ID:", config.gatewayMerchantId);
+      addRow("Merchant:",           config.merchantName);
+      addRow("Amount:",             config.amount + " " + config.currency);
+      addRow("Country:",            config.countryCode);
+      addRow("Networks:",           config.cardNetworks.join(", "));
+      addRow("Auth Methods:",       config.authMethods.join(", "));
+      addRow("Environment:",        config.environment);
+
+      el.appendChild(dl);
+    })();
 
     setStatus("Loading pay.js from pay.google.com...", "info");
 
