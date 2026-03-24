@@ -1,4 +1,4 @@
-.PHONY: install-deps generate-bindings generate-proto generate-all \
+.PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
         generate-flows pack-archive install test-package dist clean
 
 # SDK-specific paths (define BEFORE including common.mk)
@@ -35,9 +35,17 @@ install-deps:
 	@echo "All required tools present."
 
 # ---------------------------------------------------------------------------
+# install-codegen-deps
+# Ensures jinja2 etc. are installed before generate-flows (used by CI and local).
+# Delegates to sdk/Makefile install-deps (idempotent, skips if present).
+# ---------------------------------------------------------------------------
+install-codegen-deps:
+	@$(MAKE) -C $(REPO_ROOT)/sdk install-deps
+
+# ---------------------------------------------------------------------------
 # generate-bindings
 # Builds the uniffi-bindgen binary then runs uniffi-bindgen generate.
-# uniffi-bindgen lives in its own crate (backend/uniffi-bindgen) so the ffi
+# uniffi-bindgen lives in its own crate (crates/internal/uniffi-bindgen) so the ffi
 # library never pulls in the uniffi/cli codegen deps. The output binary lands
 # in the same target/<PLATFORM>/release/ directory as before.
 # ---------------------------------------------------------------------------
@@ -92,10 +100,11 @@ generate-all: generate-proto generate-bindings generate-flows
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
 # codegen script. Assumes descriptor is already generated.
+# Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows:
+generate-flows: install-codegen-deps
 	@echo "Generating Kotlin flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang kotlin
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang kotlin
 	@echo "Kotlin flow methods generated."
 
 # ---------------------------------------------------------------------------

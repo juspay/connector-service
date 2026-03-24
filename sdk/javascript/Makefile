@@ -1,4 +1,4 @@
-.PHONY: install-deps generate-bindings generate-proto generate-all \
+.PHONY: install-deps install-codegen-deps generate-bindings generate-proto generate-all \
         generate-flows build-ts pack-archive install test-package test-composite dist clean
 
 # SDK-specific paths (define BEFORE including common.mk)
@@ -32,6 +32,14 @@ install-deps:
 	@echo "All required tools present."
 
 # ---------------------------------------------------------------------------
+# install-codegen-deps
+# Ensures jinja2 etc. are installed before generate-flows (used by CI and local).
+# Delegates to sdk/Makefile install-deps (idempotent, skips if present).
+# ---------------------------------------------------------------------------
+install-codegen-deps:
+	@$(MAKE) -C $(REPO_ROOT)/sdk install-deps
+
+# ---------------------------------------------------------------------------
 # generate-bindings
 # Copies the pre-built FFI native library into the generated output directory
 # so it is bundled with the npm package. The JavaScript SDK drives the native
@@ -56,7 +64,7 @@ generate-proto: install-deps
 	@echo "Generating static protobuf JS module..."
 	@mkdir -p $(GENERATED_OUT)
 	@cd $(SDK_ROOT) && ./node_modules/.bin/pbjs \
-		-t static-module -w commonjs --no-delimited --no-convert --alt-comment \
+		-t static-module -w commonjs --no-delimited --alt-comment \
 		-p $(PROTO_DIR) \
 		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto \
 		$(PROTO_DIR)/sdk_config.proto \
@@ -78,10 +86,11 @@ generate-all: generate-proto generate-bindings generate-flows
 # generate-flows
 # Generates flow methods (authorize, capture, etc.) by running the SDK
 # codegen script. Assumes descriptor is already generated.
+# Depends on install-codegen-deps so jinja2 etc. are available (CI and local).
 # ---------------------------------------------------------------------------
-generate-flows:
+generate-flows: install-codegen-deps
 	@echo "Generating JavaScript flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang javascript
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang javascript
 	@echo "JavaScript flow methods generated."
 
 # ---------------------------------------------------------------------------
@@ -148,7 +157,7 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	else \
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
-	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js --connectors $(CONNECTORS)
+	@cd /tmp/test-hyperswitch-js && npx tsc && NODE_PATH=/tmp/test-hyperswitch-js/node_modules node test_smoke.js --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@echo "Running composite flow test..."
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.ts /tmp/test-hyperswitch-js/
 	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke_composite.ts

@@ -1,104 +1,126 @@
 {
   "connector": "paytm",
   "flows": {
+    "authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
     "authorize": {
       "Ach": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Affirm": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Afterpay": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "ApplePay": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
+      },
+      "ApplePayDecrypted": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Bacs": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Becs": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Blik": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Card": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "GooglePay": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
+      },
+      "GooglePayDecrypted": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Ideal": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Klarna": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "PaypalRedirect": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
+      },
+      "SamsungPay": {
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "Sepa": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "not_supported",
+        "error": "Only UPI payment methods are supported is not supported by Paytm"
       },
       "UpiCollect": {
-        "status": "error",
-        "required_fields": [
-          "session_token"
-        ],
-        "error": "Stuck on field: session_token — Integration error: Missing required field: session_token"
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "payment_method": {
+            "upi_collect": {
+              "vpa_id": "test@upi"
+            }
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "auth_type": "NO_THREE_DS",
+          "return_url": "https://example.com/return",
+          "session_token": "probe_session_token"
+        },
+        "sample": {
+          "url": "https://securestage.paytmpayments.com/theia/api/v1/processTransaction?mid=probe_merchant&orderId=probe_txn_001",
+          "method": "Post",
+          "headers": {
+            "content-type": "application/json",
+            "via": "HyperSwitch"
+          },
+          "body": "{\"head\":{\"txnToken\":\"probe_session_token\"},\"body\":{\"requestType\":\"NATIVE\",\"mid\":\"probe_merchant\",\"orderId\":\"probe_txn_001\",\"paymentMode\":\"UPI\",\"payerAccount\":\"test@upi\",\"channelCode\":\"\",\"channelId\":\"WEB\",\"txnToken\":\"probe_session_token\",\"authMode\":null}}"
+        }
+      }
+    },
+    "capture": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_access_token": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_customer": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "create_order": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "create_session_token": {
@@ -117,14 +139,30 @@
             "content-type": "application/json",
             "via": "HyperSwitch"
           },
-          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"1773360634\",\"signature\":\"5UPyVrXuAWozcp9nIDIft14bkoGGIGloAlF1h7TtidQFtO+3UwH+dlqVf7b2sv75JZFa7y9EwhivithY3Ex8NuerCLOnvJ3BjwCWoGQyPG4=\"},\"body\":{\"requestType\":\"Payment\",\"mid\":\"probe_merchant\",\"orderId\":\"\",\"websiteName\":\"probe_website\",\"txnAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"},\"userInfo\":{\"custId\":\"cus_default\",\"mobile\":null,\"email\":null,\"firstName\":null,\"lastName\":null},\"enablePaymentMode\":[{\"mode\":\"UPI\",\"channels\":[\"UPIPUSH\",\"UPI\"]}],\"callbackUrl\":\"https://default-callback.com\",\"shippingInfo\":[{\"trackingNo\":\"\",\"chargeAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"}}]}}"
+          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"0000000000\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"body\":{\"requestType\":\"Payment\",\"mid\":\"probe_merchant\",\"orderId\":\"\",\"websiteName\":\"probe_website\",\"txnAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"},\"userInfo\":{\"custId\":\"cus_default\",\"mobile\":null,\"email\":null,\"firstName\":null,\"lastName\":null},\"enablePaymentMode\":[{\"mode\":\"UPI\",\"channels\":[\"UPIPUSH\",\"UPI\"]}],\"callbackUrl\":\"https://default-callback.com\",\"shippingInfo\":[{\"trackingNo\":\"\",\"chargeAmount\":{\"value\":\"10.00\",\"currency\":\"USD\"}}]}}"
         }
+      }
+    },
+    "dispute_accept": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_defend": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "dispute_submit_evidence": {
+      "default": {
+        "status": "not_implemented"
       }
     },
     "get": {
       "default": {
         "status": "supported",
         "proto_request": {
+          "merchant_transaction_id": "probe_merchant_txn_001",
           "connector_transaction_id": "probe_connector_txn_001",
           "amount": {
             "minor_amount": 1000,
@@ -135,11 +173,51 @@
           "url": "https://securestage.paytmpayments.com//v3/order/status",
           "method": "Post",
           "headers": {
-            "via": "HyperSwitch",
-            "content-type": "application/json"
+            "content-type": "application/json",
+            "via": "HyperSwitch"
           },
-          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"1773360634\",\"signature\":\"aXbeKzJAOW1Myu/NvQGMuOS9HquhxkR8JTgPrP6kQoeyGxc7M5pUgVe6sVqCloIJ2lKpgLQmCZCYdkOxX91ttIwsxRyp2/gh37h77LgULwI=\"},\"body\":{\"mid\":\"probe_merchant\",\"orderId\":\"probe_connector_txn_001\"}}"
+          "body": "{\"head\":{\"clientId\":null,\"version\":\"v1\",\"requestTimestamp\":\"0000000000\",\"signature\":\"cHJvYmVfa2V5OnByb2JlX3NlY3JldA==\"},\"body\":{\"mid\":\"probe_merchant\",\"orderId\":\"probe_merchant_txn_001\"}}"
         }
+      }
+    },
+    "post_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "pre_authenticate": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "recurring_charge": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "refund": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "reverse": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "setup_recurring": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "tokenize": {
+      "default": {
+        "status": "not_implemented"
+      }
+    },
+    "void": {
+      "default": {
+        "status": "not_implemented"
       }
     }
   }

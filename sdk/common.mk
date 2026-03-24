@@ -19,8 +19,8 @@ ifndef REPO_ROOT
 REPO_ROOT    := $(shell cd $(SDK_ROOT)../.. && pwd)
 endif
 
-FFI_CRATE     := $(REPO_ROOT)/backend/ffi
-PROTO_DIR     := $(REPO_ROOT)/backend/grpc-api-types/proto
+FFI_CRATE     := $(REPO_ROOT)/crates/ffi/ffi
+PROTO_DIR     := $(REPO_ROOT)/crates/types-traits/grpc-api-types/proto
 ARTIFACTS_DIR := $(REPO_ROOT)/artifacts
 
 # ---------------------------------------------------------------------------
