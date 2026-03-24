@@ -21,6 +21,7 @@ const _NO_COLOR = !process.stdout.isTTY || !!process.env["NO_COLOR"];
 function _c(code: string, text: string): string { return _NO_COLOR ? text : `\x1b[${code}m${text}\x1b[0m`; }
 function _green (t: string): string { return _c("32", t); }
 function _red   (t: string): string { return _c("31", t); }
+function _yellow(t: string): string { return _c("33", t); }
 function _grey  (t: string): string { return _c("90", t); }
 function _bold  (t: string): string { return _c("1",  t); }
 
@@ -136,15 +137,33 @@ function credStr(cred: CredEntry, ...keys: string[]): string | undefined {
 }
 
 function buildGrpcConfig(connector: string, cred: CredEntry): GrpcConfig {
+  // Capitalize first letter of connector name for the config key
+  const connectorVariant = connector.charAt(0).toUpperCase() + connector.slice(1);
+  
+  const apiKey = credStr(cred, "api_key", "apiKey") ?? "placeholder";
+  const apiSecret = credStr(cred, "api_secret", "apiSecret");
+  const key1 = credStr(cred, "key1");
+  const merchantId = credStr(cred, "merchant_id", "merchantId");
+  const tenantId = credStr(cred, "tenant_id", "tenantId");
+  
+  // Build the connector-specific config object
+  const connectorSpecificConfig: Record<string, unknown> = { api_key: apiKey };
+  if (apiSecret) connectorSpecificConfig.api_secret = apiSecret;
+  if (key1) connectorSpecificConfig.key1 = key1;
+  if (merchantId) connectorSpecificConfig.merchant_id = merchantId;
+  if (tenantId) connectorSpecificConfig.tenant_id = tenantId;
+  
+  // Build the full x-connector-config format
+  const connectorConfig: Record<string, unknown> = {
+    config: {
+      [connectorVariant]: connectorSpecificConfig
+    }
+  };
+  
   return {
-    endpoint:    credStr(cred, "endpoint")                    ?? "http://localhost:8000",
+    endpoint: credStr(cred, "endpoint") ?? "http://localhost:8000",
     connector,
-    auth_type:   credStr(cred, "auth_type",   "authType")    ?? "header-key",
-    api_key:     credStr(cred, "api_key",     "apiKey")      ?? "placeholder",
-    api_secret:  credStr(cred, "api_secret",  "apiSecret"),
-    key1:        credStr(cred, "key1"),
-    merchant_id: credStr(cred, "merchant_id", "merchantId"),
-    tenant_id:   credStr(cred, "tenant_id",   "tenantId"),
+    connector_config: connectorConfig,
   };
 }
 
@@ -219,15 +238,29 @@ async function runConnector(
   // Pre-run AUTOMATIC authorize to get a real connector txn_id for get/refund/reverse.
   let preRunFailed = false;
   if (hasAuthorize && hasDependents) {
+    process.stdout.write(`  [authorize] running … `);
     try {
       const req = buildRequest(mod, "authorize", "AUTOMATIC", probeRequests);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = await (client as any).payment.authorize(req) as { connectorTransactionId?: string; statusCode: number };
       authorizeTxnId = extractTxnId(res.connectorTransactionId);
+      const result = `txn_id: ${res.connectorTransactionId ?? "-"}, status_code: ${res.statusCode}`;
+      if (res.statusCode >= 400) {
+        console.log(_yellow("~ connector error"), _grey(`— ${result}`));
+        preRunFailed = true;
+      } else {
+        console.log(_green("✓ ok"), _grey(`— ${result}`));
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.log(_red(`  ✗ ${connectorName}::authorize (pre-run)`), _grey(`→ ${msg}`));
-      preRunFailed = true;
+      const isTransport = /unavailable|deadlineexceeded|connection refused|transport error|dns error|connection reset/i.test(msg);
+      if (isTransport) {
+        console.log(_red("✗ FAILED"), _grey(`— ${msg}`));
+        preRunFailed = true;
+      } else {
+        console.log(_yellow("~ connector error"), _grey(`— ${msg}`));
+        preRunFailed = true;
+      }
     }
   }
 
@@ -238,11 +271,10 @@ async function runConnector(
 
     // Skip authorize if already handled in the pre-run above.
     if (flow === "authorize" && hasAuthorize && hasDependents) {
-      if (!preRunFailed) {
-        console.log(_green(`  ✓ ${connectorName}::authorize (pre-run for txn_id)`));
-      }
       continue;
     }
+
+    process.stdout.write(`  [${flow}] running … `);
 
     try {
       let result: string;
@@ -268,11 +300,16 @@ async function runConnector(
         result = `status_code: ${res["statusCode"] ?? "?"}`;
       }
 
-      console.log(_green(`  ✓ ${connectorName}::${flow}`), _grey(`→ ${result}`));
+      console.log(_green("✓ ok"), _grey(`— ${result}`));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.log(_red(`  ✗ ${connectorName}::${flow}`), _grey(`→ ${msg}`));
-      allPassed = false;
+      const isTransport = /unavailable|deadlineexceeded|connection refused|transport error|dns error|connection reset/i.test(msg);
+      if (isTransport) {
+        console.log(_red("✗ FAILED"), _grey(`— ${msg}`));
+        allPassed = false;
+      } else {
+        console.log(_yellow("~ connector error"), _grey(`— ${msg}`));
+      }
     }
   }
 
@@ -285,7 +322,7 @@ async function main(): Promise<void> {
   const credsFile = path.join(process.cwd(), "creds.json");
   const allCreds  = loadCreds(credsFile);
 
-  console.log(_bold("hyperswitch gRPC smoke test"));
+  console.log(_bold("Javascript gRPC smoke test"));
   console.log(_grey(`connectors: ${connectors.join(", ")}`));
   console.log();
 

@@ -433,12 +433,30 @@ fn main() {
                 code.push_str("        let authorize_txn_id = pre_auth_res.as_ref().ok()\n");
                 code.push_str("            .and_then(|r| r.connector_transaction_id.as_deref())\n");
                 code.push_str("            .unwrap_or(\"probe_connector_txn_001\").to_string();\n");
-                code.push_str("        results.push((\"authorize\".to_string(), pre_auth_res\n");
-                code.push_str("            .map(|r| format!(\"txn_id: {}, status_code: {}\",\n");
+                // Check if authorize returned an error status code
+                code.push_str("        let auth_result = match &pre_auth_res {\n");
+                code.push_str("            Ok(r) if r.status_code >= 400 => {\n");
+                code.push_str("                let err_msg = r.error.as_ref()\n");
+                code.push_str("                    .and_then(|e| {\n");
+                code.push_str("                        // Try unified_details first, then connector_details, then issuer_details\n");
+                code.push_str("                        e.unified_details.as_ref()\n");
+                code.push_str("                            .and_then(|u| u.message.as_ref())\n");
+                code.push_str("                            .or_else(|| e.connector_details.as_ref().and_then(|c| c.message.as_ref()))\n");
+                code.push_str("                            .or_else(|| e.issuer_details.as_ref().and_then(|i| i.message.as_ref()))\n");
+                code.push_str("                            .map(|s| s.as_str())\n");
+                code.push_str("                    })\n");
+                code.push_str("                    .unwrap_or(\"no error details available\");\n");
                 code.push_str(
-                    "                r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code))\n"
+                    "                Err(format!(\"HTTP {}: {}\", r.status_code, err_msg))\n",
                 );
-                code.push_str("            .map_err(|e| e.to_string().into())));\n");
+                code.push_str("            },\n");
+                code.push_str("            Ok(r) => {\n");
+                code.push_str("                Ok(format!(\"txn_id: {}, status_code: {}\",\n");
+                code.push_str("                    r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code))\n");
+                code.push_str("            },\n");
+                code.push_str("            Err(e) => Err(e.to_string()),\n");
+                code.push_str("        };\n");
+                code.push_str("        results.push((\"authorize\".to_string(), auth_result.map_err(|e| e.into())));\n");
             }
 
             for &(flow_key, grpc_field, grpc_method, builder_fn, needs_txn, self_auth) in flows {
@@ -464,8 +482,8 @@ fn main() {
                     };
 
                     let ret = match flow_key {
-                        "authorize" =>
-                            "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code)",
+                    "authorize" =>
+                        "format!(\"txn_id: {}, status_code: {}, error: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code, r.error.as_deref().unwrap_or(\"-\"))",
                         "get" | "reverse" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id, r.status_code)",
                         "refund" =>

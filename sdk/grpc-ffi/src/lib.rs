@@ -87,31 +87,18 @@ fn get_channel(endpoint: &str) -> Result<Channel, String> {
 struct GrpcConfigInput {
     endpoint: String,
     connector: String,
-    auth_type: String,
-    api_key: String,
-    api_secret: Option<String>,
-    key1: Option<String>,
-    merchant_id: Option<String>,
-    tenant_id: Option<String>,
+    /// Connector-specific configuration for x-connector-config header.
+    /// Format: {"config": {"ConnectorName": {"api_key": "...", ...}}}
+    connector_config: serde_json::Value,
 }
 
 fn build_headers(cfg: &GrpcConfigInput) -> Arc<HashMap<String, String>> {
     let mut h = HashMap::new();
     h.insert("x-connector".into(), cfg.connector.clone());
-    h.insert("x-auth".into(), cfg.auth_type.clone());
-    h.insert("x-api-key".into(), cfg.api_key.clone());
-    if let Some(v) = &cfg.api_secret {
-        h.insert("x-api-secret".into(), v.clone());
-    }
-    if let Some(v) = &cfg.key1 {
-        h.insert("x-key1".into(), v.clone());
-    }
-    if let Some(v) = &cfg.merchant_id {
-        h.insert("x-merchant-id".into(), v.clone());
-    }
-    if let Some(v) = &cfg.tenant_id {
-        h.insert("x-tenant-id".into(), v.clone());
-    }
+    // Serialize connector_config to JSON string for x-connector-config header
+    let config_json =
+        serde_json::to_string(&cfg.connector_config).unwrap_or_else(|_| "{}".to_string());
+    h.insert("x-connector-config".into(), config_json);
     Arc::new(h)
 }
 

@@ -41,6 +41,7 @@ RUST_GRPC_CLIENT_OUT       = SDK_ROOT  / "rust/src/_generated_grpc_client.rs"
 JS_GRPC_CLIENT_OUT         = SDK_ROOT  / "javascript/src/payments/_generated_grpc_client.ts"
 JS_GRPC_EXAMPLE_FLOWS_OUT  = REPO_ROOT / "examples/_generated_grpc_example_flows.js"
 PY_GRPC_CLIENT_OUT         = SDK_ROOT  / "python/src/payments/_generated_grpc_client.py"
+KOTLIN_GRPC_CLIENT_OUT     = SDK_ROOT  / "java/src/main/kotlin/payments/GrpcClient.kt"
 
 # ── Jinja2 environment ──────────────────────────────────────────────────────
 
@@ -285,7 +286,8 @@ env.globals["service_to_grpc_field"]     = service_to_grpc_field
 env.globals["service_to_grpc_js_field"]  = service_to_grpc_js_field
 env.globals["grpc_method_path"]          = grpc_method_path
 env.globals["grpc_example_fn_name"]      = grpc_example_fn_name
-env.globals["to_camel"] = to_camel
+env.globals["to_camel"]                  = to_camel
+env.globals["to_snake_case"]             = to_snake_case
 
 
 # ── Generators ───────────────────────────────────────────────────────────────
@@ -458,10 +460,18 @@ def gen_rust_ffi_flows(flows: list[dict]) -> None:
 
 
 def _grpc_groups() -> tuple[list[str], dict[str, list[dict]]]:
-    """Shared helper: all proto RPCs grouped by service (used by JS + Rust gRPC generators)."""
+    """Shared helper: all proto RPCs grouped by service (used by JS + Rust gRPC generators).
+    
+    Returns only unique RPCs (simple names, not prefixed duplicates like 'payment_authorize').
+    """
     all_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
     groups: dict[str, list[dict]] = {}
     for flow_name, meta in sorted(all_rpcs.items(), key=lambda kv: kv[1]["service"]):
+        # Filter out prefixed duplicates - keep only simple RPC names
+        # e.g., keep 'authorize' but skip 'payment_authorize'
+        rpc_simple_name = to_snake_case(meta["rpc"])
+        if flow_name != rpc_simple_name:
+            continue
         groups.setdefault(meta["service"], []).append({"name": flow_name, **meta})
     return list(groups.keys()), groups
 
@@ -472,6 +482,17 @@ def gen_python_grpc_client() -> None:
     render(
         "python/grpc_client.py.j2",
         PY_GRPC_CLIENT_OUT,
+        services=services,
+        groups=groups,
+    )
+
+
+def gen_kotlin_grpc_client() -> None:
+    """Generate GrpcClient.kt — Kotlin gRPC sub-clients and GrpcClient from proto RPCs."""
+    services, groups = _grpc_groups()
+    render(
+        "kotlin/grpc_client.kt.j2",
+        KOTLIN_GRPC_CLIENT_OUT,
         services=services,
         groups=groups,
     )
@@ -505,15 +526,7 @@ def gen_rust_grpc_client() -> None:
     """Generate _generated_grpc_client.rs from all proto RPCs (not filtered by FFI impl)."""
     import subprocess
 
-    all_rpcs = parse_proto_rpcs(PROTO_DESCRIPTOR)
-
-    # Group all proto RPCs by service, preserving insertion order (sorted by service name).
-    groups: dict[str, list[dict]] = {}
-    for flow_name, meta in sorted(all_rpcs.items(), key=lambda kv: kv[1]["service"]):
-        svc = meta["service"]
-        groups.setdefault(svc, []).append({"name": flow_name, **meta})
-
-    services = list(groups.keys())
+    services, groups = _grpc_groups()
     all_types = sorted({t for flows in groups.values() for f in flows for t in (f["request"], f["response"])})
 
     render(
@@ -575,6 +588,8 @@ def main() -> None:
         gen_javascript_grpc_client()
         print("Generating Python gRPC client...")
         gen_python_grpc_client()
+        print("Generating Kotlin gRPC client...")
+        gen_kotlin_grpc_client()
 
     if args.lang in ("python", "all"):
         print("Generating Python SDK...")

@@ -208,7 +208,7 @@ test-grpc: build-ffi-lib build-grpc-ffi-lib generate-all pack-archive
 	else \
 		echo "  Note: no creds.json found, test will use placeholder credentials"; \
 	fi
-	@cd /tmp/test-hyperswitch-py-grpc && PYTHONPATH=/tmp/test-hyperswitch-py-grpc \
+	@cd /tmp/test-hyperswitch-py-grpc && PYTHONPATH=/tmp/test-hyperswitch-py-grpc FORCE_COLOR=1 \
 		python3 test_smoke_grpc.py \
 		--connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples; \
 		EXIT=$$?; \

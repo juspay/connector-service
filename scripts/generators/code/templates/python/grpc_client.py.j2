@@ -9,7 +9,7 @@ import os
 import platform
 import sys
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from payments.generated import payment_pb2
 
@@ -22,28 +22,22 @@ class GrpcConfig:
 
     Field names are snake_case — they are serialised to JSON and sent to the
     Rust FFI layer which deserialises them into GrpcConfigInput.
+    
+    The connector_config field should contain the connector-specific authentication
+    and configuration in the format expected by the server:
+    {"config": {"ConnectorName": {"api_key": "...", ...}}}
     """
 
-    endpoint:   str
-    connector:  str
-    auth_type:  str
-    api_key:    str
-    api_secret: Optional[str] = None
-    key1:       Optional[str] = None
-    merchant_id: Optional[str] = None
-    tenant_id:  Optional[str] = None
+    endpoint: str
+    connector: str
+    connector_config: Dict[str, Any]
 
     def to_json_bytes(self) -> bytes:
         d: dict = {
-            "endpoint":   self.endpoint,
-            "connector":  self.connector,
-            "auth_type":  self.auth_type,
-            "api_key":    self.api_key,
+            "endpoint": self.endpoint,
+            "connector": self.connector,
+            "connector_config": self.connector_config,
         }
-        if self.api_secret  is not None: d["api_secret"]   = self.api_secret
-        if self.key1         is not None: d["key1"]         = self.key1
-        if self.merchant_id  is not None: d["merchant_id"]  = self.merchant_id
-        if self.tenant_id    is not None: d["tenant_id"]    = self.tenant_id
         return json.dumps(d).encode()
 
 
@@ -156,8 +150,7 @@ class GrpcClient:
         client = GrpcClient(GrpcConfig(
             endpoint  = "http://localhost:8000",
             connector = "stripe",
-            auth_type = "header-key",
-            api_key   = "sk_test_...",
+            connector_config = {"config": {"Stripe": {"api_key": "sk_test_..."}}},
         ))
 {% for service in services[:4] %}
         res = client.{{ service_to_grpc_field(service) }}.{{ groups[service][0].name }}(...)

@@ -327,17 +327,12 @@ impl_grpc_client!(
 ///
 /// # Example
 /// ```rust,no_run
-/// # use hyperswitch_payments_client::{GrpcClient, GrpcConfig};
+/// # use hyperswitch_payments_client::{GrpcClient, GrpcConfig, build_connector_config, ConnectorSpecificConfig};
 /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = GrpcClient::new(GrpcConfig {
-///     endpoint:    "http://localhost:8000".into(),
-///     connector:   "stripe".into(),
-///     auth_type:   "header-key".into(),
-///     api_key:     "sk_test_...".into(),
-///     api_secret:  None,
-///     key1:        None,
-///     merchant_id: None,
-///     tenant_id:   None,
+///     endpoint: "http://localhost:8000".into(),
+///     connector: "stripe".into(),
+///     connector_config: build_connector_config("Stripe", ConnectorSpecificConfig::new("sk_test_...")),
 /// }).await?;
 ///
 /// let _ = client.customer.create(Default::default()).await;

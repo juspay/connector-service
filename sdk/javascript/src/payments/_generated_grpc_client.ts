@@ -16,16 +16,15 @@ const _dirname = __dirname;
  * Connection configuration for the gRPC client.
  * Field names must be snake_case — they are serialised to JSON and sent to the
  * Rust FFI layer which deserialises them into GrpcConfigInput.
+ * 
+ * The connector_config field should contain the connector-specific authentication
+ * and configuration in the format expected by the server:
+ * {"config": {"ConnectorName": {"api_key": "...", ...}}}
  */
 export interface GrpcConfig {
-  endpoint:     string;
-  connector:    string;
-  auth_type:    string;
-  api_key:      string;
-  api_secret?:  string;
-  key1?:        string;
-  merchant_id?: string;
-  tenant_id?:   string;
+  endpoint: string;
+  connector: string;
+  connector_config: Record<string, unknown>;
 }
 
 // ── koffi FFI bindings ────────────────────────────────────────────────────────
@@ -337,10 +336,9 @@ export class GrpcRecurringPaymentClient {
  * Example:
  * ```ts
  * const client = new GrpcClient({
- *   endpoint:  "http://localhost:8000",
+ *   endpoint: "http://localhost:8000",
  *   connector: "stripe",
- *   auth_type: "header-key",
- *   api_key:   "sk_test_...",
+ *   connector_config: {"config": {"Stripe": {"api_key": "sk_test_..."}}},
  * });
  * const res = await client.customer.create({ ... });
  * const res = await client.dispute.submitEvidence({ ... });
