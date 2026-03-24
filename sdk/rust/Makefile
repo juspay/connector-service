@@ -49,14 +49,12 @@ test-package:
 	@echo "Checking Rust SDK examples..."
 	@cd $(SDK_ROOT) && cargo check --example basic 2>&1
 	@echo "Running Rust SDK smoke test..."
-	@if [ -f $(REPO_ROOT)/creds.json ]; then \
-		cp $(REPO_ROOT)/creds.json $(SDK_ROOT)/smoke-test/creds.json; \
+	@if [ ! -f $(REPO_ROOT)/creds.json ]; then \
+		echo "  Note: creds.json not found, skipping smoke test (add credentials to $(REPO_ROOT)/creds.json)"; \
 	else \
-		echo "  Note: creds.json not found, smoke test will use placeholder credentials"; \
-		echo '{"stripe":{"api_key":{"value":"placeholder"}}}' > $(SDK_ROOT)/smoke-test/creds.json; \
+		cd $(SDK_ROOT)/smoke-test && cargo run --profile release-fast -- --connectors $(CONNECTORS) --creds-file $(REPO_ROOT)/creds.json 2>&1 || \
+			(echo "  Note: smoke test requires real credentials to pass"; exit 0); \
 	fi
-	@cd $(SDK_ROOT)/smoke-test && cargo run --profile release-fast -- --connectors $(CONNECTORS) --creds-file creds.json 2>&1 || \
-		(echo "  Note: smoke test requires real credentials to pass"; exit 0)
 	@echo "✓ Rust SDK package check passed."
 
 # ---------------------------------------------------------------------------
