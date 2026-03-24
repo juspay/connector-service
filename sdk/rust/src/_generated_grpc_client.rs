@@ -374,7 +374,7 @@ impl GrpcClient {
             return Err(tonic::transport::Error::from(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 e,
-            )));
+            ).into()));
         }
         let endpoint = config.endpoint.clone();
         let headers = Arc::new(config.into_headers());
