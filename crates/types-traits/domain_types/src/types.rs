@@ -11271,7 +11271,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
 
 /// Convert a vault-alias card struct into the gRPC `CardDetails` payload used
 /// by the `CardProxy` payment-method variant.
-fn vault_alias_to_grpc_card_details(
+pub fn vault_alias_to_grpc_card_details(
     alias: &grpc_payment_types::VaultAliasCard,
 ) -> grpc_payment_types::CardDetails {
     grpc_payment_types::CardDetails {
@@ -11318,7 +11318,7 @@ fn card_proxy_pm(card: grpc_payment_types::CardDetails) -> grpc_payment_types::P
 // TokenizedPaymentServiceAuthorizeRequest
 // ---------------------------------------------------------------------------
 
-fn tokenized_authorize_to_base(
+pub fn tokenized_authorize_to_base(
     v: grpc_payment_types::TokenizedPaymentServiceAuthorizeRequest,
 ) -> PaymentServiceAuthorizeRequest {
     PaymentServiceAuthorizeRequest {
@@ -11396,7 +11396,7 @@ impl<
 // TokenizedPaymentServiceSetupRecurringRequest
 // ---------------------------------------------------------------------------
 
-fn tokenized_setup_recurring_to_base(
+pub fn tokenized_setup_recurring_to_base(
     v: grpc_payment_types::TokenizedPaymentServiceSetupRecurringRequest,
 ) -> PaymentServiceSetupRecurringRequest {
     PaymentServiceSetupRecurringRequest {
@@ -11469,7 +11469,7 @@ impl<
 // ProxyPaymentServiceAuthorizeRequest
 // ---------------------------------------------------------------------------
 
-fn proxy_authorize_to_base(
+pub fn proxy_authorize_to_base(
     v: grpc_payment_types::ProxyPaymentServiceAuthorizeRequest,
 ) -> Result<PaymentServiceAuthorizeRequest, error_stack::Report<ApplicationErrorResponse>> {
     let card = unwrap_vault_card(v.vault_card, "proxy authorization")?;
@@ -11545,7 +11545,7 @@ impl<
 // ProxyPaymentServiceSetupRecurringRequest
 // ---------------------------------------------------------------------------
 
-fn proxy_setup_recurring_to_base(
+pub fn proxy_setup_recurring_to_base(
     v: grpc_payment_types::ProxyPaymentServiceSetupRecurringRequest,
 ) -> Result<PaymentServiceSetupRecurringRequest, error_stack::Report<ApplicationErrorResponse>> {
     let card = unwrap_vault_card(v.vault_card, "proxy setup recurring")?;
@@ -11612,7 +11612,7 @@ impl<
 // ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest
 // ---------------------------------------------------------------------------
 
-fn proxy_pre_authenticate_to_base(
+pub fn proxy_pre_authenticate_to_base(
     v: grpc_payment_types::ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
 ) -> Result<
     grpc_payment_types::PaymentMethodAuthenticationServicePreAuthenticateRequest,
@@ -11688,7 +11688,7 @@ impl<
 // ProxyPaymentMethodAuthenticationServiceAuthenticateRequest
 // ---------------------------------------------------------------------------
 
-fn proxy_authenticate_to_base(
+pub fn proxy_authenticate_to_base(
     v: grpc_payment_types::ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
 ) -> Result<
     grpc_payment_types::PaymentMethodAuthenticationServiceAuthenticateRequest,
@@ -11760,7 +11760,7 @@ impl<
 // ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest
 // ---------------------------------------------------------------------------
 
-fn proxy_post_authenticate_to_base(
+pub fn proxy_post_authenticate_to_base(
     v: grpc_payment_types::ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
 ) -> Result<
     grpc_payment_types::PaymentMethodAuthenticationServicePostAuthenticateRequest,

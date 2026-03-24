@@ -2530,7 +2530,12 @@ def _rust_json_lines(
             continue
 
         if isinstance(val, dict):
-            if child_msg and child_msg in _ONEOF_WRAPPER_FIELD:
+            if child_msg and db.is_wrapper(child_msg):
+                # Wrapper message (e.g. SecretString) stored as {"value": "..."} in probe data.
+                # Secret<String> deserializes from a plain string in serde, not an object.
+                inner_val = val.get("value", "")
+                lines.append(f"{pad}{json_key}: {json.dumps(inner_val)},{cmt_part}")
+            elif child_msg and child_msg in _ONEOF_WRAPPER_FIELD:
                 # Oneof wrapper: add the struct field name that holds the enum.
                 wrapper_key = _ONEOF_WRAPPER_FIELD[child_msg]
                 inner = _rust_json_lines(val, child_msg, message_schemas, indent + 2)

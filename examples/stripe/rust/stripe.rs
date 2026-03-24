@@ -198,9 +198,7 @@ pub fn build_tokenized_authorize_request() -> TokenizedPaymentServiceAuthorizeRe
         "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
     },
-    "connector_token": {
-        "value": "pm_1AbcXyzStripeTestToken",
-    },
+    "connector_token": "pm_1AbcXyzStripeTestToken",
     "capture_method": "AUTOMATIC",
     "address": {
         "billing_address": {
@@ -218,9 +216,7 @@ pub fn build_tokenized_setup_recurring_request() -> TokenizedPaymentServiceSetup
         "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
     },
-    "connector_token": {
-        "value": "pm_1AbcXyzStripeTestToken",
-    },
+    "connector_token": "pm_1AbcXyzStripeTestToken",
     "address": {
         "billing_address": {
         },
@@ -244,14 +240,10 @@ pub fn build_proxy_authorize_request() -> ProxyPaymentServiceAuthorizeRequest {
         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
     },
     "vault_card": {
-        "card_number_alias": {
-            "value": "tok_sandbox_abc123",
-        },
+        "card_number_alias": "tok_sandbox_abc123",
         "exp_month": "03",
         "exp_year": "2030",
-        "cvc_alias": {
-            "value": "tok_sandbox_cvc456",
-        },
+        "cvc_alias": "tok_sandbox_cvc456",
         "card_holder_name": "John Doe",
     },
     "capture_method": "AUTOMATIC",
@@ -273,14 +265,10 @@ pub fn build_proxy_setup_recurring_request() -> ProxyPaymentServiceSetupRecurrin
         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
     },
     "vault_card": {
-        "card_number_alias": {
-            "value": "tok_sandbox_abc123",
-        },
+        "card_number_alias": "tok_sandbox_abc123",
         "exp_month": "03",
         "exp_year": "2030",
-        "cvc_alias": {
-            "value": "tok_sandbox_cvc456",
-        },
+        "cvc_alias": "tok_sandbox_cvc456",
         "card_holder_name": "John Doe",
     },
     "auth_type": "NO_THREE_DS",
@@ -302,9 +290,7 @@ pub fn build_proxy_pre_authenticate_request(
             "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "vault_card": {
-            "card_number_alias": {
-                "value": "tok_sandbox_abc123",
-            },
+            "card_number_alias": "tok_sandbox_abc123",
             "exp_month": "03",
             "exp_year": "2030",
             "card_holder_name": "John Doe",
@@ -336,9 +322,7 @@ pub fn build_proxy_authenticate_request(
             "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
         },
         "vault_card": {
-            "card_number_alias": {
-                "value": "tok_sandbox_abc123",
-            },
+            "card_number_alias": "tok_sandbox_abc123",
             "exp_month": "03",
             "exp_year": "2030",
             "card_holder_name": "John Doe",
@@ -355,9 +339,7 @@ pub fn build_proxy_post_authenticate_request(
         serde_json::json!({
         "merchant_order_id": "probe_proxy_order_001",
         "vault_card": {
-            "card_number_alias": {
-                "value": "tok_sandbox_abc123",
-            },
+            "card_number_alias": "tok_sandbox_abc123",
             "exp_month": "03",
             "exp_year": "2030",
             "card_holder_name": "John Doe",
@@ -844,9 +826,7 @@ pub async fn process_tokenized_checkout(
                     "minor_amount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
                     "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
                 },
-                "connector_token": {
-                    "value": "pm_1AbcXyzStripeTestToken",
-                },
+                "connector_token": "pm_1AbcXyzStripeTestToken",
                 "capture_method": "AUTOMATIC",
                 "address": {
                     "billing_address": {
@@ -914,9 +894,7 @@ pub async fn process_tokenized_recurring(
                         "minor_amount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
                         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
                     },
-                    "connector_token": {
-                        "value": "pm_1AbcXyzStripeTestToken",
-                    },
+                    "connector_token": "pm_1AbcXyzStripeTestToken",
                     "address": {
                         "billing_address": {
                         },
@@ -1000,14 +978,10 @@ pub async fn process_proxy_checkout(
                     "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
                 },
                 "vault_card": {
-                    "card_number_alias": {
-                        "value": "tok_sandbox_abc123",
-                    },
+                    "card_number_alias": "tok_sandbox_abc123",
                     "exp_month": "03",
                     "exp_year": "2030",
-                    "cvc_alias": {
-                        "value": "tok_sandbox_cvc456",
-                    },
+                    "cvc_alias": "tok_sandbox_cvc456",
                     "card_holder_name": "John Doe",
                 },
                 "capture_method": "AUTOMATIC",
@@ -1061,9 +1035,7 @@ pub async fn process_proxy_3ds_checkout(
                         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
                     },
                     "vault_card": {
-                        "card_number_alias": {
-                            "value": "tok_sandbox_abc123",
-                        },
+                        "card_number_alias": "tok_sandbox_abc123",
                         "exp_month": "03",
                         "exp_year": "2030",
                         "card_holder_name": "John Doe",
@@ -1106,9 +1078,7 @@ pub async fn process_proxy_3ds_checkout(
                         "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
                     },
                     "vault_card": {
-                        "card_number_alias": {
-                            "value": "tok_sandbox_abc123",
-                        },
+                        "card_number_alias": "tok_sandbox_abc123",
                         "exp_month": "03",
                         "exp_year": "2030",
                         "card_holder_name": "John Doe",
@@ -1139,9 +1109,7 @@ pub async fn process_proxy_3ds_checkout(
                 >(serde_json::json!({
                     "merchant_order_id": "probe_proxy_order_001",
                     "vault_card": {
-                        "card_number_alias": {
-                            "value": "tok_sandbox_abc123",
-                        },
+                        "card_number_alias": "tok_sandbox_abc123",
                         "exp_month": "03",
                         "exp_year": "2030",
                         "card_holder_name": "John Doe",
@@ -1171,14 +1139,10 @@ pub async fn process_proxy_3ds_checkout(
                     "currency": "USD",  // ISO 4217 currency code (e.g., "USD", "EUR")
                 },
                 "vault_card": {
-                    "card_number_alias": {
-                        "value": "tok_sandbox_abc123",
-                    },
+                    "card_number_alias": "tok_sandbox_abc123",
                     "exp_month": "03",
                     "exp_year": "2030",
-                    "cvc_alias": {
-                        "value": "tok_sandbox_cvc456",
-                    },
+                    "cvc_alias": "tok_sandbox_cvc456",
                     "card_holder_name": "John Doe",
                 },
                 "capture_method": "AUTOMATIC",

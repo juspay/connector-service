@@ -139,7 +139,7 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
             | "recurring_charge"
     );
 
-    // Dispute flows don't have connector_feature_data field
+    // Some flows don't have a connector_feature_data field in their request type
     let needs_feature_data = !matches!(
         final_key.as_str(),
         "create_access_token"
@@ -147,6 +147,8 @@ fn parse_flow_info(transformer_fn: &str, request_type: &str) -> Option<FlowInfo>
             | "dispute_accept"
             | "dispute_submit_evidence"
             | "dispute_defend"
+            | "proxy_setup_recurring"
+            | "proxy_post_authenticate"
     );
 
     // Flows whose base request has a connector_transaction_id that some connectors

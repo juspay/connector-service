@@ -42,7 +42,10 @@ use domain_types::{
         generate_payment_sdk_session_token_response, generate_payment_sync_response,
         generate_payment_void_post_capture_response, generate_payment_void_response,
         generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response,
+        generate_setup_mandate_response, proxy_authenticate_to_base, proxy_authorize_to_base,
+        proxy_post_authenticate_to_base, proxy_pre_authenticate_to_base,
+        proxy_setup_recurring_to_base, tokenized_authorize_to_base,
+        tokenized_setup_recurring_to_base,
     },
     utils::ForeignTryFrom,
 };
@@ -3942,50 +3945,16 @@ impl TokenizedPaymentService for Payments {
             FlowName::Authorize,
             |request_data| {
                 let service_name = service_name.clone();
-                let config = config.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let payload = request_data.payload;
+                    let authorize_request = tokenized_authorize_to_base(request_data.payload);
 
-                    // Convert connector_token to PaymentMethod::Token
-                    let authorize_request = PaymentServiceAuthorizeRequest {
-                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
-                            payment_method: Some(payment_method::PaymentMethod::Token(
-                                grpc_api_types::payments::TokenPaymentMethodType {
-                                    token: payload.connector_token,
-                                },
-                            )),
-                        }),
-                        auth_type: grpc_api_types::payments::AuthenticationType::NoThreeDs as i32,
-                        merchant_transaction_id: payload.merchant_transaction_id,
-                        amount: payload.amount,
-                        capture_method: payload.capture_method,
-                        customer: payload.customer,
-                        address: payload.address,
-                        return_url: payload.return_url,
-                        webhook_url: payload.webhook_url,
-                        metadata: payload.metadata,
-                        connector_feature_data: payload.connector_feature_data,
-                        setup_future_usage: payload.setup_future_usage,
-                        browser_info: payload.browser_info,
-                        state: payload.state,
-                        billing_descriptor: payload.billing_descriptor,
-                        merchant_order_id: payload.merchant_order_id,
-                        l2_l3_data: payload.l2_l3_data,
-                        customer_acceptance: payload.customer_acceptance,
-                        test_mode: payload.test_mode,
-                        ..Default::default()
-                    };
-
-                    // Create a new inner request to delegate to PaymentService
                     let mut inner_request = tonic::Request::new(authorize_request);
-                    // Copy over extensions and metadata
                     *inner_request.extensions_mut() = extensions;
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    // Delegate to existing PaymentService::authorize
                     <Self as PaymentService>::authorize(self, inner_request).await
                 })
             },
@@ -4037,45 +4006,17 @@ impl TokenizedPaymentService for Payments {
             FlowName::SetupMandate,
             |request_data| {
                 let service_name = service_name.clone();
-                let config = config.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let payload = request_data.payload;
+                    let setup_recurring_request =
+                        tokenized_setup_recurring_to_base(request_data.payload);
 
-                    // Convert connector_token to PaymentMethod::Token
-                    let setup_recurring_request = PaymentServiceSetupRecurringRequest {
-                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
-                            payment_method: Some(payment_method::PaymentMethod::Token(
-                                grpc_api_types::payments::TokenPaymentMethodType {
-                                    token: payload.connector_token,
-                                },
-                            )),
-                        }),
-                        merchant_recurring_payment_id: payload.merchant_recurring_payment_id,
-                        amount: payload.amount,
-                        customer: payload.customer,
-                        address: payload.address,
-                        return_url: payload.return_url,
-                        webhook_url: payload.webhook_url,
-                        metadata: payload.metadata,
-                        connector_feature_data: payload.connector_feature_data,
-                        state: payload.state,
-                        customer_acceptance: payload.customer_acceptance,
-                        setup_mandate_details: payload.setup_mandate_details,
-                        billing_descriptor: payload.billing_descriptor,
-                        locale: payload.locale,
-                        ..Default::default()
-                    };
-
-                    // Create a new inner request to delegate to PaymentService
                     let mut inner_request = tonic::Request::new(setup_recurring_request);
-                    // Copy over extensions and metadata
                     *inner_request.extensions_mut() = extensions;
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    // Delegate to existing PaymentService::setup_recurring
                     <Self as PaymentService>::setup_recurring(self, inner_request).await
                 })
             },
@@ -4134,53 +4075,17 @@ impl ProxyPaymentService for Payments {
             FlowName::Authorize,
             |request_data| {
                 let service_name = service_name.clone();
-                let config = config.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let payload = request_data.payload;
-                    let vault_card = payload
-                        .vault_card
-                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+                    let authorize_request = proxy_authorize_to_base(request_data.payload)
+                        .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
 
-                    // Convert vault_card to PaymentMethod::CardProxy
-                    let authorize_request = PaymentServiceAuthorizeRequest {
-                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
-                            payment_method: Some(payment_method::PaymentMethod::CardProxy(
-                                vault_alias_to_card_details(&vault_card)?,
-                            )),
-                        }),
-                        auth_type: payload.auth_type,
-                        authentication_data: payload.authentication_data,
-                        threeds_completion_indicator: payload.threeds_completion_indicator,
-                        merchant_transaction_id: payload.merchant_transaction_id,
-                        amount: payload.amount,
-                        capture_method: payload.capture_method,
-                        customer: payload.customer,
-                        address: payload.address,
-                        return_url: payload.return_url,
-                        webhook_url: payload.webhook_url,
-                        metadata: payload.metadata,
-                        connector_feature_data: payload.connector_feature_data,
-                        setup_future_usage: payload.setup_future_usage,
-                        browser_info: payload.browser_info,
-                        state: payload.state,
-                        billing_descriptor: payload.billing_descriptor,
-                        merchant_order_id: payload.merchant_order_id,
-                        l2_l3_data: payload.l2_l3_data,
-                        customer_acceptance: payload.customer_acceptance,
-                        test_mode: payload.test_mode,
-                        ..Default::default()
-                    };
-
-                    // Create a new inner request to delegate to PaymentService
                     let mut inner_request = tonic::Request::new(authorize_request);
-                    // Copy over extensions and metadata
                     *inner_request.extensions_mut() = extensions;
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    // Delegate to existing PaymentService::authorize
                     <Self as PaymentService>::authorize(self, inner_request).await
                 })
             },
@@ -4232,45 +4137,18 @@ impl ProxyPaymentService for Payments {
             FlowName::SetupMandate,
             |request_data| {
                 let service_name = service_name.clone();
-                let config = config.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let payload = request_data.payload;
-                    let vault_card = payload
-                        .vault_card
-                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+                    let setup_recurring_request =
+                        proxy_setup_recurring_to_base(request_data.payload)
+                            .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
 
-                    // Convert vault_card to PaymentMethod::CardProxy
-                    let setup_recurring_request = PaymentServiceSetupRecurringRequest {
-                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
-                            payment_method: Some(payment_method::PaymentMethod::CardProxy(
-                                vault_alias_to_card_details(&vault_card)?,
-                            )),
-                        }),
-                        auth_type: payload.auth_type,
-                        authentication_data: payload.authentication_data,
-                        merchant_recurring_payment_id: payload.merchant_recurring_payment_id,
-                        amount: payload.amount,
-                        customer: payload.customer,
-                        address: payload.address,
-                        return_url: payload.return_url,
-                        webhook_url: payload.webhook_url,
-                        metadata: payload.metadata,
-                        state: payload.state,
-                        customer_acceptance: payload.customer_acceptance,
-                        setup_mandate_details: payload.setup_mandate_details,
-                        ..Default::default()
-                    };
-
-                    // Create a new inner request to delegate to PaymentService
                     let mut inner_request = tonic::Request::new(setup_recurring_request);
-                    // Copy over extensions and metadata
                     *inner_request.extensions_mut() = extensions;
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    // Delegate to existing PaymentService::setup_recurring
                     <Self as PaymentService>::setup_recurring(self, inner_request).await
                 })
             },
@@ -4325,46 +4203,17 @@ impl ProxyPaymentService for Payments {
             FlowName::PreAuthenticate,
             |request_data| {
                 let service_name = service_name.clone();
-                let config = config.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let payload = request_data.payload;
-                    let vault_card = payload
-                        .vault_card
-                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+                    let pre_auth_request = proxy_pre_authenticate_to_base(request_data.payload)
+                        .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
 
-                    // Convert vault_card to PaymentMethod::CardProxy
-                    let pre_auth_request =
-                        PaymentMethodAuthenticationServicePreAuthenticateRequest {
-                            payment_method: Some(grpc_api_types::payments::PaymentMethod {
-                                payment_method: Some(payment_method::PaymentMethod::CardProxy(
-                                    vault_alias_to_card_details(&vault_card)?
-                                )),
-                            }),
-                            merchant_order_id: payload.merchant_order_id,
-                            amount: payload.amount,
-                            customer: payload.customer,
-                            address: payload.address,
-                            return_url: payload.return_url,
-                            continue_redirection_url: payload.continue_redirection_url,
-                            browser_info: payload.browser_info,
-                            state: payload.state,
-                            capture_method: payload.capture_method,
-                            description: payload.description,
-                            metadata: payload.metadata,
-                            connector_feature_data: payload.connector_feature_data,
-                            ..Default::default()
-                        };
-
-                    // Create a new inner request to delegate to PaymentMethodAuthenticationService
                     let mut inner_request = tonic::Request::new(pre_auth_request);
-                    // Copy over extensions and metadata
                     *inner_request.extensions_mut() = extensions;
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    // Delegate to existing PaymentMethodAuthenticationService::pre_authenticate
                     <PaymentMethodAuthentication as PaymentMethodAuthenticationService>::pre_authenticate(
                         &PaymentMethodAuthentication,
                         inner_request,
@@ -4423,43 +4272,17 @@ impl ProxyPaymentService for Payments {
             FlowName::Authenticate,
             |request_data| {
                 let service_name = service_name.clone();
-                let config = config.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let payload = request_data.payload;
-                    let vault_card = payload
-                        .vault_card
-                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+                    let auth_request = proxy_authenticate_to_base(request_data.payload)
+                        .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
 
-                    // Convert vault_card to PaymentMethod::CardProxy
-                    let auth_request = PaymentMethodAuthenticationServiceAuthenticateRequest {
-                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
-                            payment_method: Some(payment_method::PaymentMethod::CardProxy(
-                                vault_alias_to_card_details(&vault_card)?
-                            )),
-                        }),
-                        merchant_order_id: payload.merchant_order_id,
-                        amount: payload.amount,
-                        authentication_data: payload.authentication_data,
-                        return_url: payload.return_url,
-                        continue_redirection_url: payload.continue_redirection_url,
-                        browser_info: payload.browser_info,
-                        state: payload.state,
-                        redirection_response: payload.redirection_response,
-                        metadata: payload.metadata,
-                        connector_feature_data: payload.connector_feature_data,
-                        ..Default::default()
-                    };
-
-                    // Create a new inner request to delegate to PaymentMethodAuthenticationService
                     let mut inner_request = tonic::Request::new(auth_request);
-                    // Copy over extensions and metadata
                     *inner_request.extensions_mut() = extensions;
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    // Delegate to existing PaymentMethodAuthenticationService::authenticate
                     <PaymentMethodAuthentication as PaymentMethodAuthenticationService>::authenticate(
                         &PaymentMethodAuthentication,
                         inner_request,
@@ -4518,38 +4341,17 @@ impl ProxyPaymentService for Payments {
             FlowName::PostAuthenticate,
             |request_data| {
                 let service_name = service_name.clone();
-                let config = config.clone();
                 let extensions = extensions.clone();
                 let metadata = metadata.clone();
                 Box::pin(async move {
-                    let payload = request_data.payload;
-                    let vault_card = payload
-                        .vault_card
-                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+                    let post_auth_request = proxy_post_authenticate_to_base(request_data.payload)
+                        .map_err(|e| tonic::Status::invalid_argument(format!("{e}")))?;
 
-                    // Convert vault_card to PaymentMethod::CardProxy
-                    let post_auth_request =
-                        PaymentMethodAuthenticationServicePostAuthenticateRequest {
-                            payment_method: Some(grpc_api_types::payments::PaymentMethod {
-                                payment_method: Some(payment_method::PaymentMethod::CardProxy(
-                                    vault_alias_to_card_details(&vault_card)?
-                                )),
-                            }),
-                            merchant_order_id: payload.merchant_order_id,
-                            authentication_data: payload.authentication_data,
-                            state: payload.state,
-                            metadata: payload.metadata,
-                            ..Default::default()
-                        };
-
-                    // Create a new inner request to delegate to PaymentMethodAuthenticationService
                     let mut inner_request = tonic::Request::new(post_auth_request);
-                    // Copy over extensions and metadata
                     *inner_request.extensions_mut() = extensions;
                     *inner_request.metadata_mut() = metadata;
                     inner_request.extensions_mut().insert(service_name.clone());
 
-                    // Delegate to existing PaymentMethodAuthenticationService::post_authenticate
                     <PaymentMethodAuthentication as PaymentMethodAuthenticationService>::post_authenticate(
                         &PaymentMethodAuthentication,
                         inner_request,
@@ -4560,31 +4362,4 @@ impl ProxyPaymentService for Payments {
         )
         .await
     }
-}
-
-/// Convert VaultAliasCard to CardDetails
-fn vault_alias_to_card_details(
-    alias: &grpc_api_types::payments::VaultAliasCard,
-) -> Result<grpc_api_types::payments::CardDetails, tonic::Status> {
-    use hyperswitch_masking::PeekInterface;
-    use std::str::FromStr;
-
-    Ok(grpc_api_types::payments::CardDetails {
-        card_number: alias
-            .card_number_alias
-            .as_ref()
-            .and_then(|s| cards::CardNumber::from_str(s.peek()).ok()),
-        card_exp_month: Some(hyperswitch_masking::Secret::from(alias.exp_month.clone())),
-        card_exp_year: Some(hyperswitch_masking::Secret::from(alias.exp_year.clone())),
-        card_cvc: alias
-            .cvc_alias
-            .as_ref()
-            .map(|s| hyperswitch_masking::Secret::from(s.peek().to_string())),
-        card_holder_name: alias
-            .card_holder_name
-            .clone()
-            .map(|v| hyperswitch_masking::Secret::from(v)),
-        card_network: alias.card_network,
-        ..Default::default()
-    })
 }
