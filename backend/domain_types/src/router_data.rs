@@ -293,6 +293,11 @@ pub enum ConnectorSpecificAuth {
         client_id: Secret<String>,
         client_secret: Secret<String>,
     },
+    Trustly {
+        username: Secret<String>,
+        password: Secret<String>,
+        private_key: Secret<String>,
+    },
     Worldpay {
         username: Secret<String>,
         password: Secret<String>,
@@ -818,6 +823,11 @@ impl ForeignTryFrom<grpc_api_types::payments::ConnectorAuth> for ConnectorSpecif
                 name: authorizedotnet.name.ok_or_else(err)?,
                 transaction_key: authorizedotnet.transaction_key.ok_or_else(err)?,
             }),
+            AuthType::Trustly(trustly) => Ok(Self::Trustly {
+                username: trustly.username.ok_or_else(err)?,
+                password: trustly.password.ok_or_else(err)?,
+                private_key: trustly.private_key.ok_or_else(err)?,
+            }),
         }
     }
 }
@@ -1165,6 +1175,18 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                     api_key: api_key.clone(),
                     merchant_account: key1.clone(),
                     api_secret: api_secret.clone(),
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Trustly => match auth {
+                ConnectorAuthType::SignatureKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                } => Ok(Self::Trustly {
+                    username: api_key.clone(),
+                    password: key1.clone(),
+                    private_key: api_secret.clone(),
                 }),
                 _ => Err(err().into()),
             },

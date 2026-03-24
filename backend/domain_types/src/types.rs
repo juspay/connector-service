@@ -351,6 +351,7 @@ pub struct Connectors {
     pub revolv3: ConnectorParams,
     pub fiservcommercehub: ConnectorParams,
     pub truelayer: ConnectorParams,
+    pub trustly: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, Default, PartialEq, config_patch_derive::Patch)]
@@ -5535,7 +5536,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for PaymentMeth
             grpc_api_types::payments::PaymentMethodType::BancontactCard => Ok(Self::BankRedirect),
             grpc_api_types::payments::PaymentMethodType::Ideal => Ok(Self::BankRedirect),
             grpc_api_types::payments::PaymentMethodType::Sofort => Ok(Self::BankRedirect),
-            grpc_api_types::payments::PaymentMethodType::Trustly => Ok(Self::BankRedirect),
+            grpc_api_types::payments::PaymentMethodType::TrustlyBankRedirect => {
+                Ok(Self::BankRedirect)
+            }
             grpc_api_types::payments::PaymentMethodType::Giropay => Ok(Self::BankRedirect),
             grpc_api_types::payments::PaymentMethodType::Eps => Ok(Self::BankRedirect),
             grpc_api_types::payments::PaymentMethodType::Przelewy24 => Ok(Self::BankRedirect),
