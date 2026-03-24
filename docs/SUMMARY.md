@@ -11,8 +11,6 @@
 - [Architecture Overview](architecture/README.md)
 - [PCI Compliance](architecture/compliance/compliance.md)
 - [Versioning](architecture/versioning.md)
-
-### Concepts
 - [Core Components](architecture/concepts/core-components.md)
 - [Connector Settings and Overrides](architecture/concepts/connector-settings-and-overrides.md)
 - [Connectors Services Subservices Methods](architecture/concepts/connectors-services-subservices-methods.md)
@@ -23,15 +21,16 @@
 - [Modes of Usage](architecture/concepts/library-modes-of-usage.md)
 - [Specs and DSL](architecture/concepts/specs-and-dsl.md)
 
+### Frameworks
+- [Integrity and Source Verification](architecture/frameworks/integrity-and-source-verification.md)
+- [Money Struct](architecture/frameworks/money-struct.md)
+
 ### Autogeneration Frameworks
 - [Code Generation](architecture/autogeneration-frameworks/code-generation.md)
 - [Docs Generation](architecture/autogeneration-frameworks/docs-generation.md)
 - [SDK Generation](architecture/autogeneration-frameworks/sdk-generation.md)
 - [Test Generation](architecture/autogeneration-frameworks/test-generation.md)
 
-### Frameworks
-- [Integrity and Source Verification](architecture/frameworks/integrity-and-source-verification.md)
-- [Money Struct](architecture/frameworks/money-struct.md)
 
 ## API Reference
 - [API Reference Overview](api-reference/README.md)
