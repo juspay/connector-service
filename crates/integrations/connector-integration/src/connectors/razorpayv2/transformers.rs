@@ -166,16 +166,55 @@ pub struct RazorpayV2PaymentsRequest {
     pub email: Email,
     pub contact: Secret<String>,
     pub method: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<RazorpayV2Notes>,
     pub callback_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub upi: Option<RazorpayV2UpiDetails>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card: Option<RazorpayV2CardDetails>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication: Option<RazorpayV2Authentication>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser: Option<RazorpayV2BrowserDetails>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub referer: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_agent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub save: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurring: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RazorpayV2CardDetails {
+    pub number: Secret<String>,
+    pub name: Secret<String>,
+    pub expiry_month: Secret<String>,
+    pub expiry_year: Secret<String>,
+    pub cvv: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RazorpayV2Authentication {
+    pub authentication_channel: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RazorpayV2BrowserDetails {
+    pub java_enabled: bool,
+    pub javascript_enabled: bool,
+    pub timezone_offset: i32,
+    pub color_depth: i32,
+    pub screen_width: i32,
+    pub screen_height: i32,
 }
 
 #[derive(Debug, Serialize)]
@@ -202,14 +241,14 @@ pub struct RazorpayV2UpiDetails {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RazorpayV2PaymentsResponse {
     pub id: String,
-    pub entity: String,
-    pub amount: i64,
-    pub currency: String,
+    pub entity: Option<String>,
+    pub amount: Option<i64>,
+    pub currency: Option<String>,
     pub status: RazorpayStatus,
     pub order_id: Option<String>,
     pub invoice_id: Option<String>,
     pub international: Option<bool>,
-    pub method: String,
+    pub method: Option<String>,
     pub amount_refunded: Option<i64>,
     pub refund_status: Option<String>,
     pub captured: Option<bool>,
@@ -218,14 +257,30 @@ pub struct RazorpayV2PaymentsResponse {
     pub bank: Option<String>,
     pub wallet: Option<String>,
     pub vpa: Option<Secret<String>>,
-    pub email: Email,
-    pub contact: Secret<String>,
+    pub email: Option<Email>,
+    pub contact: Option<Secret<String>>,
     pub notes: Option<Value>,
     pub fee: Option<i64>,
     pub tax: Option<i64>,
     pub error_code: Option<String>,
     pub error_description: Option<String>,
     pub error_reason: Option<String>,
+    pub next: Option<Vec<RazorpayV2NextAction>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RazorpayV2NextAction {
+    pub action: String,
+    pub url: String,
+}
+
+/// Response from the Create Payment endpoint (POST /payments/create/json)
+/// This is different from the full payment response - it returns payment_id and next actions
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RazorpayV2CreatePaymentResponse {
+    pub razorpay_payment_id: String,
+    #[serde(default)]
+    pub next: Option<Vec<RazorpayV2NextAction>>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -239,6 +294,16 @@ pub enum RazorpayStatus {
 }
 
 fn get_psync_razorpay_payment_status(razorpay_status: RazorpayStatus) -> AttemptStatus {
+    match razorpay_status {
+        RazorpayStatus::Created => AttemptStatus::Pending,
+        RazorpayStatus::Authorized => AttemptStatus::Authorized,
+        RazorpayStatus::Captured => AttemptStatus::Charged,
+        RazorpayStatus::Refunded => AttemptStatus::AutoRefunded,
+        RazorpayStatus::Failed => AttemptStatus::Failure,
+    }
+}
+
+fn get_authorize_razorpay_payment_status(razorpay_status: RazorpayStatus) -> AttemptStatus {
     match razorpay_status {
         RazorpayStatus::Created => AttemptStatus::Pending,
         RazorpayStatus::Authorized => AttemptStatus::Authorized,
@@ -356,41 +421,6 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             U,
         >,
     ) -> Result<Self, Self::Error> {
-        // Determine UPI flow based on payment method data
-        let (upi_flow, vpa) = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Upi(upi_data) => match upi_data {
-                UpiData::UpiCollect(collect_data) => {
-                    let vpa_string = collect_data
-                        .vpa_id
-                        .as_ref()
-                        .ok_or(errors::ConnectorError::MissingRequiredField {
-                            field_name: "vpa_id",
-                        })?
-                        .peek()
-                        .to_string();
-                    (Some(UpiFlow::Collect), Some(vpa_string))
-                }
-                UpiData::UpiIntent(_) | UpiData::UpiQr(_) => (Some(UpiFlow::Intent), None),
-                // UpiData::UpiQr(_) => {
-                //     return Err(errors::ConnectorError::NotImplemented("UPI QR flow not supported by RazorpayV2".to_string()).into());
-                // }
-            },
-            _ => (None, None),
-        };
-
-        // Build UPI details if this is a UPI payment
-        let upi_details = if upi_flow.is_some() {
-            Some(RazorpayV2UpiDetails {
-                flow: upi_flow,
-                vpa: vpa.map(Secret::new),
-                expiry_time: Some(15), // 15 minutes default
-                upi_type: None,
-                end_date: None,
-            })
-        } else {
-            None
-        };
-
         let order_id =
             item.order_id
                 .as_ref()
@@ -398,37 +428,134 @@ impl<U: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     field_name: "order_id",
                 })?;
 
-        Ok(Self {
-            amount: item.amount,
-            currency: item.router_data.request.currency.to_string(),
-            order_id: order_id.to_string(),
-            email: item
-                .router_data
-                .resource_common_data
-                .get_billing_email()
-                .or_else(|_| {
-                    Email::from_str("customer@example.com").map_err(|_| {
-                        error_stack::Report::new(errors::ConnectorError::InvalidDataFormat {
-                            field_name: "billing.email",
-                        })
+        let email = item
+            .router_data
+            .resource_common_data
+            .get_billing_email()
+            .or_else(|_| {
+                Email::from_str("customer@example.com").map_err(|_| {
+                    error_stack::Report::new(errors::ConnectorError::InvalidDataFormat {
+                        field_name: "billing.email",
                     })
-                })?,
-            contact: Secret::new(
-                item.router_data
-                    .resource_common_data
-                    .get_billing_phone_number()
-                    .map(|phone| phone.expose())
-                    .unwrap_or_else(|_| "9999999999".to_string()),
-            ),
-            method: "upi".to_string(),
-            description: Some("Payment via RazorpayV2".to_string()),
-            notes: item.router_data.request.metadata.clone().expose_option(),
-            callback_url: item.router_data.request.get_router_return_url()?,
-            upi: upi_details,
-            customer_id: None,
-            save: Some(false),
-            recurring: None,
-        })
+                })
+            })?;
+
+        let contact = Secret::new(
+            item.router_data
+                .resource_common_data
+                .get_billing_phone_number()
+                .map(|phone| phone.expose())
+                .unwrap_or_else(|_| "9999999999".to_string()),
+        );
+
+        let callback_url = item.router_data.request.get_router_return_url()?;
+
+        // Determine payment method and build method-specific fields
+        match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                let card_number_str = card_data.card_number.peek().to_string();
+                let card_holder_name = card_data
+                    .card_holder_name
+                    .as_ref()
+                    .map(|name| name.peek().to_string())
+                    .unwrap_or_else(|| "Card Holder".to_string());
+
+                let card_details = RazorpayV2CardDetails {
+                    number: Secret::new(card_number_str),
+                    name: Secret::new(card_holder_name),
+                    expiry_month: card_data.card_exp_month.clone(),
+                    expiry_year: card_data.get_card_expiry_year_2_digit()?,
+                    cvv: card_data.card_cvc.clone(),
+                };
+
+                let authentication = Some(RazorpayV2Authentication {
+                    authentication_channel: "browser".to_string(),
+                });
+
+                let browser = Some(RazorpayV2BrowserDetails {
+                    java_enabled: false,
+                    javascript_enabled: true,
+                    timezone_offset: 330,
+                    color_depth: 24,
+                    screen_width: 1920,
+                    screen_height: 1080,
+                });
+
+                let referer_url = callback_url.clone();
+                Ok(Self {
+                    amount: item.amount,
+                    currency: item.router_data.request.currency.to_string(),
+                    order_id: order_id.to_string(),
+                    email,
+                    contact,
+                    method: "card".to_string(),
+                    description: Some("Payment via RazorpayV2".to_string()),
+                    notes: item.router_data.request.metadata.clone().expose_option(),
+                    callback_url,
+                    upi: None,
+                    card: Some(card_details),
+                    authentication,
+                    browser,
+                    ip: Some("127.0.0.1".to_string()),
+                    referer: Some(referer_url),
+                    user_agent: Some("Mozilla/5.0".to_string()),
+                    customer_id: None,
+                    save: Some(false),
+                    recurring: None,
+                })
+            }
+            PaymentMethodData::Upi(upi_data) => {
+                // Determine UPI flow based on payment method data
+                let (upi_flow, vpa) = match upi_data {
+                    UpiData::UpiCollect(collect_data) => {
+                        let vpa_string = collect_data
+                            .vpa_id
+                            .as_ref()
+                            .ok_or(errors::ConnectorError::MissingRequiredField {
+                                field_name: "vpa_id",
+                            })?
+                            .peek()
+                            .to_string();
+                        (Some(UpiFlow::Collect), Some(vpa_string))
+                    }
+                    UpiData::UpiIntent(_) | UpiData::UpiQr(_) => (Some(UpiFlow::Intent), None),
+                };
+
+                let upi_details = Some(RazorpayV2UpiDetails {
+                    flow: upi_flow,
+                    vpa: vpa.map(Secret::new),
+                    expiry_time: Some(15),
+                    upi_type: None,
+                    end_date: None,
+                });
+
+                Ok(Self {
+                    amount: item.amount,
+                    currency: item.router_data.request.currency.to_string(),
+                    order_id: order_id.to_string(),
+                    email,
+                    contact,
+                    method: "upi".to_string(),
+                    description: Some("Payment via RazorpayV2".to_string()),
+                    notes: item.router_data.request.metadata.clone().expose_option(),
+                    callback_url,
+                    upi: upi_details,
+                    card: None,
+                    authentication: None,
+                    browser: None,
+                    ip: None,
+                    referer: None,
+                    user_agent: None,
+                    customer_id: None,
+                    save: Some(false),
+                    recurring: None,
+                })
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                "Payment method not supported by RazorpayV2".to_string(),
+            )
+            .into()),
+        }
     }
 }
 
@@ -709,16 +836,118 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     type Error = errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _status_code, __raw_response): (
+        (response, data, _status_code, _raw_response): (
             RazorpayV2PaymentsResponse,
             Self,
             u16,
             Vec<u8>,
         ),
     ) -> Result<Self, Self::Error> {
+        // Map Razorpay payment status to internal status
+        let status = get_authorize_razorpay_payment_status(response.status);
+
+        let payments_response_data = match response.status {
+            RazorpayStatus::Failed => Err(ErrorResponse {
+                code: response
+                    .error_code
+                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+                message: response
+                    .error_description
+                    .clone()
+                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                reason: response.error_reason,
+                status_code: _status_code,
+                attempt_status: Some(status),
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            }),
+            _ => {
+                // Check if there's a redirect action in the next array
+                let redirection_data = response.next.as_ref().and_then(|next_actions| {
+                    next_actions.iter().find_map(|action| {
+                        if action.action == "redirect" {
+                            Some(Box::new(RedirectForm::Uri {
+                                uri: action.url.clone(),
+                            }))
+                        } else {
+                            None
+                        }
+                    })
+                });
+
+                Ok(PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                    redirection_data,
+                    connector_metadata: None,
+                    mandate_reference: None,
+                    network_txn_id: None,
+                    connector_response_reference_id: response
+                        .order_id
+                        .or(data.resource_common_data.reference_id.clone()),
+                    incremental_authorization_allowed: None,
+                    status_code: _status_code,
+                })
+            }
+        };
+
+        Ok(Self {
+            response: payments_response_data,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..data.resource_common_data
+            },
+            ..data
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ForeignTryFrom<(
+        RazorpayV2CreatePaymentResponse,
+        Self,
+        u16,
+        Vec<u8>, // raw_response
+    )>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+{
+    type Error = errors::ConnectorError;
+
+    fn foreign_try_from(
+        (response, data, _status_code, _raw_response): (
+            RazorpayV2CreatePaymentResponse,
+            Self,
+            u16,
+            Vec<u8>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        // The Create Payment endpoint returns a payment_id and next actions
+        // Check if there's a redirect action (3DS flow)
+        let redirection_data = response.next.as_ref().and_then(|next_actions| {
+            next_actions.iter().find_map(|action| {
+                if action.action == "redirect" {
+                    Some(Box::new(RedirectForm::Uri {
+                        uri: action.url.clone(),
+                    }))
+                } else {
+                    None
+                }
+            })
+        });
+
+        // Determine status based on whether redirection is needed
+        let status = if redirection_data.is_some() {
+            // 3DS required - needs customer action
+            AttemptStatus::AuthenticationPending
+        } else {
+            // No redirect means the payment was authorized directly
+            AttemptStatus::Authorized
+        };
+
         let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.id),
-            redirection_data: None,
+            resource_id: ResponseId::ConnectorTransactionId(response.razorpay_payment_id.clone()),
+            redirection_data,
             connector_metadata: None,
             mandate_reference: None,
             network_txn_id: None,
@@ -730,7 +959,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         Ok(Self {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::AuthenticationPending,
+                status,
                 ..data.resource_common_data
             },
             ..data

@@ -1,0 +1,40 @@
+{
+  "authorize": {
+    "no3ds_auto_capture_credit_card": {
+      "assert": {
+        "status": {"one_of": ["PENDING", "AUTHENTICATION_PENDING", "AUTHORIZED", "CHARGED"]},
+        "error": null
+      }
+    },
+    "no3ds_auto_capture_debit_card": {
+      "assert": {
+        "status": {"one_of": ["PENDING", "AUTHENTICATION_PENDING", "AUTHORIZED", "CHARGED"]},
+        "error": null
+      }
+    },
+    "no3ds_manual_capture_credit_card": {
+      "assert": {
+        "status": {"one_of": ["PENDING", "AUTHENTICATION_PENDING", "AUTHORIZED"]},
+        "error": null
+      }
+    },
+    "no3ds_manual_capture_debit_card": {
+      "assert": {
+        "status": {"one_of": ["PENDING", "AUTHENTICATION_PENDING", "AUTHORIZED"]},
+        "error": null
+      }
+    }
+  },
+  "get": {
+    "sync_payment": {
+      "assert": {
+        "status": {"one_of": ["CHARGED", "AUTHORIZED", "VOIDED", "PENDING", "AUTHENTICATION_PENDING"]}
+      }
+    },
+    "sync_payment_with_handle_response": {
+      "assert": {
+        "status": {"one_of": ["CHARGED", "AUTHORIZED", "VOIDED", "PENDING", "AUTHENTICATION_PENDING"]}
+      }
+    }
+  }
+}

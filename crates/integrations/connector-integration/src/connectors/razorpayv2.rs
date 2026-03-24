@@ -340,10 +340,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
 
-        // For UPI payments, use the specific UPI endpoint
         match &req.request.payment_method_data {
             PaymentMethodData::Upi(_) => Ok(format!("{base_url}v1/payments/create/upi")),
-            _ => Ok(format!("{base_url}v1/payments")),
+            PaymentMethodData::Card(_) => Ok(format!("{base_url}v1/payments/create/json")),
+            _ => Ok(format!("{base_url}v1/payments/create/json")),
         }
     }
 
@@ -397,20 +397,19 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         errors::ConnectorError,
     > {
-        // Try to parse as UPI response first
-        let upi_response_result = res
-            .response
-            .parse_struct::<razorpayv2::RazorpayV2UpiPaymentsResponse>(
-                "RazorpayV2UpiPaymentsResponse",
-            );
+        // Determine response type based on payment method
+        match &data.request.payment_method_data {
+            PaymentMethodData::Upi(_) => {
+                // Try to parse as UPI response
+                let upi_response: razorpayv2::RazorpayV2UpiPaymentsResponse = res
+                    .response
+                    .parse_struct("RazorpayV2UpiPaymentsResponse")
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        match upi_response_result {
-            Ok(upi_response) => {
                 if let Some(i) = event_builder {
                     i.set_connector_response(&upi_response)
                 }
 
-                // Use the transformer for UPI response handling
                 RouterDataV2::foreign_try_from((
                     upi_response,
                     data.clone(),
@@ -419,8 +418,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                 ))
                 .change_context(errors::ConnectorError::ResponseHandlingFailed)
             }
-            Err(_) => {
-                // Fall back to regular payment response
+            PaymentMethodData::Card(_) => {
+                // Card payments via /payments/create/json return a CreatePaymentResponse
+                let response: razorpayv2::RazorpayV2CreatePaymentResponse = res
+                    .response
+                    .parse_struct("RazorpayV2CreatePaymentResponse")
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+                if let Some(i) = event_builder {
+                    i.set_connector_response(&response)
+                }
+
+                RouterDataV2::foreign_try_from((
+                    response,
+                    data.clone(),
+                    res.status_code,
+                    res.response.to_vec(),
+                ))
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            }
+            _ => {
+                // Fallback to full payment response
                 let response: razorpayv2::RazorpayV2PaymentsResponse = res
                     .response
                     .parse_struct("RazorpayV2PaymentsResponse")
@@ -430,7 +448,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     i.set_connector_response(&response)
                 }
 
-                // Use the transformer for regular response handling
                 RouterDataV2::foreign_try_from((
                     response,
                     data.clone(),

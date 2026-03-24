@@ -1,0 +1,9 @@
+{
+  "connector": "razorpayv2",
+  "supported_suites": [
+    "authorize",
+    "get",
+    "refund",
+    "refund_sync"
+  ]
+}
