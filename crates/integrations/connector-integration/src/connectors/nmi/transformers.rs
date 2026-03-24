@@ -128,6 +128,7 @@ impl From<NmiStatus> for RefundStatus {
 pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
     Ach(Box<AchData>),
+    Wallet(Box<WalletRequestData>),
 }
 
 #[derive(Debug, Serialize)]
@@ -161,6 +162,20 @@ pub struct AchData {
     /// Standard Entry Class code of the ACH transaction (PPD, WEB, TEL, CCD)
     #[serde(skip_serializing_if = "Option::is_none")]
     sec_code: Option<String>,
+}
+
+// Wallet Payment Type Constant
+const WALLET_PAYMENT_TYPE: &str = "wallet";
+
+// Wallet Data Structure for ApplePay and GooglePay
+#[derive(Debug, Serialize)]
+pub struct WalletRequestData {
+    /// Payment type - must be "wallet" for wallet transactions
+    #[serde(rename = "payment")]
+    payment_type: &'static str,
+    /// The token received from ApplePay or GooglePay
+    #[serde(rename = "payment_token")]
+    payment_token: Secret<String>,
 }
 
 // ===== MERCHANT DEFINED FIELDS =====
@@ -316,13 +331,38 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
             PaymentMethodData::BankDebit(
                 BankDebitData::SepaBankDebit { .. }
                 | BankDebitData::BecsBankDebit { .. }
-                | BankDebitData::BacsBankDebit { .. },
+                | BankDebitData::BacsBankDebit { .. }
+                | BankDebitData::AchBankDebit { .. }
+                | BankDebitData::SepaGuaranteedBankDebit { .. },
             ) => Err(error_stack::report!(
                 errors::ConnectorError::NotImplemented(
                     "Bank Debit type not supported for NMI".to_string()
                 )
             )),
-            _ => Err(error_stack::report!(
+            PaymentMethodData::Wallet(wallet_data) => {
+                let payment_token = wallet_data.get_wallet_token()?;
+                let wallet_request = WalletRequestData {
+                    payment_type: WALLET_PAYMENT_TYPE,
+                    payment_token,
+                };
+                Ok(Self::Wallet(Box::new(wallet_request)))
+            }
+            PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+            | PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::CardToken(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::NetworkToken(_)
+            | PaymentMethodData::MobilePayment(_) => Err(error_stack::report!(
                 errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
             )),
         }
