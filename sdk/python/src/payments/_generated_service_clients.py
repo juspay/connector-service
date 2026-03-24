@@ -101,6 +101,13 @@ class PaymentClient(_ConnectorClientBase):
         """PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned."""
         return self._execute_flow("void", request, _pb2.PaymentServiceVoidResponse, options)
 
+class PayoutClient(_ConnectorClientBase):
+    """PayoutService flows"""
+
+    def payout_create(self, request, options=None):
+        """PayoutService.Create — Creates a payout."""
+        return self._execute_flow("payout_create", request, _pb2.PayoutServiceCreateResponse, options)
+
 class RecurringPaymentClient(_ConnectorClientBase):
     """RecurringPaymentService flows"""
 
