@@ -2,7 +2,7 @@ pub mod transformers;
 
 use std::fmt::Debug;
 
-use common_enums::CurrencyUnit;
+use common_enums::{self, CurrencyUnit};
 use common_utils::{errors::CustomResult, events, ext_traits::ByteSliceExt, StringMajorUnit};
 use domain_types::{
     connector_flow::{
@@ -258,7 +258,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(format!("{}pegasus-ci/api/gateway/init-iframe", self.connector_base_url_payments(req)))
+            match req.resource_common_data.payment_method {
+                common_enums::PaymentMethod::Card => {
+                    Ok(format!("{}api/payments/pac", self.connector_base_url_payments(req)))
+                }
+                _ => {
+                    Ok(format!("{}pegasus-ci/api/gateway/init-iframe", self.connector_base_url_payments(req)))
+                }
+            }
         }
         fn get_5xx_error_response(
         &self,
