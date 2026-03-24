@@ -74,17 +74,42 @@ function loadGrpcFfi(libPath?: string): GrpcFfi {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function callGrpc(ffi: GrpcFfi, config: GrpcConfig, method: string, req: any, ReqType: any, ResType: any): unknown {
+  // Validate config before making the call
+  if (!config.endpoint) {
+    throw new Error("GrpcConfig.endpoint is required");
+  }
+  if (!config.connector) {
+    throw new Error("GrpcConfig.connector is required");
+  }
+  if (!config.auth_type) {
+    throw new Error("GrpcConfig.auth_type is required");
+  }
+  if (!config.api_key) {
+    throw new Error("GrpcConfig.api_key is required");
+  }
+
   const configBuf = Buffer.from(JSON.stringify(config));
   const reqBuf    = Buffer.from(ReqType.encode(ReqType.fromObject(req)).finish());
   const outLen    = [0];
 
   const ptr = ffi.call(method, configBuf, configBuf.length, reqBuf, reqBuf.length, outLen);
   const len = outLen[0];
+
+  // Handle null pointer response (critical FFI error)
+  if (!ptr) {
+    throw new Error(`gRPC FFI error (${method}): null pointer returned - check FFI logs`);
+  }
+
   const rawBytes = Buffer.from(koffi.decode(ptr, "uint8", len) as Uint8Array);
   ffi.free(ptr, len);
 
+  if (rawBytes.length === 0) {
+    throw new Error(`gRPC error (${method}): empty response from FFI`);
+  }
+
   if (rawBytes[0] === 1) {
-    throw new Error(`gRPC error (${method}): ${rawBytes.slice(1).toString("utf-8")}`);
+    const errorMsg = rawBytes.slice(1).toString("utf-8");
+    throw new Error(`gRPC error (${method}): ${errorMsg}`);
   }
 
   return ResType.decode(rawBytes.slice(1));
