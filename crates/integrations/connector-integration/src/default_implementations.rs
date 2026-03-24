@@ -215,7 +215,6 @@ default_impl_update_mandate_token_v2!(
     Payme,
     Paysafe,
     Paytm,
-    Payu,
     Paypal,
     Peachpayments,
     Phonepe,
