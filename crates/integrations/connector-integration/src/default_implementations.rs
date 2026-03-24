@@ -9,12 +9,18 @@
 
 use crate::connectors::*;
 use domain_types::{
-    connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
+    connector_flow::UpdateMandateToken,
+    connector_flow::VerifyWebhookSource,
+    connector_types::VerifyWebhookSourceFlowData,
+    connector_types::{
+        PaymentFlowData, UpdateMandateTokenRequestData, UpdateMandateTokenResponseData,
+    },
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
 };
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
+use interfaces::connector_types::UpdateMandateTokenV2;
 use interfaces::connector_types::VerifyWebhookSourceV2;
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
@@ -127,3 +133,115 @@ default_impl_verify_webhook_source_v2!(
     Ppro
 );
 // PayPal has its own implementation in paypal.rs
+
+/// Macro to generate empty implementations of UpdateMandateTokenV2 for connectors
+/// that don't support updating mandate token details.
+///
+/// Usage: When a new connector is added, add it to the macro invocation below.
+/// Connectors with real implementation (like PayU) implement it in their own file.
+#[macro_export]
+macro_rules! default_impl_update_mandate_token_v2 {
+    ($($connector:ident),*) => {
+        $(
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                UpdateMandateTokenV2 for $connector<T>
+            {
+            }
+
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                ConnectorIntegrationV2<
+                    UpdateMandateToken,
+                    PaymentFlowData,
+                    UpdateMandateTokenRequestData,
+                    UpdateMandateTokenResponseData,
+                > for $connector<T>
+            {
+            }
+
+        )*
+    };
+}
+
+// Generate default (empty) implementations for all connectors
+// Connectors with real implementations will override these in their own files
+default_impl_update_mandate_token_v2!(
+    Adyen,
+    Aci,
+    Airwallex,
+    Authipay,
+    Authorizedotnet,
+    Bambora,
+    Bamboraapac,
+    Bankofamerica,
+    Barclaycard,
+    Billwerk,
+    Bluesnap,
+    Braintree,
+    Calida,
+    Cashfree,
+    Cashtocode,
+    Celero,
+    Checkout,
+    Cryptopay,
+    Cybersource,
+    Datatrans,
+    Dlocal,
+    Elavon,
+    Fiserv,
+    Fiservcommercehub,
+    Fiservemea,
+    Fiuu,
+    Forte,
+    Getnet,
+    Gigadat,
+    Globalpay,
+    Helcim,
+    Hipay,
+    Hyperpg,
+    Iatapay,
+    Jpmorgan,
+    Loonio,
+    Mifinity,
+    Mollie,
+    Multisafepay,
+    Nexinets,
+    Nexixpay,
+    Nmi,
+    Noon,
+    Novalnet,
+    Nuvei,
+    Paybox,
+    Payload,
+    Payme,
+    Paysafe,
+    Paytm,
+    Payu,
+    Paypal,
+    Peachpayments,
+    Phonepe,
+    Placetopay,
+    Powertranz,
+    Rapyd,
+    Razorpay,
+    RazorpayV2,
+    Redsys,
+    Revolut,
+    Revolv3,
+    Finix,
+    Shift4,
+    Silverflow,
+    Stax,
+    Stripe,
+    Truelayer,
+    Trustpay,
+    Trustpayments,
+    Tsys,
+    Volt,
+    Wellsfargo,
+    Worldpay,
+    Worldpayvantiv,
+    Worldpayxml,
+    Xendit,
+    Zift,
+    Ppro
+);

@@ -1656,6 +1656,28 @@ pub struct MandateRevokeResponseData {
     pub status_code: u16,
 }
 
+#[derive(Debug, Clone)]
+pub struct UpdateMandateTokenRequestData {
+    pub connector_mandate_id: Secret<String>,
+    pub card_number: Secret<String>,
+    pub card_exp_month: Secret<String>,
+    pub card_exp_year: Secret<String>,
+    pub card_network: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UpdateMandateTokenResponseData {
+    pub updation_status: UpdateMandateTokenStatus,
+    pub failure_reason: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum UpdateMandateTokenStatus {
+    Success,
+    Fail,
+    Pending,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

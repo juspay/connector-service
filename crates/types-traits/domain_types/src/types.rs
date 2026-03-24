@@ -32,7 +32,8 @@ use grpc_api_types::payments::{
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RecurringPaymentServiceRevokeRequest, RefundResponse,
+    RecurringPaymentServiceRevokeRequest, RecurringPaymentServiceUpdateMandateTokenRequest,
+    RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -10740,6 +10741,83 @@ impl
             customer_id: None,
             connector_customer: None,
             description: Some("Mandate revoke operation".to_string()),
+            return_url: None,
+            connector_feature_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            minor_amount_capturable: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+            l2_l3_data: None,
+        })
+    }
+}
+
+// Conversion implementations for UpdateMandateToken flow
+impl ForeignTryFrom<RecurringPaymentServiceUpdateMandateTokenRequest>
+    for connector_types::UpdateMandateTokenRequestData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: RecurringPaymentServiceUpdateMandateTokenRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            connector_mandate_id: Secret::new(value.connector_mandate_id),
+            card_number: Secret::new(value.card_number),
+            card_exp_month: Secret::new(value.card_exp_month),
+            card_exp_year: Secret::new(value.card_exp_year),
+            card_network: value.card_network,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        RecurringPaymentServiceUpdateMandateTokenRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (_value, connectors, metadata): (
+            RecurringPaymentServiceUpdateMandateTokenRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "UPDATE_MANDATE_TOKEN_ID".to_string(),
+            attempt_id: "UPDATE_MANDATE_TOKEN_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default for mandate operations
+            address: PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: "UPDATE_MANDATE_TOKEN_REF".to_string(),
+            customer_id: None,
+            connector_customer: None,
+            description: Some("Update mandate token operation".to_string()),
             return_url: None,
             connector_feature_data: None,
             amount_captured: None,
