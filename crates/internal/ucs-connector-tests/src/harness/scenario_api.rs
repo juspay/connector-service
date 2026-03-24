@@ -197,8 +197,8 @@ fn connector_request_reference_id_for(
     // Silently ignore errors — an absent spec means default behaviour.
     if let Ok(Some(spec)) = load_connector_spec(connector) {
         if let Some(source_field) = spec.request_id_source_field.as_deref() {
-            if let Some(value) = lookup_json_path_with_case_fallback(grpc_req, source_field)
-                .and_then(Value::as_str)
+            if let Some(value) =
+                lookup_json_path_with_case_fallback(grpc_req, source_field).and_then(Value::as_str)
             {
                 if !value.trim().is_empty() {
                     return value.to_string();
@@ -317,8 +317,8 @@ fn maybe_execute_browser_automation_for_suite(
     // Convention-based Google Pay token generation
     // If the request has payment_method.google_pay.tokenization_data.encrypted_data.token,
     // automatically generate a real token via browser automation
-    if let Some(token_field) = effective_req
-        .pointer("/payment_method/google_pay/tokenization_data/encrypted_data/token")
+    if let Some(token_field) =
+        effective_req.pointer("/payment_method/google_pay/tokenization_data/encrypted_data/token")
     {
         if token_field.is_string() {
             eprintln!("[DEBUG] Detected Google Pay encrypted token field - triggering automatic token generation");
@@ -328,19 +328,28 @@ fn maybe_execute_browser_automation_for_suite(
 
     // Load connector-specific browser automation spec (for custom flows like 3DS)
     let Some(config) = load_connector_browser_automation_spec(connector)? else {
-        eprintln!("[DEBUG] No browser automation spec found for connector: {}", connector);
+        eprintln!(
+            "[DEBUG] No browser automation spec found for connector: {}",
+            connector
+        );
         return Ok(());
     };
 
     let Some(browser_automation) =
         select_connector_browser_automation_hook(&config.hooks, suite, scenario)
     else {
-        eprintln!("[DEBUG] No browser automation hook found for {}/{} on connector {}", suite, scenario, connector);
+        eprintln!(
+            "[DEBUG] No browser automation hook found for {}/{} on connector {}",
+            suite, scenario, connector
+        );
         return Ok(());
     };
 
     if browser_automation.phase == BrowserAutomationPhase::CliPreRequest {
-        eprintln!("[DEBUG] Executing cli_pre_request browser automation for {}/{} on connector {}", suite, scenario, connector);
+        eprintln!(
+            "[DEBUG] Executing cli_pre_request browser automation for {}/{} on connector {}",
+            suite, scenario, connector
+        );
         let Some(cli_config) = browser_automation.cli_pre_request.as_ref() else {
             return Err(ScenarioError::GrpcurlExecution {
                 message: format!(
@@ -349,14 +358,11 @@ fn maybe_execute_browser_automation_for_suite(
                 ),
             });
         };
-        let result = execute_cli_pre_request(
-            suite,
-            scenario,
-            connector,
-            cli_config,
-            effective_req,
+        let result = execute_cli_pre_request(suite, scenario, connector, cli_config, effective_req);
+        eprintln!(
+            "[DEBUG] cli_pre_request execution completed with result: {:?}",
+            result.as_ref().map(|_| "Ok").map_err(|e| e.to_string())
         );
-        eprintln!("[DEBUG] cli_pre_request execution completed with result: {:?}", result.as_ref().map(|_| "Ok").map_err(|e| e.to_string()));
         return result;
     }
 
@@ -834,11 +840,13 @@ fn execute_google_pay_token_generation(
         "[google_pay_token_gen] {connector}/{suite}/{scenario}: spawning npm {}",
         args.join(" ")
     );
-    let mut child = cmd.spawn().map_err(|error| ScenarioError::GrpcurlExecution {
-        message: format!(
+    let mut child = cmd
+        .spawn()
+        .map_err(|error| ScenarioError::GrpcurlExecution {
+            message: format!(
             "[google_pay_token_gen] {connector}/{suite}/{scenario}: failed to spawn npm: {error}"
         ),
-    })?;
+        })?;
     eprintln!(
         "[google_pay_token_gen] child process spawned with PID: {:?}",
         child.id()
@@ -846,11 +854,13 @@ fn execute_google_pay_token_generation(
 
     // 6. Wait for the child process to exit.
     eprintln!("[google_pay_token_gen] waiting for child process to exit...");
-    let status = child.wait().map_err(|error| ScenarioError::GrpcurlExecution {
-        message: format!(
+    let status = child
+        .wait()
+        .map_err(|error| ScenarioError::GrpcurlExecution {
+            message: format!(
             "[google_pay_token_gen] {connector}/{suite}/{scenario}: failed waiting for npm: {error}"
         ),
-    })?;
+        })?;
     eprintln!(
         "[google_pay_token_gen] child process exited with status: {:?}",
         status
@@ -942,10 +952,7 @@ fn execute_cli_pre_request(
             missing_env.join(", ")
         );
         return Err(ScenarioError::Skipped {
-            reason: format!(
-                "required env vars not set: {}",
-                missing_env.join(", ")
-            ),
+            reason: format!("required env vars not set: {}", missing_env.join(", ")),
         });
     }
 
@@ -987,14 +994,23 @@ fn execute_cli_pre_request(
         cmd.env(key, val);
     }
 
-    eprintln!("[DEBUG] cli_pre_request: spawning command: {} {}", config.command, resolved_args.join(" "));
-    let mut child = cmd.spawn().map_err(|error| ScenarioError::GrpcurlExecution {
-        message: format!(
-            "[cli_pre_request] {connector}/{suite}/{scenario}: failed to spawn '{}': {error}",
-            config.command
-        ),
-    })?;
-    eprintln!("[DEBUG] cli_pre_request: child process spawned with PID: {:?}", child.id());
+    eprintln!(
+        "[DEBUG] cli_pre_request: spawning command: {} {}",
+        config.command,
+        resolved_args.join(" ")
+    );
+    let mut child = cmd
+        .spawn()
+        .map_err(|error| ScenarioError::GrpcurlExecution {
+            message: format!(
+                "[cli_pre_request] {connector}/{suite}/{scenario}: failed to spawn '{}': {error}",
+                config.command
+            ),
+        })?;
+    eprintln!(
+        "[DEBUG] cli_pre_request: child process spawned with PID: {:?}",
+        child.id()
+    );
 
     // 6. Wait for the child process to exit
     eprintln!("[DEBUG] cli_pre_request: waiting for child process to exit...");
@@ -1006,7 +1022,10 @@ fn execute_cli_pre_request(
                 config.command
             ),
         })?;
-    eprintln!("[DEBUG] cli_pre_request: child process exited with status: {:?}", status);
+    eprintln!(
+        "[DEBUG] cli_pre_request: child process exited with status: {:?}",
+        status
+    );
 
     if !status.success() {
         let _ = std::fs::remove_file(&output_file);
@@ -1019,7 +1038,10 @@ fn execute_cli_pre_request(
     }
 
     // 7. Read and parse the CLI output JSON.
-    eprintln!("[DEBUG] cli_pre_request: reading output file: {}", output_file.display());
+    eprintln!(
+        "[DEBUG] cli_pre_request: reading output file: {}",
+        output_file.display()
+    );
     let output_content =
         std::fs::read_to_string(&output_file).map_err(|error| ScenarioError::GrpcurlExecution {
             message: format!(
@@ -1040,7 +1062,10 @@ fn execute_cli_pre_request(
     eprintln!("[DEBUG] cli_pre_request: parsed output JSON successfully");
 
     // 8. Apply output_map: inject CLI output fields into effective_req.
-    eprintln!("[DEBUG] cli_pre_request: applying output_map with {} entries", config.output_map.len());
+    eprintln!(
+        "[DEBUG] cli_pre_request: applying output_map with {} entries",
+        config.output_map.len()
+    );
     for (target_path, source_path) in &config.output_map {
         let Some(source_value) =
             lookup_json_path_with_case_fallback(&output_json, source_path).cloned()
@@ -1901,7 +1926,10 @@ fn execute_grpcurl_from_request(
     // Debug logging for grpcurl execution
     eprintln!("[DEBUG] Executing grpcurl command:");
     eprintln!("[DEBUG] grpcurl {}", args.join(" "));
-    eprintln!("[DEBUG] Endpoint: {}, Method: {}", request.endpoint, request.method);
+    eprintln!(
+        "[DEBUG] Endpoint: {}, Method: {}",
+        request.endpoint, request.method
+    );
 
     let output = Command::new("grpcurl")
         .args(&args)
@@ -2099,10 +2127,11 @@ pub fn execute_tonic_request_from_payload(
     let merchant_id = merchant_id.unwrap_or(DEFAULT_MERCHANT_ID).to_string();
     let tenant_id = tenant_id.unwrap_or(DEFAULT_TENANT_ID).to_string();
     let endpoint = endpoint.unwrap_or(DEFAULT_ENDPOINT).to_string();
-    let config = load_connector_config(&connector).map_err(|error| ScenarioError::CredentialLoad {
-        connector: connector.clone(),
-        message: error.to_string(),
-    })?;
+    let config =
+        load_connector_config(&connector).map_err(|error| ScenarioError::CredentialLoad {
+            connector: connector.clone(),
+            message: error.to_string(),
+        })?;
 
     let request_id = format!("{suite}_{scenario}_req");
     let connector_request_reference_id =
@@ -3060,79 +3089,82 @@ pub fn run_scenario_test_with_options(
                         suite: suite.to_string(),
                         scenario: scenario.to_string(),
                         is_dependency: false,
-                    passed: true,
-                    skipped: false,
-                    error: None,
-                    dependency: dependency_labels,
-                    req_body: Some(executed.effective_req),
-                    res_body: Some(executed.response_json),
-                    grpc_request: executed.grpc_request,
-                    grpc_response: executed.grpc_response,
-                });
-            }
-            Err(error) => {
-                failed += 1;
-                results.push(SuiteScenarioResult {
-                    suite: suite.to_string(),
-                    scenario: scenario.to_string(),
-                    is_dependency: false,
-                    passed: false,
-                    skipped: false,
-                    error: Some(error.to_string()),
-                    dependency: dependency_labels,
-                    req_body: Some(executed.effective_req),
-                    res_body: Some(executed.response_json),
-                    grpc_request: executed.grpc_request,
-                    grpc_response: executed.grpc_response,
-                });
+                        passed: true,
+                        skipped: false,
+                        error: None,
+                        dependency: dependency_labels,
+                        req_body: Some(executed.effective_req),
+                        res_body: Some(executed.response_json),
+                        grpc_request: executed.grpc_request,
+                        grpc_response: executed.grpc_response,
+                    });
+                }
+                Err(error) => {
+                    failed += 1;
+                    results.push(SuiteScenarioResult {
+                        suite: suite.to_string(),
+                        scenario: scenario.to_string(),
+                        is_dependency: false,
+                        passed: false,
+                        skipped: false,
+                        error: Some(error.to_string()),
+                        dependency: dependency_labels,
+                        req_body: Some(executed.effective_req),
+                        res_body: Some(executed.response_json),
+                        grpc_request: executed.grpc_request,
+                        grpc_response: executed.grpc_response,
+                    });
+                }
             }
         }
+        Err(ScenarioError::Skipped { reason }) => {
+            eprintln!(
+                "[test_ucs] assertion result for '{}': SKIP ({})",
+                scenario, reason
+            );
+            results.push(SuiteScenarioResult {
+                suite: suite.to_string(),
+                scenario: scenario.to_string(),
+                is_dependency: false,
+                passed: false,
+                skipped: true,
+                error: Some(reason),
+                dependency: dependency_labels,
+                req_body: None,
+                res_body: None,
+                grpc_request: None,
+                grpc_response: None,
+            });
+        }
+        Err(error) => {
+            failed += 1;
+            results.push(SuiteScenarioResult {
+                suite: suite.to_string(),
+                scenario: scenario.to_string(),
+                is_dependency: false,
+                passed: false,
+                skipped: false,
+                error: Some(error.to_string()),
+                dependency: dependency_labels,
+                req_body: None,
+                res_body: None,
+                grpc_request: None,
+                grpc_response: None,
+            });
+        }
     }
-    Err(ScenarioError::Skipped { reason }) => {
-        eprintln!(
-            "[test_ucs] assertion result for '{}': SKIP ({})",
-            scenario, reason
-        );
-        results.push(SuiteScenarioResult {
-            suite: suite.to_string(),
-            scenario: scenario.to_string(),
-            is_dependency: false,
-            passed: false,
-            skipped: true,
-            error: Some(reason),
-            dependency: dependency_labels,
-            req_body: None,
-            res_body: None,
-            grpc_request: None,
-            grpc_response: None,
-        });
-    }
-    Err(error) => {
-        failed += 1;
-        results.push(SuiteScenarioResult {
-            suite: suite.to_string(),
-            scenario: scenario.to_string(),
-            is_dependency: false,
-            passed: false,
-            skipped: false,
-            error: Some(error.to_string()),
-            dependency: dependency_labels,
-            req_body: None,
-            res_body: None,
-            grpc_request: None,
-            grpc_response: None,
-        });
-    }
-}
 
-Ok(SuiteRunSummary {
-    suite: suite.to_string(),
-    connector: connector.to_string(),
-    passed,
-    failed,
-    skipped: results.iter().filter(|r| r.skipped && !r.is_dependency).count(),
-    results,
-})
+    Ok(SuiteRunSummary {
+        suite: suite.to_string(),
+        connector: connector.to_string(),
+        passed,
+        failed,
+        skipped: results
+            .iter()
+            .filter(|r| r.skipped && !r.is_dependency)
+            .count(),
+        results,
+    })
 }
 
 /// Runs all supported suites for one connector using default options.
@@ -3522,7 +3554,10 @@ fn execute_dependency_chain(
         let dependency_suite = dependency.suite();
         let is_supported = is_suite_supported_for_connector(connector, dependency_suite)?;
         if !is_supported {
-            eprintln!("[DEBUG] Dependency suite '{}' not supported for connector '{}', skipping", dependency_suite, connector);
+            eprintln!(
+                "[DEBUG] Dependency suite '{}' not supported for connector '{}', skipping",
+                dependency_suite, connector
+            );
             continue;
         }
 
@@ -3533,7 +3568,10 @@ fn execute_dependency_chain(
         };
         let current_label = dependency_label(dependency_suite, &dependency_scenario);
 
-        eprintln!("[DEBUG] Executing dependency: {}/{} for connector {}", dependency_suite, dependency_scenario, connector);
+        eprintln!(
+            "[DEBUG] Executing dependency: {}/{} for connector {}",
+            dependency_suite, dependency_scenario, connector
+        );
 
         let dep_result = execute_single_scenario_with_context(
             dependency_suite,
@@ -3852,15 +3890,19 @@ fn maybe_sync_complete_authorize_pending(
         return Ok(());
     }
 
-    let Some(connector_transaction_id) = lookup_json_path_with_case_fallback(
-        effective_req,
-        "merchant_order_id",
-    )
-    .or_else(|| lookup_json_path_with_case_fallback(effective_req, "merchant_transaction_id"))
-    .or_else(|| lookup_json_path_with_case_fallback(response_json, "connector_transaction_id"))
-    .or_else(|| lookup_json_path_with_case_fallback(response_json, "connectorTransactionId"))
-    .and_then(Value::as_str)
-    .map(|value| value.to_string())
+    let Some(connector_transaction_id) =
+        lookup_json_path_with_case_fallback(effective_req, "merchant_order_id")
+            .or_else(|| {
+                lookup_json_path_with_case_fallback(effective_req, "merchant_transaction_id")
+            })
+            .or_else(|| {
+                lookup_json_path_with_case_fallback(response_json, "connector_transaction_id")
+            })
+            .or_else(|| {
+                lookup_json_path_with_case_fallback(response_json, "connectorTransactionId")
+            })
+            .and_then(Value::as_str)
+            .map(|value| value.to_string())
     else {
         return Ok(());
     };
@@ -4121,8 +4163,8 @@ mod tests {
         prune_unresolved_context_fields, run_test, DEFAULT_SCENARIO, DEFAULT_SUITE,
     };
     use crate::harness::scenario_loader::{
-        connector_spec_dir, discover_all_connectors, load_suite_scenarios,
-        load_suite_spec, load_supported_suites_for_connector,
+        connector_spec_dir, discover_all_connectors, load_suite_scenarios, load_suite_spec,
+        load_supported_suites_for_connector,
     };
     use crate::harness::scenario_types::ContextMap;
 
