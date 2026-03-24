@@ -140,9 +140,10 @@ ai:
 	command -v opencode >/dev/null 2>&1 && editors="$$editors opencode"; \
 	command -v cursor >/dev/null 2>&1 && editors="$$editors cursor"; \
 	command -v windsurf >/dev/null 2>&1 && editors="$$editors windsurf"; \
+	command -v codex >/dev/null 2>&1 && editors="$$editors codex"; \
 	editors=$$(echo $$editors | xargs); \
 	if [ -z "$$editors" ]; then \
-		echo "Error: No AI editors found. Install one of: claude, opencode, cursor, windsurf"; \
+		echo "Error: No AI editors found. Install one of: claude, opencode, cursor, windsurf, codex"; \
 		exit 1; \
 	fi; \
 	count=$$(echo $$editors | wc -w | xargs); \
@@ -159,10 +160,11 @@ ai:
 		opencode) mkdir -p .opencode && ln -sfn ../.skills .opencode/skills ;; \
 		cursor)   mkdir -p .cursor && ln -sfn ../.skills .cursor/rules ;; \
 		windsurf) mkdir -p .windsurf && ln -sfn ../.skills .windsurf/rules ;; \
+		codex)    mkdir -p .agents && ln -sfn ../.skills .agents/skills ;; \
 	esac; \
 	echo "Skills linked for $$choice"; \
 	case $$choice in \
-		claude|opencode) exec $$choice ;; \
+		claude|opencode|codex) exec $$choice ;; \
 		cursor|windsurf) exec $$choice . ;; \
 	esac
 
