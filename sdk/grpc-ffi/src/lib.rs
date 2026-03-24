@@ -298,6 +298,7 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
         Err(e) => encode_err(&e),
     };
 
+    // SAFETY: Caller guarantees `out_len` is valid (see `to_raw_buf` safety docs).
     unsafe { to_raw_buf(bytes, out_len) }
 }
 
