@@ -268,16 +268,20 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
     req_len: u32,
     out_len: *mut u32,
 ) -> *mut u8 {
+    // SAFETY: Caller guarantees `method_ptr` is a valid, null-terminated C string.
     let method = match unsafe { std::ffi::CStr::from_ptr(method_ptr) }.to_str() {
         Ok(s) => s,
         Err(e) => {
+            // SAFETY: Caller guarantees `out_len` is valid (see `to_raw_buf` safety docs).
             return unsafe {
                 to_raw_buf(encode_err(&format!("invalid method string: {e}")), out_len)
             }
         }
     };
 
+    // SAFETY: Caller guarantees `config_ptr` is valid for `config_len` bytes.
     let config_bytes = unsafe { std::slice::from_raw_parts(config_ptr, config_len as usize) };
+    // SAFETY: Caller guarantees `req_ptr` is valid for `req_len` bytes.
     let req_bytes = unsafe { std::slice::from_raw_parts(req_ptr, req_len as usize) };
 
     let cfg: GrpcConfigInput = match serde_json::from_slice(config_bytes) {
