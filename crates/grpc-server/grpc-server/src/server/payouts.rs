@@ -32,9 +32,14 @@ impl PayoutService for Payouts {
         request: tonic::Request<PayoutServiceCreateRequest>,
     ) -> Result<tonic::Response<PayoutServiceCreateResponse>, tonic::Status> {
         let config = get_config_from_request(&request)?;
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PayoutService".to_string());
         grpc_logging_wrapper(
             request,
-            "PAYOUT_CREATE",
+            &service_name,
             config,
             FlowName::PayoutCreate,
             |request_data| self.internal_payout_create(request_data),
