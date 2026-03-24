@@ -33,7 +33,7 @@ pub fn process_webhook_event<
         + serde::de::DeserializeOwned
         + Clone
         + Sync
-        + CardConversionHelper<T>
+        + CardConversionHelper
         + 'static,
 >(
     connector_data: ConnectorData<T>,
@@ -189,7 +189,7 @@ pub fn get_refunds_webhook_content<
         + serde::de::DeserializeOwned
         + Clone
         + Sync
-        + CardConversionHelper<T>
+        + CardConversionHelper
         + 'static,
 >(
     connector_data: ConnectorData<T>,
@@ -231,7 +231,7 @@ pub fn get_disputes_webhook_content<
         + serde::de::DeserializeOwned
         + Clone
         + Sync
-        + CardConversionHelper<T>
+        + CardConversionHelper
         + 'static,
 >(
     connector_data: ConnectorData<T>,

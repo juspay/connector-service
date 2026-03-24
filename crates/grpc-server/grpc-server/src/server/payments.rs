@@ -306,7 +306,7 @@ impl Customer {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>
+            + domain_types::types::CardConversionHelper
             + 'static,
     >(
         &self,
@@ -436,7 +436,7 @@ impl Customer {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>
+            + domain_types::types::CardConversionHelper
             + 'static,
     >(
         &self,
@@ -715,7 +715,7 @@ impl Payments {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>
+            + domain_types::types::CardConversionHelper
             + 'static,
     >(
         &self,
@@ -925,7 +925,7 @@ impl Payments {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>,
+            + domain_types::types::CardConversionHelper,
     >(
         &self,
         config: &Arc<Config>,
@@ -1097,7 +1097,7 @@ impl Payments {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>,
+            + domain_types::types::CardConversionHelper,
     >(
         &self,
         config: &Arc<Config>,
@@ -1216,7 +1216,7 @@ impl Payments {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>,
+            + domain_types::types::CardConversionHelper,
     >(
         &self,
         config: &Arc<Config>,
@@ -2736,7 +2736,7 @@ impl MerchantAuthentication {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>
+            + domain_types::types::CardConversionHelper
             + 'static,
         P: serde::Serialize + Clone,
     >(
@@ -2873,7 +2873,7 @@ impl MerchantAuthentication {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>
+            + domain_types::types::CardConversionHelper
             + 'static,
     >(
         &self,
@@ -3000,7 +3000,7 @@ impl MerchantAuthentication {
             + serde::de::DeserializeOwned
             + Clone
             + Sync
-            + domain_types::types::CardConversionHelper<T>
+            + domain_types::types::CardConversionHelper
             + 'static,
     >(
         &self,

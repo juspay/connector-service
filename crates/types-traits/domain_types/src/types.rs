@@ -869,7 +869,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     > ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<T>
 {
     type Error = ApplicationErrorResponse;
@@ -884,14 +884,8 @@ impl<
                 // ============================================================================
                 // CARD METHODS
                 // ============================================================================
-                grpc_api_types::payments::payment_method::PaymentMethod::Card(card_details) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
-                    Ok(Self::Card(card))
-                }
-                grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(
-                    card_details,
-                ) => {
-                    let card = payment_method_data::Card::<T>::foreign_try_from(card_details)?;
+                i@ grpc_api_types::payments::payment_method::PaymentMethod::Card(_) | i@grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(_) => {
+                    let card = T::convert_card(i)?;
                     Ok(Self::Card(card))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::CardRedirect(
@@ -2287,26 +2281,25 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
 // Each implementation handles exactly one card type:
 //   - DefaultPCIHolder handles CardDetails (and rejects ProxyCardDetails)
 //   - VaultTokenHolder handles ProxyCardDetails (and rejects CardDetails)
-pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
-    type CardType;
+pub trait CardConversionHelper where Self: PaymentMethodDataTypes {
     fn convert_card(
-        card: Self::CardType,
-    ) -> Result<payment_method_data::Card<T>, error_stack::Report<ApplicationErrorResponse>>;
+        card: grpc_api_types::payments::payment_method::PaymentMethod,
+    ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>;
 }
 
-// Implementation for DefaultPCIHolder — accepts only CardDetails
-impl CardConversionHelper<Self> for DefaultPCIHolder {
-    type CardType = grpc_api_types::payments::CardDetails;
+impl CardConversionHelper for DefaultPCIHolder {
     fn convert_card(
-        card: Self::CardType,
-    ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>
-    {
-        let card_network = match card.card_network() {
+            card: grpc_api_types::payments::payment_method::PaymentMethod,
+        ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>> {
+        match card {
+            grpc_api_types::payments::payment_method::PaymentMethod::Card(details) => {
+
+        let card_network = match details.card_network() {
             grpc_api_types::payments::CardNetwork::Unspecified => None,
-            _ => Some(CardNetwork::foreign_try_from(card.card_network())?),
+            _ => Some(CardNetwork::foreign_try_from(details.card_network())?),
         };
         Ok(payment_method_data::Card {
-            card_number: RawCardNumber::<Self>(card.card_number.ok_or(
+            card_number: RawCardNumber::<Self>(details.card_number.ok_or(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_CARD_NUMBER".to_owned(),
                     error_identifier: 400,
@@ -2314,7 +2307,7 @@ impl CardConversionHelper<Self> for DefaultPCIHolder {
                     error_object: None,
                 }),
             )?),
-            card_exp_month: card
+            card_exp_month: details
                 .card_exp_month
                 .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_EXP_MONTH".to_owned(),
@@ -2322,7 +2315,7 @@ impl CardConversionHelper<Self> for DefaultPCIHolder {
                     error_message: "Missing Card Expiry Month".to_owned(),
                     error_object: None,
                 }))?,
-            card_exp_year: card
+            card_exp_year: details
                 .card_exp_year
                 .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_EXP_YEAR".to_owned(),
@@ -2330,7 +2323,7 @@ impl CardConversionHelper<Self> for DefaultPCIHolder {
                     error_message: "Missing Card Expiry Year".to_owned(),
                     error_object: None,
                 }))?,
-            card_cvc: card
+            card_cvc: details
                 .card_cvc
                 .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_CVC".to_owned(),
@@ -2338,32 +2331,39 @@ impl CardConversionHelper<Self> for DefaultPCIHolder {
                     error_message: "Missing CVC".to_owned(),
                     error_object: None,
                 }))?,
-            card_issuer: card.card_issuer,
+            card_issuer: details.card_issuer,
             card_network,
-            card_type: card.card_type,
-            card_issuing_country: card.card_issuing_country_alpha2,
-            bank_code: card.bank_code,
-            nick_name: card.nick_name.map(|name| name.into()),
-            card_holder_name: card.card_holder_name,
+            card_type: details.card_type,
+            card_issuing_country: details.card_issuing_country_alpha2,
+            bank_code: details.bank_code,
+            nick_name: details.nick_name.map(|name| name.into()),
+            card_holder_name: details.card_holder_name,
             co_badged_card_data: None,
-        })
+        })            },
+            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "Invalid pattern".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing card number".to_owned(),
+                    error_object: None,
+                }))),
+        }
     }
 }
 
 
-// Implementation for VaultTokenHolder — accepts only ProxyCardDetails
-impl CardConversionHelper<Self> for VaultTokenHolder {
-    type CardType = grpc_api_types::payments::ProxyCardDetails;
+impl CardConversionHelper for VaultTokenHolder {
     fn convert_card(
-        card: Self::CardType,
-    ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>>
-    {
-        let card_network = match card.card_network() {
+            card: grpc_api_types::payments::payment_method::PaymentMethod,
+        ) -> Result<payment_method_data::Card<Self>, error_stack::Report<ApplicationErrorResponse>> {
+        match card {
+            grpc_api_types::payments::payment_method::PaymentMethod::CardProxy(details) => {
+
+        let card_network = match details.card_network() {
             grpc_api_types::payments::CardNetwork::Unspecified => None,
-            _ => Some(CardNetwork::foreign_try_from(card.card_network())?),
+            _ => Some(CardNetwork::foreign_try_from(details.card_network())?),
         };
         Ok(payment_method_data::Card {
-            card_number: RawCardNumber::<Self>(card.card_number.ok_or(
+            card_number: RawCardNumber::<Self>(details.card_number.ok_or(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_CARD_NUMBER".to_owned(),
                     error_identifier: 400,
@@ -2371,7 +2371,7 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
                     error_object: None,
                 }),
             )?),
-            card_exp_month: card
+            card_exp_month: details
                 .card_exp_month
                 .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_EXP_MONTH".to_owned(),
@@ -2379,7 +2379,7 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
                     error_message: "Missing Card Expiry Month".to_owned(),
                     error_object: None,
                 }))?,
-            card_exp_year: card
+            card_exp_year: details
                 .card_exp_year
                 .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_EXP_YEAR".to_owned(),
@@ -2387,7 +2387,7 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
                     error_message: "Missing Card Expiry Year".to_owned(),
                     error_object: None,
                 }))?,
-            card_cvc: card
+            card_cvc: details
                 .card_cvc
                 .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_CVC".to_owned(),
@@ -2395,39 +2395,25 @@ impl CardConversionHelper<Self> for VaultTokenHolder {
                     error_message: "Missing CVC".to_owned(),
                     error_object: None,
                 }))?,
-            card_issuer: card.card_issuer,
+            card_issuer: details.card_issuer,
             card_network,
-            card_type: card.card_type,
-            card_issuing_country: card.card_issuing_country_alpha2,
-            bank_code: card.bank_code,
-            nick_name: card.nick_name.map(|name| name.into()),
-            card_holder_name: card.card_holder_name,
+            card_type: details.card_type,
+            card_issuing_country: details.card_issuing_country_alpha2,
+            bank_code: details.bank_code,
+            nick_name: details.nick_name.map(|name| name.into()),
+            card_holder_name: details.card_holder_name,
             co_badged_card_data: None,
-        })
+        })            },
+            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "Invalid pattern".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing card number".to_owned(),
+                    error_object: None,
+                }))),
+        }
     }
 }
 
-// Generic ForeignTryFrom for CardDetails → Card<T>
-impl<T> ForeignTryFrom<T::CardType> for payment_method_data::Card<T>
-where
-    T: PaymentMethodDataTypes
-        + Default
-        + Debug
-        + Send
-        + Eq
-        + PartialEq
-        + Serialize
-        + serde::de::DeserializeOwned
-        + Clone
-        + CardConversionHelper<T>,
-{
-    type Error = ApplicationErrorResponse;
-    fn foreign_try_from(
-        card: T::CardType,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        T::convert_card(card)
-    }
-}
 
 // // Generic ForeignTryFrom for ProxyCardDetails → Card<T>
 // impl<T> ForeignTryFrom<grpc_api_types::payments::ProxyCardDetails>
@@ -2442,7 +2428,7 @@ where
 //         + Serialize
 //         + serde::de::DeserializeOwned
 //         + Clone
-//         + CardConversionHelper<T>,
+//         + CardConversionHelper,
 // {
 //     type Error = ApplicationErrorResponse;
 //     fn foreign_try_from(
@@ -2623,7 +2609,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     > ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData<T>
 {
     type Error = ApplicationErrorResponse;
@@ -7406,7 +7392,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     > ForeignTryFrom<PaymentServiceSetupRecurringRequest> for SetupMandateRequestData<T>
 {
     type Error = ApplicationErrorResponse;
@@ -8985,7 +8971,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     > ForeignTryFrom<grpc_api_types::payments::PaymentMethodServiceTokenizeRequest>
     for PaymentMethodTokenizationData<T>
 {
@@ -9322,7 +9308,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     > ForeignTryFrom<grpc_api_types::payments::RecurringPaymentServiceChargeRequest>
     for RepeatPaymentData<T>
 {
@@ -10275,7 +10261,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     >
     ForeignTryFrom<
         grpc_api_types::payments::PaymentMethodAuthenticationServicePreAuthenticateRequest,
@@ -10383,7 +10369,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     >
     ForeignTryFrom<grpc_api_types::payments::PaymentMethodAuthenticationServiceAuthenticateRequest>
     for PaymentsAuthenticateData<T>
@@ -10506,7 +10492,7 @@ impl<
             + Serialize
             + serde::de::DeserializeOwned
             + Clone
-            + CardConversionHelper<T>,
+            + CardConversionHelper,
     >
     ForeignTryFrom<
         grpc_api_types::payments::PaymentMethodAuthenticationServicePostAuthenticateRequest,
