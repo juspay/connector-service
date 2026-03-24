@@ -20,24 +20,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{connectors::worldpayvantiv::WorldpayvantivRouterData, types::ResponseRouterData};
 
-// Helper function to extract report group from connector metadata
-fn extract_report_group(
-    connector_feature_data: &Option<Secret<serde_json::Value>>,
-) -> Option<String> {
-    connector_feature_data.as_ref().and_then(|metadata| {
-        let metadata_value = metadata.peek();
-        if let serde_json::Value::String(metadata_str) = metadata_value {
-            // Try to parse the metadata string as JSON
-            serde_json::from_str::<WorldpayvantivMetadataObject>(metadata_str)
-                .ok()
-                .map(|obj| obj.report_group)
-        } else {
-            // Try to parse metadata directly as object
-            serde_json::from_value::<WorldpayvantivMetadataObject>(metadata_value.clone())
-                .ok()
-                .map(|obj| obj.report_group)
-        }
-    })
+// Helper function to extract report group from connector config
+fn extract_report_group(connector_config: &ConnectorSpecificConfig) -> Option<String> {
+    WorldpayvantivAuthType::try_from(connector_config)
+        .ok()
+        .and_then(|auth| auth.report_group)
 }
 
 fn extract_customer_id(customer_id: &Option<CustomerId>) -> Option<String> {
@@ -49,18 +36,6 @@ fn extract_customer_id(customer_id: &Option<CustomerId>) -> Option<String> {
             None
         }
     })
-}
-
-// Metadata structures for WorldpayVantiv
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct WorldpayvantivMetadataObject {
-    pub report_group: String,
-    pub merchant_config_currency: Currency,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct WorldpayvantivPaymentMetadata {
-    pub report_group: Option<String>,
 }
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -176,9 +151,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let amount = item.router_data.request.minor_amount;
 
         // Extract report group from metadata or use default
-        let report_group =
-            extract_report_group(&item.router_data.resource_common_data.connector_feature_data)
-                .unwrap_or_else(|| "rtpGrp".to_string());
+        let report_group = extract_report_group(&item.router_data.connector_config)
+            .unwrap_or_else(|| "rtpGrp".to_string());
 
         let bill_to_address = get_billing_address(&item.router_data.resource_common_data);
         let ship_to_address = get_shipping_address(&item.router_data.resource_common_data);
@@ -1822,9 +1796,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Extract report_group from connector_feature_data
-        let report_group =
-            extract_report_group(&item.router_data.resource_common_data.connector_feature_data)
-                .unwrap_or_else(|| "rtpGrp".to_string());
+        let report_group = extract_report_group(&item.router_data.connector_config)
+            .unwrap_or_else(|| "rtpGrp".to_string());
 
         let capture = CaptureRequest {
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
@@ -1883,9 +1856,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Extract report group from metadata or use default
-        let report_group =
-            extract_report_group(&item.router_data.resource_common_data.connector_feature_data)
-                .unwrap_or_else(|| "rtpGrp".to_string());
+        let report_group = extract_report_group(&item.router_data.connector_config)
+            .unwrap_or_else(|| "rtpGrp".to_string());
 
         // For pre-capture void, use AuthReversal
         let auth_reversal = AuthReversal {
@@ -2025,9 +1997,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Extract report group from metadata or use default
-        let report_group =
-            extract_report_group(&item.router_data.resource_common_data.connector_feature_data)
-                .unwrap_or_else(|| "rtpGrp".to_string());
+        let report_group = extract_report_group(&item.router_data.connector_config)
+            .unwrap_or_else(|| "rtpGrp".to_string());
 
         let void = VoidRequest {
             id: format!("{}_{}", OperationId::VoidPC, merchant_txn_id),
@@ -2173,9 +2144,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Extract report_group from connector_feature_data
-        let report_group =
-            extract_report_group(&item.router_data.resource_common_data.connector_feature_data)
-                .unwrap_or_else(|| "rtpGrp".to_string());
+        let report_group = extract_report_group(&item.router_data.connector_config)
+            .unwrap_or_else(|| "rtpGrp".to_string());
 
         let capture = CaptureRequest {
             id: format!("{}_{}", OperationId::Capture, merchant_txn_id),
@@ -2311,9 +2281,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
             .clone();
 
         // Extract report_group from connector_feature_data
-        let report_group =
-            extract_report_group(&item.router_data.resource_common_data.connector_feature_data)
-                .unwrap_or_else(|| "rtpGrp".to_string());
+        let report_group = extract_report_group(&item.router_data.connector_config)
+            .unwrap_or_else(|| "rtpGrp".to_string());
 
         let void = VoidRequest {
             id: format!("{}_{}", OperationId::Void, merchant_txn_id),
