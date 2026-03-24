@@ -5042,30 +5042,38 @@ pub(crate) fn get_adyen_refund_webhook_event(
     }
 }
 
-pub(crate) fn get_adyen_webhook_event_type(code: WebhookEventCode) -> EventType {
+pub(crate) fn get_adyen_webhook_event_type(
+    code: WebhookEventCode,
+) -> Result<EventType, errors::ConnectorError> {
     match code {
         WebhookEventCode::Authorisation | WebhookEventCode::RecurringContract => {
-            EventType::PaymentIntentAuthorizationSuccess
+            Ok(EventType::PaymentIntentAuthorizationSuccess)
         }
-        WebhookEventCode::AuthorisationAdjustment => EventType::PaymentIntentAuthorizationSuccess,
-        WebhookEventCode::Cancellation => EventType::PaymentIntentCancelled,
-        WebhookEventCode::Capture => EventType::PaymentIntentCaptureSuccess,
-        WebhookEventCode::CaptureFailed => EventType::PaymentIntentCaptureFailure,
-        WebhookEventCode::OfferClosed => EventType::PaymentIntentExpired,
-        WebhookEventCode::Refund | WebhookEventCode::CancelOrRefund => EventType::RefundSuccess,
+        WebhookEventCode::AuthorisationAdjustment => {
+            Ok(EventType::PaymentIntentAuthorizationSuccess)
+        }
+        WebhookEventCode::Cancellation => Ok(EventType::PaymentIntentCancelled),
+        WebhookEventCode::Capture => Ok(EventType::PaymentIntentCaptureSuccess),
+        WebhookEventCode::CaptureFailed => Ok(EventType::PaymentIntentCaptureFailure),
+        WebhookEventCode::OfferClosed => Ok(EventType::PaymentIntentExpired),
+        WebhookEventCode::Refund | WebhookEventCode::CancelOrRefund => {
+            Ok(EventType::RefundSuccess)
+        }
         WebhookEventCode::RefundFailed | WebhookEventCode::RefundReversed => {
-            EventType::RefundFailure
+            Ok(EventType::RefundFailure)
         }
         WebhookEventCode::NotificationOfChargeback | WebhookEventCode::Chargeback => {
-            EventType::DisputeOpened
+            Ok(EventType::DisputeOpened)
         }
         WebhookEventCode::ChargebackReversed | WebhookEventCode::PrearbitrationWon => {
-            EventType::DisputeWon
+            Ok(EventType::DisputeWon)
         }
         WebhookEventCode::SecondChargeback | WebhookEventCode::PrearbitrationLost => {
-            EventType::DisputeLost
+            Ok(EventType::DisputeLost)
         }
-        WebhookEventCode::Unknown => EventType::PaymentIntentAuthorizationSuccess, // Default fallback
+        WebhookEventCode::Unknown => {
+            Err(errors::ConnectorError::WebhookEventTypeNotFound)
+        }
     }
 }
 
