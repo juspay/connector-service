@@ -35,6 +35,7 @@ Extract and report:
    - CreateSessionToken: session init before payment → YES/NO
 
 If the tech spec is missing or incomplete, report FAILED with what's missing.
+The orchestrator must then invoke the generate-tech-spec skill before retrying.
 
 Output format:
   CONNECTOR: {ConnectorName}

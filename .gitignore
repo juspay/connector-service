@@ -433,6 +433,7 @@ sdk/java/bin
 artifacts/
 sdk/tests/client_sanity/artifacts/
 
+.claude
 
 # Generated proto descriptor files
 scripts/generators/code/services.desc

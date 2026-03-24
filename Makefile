@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push
+.PHONY: all fmt check clippy test nextest ci help proto-format proto-generate proto-build proto-lint proto-clean generate certify-client-sanity field-probe docs docs-check test-ucs validate-pre-push ai
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -133,6 +133,39 @@ docs-check:
 	@echo "▶ Checking connector annotation coverage…"
 	python3 scripts/generators/docs/generate.py --check
 
+## Launch AI editor with skills
+ai:
+	@editors=""; \
+	command -v claude >/dev/null 2>&1 && editors="$$editors claude"; \
+	command -v opencode >/dev/null 2>&1 && editors="$$editors opencode"; \
+	command -v cursor >/dev/null 2>&1 && editors="$$editors cursor"; \
+	command -v windsurf >/dev/null 2>&1 && editors="$$editors windsurf"; \
+	editors=$$(echo $$editors | xargs); \
+	if [ -z "$$editors" ]; then \
+		echo "Error: No AI editors found. Install one of: claude, opencode, cursor, windsurf"; \
+		exit 1; \
+	fi; \
+	count=$$(echo $$editors | wc -w | xargs); \
+	if [ "$$count" -eq 1 ]; then \
+		choice=$$editors; \
+	else \
+		echo "Multiple AI editors detected:"; \
+		i=1; for e in $$editors; do echo "  $$i) $$e"; i=$$((i+1)); done; \
+		printf "Choose editor [1-$$count]: "; read sel; \
+		choice=$$(echo $$editors | cut -d' ' -f$$sel); \
+	fi; \
+	case $$choice in \
+		claude)   mkdir -p .claude && ln -sfn ../.skills .claude/skills ;; \
+		opencode) mkdir -p .opencode && ln -sfn ../.skills .opencode/skills ;; \
+		cursor)   mkdir -p .cursor && ln -sfn ../.skills .cursor/rules ;; \
+		windsurf) mkdir -p .windsurf && ln -sfn ../.skills .windsurf/rules ;; \
+	esac; \
+	echo "Skills linked for $$choice"; \
+	case $$choice in \
+		claude|opencode) exec $$choice ;; \
+		cursor|windsurf) exec $$choice . ;; \
+	esac
+
 ## Show this help
 help:
 	@echo "Usage: make [TARGET]"
@@ -166,6 +199,9 @@ help:
 	@echo "  docs-check   Report which connectors are missing annotation files"
 	@echo "Certification Targets:"
 	@echo "  certify-client-sanity  Run cross-language transport parity certification"
+	@echo
+	@echo "AI Targets:"
+	@echo "  ai       Detect AI editor, set up skills symlink, and launch"
 	@echo
 	@echo "Other Targets:"
 	@echo "  test-ucs Run interactive UCS connector tests"

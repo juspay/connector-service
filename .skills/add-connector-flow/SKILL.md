@@ -17,8 +17,11 @@ metadata:
 
 ## Overview
 
-Adds specific payment flows to an existing connector. Every step is delegatable to a
-subagent. Full subagent prompts are in `references/subagent-prompts.md`.
+Adds specific payment flows to an existing connector.
+
+**MANDATORY SUBAGENT DELEGATION: You are the orchestrator. You MUST delegate every step
+to a subagent using the prompts in `references/subagent-prompts.md`. Do NOT implement
+code, run tests, or review quality yourself. Spawn subagents and coordinate their outputs.**
 
 **Inputs:** connector name + list of flows to add (e.g., "add Refund and RSync to AcmePay")
 **Output:** requested flows implemented, tested, and quality-reviewed
@@ -82,20 +85,25 @@ Include in every subagent prompt:
 
 **Outputs:** existing_flows, implementation_order, missing_prerequisites
 
-**Gate:** If prerequisites missing → STOP, inform user what to add first.
+**Gates:**
+- If tech spec missing → invoke the `generate-tech-spec` skill first. Do NOT proceed without it.
+- If prerequisites missing → STOP, inform user what to add first.
 
 ---
 
-### Step 2: Flow Implementation (Subagent per flow, sequential)
+### Step 2: Flow Implementation (MANDATORY subagent per flow, sequential)
 
-> **Subagent prompt:** `references/subagent-prompts.md` → Subagent 2
+> **CRITICAL: You MUST delegate each flow to a subagent. Do NOT implement code yourself.**
+> Read the subagent prompt from `references/subagent-prompts.md` → Subagent 2, fill in the
+> variables ({ConnectorName}, {FlowName}, tech spec path), and spawn a subagent for EACH flow.
+> Wait for each subagent to complete before spawning the next.
+
 > **Detailed procedure:** `references/flow-implementation-guide.md`
 > **Per-flow patterns:** `references/flow-patterns/{flow}.md`
 
-Implement each flow in the resolved order from Step 1. Wait for each to complete
-before starting the next.
+Implement each flow in the resolved order from Step 1. **Spawn one subagent per flow.**
 
-**Per-flow subagent does:**
+**Each flow subagent does:**
 1. Reads tech spec for this flow's endpoint
 2. Reads `references/flow-patterns/{flow}.md`
 3. Adds flow to `create_all_prerequisites!`
@@ -139,8 +147,9 @@ before starting the next.
 
 ---
 
-### Step 3: gRPC Testing (Subagent)
+### Step 3: gRPC Testing (MANDATORY subagent)
 
+> **CRITICAL: You MUST delegate testing to a subagent. Do NOT run grpcurl yourself.**
 > **Subagent prompt:** `references/subagent-prompts.md` → Subagent 3
 > **Testing guide:** `references/grpc-testing-guide.md`
 
@@ -170,8 +179,9 @@ before starting the next.
 
 ---
 
-### Step 4: Quality Review (Subagent)
+### Step 4: Quality Review (MANDATORY subagent)
 
+> **CRITICAL: You MUST delegate quality review to a subagent. Do NOT review yourself.**
 > **Subagent prompt:** `references/subagent-prompts.md` → Subagent 4
 > **Checklist:** `references/quality-checklist.md`
 

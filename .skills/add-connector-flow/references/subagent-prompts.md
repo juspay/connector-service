@@ -21,6 +21,11 @@ Dependency reference: .skills/add-connector-flow/references/flow-dependencies.md
 Instructions:
 1. Verify the connector exists at the expected path. If not → FAILED.
 
+2a. Check tech spec exists at:
+    grace/rulesbook/codegen/references/{connector_name}/technical_specification.md
+    or: grace/rulesbook/codegen/references/specs/{connector_name}.md
+    If missing → FAILED with reason "Tech spec not found. Run generate-tech-spec skill first."
+
 2. Read the connector file and identify which flows are already in create_all_prerequisites!
    List them as EXISTING_FLOWS.
 

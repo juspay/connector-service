@@ -17,8 +17,11 @@ metadata:
 
 ## Overview
 
-Adds payment method support to an existing connector's Authorize flow. Every step is
-delegatable to a subagent. Full subagent prompts in `references/subagent-prompts.md`.
+Adds payment method support to an existing connector's Authorize flow.
+
+**MANDATORY SUBAGENT DELEGATION: You are the orchestrator. You MUST delegate every step
+to a subagent using the prompts in `references/subagent-prompts.md`. Do NOT implement
+code, run tests, or review quality yourself. Spawn subagents and coordinate their outputs.**
 
 **Inputs:** connector name + payment methods to add (e.g., "add Apple Pay and Google Pay to AcmePay")
 **Output:** payment methods implemented, tested, quality-reviewed
@@ -72,16 +75,23 @@ Full PM name → category mapping: `references/category-mapping.md`
 
 **Outputs:** category mapping per PM, existing PMs, implementation plan
 
-**Gate:** If Authorize flow missing → STOP, use `add-connector-flow` skill first.
+**Gates:**
+- If tech spec missing → invoke the `generate-tech-spec` skill first. Do NOT proceed without it.
+- If Authorize flow missing → invoke the `add-connector-flow` skill to add Authorize first.
 
 ---
 
-### Step 2: Payment Method Implementation (Subagent per PM or category)
+### Step 2: Payment Method Implementation (MANDATORY subagent per PM or category)
 
-> **Subagent prompt:** `references/subagent-prompts.md` → Subagent 2
+> **CRITICAL: You MUST delegate implementation to a subagent. Do NOT implement code yourself.**
+> Read the subagent prompt from `references/subagent-prompts.md` → Subagent 2, fill in the
+> variables ({ConnectorName}, {PaymentMethod}, {Category}, pattern file path), and spawn a subagent.
+> For multiple PMs in the same category (e.g., Apple Pay + Google Pay = both Wallet), you may
+> use one subagent for the whole category.
+
 > **Per-category patterns:** `references/payment-method-patterns/{category}.md`
 
-For each payment method, the subagent:
+Each PM subagent:
 1. Reads the category pattern file
 2. Finds the `match payment_method_data` block in the Authorize TryFrom
 3. Adds match arm for the new PM variant
@@ -92,8 +102,9 @@ For each payment method, the subagent:
 
 ---
 
-### Step 3: gRPC Testing (Subagent)
+### Step 3: gRPC Testing (MANDATORY subagent)
 
+> **CRITICAL: You MUST delegate testing to a subagent. Do NOT run grpcurl yourself.**
 > **Subagent prompt:** `references/subagent-prompts.md` → Subagent 3
 > **Testing guide:** `references/grpc-testing-guide.md`
 
@@ -112,8 +123,9 @@ Also tests Refund/Capture with new PMs if those flows were modified.
 
 ---
 
-### Step 4: Quality Review (Subagent)
+### Step 4: Quality Review (MANDATORY subagent)
 
+> **CRITICAL: You MUST delegate quality review to a subagent. Do NOT review yourself.**
 > **Subagent prompt:** `references/subagent-prompts.md` → Subagent 4
 
 **Checks:**

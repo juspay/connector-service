@@ -22,6 +22,11 @@ Requested payment methods: {payment_methods}
 Instructions:
 1. Verify the connector exists. If not → FAILED.
 
+1a. Check tech spec exists at:
+    grace/rulesbook/codegen/references/{connector_name}/technical_specification.md
+    or: grace/rulesbook/codegen/references/specs/{connector_name}.md
+    If missing → FAILED with reason "Tech spec not found. Run generate-tech-spec skill first."
+
 2. Verify the Authorize flow is implemented (check create_all_prerequisites! for flow: Authorize).
    If Authorize is missing → FAILED, must add Authorize first.
 

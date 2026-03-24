@@ -17,8 +17,11 @@ metadata:
 
 ## Overview
 
-This skill produces a complete payment connector in the UCS Rust codebase. Every step is
-delegatable to a subagent. Full subagent prompts are in `references/subagent-prompts.md`.
+This skill produces a complete payment connector in the UCS Rust codebase.
+
+**MANDATORY SUBAGENT DELEGATION: You are the orchestrator. You MUST delegate every step
+to a subagent using the prompts in `references/subagent-prompts.md`. Do NOT implement
+code, run tests, or review quality yourself. Spawn subagents and coordinate their outputs.**
 
 **Output:**
 - Main connector file with macro-based flow implementations
@@ -86,7 +89,8 @@ waits for completion, and passes outputs to the next step.
 
 **Outputs:** connector config, list of flows, list of pre-auth flows
 
-**Gate:** If tech spec missing → STOP, use `generate-tech-spec` skill first.
+**Gate:** If tech spec missing → invoke the `generate-tech-spec` skill to discover
+API docs and produce the spec. Do NOT proceed without a tech spec.
 
 ---
 
@@ -110,14 +114,18 @@ waits for completion, and passes outputs to the next step.
 
 ---
 
-### Step 3: Flow Implementation (Subagent per flow, sequential)
+### Step 3: Flow Implementation (MANDATORY subagent per flow, sequential)
 
-> **Subagent prompt:** `references/subagent-prompts.md` → Subagent 3
+> **CRITICAL: You MUST delegate each flow to a subagent. Do NOT implement code yourself.**
+> Read the subagent prompt from `references/subagent-prompts.md` → Subagent 3, fill in the
+> variables ({ConnectorName}, {FlowName}, tech spec path), and spawn a subagent for EACH flow.
+> Wait for each subagent to complete before spawning the next.
+
 > **Detailed procedure:** `references/flow-implementation-guide.md`
 > **Per-flow patterns:** `references/flow-patterns/{flow}.md`
 > **Macro reference:** `references/macro-reference.md`
 
-**Execution order** (strict sequential, wait for each before starting next):
+**Execution order** (strict sequential — spawn one subagent per flow, wait for completion):
 
 1. Pre-auth flows (only if detected in Step 1):
    CreateAccessToken → CreateOrder → CreateConnectorCustomer → PaymentMethodToken → CreateSessionToken
@@ -125,7 +133,7 @@ waits for completion, and passes outputs to the next step.
 2. Core flows (always):
    Authorize → PSync → Capture → Refund → RSync → Void
 
-**Per-flow subagent does:**
+**Each flow subagent does:**
 1. Reads tech spec for this flow's endpoint details
 2. Reads `references/flow-patterns/{flow}.md` for patterns
 3. Adds flow to `create_all_prerequisites!` with correct types
@@ -148,8 +156,9 @@ waits for completion, and passes outputs to the next step.
 
 ---
 
-### Step 4: gRPC Testing (Subagent)
+### Step 4: gRPC Testing (MANDATORY subagent)
 
+> **CRITICAL: You MUST delegate testing to a subagent. Do NOT run grpcurl yourself.**
 > **Subagent prompt:** `references/subagent-prompts.md` → Subagent 4
 > **Full testing guide:** `references/grpc-testing-guide.md`
 
@@ -179,8 +188,9 @@ waits for completion, and passes outputs to the next step.
 
 ---
 
-### Step 5: Quality Review (Subagent)
+### Step 5: Quality Review (MANDATORY subagent)
 
+> **CRITICAL: You MUST delegate quality review to a subagent. Do NOT review yourself.**
 > **Subagent prompt:** `references/subagent-prompts.md` → Subagent 5
 > **Checklist:** `references/quality-checklist.md`
 
