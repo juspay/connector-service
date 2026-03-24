@@ -97,6 +97,7 @@ FLOW_META = [
     ("handle_event",             "event",            "handle_event",        "_build_handle_event_request",           "none"),
     ("create_access_token",      "merchant_authentication", "create_access_token",  "_build_create_access_token_request",  "none"),
     ("create_session_token",     "merchant_authentication", "create_session_token", "_build_create_session_token_request", "none"),
+    ("create_sdk_session_token", "merchant_authentication", "create_sdk_session_token", "_build_create_sdk_session_token_request", "none"),
 ]
 
 # capture/void: run inline MANUAL authorize first (AUTOMATIC txn_id can't be captured)
