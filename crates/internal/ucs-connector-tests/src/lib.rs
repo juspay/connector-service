@@ -5,4 +5,5 @@
 //! Most runtime behavior lives under `harness`, while binaries under `src/bin`
 //! wire CLI argument parsing and reporting around these reusable primitives.
 
+pub mod generator_core;
 pub mod harness;
