@@ -74,6 +74,24 @@ def to_snake_case(name: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s).lower()
 
 
+def _service_flow_prefix(service_name: str) -> str | None:
+    """
+    Derive the transformer name prefix for services whose RPCs collide with
+    PaymentService.  Only services of the form ``{Prefix}PaymentService`` get a
+    prefix — e.g. ``TokenizedPaymentService`` → ``"tokenized"``,
+    ``ProxyPaymentService`` → ``"proxy"``.
+
+    Base services (``PaymentService``, ``RecurringPaymentService``,
+    ``PaymentMethodAuthenticationService``, etc.) return ``None``.
+    """
+    snake = to_snake_case(service_name)          # e.g. "tokenized_payment_service"
+    without_svc = snake.removesuffix("_service") # e.g. "tokenized_payment"
+    if without_svc.endswith("_payment"):
+        prefix = without_svc.removesuffix("_payment")
+        return prefix or None  # guard against plain "payment_service" → ""
+    return None
+
+
 def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
     """
     Parse RPC definitions from a protobuf descriptor file.
@@ -86,7 +104,12 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
       - Doc comments from SourceCodeInfo
 
     Returns {snake_case_rpc_name: {...}}.
-    First-occurrence wins on name collision.
+    First-occurrence wins for the plain snake key.  When a service-variant
+    RPC collides with an existing plain key (e.g. ``TokenizedPaymentService.
+    Authorize`` collides with ``PaymentService.Authorize``), the entry is
+    *also* stored under ``{service_prefix}_{rpc_snake}`` so that transformer
+    names like ``proxy_authorize`` or ``tokenized_setup_recurring`` can be
+    matched by ``discover_flows()``.
     """
     from google.protobuf.descriptor_pb2 import FileDescriptorSet
 
@@ -110,39 +133,56 @@ def parse_proto_rpcs(desc_file: Path) -> dict[str, dict]:
                 rpc_name = method.name
                 snake = to_snake_case(rpc_name)
 
+                # Extract type names (remove package prefix)
+                req_type = method.input_type.split('.')[-1]
+                res_type = method.output_type.split('.')[-1]
+
+                # Get doc comment if available
+                # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
+                path = (6, svc_idx, 2, method_idx)
+                comment = source_info.get(path, f"{service.name}.{rpc_name}")
+                comment = ' '.join(comment.split())
+
+                entry = {
+                    "request": req_type,
+                    "response": res_type,
+                    "service": service.name,
+                    "rpc": rpc_name,
+                    "description": comment,
+                }
+
                 if snake not in rpcs:
-                    # Extract type names (remove package prefix)
-                    req_type = method.input_type.split('.')[-1]
-                    res_type = method.output_type.split('.')[-1]
-
-                    # Get doc comment if available
-                    # Path for method: [6 (service), svc_idx, 2 (method), method_idx]
-                    path = (6, svc_idx, 2, method_idx)
-                    comment = source_info.get(path, f"{service.name}.{rpc_name}")
-                    # Normalize whitespace to single-line
-                    comment = ' '.join(comment.split())
-
-                    rpcs[snake] = {
-                        "request": req_type,
-                        "response": res_type,
-                        "service": service.name,
-                        "rpc": rpc_name,
-                        "description": comment,
-                    }
+                    # First occurrence — store under plain snake key.
+                    rpcs[snake] = entry
+                else:
+                    # Collision: the RPC name is shared across services.
+                    # Also store under "{service_prefix}_{rpc_snake}" so that
+                    # transformers like "proxy_authorize" can be discovered.
+                    prefix = _service_flow_prefix(service.name)
+                    if prefix:
+                        prefixed = f"{prefix}_{snake}"
+                        if prefixed not in rpcs:
+                            rpcs[prefixed] = entry
 
     return rpcs
 
 
 def parse_service_flows(service_file: Path) -> set[str]:
     """
-    Scan services/payments.rs for every req_transformer! invocation.
-    Captures the flow name from `fn_name: {flow}_req_transformer`.
+    Scan services/payments.rs for every req_transformer implementation.
+
+    Two patterns are matched:
+    1. ``fn_name: {flow}_req_transformer`` — inside a ``req_transformer!`` macro
+       invocation (the standard codegen path).
+    2. ``pub fn {flow}_req_transformer`` — an explicit wrapper function used when
+       a pre-conversion step is needed before delegating to the standard transformer
+       (e.g. TokenizedPaymentService, ProxyPaymentService).
     """
     text = service_file.read_text()
     return {
         m.group(1)
         for m in re.finditer(
-            r"fn_name:\s*(\w+)_req_transformer\b", text
+            r"(?:fn_name:\s*|pub fn )(\w+)_req_transformer\b", text
         )
     }
 
@@ -153,11 +193,15 @@ def parse_single_flows(service_file: Path) -> set[str]:
     These are `pub fn {flow}_transformer` functions that are NOT req/res macros —
     they take the request directly and return the response without an HTTP round-trip
     (e.g. webhook processing via `handle_transformer`).
+
+    Explicitly excludes ``_req_transformer`` and ``_res_transformer`` functions
+    (those are handled by ``parse_service_flows``).
     """
     text = service_file.read_text()
     return {
         m.group(1)
         for m in re.finditer(r"^pub fn (\w+)_transformer\b", text, re.MULTILINE)
+        if not m.group(1).endswith(("_req", "_res"))
     }
 
 
@@ -272,7 +316,8 @@ env.globals["service_to_grpc_field"]     = service_to_grpc_field
 env.globals["service_to_grpc_js_field"]  = service_to_grpc_js_field
 env.globals["grpc_method_path"]          = grpc_method_path
 env.globals["grpc_example_fn_name"]      = grpc_example_fn_name
-env.globals["to_camel"] = to_camel
+env.globals["to_camel"]      = to_camel
+env.globals["to_snake_case"] = to_snake_case
 
 
 # ── Generators ───────────────────────────────────────────────────────────────

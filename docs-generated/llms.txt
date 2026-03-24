@@ -537,9 +537,9 @@ examples_python: examples/stax/python/stax.py
 ## Stripe
 connector_id: stripe
 doc: docs/connectors/stripe.md
-scenarios: checkout_card, checkout_autocapture, checkout_wallet, checkout_bank, refund, recurring, void_payment, get_payment, create_customer, tokenize
+scenarios: checkout_card, checkout_autocapture, checkout_wallet, checkout_bank, refund, recurring, void_payment, get_payment, create_customer, tokenize, tokenized_checkout, tokenized_recurring, proxy_checkout, proxy_3ds_checkout
 payment_methods: Ach, Affirm, Afterpay, ApplePay, ApplePayDecrypted, Bacs, Becs, Blik, Card, GooglePay, Ideal, Klarna, Sepa
-flows: authorize, capture, create_customer, get, recurring_charge, refund, setup_recurring, tokenize, void
+flows: authorize, capture, create_customer, get, recurring_charge, refund, setup_recurring, tokenize, void, tokenized_authorize, tokenized_setup_recurring, proxy_authorize, proxy_setup_recurring, proxy_pre_authenticate, proxy_authenticate, proxy_post_authenticate
 examples_python: examples/stripe/python/stripe.py
 
 ## Truelayer

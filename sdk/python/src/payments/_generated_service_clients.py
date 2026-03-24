@@ -101,9 +101,43 @@ class PaymentClient(_ConnectorClientBase):
         """PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned."""
         return self._execute_flow("void", request, _pb2.PaymentServiceVoidResponse, options)
 
+class ProxyPaymentClient(_ConnectorClientBase):
+    """ProxyPaymentService flows"""
+
+    def proxy_authenticate(self, request, options=None):
+        """ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy."""
+        return self._execute_flow("proxy_authenticate", request, _pb2.PaymentMethodAuthenticationServiceAuthenticateResponse, options)
+
+    def proxy_authorize(self, request, options=None):
+        """ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
+        return self._execute_flow("proxy_authorize", request, _pb2.PaymentServiceAuthorizeResponse, options)
+
+    def proxy_post_authenticate(self, request, options=None):
+        """ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy."""
+        return self._execute_flow("proxy_post_authenticate", request, _pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse, options)
+
+    def proxy_pre_authenticate(self, request, options=None):
+        """ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server."""
+        return self._execute_flow("proxy_pre_authenticate", request, _pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse, options)
+
+    def proxy_setup_recurring(self, request, options=None):
+        """ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
+        return self._execute_flow("proxy_setup_recurring", request, _pb2.PaymentServiceSetupRecurringResponse, options)
+
 class RecurringPaymentClient(_ConnectorClientBase):
     """RecurringPaymentService flows"""
 
     def charge(self, request, options=None):
         """RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details."""
         return self._execute_flow("charge", request, _pb2.RecurringPaymentServiceChargeResponse, options)
+
+class TokenizedPaymentClient(_ConnectorClientBase):
+    """TokenizedPaymentService flows"""
+
+    def tokenized_authorize(self, request, options=None):
+        """TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token."""
+        return self._execute_flow("tokenized_authorize", request, _pb2.PaymentServiceAuthorizeResponse, options)
+
+    def tokenized_setup_recurring(self, request, options=None):
+        """TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token."""
+        return self._execute_flow("tokenized_setup_recurring", request, _pb2.PaymentServiceSetupRecurringResponse, options)

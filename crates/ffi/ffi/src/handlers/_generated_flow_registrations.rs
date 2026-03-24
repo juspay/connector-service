@@ -37,9 +37,16 @@ use grpc_api_types::payments::{
     PaymentServiceSetupRecurringResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
+    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    ProxyPaymentServiceAuthorizeRequest,
+    ProxyPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RefundResponse,
+    TokenizedPaymentServiceAuthorizeRequest,
+    TokenizedPaymentServiceSetupRecurringRequest,
 };
 use crate::services::payments::{
     accept_req_transformer, accept_res_transformer,
@@ -55,11 +62,18 @@ use crate::services::payments::{
     get_req_transformer, get_res_transformer,
     post_authenticate_req_transformer, post_authenticate_res_transformer,
     pre_authenticate_req_transformer, pre_authenticate_res_transformer,
+    proxy_authenticate_req_transformer, proxy_authenticate_res_transformer,
+    proxy_authorize_req_transformer, proxy_authorize_res_transformer,
+    proxy_post_authenticate_req_transformer, proxy_post_authenticate_res_transformer,
+    proxy_pre_authenticate_req_transformer, proxy_pre_authenticate_res_transformer,
+    proxy_setup_recurring_req_transformer, proxy_setup_recurring_res_transformer,
     refund_req_transformer, refund_res_transformer,
     reverse_req_transformer, reverse_res_transformer,
     setup_recurring_req_transformer, setup_recurring_res_transformer,
     submit_evidence_req_transformer, submit_evidence_res_transformer,
     tokenize_req_transformer, tokenize_res_transformer,
+    tokenized_authorize_req_transformer, tokenized_authorize_res_transformer,
+    tokenized_setup_recurring_req_transformer, tokenized_setup_recurring_res_transformer,
     void_req_transformer, void_res_transformer,
 };
 
@@ -89,6 +103,16 @@ impl_flow_handlers!(get, PaymentServiceGetRequest, PaymentServiceGetResponse, ge
 impl_flow_handlers!(post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, post_authenticate_req_transformer, post_authenticate_res_transformer);
 // pre_authenticate: PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
 impl_flow_handlers!(pre_authenticate, PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse, pre_authenticate_req_transformer, pre_authenticate_res_transformer);
+// proxy_authenticate: ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
+impl_flow_handlers!(proxy_authenticate, ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, PaymentMethodAuthenticationServiceAuthenticateResponse, proxy_authenticate_req_transformer, proxy_authenticate_res_transformer);
+// proxy_authorize: ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+impl_flow_handlers!(proxy_authorize, ProxyPaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, proxy_authorize_req_transformer, proxy_authorize_res_transformer);
+// proxy_post_authenticate: ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
+impl_flow_handlers!(proxy_post_authenticate, ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, PaymentMethodAuthenticationServicePostAuthenticateResponse, proxy_post_authenticate_req_transformer, proxy_post_authenticate_res_transformer);
+// proxy_pre_authenticate: ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
+impl_flow_handlers!(proxy_pre_authenticate, ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodAuthenticationServicePreAuthenticateResponse, proxy_pre_authenticate_req_transformer, proxy_pre_authenticate_res_transformer);
+// proxy_setup_recurring: ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
+impl_flow_handlers!(proxy_setup_recurring, ProxyPaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse, proxy_setup_recurring_req_transformer, proxy_setup_recurring_res_transformer);
 // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
 impl_flow_handlers!(refund, PaymentServiceRefundRequest, RefundResponse, refund_req_transformer, refund_res_transformer);
 // reverse: PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
@@ -99,5 +123,9 @@ impl_flow_handlers!(setup_recurring, PaymentServiceSetupRecurringRequest, Paymen
 impl_flow_handlers!(submit_evidence, DisputeServiceSubmitEvidenceRequest, DisputeServiceSubmitEvidenceResponse, submit_evidence_req_transformer, submit_evidence_res_transformer);
 // tokenize: PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
 impl_flow_handlers!(tokenize, PaymentMethodServiceTokenizeRequest, PaymentMethodServiceTokenizeResponse, tokenize_req_transformer, tokenize_res_transformer);
+// tokenized_authorize: TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token.
+impl_flow_handlers!(tokenized_authorize, TokenizedPaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, tokenized_authorize_req_transformer, tokenized_authorize_res_transformer);
+// tokenized_setup_recurring: TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token.
+impl_flow_handlers!(tokenized_setup_recurring, TokenizedPaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse, tokenized_setup_recurring_req_transformer, tokenized_setup_recurring_res_transformer);
 // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 impl_flow_handlers!(void, PaymentServiceVoidRequest, PaymentServiceVoidResponse, void_req_transformer, void_res_transformer);

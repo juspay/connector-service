@@ -434,6 +434,7 @@ artifacts/
 sdk/tests/client_sanity/artifacts/
 
 .claude
+CLAUDE.md
 
 # Generated proto descriptor files
 scripts/generators/code/services.desc

@@ -11,6 +11,8 @@ import payments.PaymentClient
 import payments.RecurringPaymentClient
 import payments.CustomerClient
 import payments.PaymentMethodClient
+import payments.TokenizedPaymentClient
+import payments.ProxyPaymentClient
 import payments.PaymentServiceAuthorizeRequest
 import payments.PaymentServiceCaptureRequest
 import payments.PaymentServiceRefundRequest
@@ -20,6 +22,13 @@ import payments.PaymentServiceVoidRequest
 import payments.PaymentServiceGetRequest
 import payments.CustomerServiceCreateRequest
 import payments.PaymentMethodServiceTokenizeRequest
+import payments.TokenizedPaymentServiceAuthorizeRequest
+import payments.TokenizedPaymentServiceSetupRecurringRequest
+import payments.ProxyPaymentServiceAuthorizeRequest
+import payments.ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest
+import payments.ProxyPaymentMethodAuthenticationServiceAuthenticateRequest
+import payments.ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest
+import payments.ProxyPaymentServiceSetupRecurringRequest
 import payments.AcceptanceType
 import payments.AuthenticationType
 import payments.CaptureMethod
@@ -390,6 +399,229 @@ fun processTokenize(txnId: String, config: ConnectorConfig = _defaultConfig): Ma
     return mapOf("token" to tokenizeResponse.paymentMethodToken, "error" to tokenizeResponse.error)
 }
 
+// Scenario: Tokenized Payment (Authorize + Capture)
+// Authorize using a connector-issued payment method token (e.g. Stripe pm_xxx). Card data never touches your server — only the token is sent. Capture settles the reserved funds.
+fun processTokenizedCheckout(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val tokenizedPaymentClient = TokenizedPaymentClient(config)
+    val paymentClient = PaymentClient(config)
+
+    // Step 1: Tokenized Authorize — reserve funds using a connector-issued payment method token
+    val authorizeResponse = tokenizedPaymentClient.tokenized_authorize(TokenizedPaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_tokenized_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        connectorTokenBuilder.apply {
+            value = "pm_1AbcXyzStripeTestToken"
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        returnUrl = "https://example.com/return"
+    }.build())
+
+    // Step 2: Capture — settle the reserved funds
+    val captureResponse = paymentClient.capture(PaymentServiceCaptureRequest.newBuilder().apply {
+        merchantCaptureId = "probe_capture_001"  // Identification
+        connectorTransactionId = "probe_connector_txn_001"
+        amountToCaptureBuilder.apply {  // Capture Details
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    }.build())
+
+    if (captureResponse.status.name == "FAILED")
+        throw RuntimeException("Capture failed: ${captureResponse.error.unifiedDetails.message}")
+
+    return mapOf()
+}
+
+// Scenario: Tokenized Recurring Payments
+// Store a payment mandate using a connector token with SetupRecurring, then charge it repeatedly with RecurringPaymentService without requiring customer action or re-collecting card data.
+fun processTokenizedRecurring(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val tokenizedPaymentClient = TokenizedPaymentClient(config)
+    val recurringPaymentClient = RecurringPaymentClient(config)
+
+    // Step 1: Tokenized Setup Recurring — store a mandate using a connector token
+    val setupResponse = tokenizedPaymentClient.tokenized_setup_recurring(TokenizedPaymentServiceSetupRecurringRequest.newBuilder().apply {
+        merchantRecurringPaymentId = "probe_tokenized_mandate_001"
+        amountBuilder.apply {
+            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        connectorTokenBuilder.apply {
+            value = "pm_1AbcXyzStripeTestToken"
+        }
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        customerAcceptanceBuilder.apply {
+            acceptanceType = AcceptanceType.ONLINE  // Type of acceptance (e.g., online, offline).
+            ipAddress = "127.0.0.1"
+            userAgent = "Mozilla/5.0"
+        }
+    }.build())
+
+    // Step 2: Recurring Charge — charge against the stored mandate
+    val recurringResponse = recurringPaymentClient.charge(RecurringPaymentServiceChargeRequest.newBuilder().apply {
+        connectorRecurringPaymentIdBuilder.apply {  // Reference to existing mandate
+            connectorMandateId = "probe-mandate-123"  // mandate_id sent by the connector
+        }
+        amountBuilder.apply {  // Amount Information
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        paymentMethodBuilder.apply {  // Optional payment Method Information (for network transaction flows)
+            tokenBuilder.apply {  // Payment tokens
+                tokenBuilder.value = "probe_pm_token"
+            }
+        }
+        returnUrl = "https://example.com/recurring-return"
+        connectorCustomerId = "cust_probe_123"
+        paymentMethodType = PaymentMethodType.PAY_PAL
+        offSession = true  // Behavioral Flags and Preferences
+    }.build())
+
+    if (recurringResponse.status.name == "FAILED")
+        throw RuntimeException("Recurring Charge failed: ${recurringResponse.error.unifiedDetails.message}")
+
+    return mapOf()
+}
+
+// Scenario: Proxy Payment via Vault (VGS / Basis Theory)
+// Authorize using vault alias tokens. Configure an outbound proxy URL in RequestConfig — the proxy substitutes aliases with real card values before the request reaches the connector. Card data never touches your server.
+fun processProxyCheckout(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val proxyPaymentClient = ProxyPaymentClient(config)
+
+    // Step 1: Proxy Authorize — reserve funds using vault alias tokens routed through a proxy
+    val authorizeResponse = proxyPaymentClient.proxy_authorize(ProxyPaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cvcAliasBuilder.apply {
+                value = "tok_sandbox_cvc456"
+            }
+            cardHolderName = "John Doe"
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        authType = AuthenticationType.NO_THREE_DS
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        returnUrl = "https://example.com/return"
+    }.build())
+
+    return mapOf()
+}
+
+// Scenario: Proxy Payment with 3DS (VGS + Proxy 3DS)
+// Full 3DS flow using vault alias tokens routed through an outbound proxy. The proxy substitutes aliases before forwarding to Netcetera (3DS server). Authorize after successful authentication using the same vault aliases.
+fun processProxy3DsCheckout(txnId: String, config: ConnectorConfig = _defaultConfig): Map<String, Any?> {
+    val proxyPaymentClient = ProxyPaymentClient(config)
+
+    // Step 1: Proxy Pre-Authenticate — initiate 3DS using vault aliases (proxy substitutes before Netcetera)
+    val preAuthenticateResponse = proxyPaymentClient.proxy_pre_authenticate(ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest.newBuilder().apply {
+        merchantOrderId = "probe_proxy_order_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cardHolderName = "John Doe"
+        }
+        browserInfoBuilder.apply {
+            userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+            acceptHeader = "application/json"  // Browser Headers
+            language = "en-US"
+            colorDepth = 24  // Display Information
+            screenHeight = 1080
+            screenWidth = 1920
+            timeZoneOffset = -330L
+            javaEnabled = false  // Browser Settings
+            javaScriptEnabled = true
+        }
+        returnUrl = "https://example.com/3ds-return"
+    }.build())
+
+    // Step 2: Proxy Authenticate — execute 3DS challenge using vault aliases via proxy
+    val authenticateResponse = proxyPaymentClient.proxy_authenticate(ProxyPaymentMethodAuthenticationServiceAuthenticateRequest.newBuilder().apply {
+        merchantOrderId = "probe_proxy_order_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cardHolderName = "John Doe"
+        }
+        returnUrl = "https://example.com/3ds-return"
+    }.build())
+
+    // Step 3: Proxy Post-Authenticate — validate 3DS result using vault aliases via proxy
+    val postAuthenticateResponse = proxyPaymentClient.proxy_post_authenticate(ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest.newBuilder().apply {
+        merchantOrderId = "probe_proxy_order_001"
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cardHolderName = "John Doe"
+        }
+    }.build())
+
+    // Step 4: Proxy Authorize — reserve funds using vault alias tokens routed through a proxy
+    val authorizeResponse = proxyPaymentClient.proxy_authorize(ProxyPaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cvcAliasBuilder.apply {
+                value = "tok_sandbox_cvc456"
+            }
+            cardHolderName = "John Doe"
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        authType = AuthenticationType.NO_THREE_DS
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        returnUrl = "https://example.com/return"
+    }.build())
+
+    return mapOf()
+}
+
 // Flow: PaymentService.Authorize (Card)
 fun authorize(txnId: String) {
     val client = PaymentClient(_defaultConfig)
@@ -547,6 +779,192 @@ fun void(txnId: String) {
     println("Done: ${response.status.name}")
 }
 
+// Flow: TokenizedPaymentService.Authorize
+fun tokenizedAuthorize(txnId: String) {
+    val client = TokenizedPaymentClient(_defaultConfig)
+    val request = TokenizedPaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_tokenized_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        connectorTokenBuilder.apply {
+            value = "pm_1AbcXyzStripeTestToken"
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        returnUrl = "https://example.com/return"
+    }.build()
+    val response = client.tokenized_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: TokenizedPaymentService.SetupRecurring
+fun tokenizedSetupRecurring(txnId: String) {
+    val client = TokenizedPaymentClient(_defaultConfig)
+    val request = TokenizedPaymentServiceSetupRecurringRequest.newBuilder().apply {
+        merchantRecurringPaymentId = "probe_tokenized_mandate_001"
+        amountBuilder.apply {
+            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        connectorTokenBuilder.apply {
+            value = "pm_1AbcXyzStripeTestToken"
+        }
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        customerAcceptanceBuilder.apply {
+            acceptanceType = AcceptanceType.ONLINE  // Type of acceptance (e.g., online, offline).
+            ipAddress = "127.0.0.1"
+            userAgent = "Mozilla/5.0"
+        }
+    }.build()
+    val response = client.tokenized_setup_recurring(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: ProxyPaymentService.Authorize
+fun proxyAuthorize(txnId: String) {
+    val client = ProxyPaymentClient(_defaultConfig)
+    val request = ProxyPaymentServiceAuthorizeRequest.newBuilder().apply {
+        merchantTransactionId = "probe_proxy_txn_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cvcAliasBuilder.apply {
+                value = "tok_sandbox_cvc456"
+            }
+            cardHolderName = "John Doe"
+        }
+        captureMethod = CaptureMethod.AUTOMATIC
+        authType = AuthenticationType.NO_THREE_DS
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+        returnUrl = "https://example.com/return"
+    }.build()
+    val response = client.proxy_authorize(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: ProxyPaymentService.SetupRecurring
+fun proxySetupRecurring(txnId: String) {
+    val client = ProxyPaymentClient(_defaultConfig)
+    val request = ProxyPaymentServiceSetupRecurringRequest.newBuilder().apply {
+        merchantRecurringPaymentId = "probe_proxy_mandate_001"
+        amountBuilder.apply {
+            minorAmount = 0L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cvcAliasBuilder.apply {
+                value = "tok_sandbox_cvc456"
+            }
+            cardHolderName = "John Doe"
+        }
+        authType = AuthenticationType.NO_THREE_DS
+        addressBuilder.apply {
+            billingAddressBuilder.apply {
+            }
+        }
+    }.build()
+    val response = client.proxy_setup_recurring(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: ProxyPaymentService.PreAuthenticate
+fun proxyPreAuthenticate(txnId: String) {
+    val client = ProxyPaymentClient(_defaultConfig)
+    val request = ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest.newBuilder().apply {
+        merchantOrderId = "probe_proxy_order_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cardHolderName = "John Doe"
+        }
+        browserInfoBuilder.apply {
+            userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+            acceptHeader = "application/json"  // Browser Headers
+            language = "en-US"
+            colorDepth = 24  // Display Information
+            screenHeight = 1080
+            screenWidth = 1920
+            timeZoneOffset = -330L
+            javaEnabled = false  // Browser Settings
+            javaScriptEnabled = true
+        }
+        returnUrl = "https://example.com/3ds-return"
+    }.build()
+    val response = client.proxy_pre_authenticate(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: ProxyPaymentService.Authenticate
+fun proxyAuthenticate(txnId: String) {
+    val client = ProxyPaymentClient(_defaultConfig)
+    val request = ProxyPaymentMethodAuthenticationServiceAuthenticateRequest.newBuilder().apply {
+        merchantOrderId = "probe_proxy_order_001"
+        amountBuilder.apply {
+            minorAmount = 1000L  // Amount in minor units (e.g., 1000 = $10.00)
+            currency = Currency.USD  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cardHolderName = "John Doe"
+        }
+        returnUrl = "https://example.com/3ds-return"
+    }.build()
+    val response = client.proxy_authenticate(request)
+    println("Status: ${response.status.name}")
+}
+
+// Flow: ProxyPaymentService.PostAuthenticate
+fun proxyPostAuthenticate(txnId: String) {
+    val client = ProxyPaymentClient(_defaultConfig)
+    val request = ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest.newBuilder().apply {
+        merchantOrderId = "probe_proxy_order_001"
+        vaultCardBuilder.apply {
+            cardNumberAliasBuilder.apply {
+                value = "tok_sandbox_abc123"
+            }
+            expMonth = "03"
+            expYear = "2030"
+            cardHolderName = "John Doe"
+        }
+    }.build()
+    val response = client.proxy_post_authenticate(request)
+    println("Status: ${response.status.name}")
+}
+
 
 fun main(args: Array<String>) {
     val txnId = "order_001"
@@ -562,6 +980,10 @@ fun main(args: Array<String>) {
         "processGetPayment" -> processGetPayment(txnId)
         "processCreateCustomer" -> processCreateCustomer(txnId)
         "processTokenize" -> processTokenize(txnId)
+        "processTokenizedCheckout" -> processTokenizedCheckout(txnId)
+        "processTokenizedRecurring" -> processTokenizedRecurring(txnId)
+        "processProxyCheckout" -> processProxyCheckout(txnId)
+        "processProxy3DsCheckout" -> processProxy3DsCheckout(txnId)
         "authorize" -> authorize(txnId)
         "capture" -> capture(txnId)
         "createCustomer" -> createCustomer(txnId)
@@ -571,6 +993,13 @@ fun main(args: Array<String>) {
         "setupRecurring" -> setupRecurring(txnId)
         "tokenize" -> tokenize(txnId)
         "void" -> void(txnId)
-        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, tokenize, void")
+        "tokenizedAuthorize" -> tokenizedAuthorize(txnId)
+        "tokenizedSetupRecurring" -> tokenizedSetupRecurring(txnId)
+        "proxyAuthorize" -> proxyAuthorize(txnId)
+        "proxySetupRecurring" -> proxySetupRecurring(txnId)
+        "proxyPreAuthenticate" -> proxyPreAuthenticate(txnId)
+        "proxyAuthenticate" -> proxyAuthenticate(txnId)
+        "proxyPostAuthenticate" -> proxyPostAuthenticate(txnId)
+        else -> System.err.println("Unknown flow: $flow. Available: processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, processTokenizedCheckout, processTokenizedRecurring, processProxyCheckout, processProxy3DsCheckout, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, tokenize, void, tokenizedAuthorize, tokenizedSetupRecurring, proxyAuthorize, proxySetupRecurring, proxyPreAuthenticate, proxyAuthenticate, proxyPostAuthenticate")
     }
 }

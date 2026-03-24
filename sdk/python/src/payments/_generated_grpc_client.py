@@ -410,6 +410,54 @@ class GrpcPayoutClient:
         )
 
 
+class GrpcProxyPaymentClient:
+    """ProxyPaymentService — gRPC sub-client."""
+
+    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
+        self._ffi    = ffi
+        self._config = config
+
+    def proxy_authorize(self, req: payment_pb2.ProxyPaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
+        """ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "proxy_payment/proxy_authorize",
+            req, payment_pb2.PaymentServiceAuthorizeResponse,
+        )
+
+    def proxy_setup_recurring(self, req: payment_pb2.ProxyPaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
+        """ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "proxy_payment/proxy_setup_recurring",
+            req, payment_pb2.PaymentServiceSetupRecurringResponse,
+        )
+
+    def proxy_pre_authenticate(self, req: payment_pb2.ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse:
+        """ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "proxy_payment/proxy_pre_authenticate",
+            req, payment_pb2.PaymentMethodAuthenticationServicePreAuthenticateResponse,
+        )
+
+    def proxy_authenticate(self, req: payment_pb2.ProxyPaymentMethodAuthenticationServiceAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServiceAuthenticateResponse:
+        """ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "proxy_payment/proxy_authenticate",
+            req, payment_pb2.PaymentMethodAuthenticationServiceAuthenticateResponse,
+        )
+
+    def proxy_post_authenticate(self, req: payment_pb2.ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest) -> payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse:
+        """ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "proxy_payment/proxy_post_authenticate",
+            req, payment_pb2.PaymentMethodAuthenticationServicePostAuthenticateResponse,
+        )
+
+
 class GrpcRecurringPaymentClient:
     """RecurringPaymentService — gRPC sub-client."""
 
@@ -431,6 +479,30 @@ class GrpcRecurringPaymentClient:
             self._ffi, self._config,
             "recurring_payment/revoke",
             req, payment_pb2.RecurringPaymentServiceRevokeResponse,
+        )
+
+
+class GrpcTokenizedPaymentClient:
+    """TokenizedPaymentService — gRPC sub-client."""
+
+    def __init__(self, ffi: _GrpcFfi, config: GrpcConfig) -> None:
+        self._ffi    = ffi
+        self._config = config
+
+    def tokenized_authorize(self, req: payment_pb2.TokenizedPaymentServiceAuthorizeRequest) -> payment_pb2.PaymentServiceAuthorizeResponse:
+        """TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "tokenized_payment/tokenized_authorize",
+            req, payment_pb2.PaymentServiceAuthorizeResponse,
+        )
+
+    def tokenized_setup_recurring(self, req: payment_pb2.TokenizedPaymentServiceSetupRecurringRequest) -> payment_pb2.PaymentServiceSetupRecurringResponse:
+        """TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token."""
+        return _call_grpc(
+            self._ffi, self._config,
+            "tokenized_payment/tokenized_setup_recurring",
+            req, payment_pb2.PaymentServiceSetupRecurringResponse,
         )
 
 
@@ -465,7 +537,9 @@ class GrpcClient:
     payment_method: GrpcPaymentMethodClient
     payment: GrpcPaymentClient
     payout: GrpcPayoutClient
+    proxy_payment: GrpcProxyPaymentClient
     recurring_payment: GrpcRecurringPaymentClient
+    tokenized_payment: GrpcTokenizedPaymentClient
 
     def __init__(self, config: GrpcConfig, lib_path: Optional[str] = None) -> None:
         ffi = _GrpcFfi(lib_path)
@@ -477,4 +551,6 @@ class GrpcClient:
         self.payment_method = GrpcPaymentMethodClient(ffi, config)
         self.payment = GrpcPaymentClient(ffi, config)
         self.payout = GrpcPayoutClient(ffi, config)
+        self.proxy_payment = GrpcProxyPaymentClient(ffi, config)
         self.recurring_payment = GrpcRecurringPaymentClient(ffi, config)
+        self.tokenized_payment = GrpcTokenizedPaymentClient(ffi, config)

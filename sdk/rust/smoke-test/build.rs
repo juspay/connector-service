@@ -72,6 +72,13 @@ fn load_supported_flows(examples_dir: &Path, connector: &str) -> Option<HashSet<
         "create_access_token",
         "create_session_token",
         "create_sdk_session_token",
+        "tokenized_authorize",
+        "tokenized_setup_recurring",
+        "proxy_authorize",
+        "proxy_setup_recurring",
+        "proxy_pre_authenticate",
+        "proxy_authenticate",
+        "proxy_post_authenticate",
     ];
     let mut supported = HashSet::new();
     for flow_key in all_flow_keys {
@@ -112,6 +119,10 @@ fn main() {
         ("create_customer", "process_create_customer"),
         ("tokenize", "process_tokenize"),
         ("authentication", "process_authentication"),
+        ("tokenized_checkout", "process_tokenized_checkout"),
+        ("tokenized_recurring", "process_tokenized_recurring"),
+        ("proxy_checkout", "process_proxy_checkout"),
+        ("proxy_3ds_checkout", "process_proxy_3ds_checkout"),
     ];
 
     // Flow metadata for gRPC dispatch via builder functions.
@@ -238,6 +249,62 @@ fn main() {
             "payment",
             "create_sdk_session_token",
             "build_create_sdk_session_token_request",
+            false,
+            false,
+        ),
+        (
+            "tokenized_authorize",
+            "tokenized_payment",
+            "tokenized_authorize",
+            "build_tokenized_authorize_request",
+            false,
+            false,
+        ),
+        (
+            "tokenized_setup_recurring",
+            "tokenized_payment",
+            "tokenized_setup_recurring",
+            "build_tokenized_setup_recurring_request",
+            false,
+            false,
+        ),
+        (
+            "proxy_authorize",
+            "proxy_payment",
+            "proxy_authorize",
+            "build_proxy_authorize_request",
+            false,
+            false,
+        ),
+        (
+            "proxy_setup_recurring",
+            "proxy_payment",
+            "proxy_setup_recurring",
+            "build_proxy_setup_recurring_request",
+            false,
+            false,
+        ),
+        (
+            "proxy_pre_authenticate",
+            "proxy_payment",
+            "proxy_pre_authenticate",
+            "build_proxy_pre_authenticate_request",
+            false,
+            false,
+        ),
+        (
+            "proxy_authenticate",
+            "proxy_payment",
+            "proxy_authenticate",
+            "build_proxy_authenticate_request",
+            false,
+            false,
+        ),
+        (
+            "proxy_post_authenticate",
+            "proxy_payment",
+            "proxy_post_authenticate",
+            "build_proxy_post_authenticate_request",
             false,
             false,
         ),
@@ -464,7 +531,7 @@ fn main() {
                     };
 
                     let ret = match flow_key {
-                        "authorize" =>
+                        "authorize" | "tokenized_authorize" | "proxy_authorize" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code)",
                         "get" | "reverse" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id, r.status_code)",
@@ -474,7 +541,7 @@ fn main() {
                             "format!(\"token: {}\", r.payment_method_token)",
                         "create_customer" =>
                             "format!(\"customer_id: {}, status_code: {}\", r.connector_customer_id, r.status_code)",
-                        "setup_recurring" =>
+                        "setup_recurring" | "tokenized_setup_recurring" | "proxy_setup_recurring" =>
                             "format!(\"recurring_id: {}, status_code: {}\", r.connector_recurring_payment_id.as_deref().unwrap_or(\"-\"), r.status_code)",
                         "recurring_charge" =>
                             "format!(\"txn_id: {}, status_code: {}\", r.connector_transaction_id.as_deref().unwrap_or(\"-\"), r.status_code)",

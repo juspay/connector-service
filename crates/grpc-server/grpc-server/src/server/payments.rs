@@ -3881,3 +3881,710 @@ pub fn generate_mandate_revoke_response(
         }),
     }
 }
+
+// ============================================================================
+// NON-PCI SDK CLIENTS — TokenizedPaymentService Implementation
+// ============================================================================
+
+use grpc_api_types::payments::{
+    proxy_payment_service_server::ProxyPaymentService,
+    tokenized_payment_service_server::TokenizedPaymentService,
+    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    ProxyPaymentServiceAuthorizeRequest, ProxyPaymentServiceSetupRecurringRequest,
+    TokenizedPaymentServiceAuthorizeRequest, TokenizedPaymentServiceSetupRecurringRequest,
+};
+
+#[tonic::async_trait]
+impl TokenizedPaymentService for Payments {
+    #[tracing::instrument(
+        name = "tokenized_payment_authorize",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "TokenizedPaymentService",
+            service_method = FlowName::Authorize.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::Authorize.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn authorize(
+        &self,
+        request: tonic::Request<TokenizedPaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        info!("TOKENIZED_PAYMENT_AUTHORIZE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "TokenizedPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        // Extract metadata to preserve it for the inner request
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::Authorize,
+            |request_data| {
+                let service_name = service_name.clone();
+                let config = config.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+
+                    // Convert connector_token to PaymentMethod::Token
+                    let authorize_request = PaymentServiceAuthorizeRequest {
+                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
+                            payment_method: Some(payment_method::PaymentMethod::Token(
+                                grpc_api_types::payments::TokenPaymentMethodType {
+                                    token: payload.connector_token,
+                                },
+                            )),
+                        }),
+                        auth_type: grpc_api_types::payments::AuthenticationType::NoThreeDs as i32,
+                        merchant_transaction_id: payload.merchant_transaction_id,
+                        amount: payload.amount,
+                        capture_method: payload.capture_method,
+                        customer: payload.customer,
+                        address: payload.address,
+                        return_url: payload.return_url,
+                        webhook_url: payload.webhook_url,
+                        metadata: payload.metadata,
+                        connector_feature_data: payload.connector_feature_data,
+                        setup_future_usage: payload.setup_future_usage,
+                        browser_info: payload.browser_info,
+                        state: payload.state,
+                        billing_descriptor: payload.billing_descriptor,
+                        merchant_order_id: payload.merchant_order_id,
+                        l2_l3_data: payload.l2_l3_data,
+                        customer_acceptance: payload.customer_acceptance,
+                        test_mode: payload.test_mode,
+                        ..Default::default()
+                    };
+
+                    // Create a new inner request to delegate to PaymentService
+                    let mut inner_request = tonic::Request::new(authorize_request);
+                    // Copy over extensions and metadata
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    // Delegate to existing PaymentService::authorize
+                    <Self as PaymentService>::authorize(self, inner_request).await
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "tokenized_payment_setup_recurring",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "TokenizedPaymentService",
+            service_method = FlowName::SetupMandate.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::SetupMandate.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn setup_recurring(
+        &self,
+        request: tonic::Request<TokenizedPaymentServiceSetupRecurringRequest>,
+    ) -> Result<tonic::Response<PaymentServiceSetupRecurringResponse>, tonic::Status> {
+        info!("TOKENIZED_PAYMENT_SETUP_RECURRING_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "TokenizedPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        // Extract metadata to preserve it for the inner request
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::SetupMandate,
+            |request_data| {
+                let service_name = service_name.clone();
+                let config = config.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+
+                    // Convert connector_token to PaymentMethod::Token
+                    let setup_recurring_request = PaymentServiceSetupRecurringRequest {
+                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
+                            payment_method: Some(payment_method::PaymentMethod::Token(
+                                grpc_api_types::payments::TokenPaymentMethodType {
+                                    token: payload.connector_token,
+                                },
+                            )),
+                        }),
+                        merchant_recurring_payment_id: payload.merchant_recurring_payment_id,
+                        amount: payload.amount,
+                        customer: payload.customer,
+                        address: payload.address,
+                        return_url: payload.return_url,
+                        webhook_url: payload.webhook_url,
+                        metadata: payload.metadata,
+                        connector_feature_data: payload.connector_feature_data,
+                        state: payload.state,
+                        customer_acceptance: payload.customer_acceptance,
+                        setup_mandate_details: payload.setup_mandate_details,
+                        billing_descriptor: payload.billing_descriptor,
+                        locale: payload.locale,
+                        ..Default::default()
+                    };
+
+                    // Create a new inner request to delegate to PaymentService
+                    let mut inner_request = tonic::Request::new(setup_recurring_request);
+                    // Copy over extensions and metadata
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    // Delegate to existing PaymentService::setup_recurring
+                    <Self as PaymentService>::setup_recurring(self, inner_request).await
+                })
+            },
+        )
+        .await
+    }
+}
+
+// ============================================================================
+// NON-PCI SDK CLIENTS — ProxyPaymentService Implementation
+// ============================================================================
+
+#[tonic::async_trait]
+impl ProxyPaymentService for Payments {
+    #[tracing::instrument(
+        name = "proxy_payment_authorize",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "ProxyPaymentService",
+            service_method = FlowName::Authorize.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::Authorize.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn authorize(
+        &self,
+        request: tonic::Request<ProxyPaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        info!("PROXY_PAYMENT_AUTHORIZE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "ProxyPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        // Extract metadata to preserve it for the inner request
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::Authorize,
+            |request_data| {
+                let service_name = service_name.clone();
+                let config = config.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let vault_card = payload
+                        .vault_card
+                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+
+                    // Convert vault_card to PaymentMethod::CardProxy
+                    let authorize_request = PaymentServiceAuthorizeRequest {
+                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
+                            payment_method: Some(payment_method::PaymentMethod::CardProxy(
+                                vault_alias_to_card_details(&vault_card)?,
+                            )),
+                        }),
+                        auth_type: payload.auth_type,
+                        authentication_data: payload.authentication_data,
+                        threeds_completion_indicator: payload.threeds_completion_indicator,
+                        merchant_transaction_id: payload.merchant_transaction_id,
+                        amount: payload.amount,
+                        capture_method: payload.capture_method,
+                        customer: payload.customer,
+                        address: payload.address,
+                        return_url: payload.return_url,
+                        webhook_url: payload.webhook_url,
+                        metadata: payload.metadata,
+                        connector_feature_data: payload.connector_feature_data,
+                        setup_future_usage: payload.setup_future_usage,
+                        browser_info: payload.browser_info,
+                        state: payload.state,
+                        billing_descriptor: payload.billing_descriptor,
+                        merchant_order_id: payload.merchant_order_id,
+                        l2_l3_data: payload.l2_l3_data,
+                        customer_acceptance: payload.customer_acceptance,
+                        test_mode: payload.test_mode,
+                        ..Default::default()
+                    };
+
+                    // Create a new inner request to delegate to PaymentService
+                    let mut inner_request = tonic::Request::new(authorize_request);
+                    // Copy over extensions and metadata
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    // Delegate to existing PaymentService::authorize
+                    <Self as PaymentService>::authorize(self, inner_request).await
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "proxy_payment_setup_recurring",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "ProxyPaymentService",
+            service_method = FlowName::SetupMandate.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::SetupMandate.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn setup_recurring(
+        &self,
+        request: tonic::Request<ProxyPaymentServiceSetupRecurringRequest>,
+    ) -> Result<tonic::Response<PaymentServiceSetupRecurringResponse>, tonic::Status> {
+        info!("PROXY_PAYMENT_SETUP_RECURRING_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "ProxyPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        // Extract metadata to preserve it for the inner request
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::SetupMandate,
+            |request_data| {
+                let service_name = service_name.clone();
+                let config = config.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let vault_card = payload
+                        .vault_card
+                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+
+                    // Convert vault_card to PaymentMethod::CardProxy
+                    let setup_recurring_request = PaymentServiceSetupRecurringRequest {
+                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
+                            payment_method: Some(payment_method::PaymentMethod::CardProxy(
+                                vault_alias_to_card_details(&vault_card)?,
+                            )),
+                        }),
+                        auth_type: payload.auth_type,
+                        authentication_data: payload.authentication_data,
+                        merchant_recurring_payment_id: payload.merchant_recurring_payment_id,
+                        amount: payload.amount,
+                        customer: payload.customer,
+                        address: payload.address,
+                        return_url: payload.return_url,
+                        webhook_url: payload.webhook_url,
+                        metadata: payload.metadata,
+                        state: payload.state,
+                        customer_acceptance: payload.customer_acceptance,
+                        setup_mandate_details: payload.setup_mandate_details,
+                        ..Default::default()
+                    };
+
+                    // Create a new inner request to delegate to PaymentService
+                    let mut inner_request = tonic::Request::new(setup_recurring_request);
+                    // Copy over extensions and metadata
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    // Delegate to existing PaymentService::setup_recurring
+                    <Self as PaymentService>::setup_recurring(self, inner_request).await
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "proxy_payment_pre_authenticate",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "ProxyPaymentService",
+            service_method = FlowName::PreAuthenticate.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::PreAuthenticate.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn pre_authenticate(
+        &self,
+        request: tonic::Request<ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<PaymentMethodAuthenticationServicePreAuthenticateResponse>,
+        tonic::Status,
+    > {
+        info!("PROXY_PAYMENT_PRE_AUTHENTICATE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "ProxyPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        // Extract metadata to preserve it for the inner request
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::PreAuthenticate,
+            |request_data| {
+                let service_name = service_name.clone();
+                let config = config.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let vault_card = payload
+                        .vault_card
+                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+
+                    // Convert vault_card to PaymentMethod::CardProxy
+                    let pre_auth_request =
+                        PaymentMethodAuthenticationServicePreAuthenticateRequest {
+                            payment_method: Some(grpc_api_types::payments::PaymentMethod {
+                                payment_method: Some(payment_method::PaymentMethod::CardProxy(
+                                    vault_alias_to_card_details(&vault_card)?
+                                )),
+                            }),
+                            merchant_order_id: payload.merchant_order_id,
+                            amount: payload.amount,
+                            customer: payload.customer,
+                            address: payload.address,
+                            return_url: payload.return_url,
+                            continue_redirection_url: payload.continue_redirection_url,
+                            browser_info: payload.browser_info,
+                            state: payload.state,
+                            capture_method: payload.capture_method,
+                            description: payload.description,
+                            metadata: payload.metadata,
+                            connector_feature_data: payload.connector_feature_data,
+                            ..Default::default()
+                        };
+
+                    // Create a new inner request to delegate to PaymentMethodAuthenticationService
+                    let mut inner_request = tonic::Request::new(pre_auth_request);
+                    // Copy over extensions and metadata
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    // Delegate to existing PaymentMethodAuthenticationService::pre_authenticate
+                    <PaymentMethodAuthentication as PaymentMethodAuthenticationService>::pre_authenticate(
+                        &PaymentMethodAuthentication,
+                        inner_request,
+                    )
+                    .await
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "proxy_payment_authenticate",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "ProxyPaymentService",
+            service_method = FlowName::Authenticate.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::Authenticate.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn authenticate(
+        &self,
+        request: tonic::Request<ProxyPaymentMethodAuthenticationServiceAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<PaymentMethodAuthenticationServiceAuthenticateResponse>,
+        tonic::Status,
+    > {
+        info!("PROXY_PAYMENT_AUTHENTICATE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "ProxyPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        // Extract metadata to preserve it for the inner request
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::Authenticate,
+            |request_data| {
+                let service_name = service_name.clone();
+                let config = config.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let vault_card = payload
+                        .vault_card
+                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+
+                    // Convert vault_card to PaymentMethod::CardProxy
+                    let auth_request = PaymentMethodAuthenticationServiceAuthenticateRequest {
+                        payment_method: Some(grpc_api_types::payments::PaymentMethod {
+                            payment_method: Some(payment_method::PaymentMethod::CardProxy(
+                                vault_alias_to_card_details(&vault_card)?
+                            )),
+                        }),
+                        merchant_order_id: payload.merchant_order_id,
+                        amount: payload.amount,
+                        authentication_data: payload.authentication_data,
+                        return_url: payload.return_url,
+                        continue_redirection_url: payload.continue_redirection_url,
+                        browser_info: payload.browser_info,
+                        state: payload.state,
+                        redirection_response: payload.redirection_response,
+                        metadata: payload.metadata,
+                        connector_feature_data: payload.connector_feature_data,
+                        ..Default::default()
+                    };
+
+                    // Create a new inner request to delegate to PaymentMethodAuthenticationService
+                    let mut inner_request = tonic::Request::new(auth_request);
+                    // Copy over extensions and metadata
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    // Delegate to existing PaymentMethodAuthenticationService::authenticate
+                    <PaymentMethodAuthentication as PaymentMethodAuthenticationService>::authenticate(
+                        &PaymentMethodAuthentication,
+                        inner_request,
+                    )
+                    .await
+                })
+            },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "proxy_payment_post_authenticate",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = "ProxyPaymentService",
+            service_method = FlowName::PostAuthenticate.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::PostAuthenticate.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        ),
+        skip(self, request)
+    )]
+    async fn post_authenticate(
+        &self,
+        request: tonic::Request<ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<PaymentMethodAuthenticationServicePostAuthenticateResponse>,
+        tonic::Status,
+    > {
+        info!("PROXY_PAYMENT_POST_AUTHENTICATE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "ProxyPaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+
+        // Extract metadata to preserve it for the inner request
+        let extensions = request.extensions().clone();
+        let metadata = request.metadata().clone();
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::PostAuthenticate,
+            |request_data| {
+                let service_name = service_name.clone();
+                let config = config.clone();
+                let extensions = extensions.clone();
+                let metadata = metadata.clone();
+                Box::pin(async move {
+                    let payload = request_data.payload;
+                    let vault_card = payload
+                        .vault_card
+                        .ok_or_else(|| tonic::Status::invalid_argument("Vault card is required"))?;
+
+                    // Convert vault_card to PaymentMethod::CardProxy
+                    let post_auth_request =
+                        PaymentMethodAuthenticationServicePostAuthenticateRequest {
+                            payment_method: Some(grpc_api_types::payments::PaymentMethod {
+                                payment_method: Some(payment_method::PaymentMethod::CardProxy(
+                                    vault_alias_to_card_details(&vault_card)?
+                                )),
+                            }),
+                            merchant_order_id: payload.merchant_order_id,
+                            authentication_data: payload.authentication_data,
+                            state: payload.state,
+                            metadata: payload.metadata,
+                            ..Default::default()
+                        };
+
+                    // Create a new inner request to delegate to PaymentMethodAuthenticationService
+                    let mut inner_request = tonic::Request::new(post_auth_request);
+                    // Copy over extensions and metadata
+                    *inner_request.extensions_mut() = extensions;
+                    *inner_request.metadata_mut() = metadata;
+                    inner_request.extensions_mut().insert(service_name.clone());
+
+                    // Delegate to existing PaymentMethodAuthenticationService::post_authenticate
+                    <PaymentMethodAuthentication as PaymentMethodAuthenticationService>::post_authenticate(
+                        &PaymentMethodAuthentication,
+                        inner_request,
+                    )
+                    .await
+                })
+            },
+        )
+        .await
+    }
+}
+
+/// Convert VaultAliasCard to CardDetails
+fn vault_alias_to_card_details(
+    alias: &grpc_api_types::payments::VaultAliasCard,
+) -> Result<grpc_api_types::payments::CardDetails, tonic::Status> {
+    use hyperswitch_masking::PeekInterface;
+    use std::str::FromStr;
+
+    Ok(grpc_api_types::payments::CardDetails {
+        card_number: alias
+            .card_number_alias
+            .as_ref()
+            .and_then(|s| cards::CardNumber::from_str(s.peek()).ok()),
+        card_exp_month: Some(hyperswitch_masking::Secret::from(alias.exp_month.clone())),
+        card_exp_year: Some(hyperswitch_masking::Secret::from(alias.exp_year.clone())),
+        card_cvc: alias
+            .cvc_alias
+            .as_ref()
+            .map(|s| hyperswitch_masking::Secret::from(s.peek().to_string())),
+        card_holder_name: alias
+            .card_holder_name
+            .clone()
+            .map(|v| hyperswitch_masking::Secret::from(v)),
+        card_network: alias.card_network,
+        ..Default::default()
+    })
+}

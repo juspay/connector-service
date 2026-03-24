@@ -31,6 +31,16 @@ import uniffi.connector_service_ffi.postAuthenticateReqTransformer
 import uniffi.connector_service_ffi.postAuthenticateResTransformer
 import uniffi.connector_service_ffi.preAuthenticateReqTransformer
 import uniffi.connector_service_ffi.preAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxyAuthenticateReqTransformer
+import uniffi.connector_service_ffi.proxyAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxyAuthorizeReqTransformer
+import uniffi.connector_service_ffi.proxyAuthorizeResTransformer
+import uniffi.connector_service_ffi.proxyPostAuthenticateReqTransformer
+import uniffi.connector_service_ffi.proxyPostAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxyPreAuthenticateReqTransformer
+import uniffi.connector_service_ffi.proxyPreAuthenticateResTransformer
+import uniffi.connector_service_ffi.proxySetupRecurringReqTransformer
+import uniffi.connector_service_ffi.proxySetupRecurringResTransformer
 import uniffi.connector_service_ffi.refundReqTransformer
 import uniffi.connector_service_ffi.refundResTransformer
 import uniffi.connector_service_ffi.reverseReqTransformer
@@ -41,6 +51,10 @@ import uniffi.connector_service_ffi.submitEvidenceReqTransformer
 import uniffi.connector_service_ffi.submitEvidenceResTransformer
 import uniffi.connector_service_ffi.tokenizeReqTransformer
 import uniffi.connector_service_ffi.tokenizeResTransformer
+import uniffi.connector_service_ffi.tokenizedAuthorizeReqTransformer
+import uniffi.connector_service_ffi.tokenizedAuthorizeResTransformer
+import uniffi.connector_service_ffi.tokenizedSetupRecurringReqTransformer
+import uniffi.connector_service_ffi.tokenizedSetupRecurringResTransformer
 import uniffi.connector_service_ffi.voidReqTransformer
 import uniffi.connector_service_ffi.voidResTransformer
 import uniffi.connector_service_ffi.handleEventTransformer
@@ -60,11 +74,18 @@ object FlowRegistry {
         "get" to ::getReqTransformer,
         "post_authenticate" to ::postAuthenticateReqTransformer,
         "pre_authenticate" to ::preAuthenticateReqTransformer,
+        "proxy_authenticate" to ::proxyAuthenticateReqTransformer,
+        "proxy_authorize" to ::proxyAuthorizeReqTransformer,
+        "proxy_post_authenticate" to ::proxyPostAuthenticateReqTransformer,
+        "proxy_pre_authenticate" to ::proxyPreAuthenticateReqTransformer,
+        "proxy_setup_recurring" to ::proxySetupRecurringReqTransformer,
         "refund" to ::refundReqTransformer,
         "reverse" to ::reverseReqTransformer,
         "setup_recurring" to ::setupRecurringReqTransformer,
         "submit_evidence" to ::submitEvidenceReqTransformer,
         "tokenize" to ::tokenizeReqTransformer,
+        "tokenized_authorize" to ::tokenizedAuthorizeReqTransformer,
+        "tokenized_setup_recurring" to ::tokenizedSetupRecurringReqTransformer,
         "void" to ::voidReqTransformer,
     )
 
@@ -82,11 +103,18 @@ object FlowRegistry {
         "get" to ::getResTransformer,
         "post_authenticate" to ::postAuthenticateResTransformer,
         "pre_authenticate" to ::preAuthenticateResTransformer,
+        "proxy_authenticate" to ::proxyAuthenticateResTransformer,
+        "proxy_authorize" to ::proxyAuthorizeResTransformer,
+        "proxy_post_authenticate" to ::proxyPostAuthenticateResTransformer,
+        "proxy_pre_authenticate" to ::proxyPreAuthenticateResTransformer,
+        "proxy_setup_recurring" to ::proxySetupRecurringResTransformer,
         "refund" to ::refundResTransformer,
         "reverse" to ::reverseResTransformer,
         "setup_recurring" to ::setupRecurringResTransformer,
         "submit_evidence" to ::submitEvidenceResTransformer,
         "tokenize" to ::tokenizeResTransformer,
+        "tokenized_authorize" to ::tokenizedAuthorizeResTransformer,
+        "tokenized_setup_recurring" to ::tokenizedSetupRecurringResTransformer,
         "void" to ::voidResTransformer,
     )
 
@@ -224,6 +252,33 @@ class PaymentClient(
 
 }
 
+class ProxyPaymentClient(
+    config: ConnectorConfig,
+    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
+    libPath: String? = null
+) : ConnectorClient(config, defaults, libPath) {
+    // proxy_authenticate: ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
+    fun proxy_authenticate(request: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServiceAuthenticateResponse =
+        executeFlow("proxy_authenticate", request.toByteArray(), PaymentMethodAuthenticationServiceAuthenticateResponse.parser(), options)
+
+    // proxy_authorize: ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+    fun proxy_authorize(request: ProxyPaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
+        executeFlow("proxy_authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
+
+    // proxy_post_authenticate: ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
+    fun proxy_post_authenticate(request: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePostAuthenticateResponse =
+        executeFlow("proxy_post_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePostAuthenticateResponse.parser(), options)
+
+    // proxy_pre_authenticate: ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
+    fun proxy_pre_authenticate(request: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, options: RequestConfig? = null): PaymentMethodAuthenticationServicePreAuthenticateResponse =
+        executeFlow("proxy_pre_authenticate", request.toByteArray(), PaymentMethodAuthenticationServicePreAuthenticateResponse.parser(), options)
+
+    // proxy_setup_recurring: ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
+    fun proxy_setup_recurring(request: ProxyPaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
+        executeFlow("proxy_setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
+
+}
+
 class RecurringPaymentClient(
     config: ConnectorConfig,
     defaults: RequestConfig = RequestConfig.getDefaultInstance(),
@@ -232,5 +287,20 @@ class RecurringPaymentClient(
     // charge: RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details.
     fun charge(request: RecurringPaymentServiceChargeRequest, options: RequestConfig? = null): RecurringPaymentServiceChargeResponse =
         executeFlow("charge", request.toByteArray(), RecurringPaymentServiceChargeResponse.parser(), options)
+
+}
+
+class TokenizedPaymentClient(
+    config: ConnectorConfig,
+    defaults: RequestConfig = RequestConfig.getDefaultInstance(),
+    libPath: String? = null
+) : ConnectorClient(config, defaults, libPath) {
+    // tokenized_authorize: TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token.
+    fun tokenized_authorize(request: TokenizedPaymentServiceAuthorizeRequest, options: RequestConfig? = null): PaymentServiceAuthorizeResponse =
+        executeFlow("tokenized_authorize", request.toByteArray(), PaymentServiceAuthorizeResponse.parser(), options)
+
+    // tokenized_setup_recurring: TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token.
+    fun tokenized_setup_recurring(request: TokenizedPaymentServiceSetupRecurringRequest, options: RequestConfig? = null): PaymentServiceSetupRecurringResponse =
+        executeFlow("tokenized_setup_recurring", request.toByteArray(), PaymentServiceSetupRecurringResponse.parser(), options)
 
 }

@@ -25,7 +25,9 @@ use grpc_api_types::payments::{
     payment_method_authentication_service_client::PaymentMethodAuthenticationServiceClient,
     payment_method_service_client::PaymentMethodServiceClient,
     payment_service_client::PaymentServiceClient,
-    recurring_payment_service_client::RecurringPaymentServiceClient, CustomerServiceCreateRequest,
+    proxy_payment_service_client::ProxyPaymentServiceClient,
+    recurring_payment_service_client::RecurringPaymentServiceClient,
+    tokenized_payment_service_client::TokenizedPaymentServiceClient, CustomerServiceCreateRequest,
     EventServiceHandleRequest, MerchantAuthenticationServiceCreateAccessTokenRequest,
     MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
     MerchantAuthenticationServiceCreateSessionTokenRequest,
@@ -34,7 +36,12 @@ use grpc_api_types::payments::{
     PaymentMethodAuthenticationServicePreAuthenticateRequest, PaymentMethodServiceTokenizeRequest,
     PaymentServiceAuthorizeRequest, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
     PaymentServiceRefundRequest, PaymentServiceReverseRequest, PaymentServiceSetupRecurringRequest,
-    PaymentServiceVoidRequest, RecurringPaymentServiceChargeRequest,
+    PaymentServiceVoidRequest, ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    ProxyPaymentServiceAuthorizeRequest, ProxyPaymentServiceSetupRecurringRequest,
+    RecurringPaymentServiceChargeRequest, TokenizedPaymentServiceAuthorizeRequest,
+    TokenizedPaymentServiceSetupRecurringRequest,
 };
 use prost::Message;
 use serde::Deserialize;
@@ -217,6 +224,43 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
             RecurringPaymentServiceClient,
             charge,
             RecurringPaymentServiceChargeRequest
+        ),
+        // TokenizedPaymentService
+        "tokenized_payment/authorize" => call!(
+            TokenizedPaymentServiceClient,
+            authorize,
+            TokenizedPaymentServiceAuthorizeRequest
+        ),
+        "tokenized_payment/setup_recurring" => call!(
+            TokenizedPaymentServiceClient,
+            setup_recurring,
+            TokenizedPaymentServiceSetupRecurringRequest
+        ),
+        // ProxyPaymentService
+        "proxy_payment/authorize" => call!(
+            ProxyPaymentServiceClient,
+            authorize,
+            ProxyPaymentServiceAuthorizeRequest
+        ),
+        "proxy_payment/setup_recurring" => call!(
+            ProxyPaymentServiceClient,
+            setup_recurring,
+            ProxyPaymentServiceSetupRecurringRequest
+        ),
+        "proxy_payment/pre_authenticate" => call!(
+            ProxyPaymentServiceClient,
+            pre_authenticate,
+            ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest
+        ),
+        "proxy_payment/authenticate" => call!(
+            ProxyPaymentServiceClient,
+            authenticate,
+            ProxyPaymentMethodAuthenticationServiceAuthenticateRequest
+        ),
+        "proxy_payment/post_authenticate" => call!(
+            ProxyPaymentServiceClient,
+            post_authenticate,
+            ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest
         ),
         other => Err(format!("unknown gRPC method: \"{other}\"")),
     }

@@ -178,6 +178,49 @@ export class PaymentClient extends _ConnectorClientBase {
 
 }
 
+export class ProxyPaymentClient extends _ConnectorClientBase {
+  /** ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy. */
+  async proxyAuthenticate(
+    requestMsg: types.IProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentMethodAuthenticationServiceAuthenticateResponse> {
+    return this._executeFlow('proxy_authenticate', requestMsg, options, 'ProxyPaymentMethodAuthenticationServiceAuthenticateRequest', 'PaymentMethodAuthenticationServiceAuthenticateResponse') as Promise<types.PaymentMethodAuthenticationServiceAuthenticateResponse>;
+  }
+
+  /** ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
+  async proxyAuthorize(
+    requestMsg: types.IProxyPaymentServiceAuthorizeRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceAuthorizeResponse> {
+    return this._executeFlow('proxy_authorize', requestMsg, options, 'ProxyPaymentServiceAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<types.PaymentServiceAuthorizeResponse>;
+  }
+
+  /** ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy. */
+  async proxyPostAuthenticate(
+    requestMsg: types.IProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentMethodAuthenticationServicePostAuthenticateResponse> {
+    return this._executeFlow('proxy_post_authenticate', requestMsg, options, 'ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest', 'PaymentMethodAuthenticationServicePostAuthenticateResponse') as Promise<types.PaymentMethodAuthenticationServicePostAuthenticateResponse>;
+  }
+
+  /** ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server. */
+  async proxyPreAuthenticate(
+    requestMsg: types.IProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentMethodAuthenticationServicePreAuthenticateResponse> {
+    return this._executeFlow('proxy_pre_authenticate', requestMsg, options, 'ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest', 'PaymentMethodAuthenticationServicePreAuthenticateResponse') as Promise<types.PaymentMethodAuthenticationServicePreAuthenticateResponse>;
+  }
+
+  /** ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data. */
+  async proxySetupRecurring(
+    requestMsg: types.IProxyPaymentServiceSetupRecurringRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceSetupRecurringResponse> {
+    return this._executeFlow('proxy_setup_recurring', requestMsg, options, 'ProxyPaymentServiceSetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<types.PaymentServiceSetupRecurringResponse>;
+  }
+
+}
+
 export class RecurringPaymentClient extends _ConnectorClientBase {
   /** RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details. */
   async charge(
@@ -185,6 +228,25 @@ export class RecurringPaymentClient extends _ConnectorClientBase {
     options?: types.IRequestConfig | null
   ): Promise<types.RecurringPaymentServiceChargeResponse> {
     return this._executeFlow('charge', requestMsg, options, 'RecurringPaymentServiceChargeRequest', 'RecurringPaymentServiceChargeResponse') as Promise<types.RecurringPaymentServiceChargeResponse>;
+  }
+
+}
+
+export class TokenizedPaymentClient extends _ConnectorClientBase {
+  /** TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token. */
+  async tokenizedAuthorize(
+    requestMsg: types.ITokenizedPaymentServiceAuthorizeRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceAuthorizeResponse> {
+    return this._executeFlow('tokenized_authorize', requestMsg, options, 'TokenizedPaymentServiceAuthorizeRequest', 'PaymentServiceAuthorizeResponse') as Promise<types.PaymentServiceAuthorizeResponse>;
+  }
+
+  /** TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token. */
+  async tokenizedSetupRecurring(
+    requestMsg: types.ITokenizedPaymentServiceSetupRecurringRequest,
+    options?: types.IRequestConfig | null
+  ): Promise<types.PaymentServiceSetupRecurringResponse> {
+    return this._executeFlow('tokenized_setup_recurring', requestMsg, options, 'TokenizedPaymentServiceSetupRecurringRequest', 'PaymentServiceSetupRecurringResponse') as Promise<types.PaymentServiceSetupRecurringResponse>;
   }
 
 }

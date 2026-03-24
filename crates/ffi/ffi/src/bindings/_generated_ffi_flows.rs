@@ -20,7 +20,14 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest,
     PaymentServiceSetupRecurringRequest,
     PaymentServiceVoidRequest,
+    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    ProxyPaymentServiceAuthorizeRequest,
+    ProxyPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
+    TokenizedPaymentServiceAuthorizeRequest,
+    TokenizedPaymentServiceSetupRecurringRequest,
 };
 use crate::handlers::payments::{
     accept_req_handler, accept_res_handler,
@@ -36,11 +43,18 @@ use crate::handlers::payments::{
     get_req_handler, get_res_handler,
     post_authenticate_req_handler, post_authenticate_res_handler,
     pre_authenticate_req_handler, pre_authenticate_res_handler,
+    proxy_authenticate_req_handler, proxy_authenticate_res_handler,
+    proxy_authorize_req_handler, proxy_authorize_res_handler,
+    proxy_post_authenticate_req_handler, proxy_post_authenticate_res_handler,
+    proxy_pre_authenticate_req_handler, proxy_pre_authenticate_res_handler,
+    proxy_setup_recurring_req_handler, proxy_setup_recurring_res_handler,
     refund_req_handler, refund_res_handler,
     reverse_req_handler, reverse_res_handler,
     setup_recurring_req_handler, setup_recurring_res_handler,
     submit_evidence_req_handler, submit_evidence_res_handler,
     tokenize_req_handler, tokenize_res_handler,
+    tokenized_authorize_req_handler, tokenized_authorize_res_handler,
+    tokenized_setup_recurring_req_handler, tokenized_setup_recurring_res_handler,
     void_req_handler, void_res_handler,
 };
 
@@ -70,6 +84,16 @@ define_ffi_flow!(get, PaymentServiceGetRequest, get_req_handler, get_res_handler
 define_ffi_flow!(post_authenticate, PaymentMethodAuthenticationServicePostAuthenticateRequest, post_authenticate_req_handler, post_authenticate_res_handler);
 // pre_authenticate: PaymentMethodAuthenticationService.PreAuthenticate — Initiate 3DS flow before payment authorization. Collects device data and prepares authentication context for frictionless or challenge-based verification.
 define_ffi_flow!(pre_authenticate, PaymentMethodAuthenticationServicePreAuthenticateRequest, pre_authenticate_req_handler, pre_authenticate_res_handler);
+// proxy_authenticate: ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
+define_ffi_flow!(proxy_authenticate, ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, proxy_authenticate_req_handler, proxy_authenticate_res_handler);
+// proxy_authorize: ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+define_ffi_flow!(proxy_authorize, ProxyPaymentServiceAuthorizeRequest, proxy_authorize_req_handler, proxy_authorize_res_handler);
+// proxy_post_authenticate: ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
+define_ffi_flow!(proxy_post_authenticate, ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, proxy_post_authenticate_req_handler, proxy_post_authenticate_res_handler);
+// proxy_pre_authenticate: ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
+define_ffi_flow!(proxy_pre_authenticate, ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, proxy_pre_authenticate_req_handler, proxy_pre_authenticate_res_handler);
+// proxy_setup_recurring: ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
+define_ffi_flow!(proxy_setup_recurring, ProxyPaymentServiceSetupRecurringRequest, proxy_setup_recurring_req_handler, proxy_setup_recurring_res_handler);
 // refund: PaymentService.Refund — Initiate a refund to customer's payment method. Returns funds for returns, cancellations, or service adjustments after original payment.
 define_ffi_flow!(refund, PaymentServiceRefundRequest, refund_req_handler, refund_res_handler);
 // reverse: PaymentService.Reverse — Reverse a captured payment before settlement. Recovers funds after capture but before bank settlement, used for corrections or cancellations.
@@ -80,5 +104,9 @@ define_ffi_flow!(setup_recurring, PaymentServiceSetupRecurringRequest, setup_rec
 define_ffi_flow!(submit_evidence, DisputeServiceSubmitEvidenceRequest, submit_evidence_req_handler, submit_evidence_res_handler);
 // tokenize: PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
 define_ffi_flow!(tokenize, PaymentMethodServiceTokenizeRequest, tokenize_req_handler, tokenize_res_handler);
+// tokenized_authorize: TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token.
+define_ffi_flow!(tokenized_authorize, TokenizedPaymentServiceAuthorizeRequest, tokenized_authorize_req_handler, tokenized_authorize_res_handler);
+// tokenized_setup_recurring: TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token.
+define_ffi_flow!(tokenized_setup_recurring, TokenizedPaymentServiceSetupRecurringRequest, tokenized_setup_recurring_req_handler, tokenized_setup_recurring_res_handler);
 // void: PaymentService.Void — Cancel an authorized payment before capture. Releases held funds back to customer, typically used when orders are cancelled or abandoned.
 define_ffi_flow!(void, PaymentServiceVoidRequest, void_req_handler, void_res_handler);

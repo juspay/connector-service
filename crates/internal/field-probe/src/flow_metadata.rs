@@ -65,6 +65,8 @@ fn get_category_for_service(service_name: &str) -> String {
         "PaymentMethodService" => "Payments".to_string(),
         "MerchantAuthenticationService" => "Authentication".to_string(),
         "PaymentMethodAuthenticationService" => "Authentication".to_string(),
+        "TokenizedPaymentService" => "Non-PCI Payments".to_string(),
+        "ProxyPaymentService" => "Non-PCI Payments".to_string(),
         "DisputeService" => "Disputes".to_string(),
         "EventService" => "Events".to_string(),
         _ => "Other".to_string(),
@@ -135,6 +137,33 @@ fn get_flow_key_mapping() -> HashMap<(&'static str, &'static str), &'static str>
         (("DisputeService", "Get"), "dispute_get"),
         (("DisputeService", "Defend"), "dispute_defend"),
         (("DisputeService", "Accept"), "dispute_accept"),
+        // TokenizedPaymentService
+        (
+            ("TokenizedPaymentService", "Authorize"),
+            "tokenized_authorize",
+        ),
+        (
+            ("TokenizedPaymentService", "SetupRecurring"),
+            "tokenized_setup_recurring",
+        ),
+        // ProxyPaymentService
+        (("ProxyPaymentService", "Authorize"), "proxy_authorize"),
+        (
+            ("ProxyPaymentService", "SetupRecurring"),
+            "proxy_setup_recurring",
+        ),
+        (
+            ("ProxyPaymentService", "PreAuthenticate"),
+            "proxy_pre_authenticate",
+        ),
+        (
+            ("ProxyPaymentService", "Authenticate"),
+            "proxy_authenticate",
+        ),
+        (
+            ("ProxyPaymentService", "PostAuthenticate"),
+            "proxy_post_authenticate",
+        ),
         // EventService
         (("EventService", "HandleEvent"), "handle_event"),
     ]

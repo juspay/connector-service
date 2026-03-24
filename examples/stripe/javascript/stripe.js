@@ -6,7 +6,7 @@
 // Run a scenario:  node stripe.js checkout_card
 'use strict';
 
-const { PaymentClient, RecurringPaymentClient, CustomerClient, PaymentMethodClient } = require('hs-playlib');
+const { PaymentClient, RecurringPaymentClient, CustomerClient, PaymentMethodClient, TokenizedPaymentClient, ProxyPaymentClient } = require('hs-playlib');
 const { ConnectorConfig, ConnectorSpecificConfig, SdkOptions, Environment } = require('hs-playlib').types;
 
 const _defaultConfig = ConnectorConfig.create({
@@ -167,6 +167,166 @@ function _buildVoidRequest(connectorTransactionId) {
     return {
         "merchantVoidId": "probe_void_001",  // Identification
         "connectorTransactionId": connectorTransactionId
+    };
+}
+
+function _buildTokenizedAuthorizeRequest() {
+    return {
+        "merchantTransactionId": "probe_tokenized_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "connectorToken": {
+            "value": "pm_1AbcXyzStripeTestToken"
+        },
+        "captureMethod": "AUTOMATIC",
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "returnUrl": "https://example.com/return"
+    };
+}
+
+function _buildTokenizedSetupRecurringRequest() {
+    return {
+        "merchantRecurringPaymentId": "probe_tokenized_mandate_001",
+        "amount": {
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "connectorToken": {
+            "value": "pm_1AbcXyzStripeTestToken"
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "customerAcceptance": {
+            "acceptanceType": "ONLINE",  // Type of acceptance (e.g., online, offline).
+            "online": {
+                "ipAddress": "127.0.0.1",
+                "userAgent": "Mozilla/5.0"
+            }
+        }
+    };
+}
+
+function _buildProxyAuthorizeRequest() {
+    return {
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cvcAlias": {
+                "value": "tok_sandbox_cvc456"
+            },
+            "cardHolderName": "John Doe"
+        },
+        "captureMethod": "AUTOMATIC",
+        "authType": "NO_THREE_DS",
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "returnUrl": "https://example.com/return"
+    };
+}
+
+function _buildProxySetupRecurringRequest() {
+    return {
+        "merchantRecurringPaymentId": "probe_proxy_mandate_001",
+        "amount": {
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cvcAlias": {
+                "value": "tok_sandbox_cvc456"
+            },
+            "cardHolderName": "John Doe"
+        },
+        "authType": "NO_THREE_DS",
+        "address": {
+            "billingAddress": {
+            }
+        }
+    };
+}
+
+function _buildProxyPreAuthenticateRequest() {
+    return {
+        "merchantOrderId": "probe_proxy_order_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cardHolderName": "John Doe"
+        },
+        "browserInfo": {
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+            "acceptHeader": "application/json",  // Browser Headers
+            "language": "en-US",
+            "colorDepth": 24,  // Display Information
+            "screenHeight": 1080,
+            "screenWidth": 1920,
+            "timeZoneOffset": -330,
+            "javaEnabled": false,  // Browser Settings
+            "javaScriptEnabled": true
+        },
+        "returnUrl": "https://example.com/3ds-return"
+    };
+}
+
+function _buildProxyAuthenticateRequest() {
+    return {
+        "merchantOrderId": "probe_proxy_order_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cardHolderName": "John Doe"
+        },
+        "returnUrl": "https://example.com/3ds-return"
+    };
+}
+
+function _buildProxyPostAuthenticateRequest() {
+    return {
+        "merchantOrderId": "probe_proxy_order_001",
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cardHolderName": "John Doe"
+        }
     };
 }
 
@@ -478,6 +638,233 @@ async function processTokenize(merchantTransactionId, config = _defaultConfig) {
     return { token: tokenizeResponse.paymentMethodToken, error: tokenizeResponse.error };
 }
 
+// Tokenized Payment (Authorize + Capture)
+// Authorize using a connector-issued payment method token (e.g. Stripe pm_xxx). Card data never touches your server — only the token is sent. Capture settles the reserved funds.
+async function processTokenizedCheckout(merchantTransactionId, config = _defaultConfig) {
+    const tokenizedPaymentClient = new TokenizedPaymentClient(config);
+    const paymentClient = new PaymentClient(config);
+
+    // Step 1: Tokenized Authorize — reserve funds using a connector-issued payment method token
+    const authorizeResponse = await tokenizedPaymentClient.tokenizedAuthorize({
+        "merchantTransactionId": "probe_tokenized_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "connectorToken": {
+            "value": "pm_1AbcXyzStripeTestToken"
+        },
+        "captureMethod": "AUTOMATIC",
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "returnUrl": "https://example.com/return"
+    });
+
+    // Step 2: Capture — settle the reserved funds
+    const captureResponse = await paymentClient.capture({
+        "merchantCaptureId": "probe_capture_001",  // Identification
+        "connectorTransactionId": "probe_connector_txn_001",
+        "amountToCapture": {  // Capture Details
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        }
+    });
+
+    if (captureResponse.status === 'FAILED') {
+        throw new Error(`Capture failed: ${captureResponse.error?.message}`);
+    }
+
+    return {};
+}
+
+// Tokenized Recurring Payments
+// Store a payment mandate using a connector token with SetupRecurring, then charge it repeatedly with RecurringPaymentService without requiring customer action or re-collecting card data.
+async function processTokenizedRecurring(merchantTransactionId, config = _defaultConfig) {
+    const tokenizedPaymentClient = new TokenizedPaymentClient(config);
+    const recurringPaymentClient = new RecurringPaymentClient(config);
+
+    // Step 1: Tokenized Setup Recurring — store a mandate using a connector token
+    const setupResponse = await tokenizedPaymentClient.tokenizedSetupRecurring({
+        "merchantRecurringPaymentId": "probe_tokenized_mandate_001",
+        "amount": {
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "connectorToken": {
+            "value": "pm_1AbcXyzStripeTestToken"
+        },
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "customerAcceptance": {
+            "acceptanceType": "ONLINE",  // Type of acceptance (e.g., online, offline).
+            "online": {
+                "ipAddress": "127.0.0.1",
+                "userAgent": "Mozilla/5.0"
+            }
+        }
+    });
+
+    // Step 2: Recurring Charge — charge against the stored mandate
+    const recurringResponse = await recurringPaymentClient.charge({
+        "connectorRecurringPaymentId": {  // Reference to existing mandate
+            "mandateIdType": {
+                "connectorMandateId": "probe-mandate-123"
+            }
+        },
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {  // Optional payment Method Information (for network transaction flows)
+            "token": {"token": {"value": "probe_pm_token"}}  // Payment tokens
+        },
+        "returnUrl": "https://example.com/recurring-return",
+        "connectorCustomerId": "cust_probe_123",
+        "paymentMethodType": "PAY_PAL",
+        "offSession": true  // Behavioral Flags and Preferences
+    });
+
+    if (recurringResponse.status === 'FAILED') {
+        throw new Error(`Recurring_Charge failed: ${recurringResponse.error?.message}`);
+    }
+
+    return {};
+}
+
+// Proxy Payment via Vault (VGS / Basis Theory)
+// Authorize using vault alias tokens. Configure an outbound proxy URL in RequestConfig — the proxy substitutes aliases with real card values before the request reaches the connector. Card data never touches your server.
+async function processProxyCheckout(merchantTransactionId, config = _defaultConfig) {
+    const proxyPaymentClient = new ProxyPaymentClient(config);
+
+    // Step 1: Proxy Authorize — reserve funds using vault alias tokens routed through a proxy
+    const authorizeResponse = await proxyPaymentClient.proxyAuthorize({
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cvcAlias": {
+                "value": "tok_sandbox_cvc456"
+            },
+            "cardHolderName": "John Doe"
+        },
+        "captureMethod": "AUTOMATIC",
+        "authType": "NO_THREE_DS",
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "returnUrl": "https://example.com/return"
+    });
+
+    return {};
+}
+
+// Proxy Payment with 3DS (VGS + Proxy 3DS)
+// Full 3DS flow using vault alias tokens routed through an outbound proxy. The proxy substitutes aliases before forwarding to Netcetera (3DS server). Authorize after successful authentication using the same vault aliases.
+async function processProxy3DsCheckout(merchantTransactionId, config = _defaultConfig) {
+    const proxyPaymentClient = new ProxyPaymentClient(config);
+
+    // Step 1: Proxy Pre-Authenticate — initiate 3DS using vault aliases (proxy substitutes before Netcetera)
+    const preAuthenticateresponse = await proxyPaymentClient.proxyPreAuthenticate({
+        "merchantOrderId": "probe_proxy_order_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cardHolderName": "John Doe"
+        },
+        "browserInfo": {
+            "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+            "acceptHeader": "application/json",  // Browser Headers
+            "language": "en-US",
+            "colorDepth": 24,  // Display Information
+            "screenHeight": 1080,
+            "screenWidth": 1920,
+            "timeZoneOffset": -330,
+            "javaEnabled": false,  // Browser Settings
+            "javaScriptEnabled": true
+        },
+        "returnUrl": "https://example.com/3ds-return"
+    });
+
+    // Step 2: Proxy Authenticate — execute 3DS challenge using vault aliases via proxy
+    const authenticateResponse = await proxyPaymentClient.proxyAuthenticate({
+        "merchantOrderId": "probe_proxy_order_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cardHolderName": "John Doe"
+        },
+        "returnUrl": "https://example.com/3ds-return"
+    });
+
+    // Step 3: Proxy Post-Authenticate — validate 3DS result using vault aliases via proxy
+    const postAuthenticateresponse = await proxyPaymentClient.proxyPostAuthenticate({
+        "merchantOrderId": "probe_proxy_order_001",
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cardHolderName": "John Doe"
+        }
+    });
+
+    // Step 4: Proxy Authorize — reserve funds using vault alias tokens routed through a proxy
+    const authorizeResponse = await proxyPaymentClient.proxyAuthorize({
+        "merchantTransactionId": "probe_proxy_txn_001",
+        "amount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "vaultCard": {
+            "cardNumberAlias": {
+                "value": "tok_sandbox_abc123"
+            },
+            "expMonth": "03",
+            "expYear": "2030",
+            "cvcAlias": {
+                "value": "tok_sandbox_cvc456"
+            },
+            "cardHolderName": "John Doe"
+        },
+        "captureMethod": "AUTOMATIC",
+        "authType": "NO_THREE_DS",
+        "address": {
+            "billingAddress": {
+            }
+        },
+        "returnUrl": "https://example.com/return"
+    });
+
+    return {};
+}
+
 // Flow: PaymentService.Authorize (Card)
 async function authorize(merchantTransactionId, config = _defaultConfig) {
     const paymentClient = new PaymentClient(config);
@@ -559,8 +946,71 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
     return { status: voidResponse.status };
 }
 
+// Flow: TokenizedPaymentService.Authorize
+async function tokenizedAuthorize(merchantTransactionId, config = _defaultConfig) {
+    const tokenizedPaymentClient = new TokenizedPaymentClient(config);
 
-module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, tokenize, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateCustomerRequest, _buildGetRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenizeRequest, _buildVoidRequest };
+    const tokenizedResponse = await tokenizedPaymentClient.tokenizedAuthorize(_buildTokenizedAuthorizeRequest());
+
+    return { status: tokenizedResponse.status };
+}
+
+// Flow: TokenizedPaymentService.SetupRecurring
+async function tokenizedSetupRecurring(merchantTransactionId, config = _defaultConfig) {
+    const tokenizedPaymentClient = new TokenizedPaymentClient(config);
+
+    const tokenizedResponse = await tokenizedPaymentClient.tokenizedSetupRecurring(_buildTokenizedSetupRecurringRequest());
+
+    return { status: tokenizedResponse.status };
+}
+
+// Flow: ProxyPaymentService.Authorize
+async function proxyAuthorize(merchantTransactionId, config = _defaultConfig) {
+    const proxyPaymentClient = new ProxyPaymentClient(config);
+
+    const proxyResponse = await proxyPaymentClient.proxyAuthorize(_buildProxyAuthorizeRequest());
+
+    return { status: proxyResponse.status };
+}
+
+// Flow: ProxyPaymentService.SetupRecurring
+async function proxySetupRecurring(merchantTransactionId, config = _defaultConfig) {
+    const proxyPaymentClient = new ProxyPaymentClient(config);
+
+    const proxyResponse = await proxyPaymentClient.proxySetupRecurring(_buildProxySetupRecurringRequest());
+
+    return { status: proxyResponse.status };
+}
+
+// Flow: ProxyPaymentService.PreAuthenticate
+async function proxyPreAuthenticate(merchantTransactionId, config = _defaultConfig) {
+    const proxyPaymentClient = new ProxyPaymentClient(config);
+
+    const proxyResponse = await proxyPaymentClient.proxyPreAuthenticate(_buildProxyPreAuthenticateRequest());
+
+    return { status: proxyResponse.status };
+}
+
+// Flow: ProxyPaymentService.Authenticate
+async function proxyAuthenticate(merchantTransactionId, config = _defaultConfig) {
+    const proxyPaymentClient = new ProxyPaymentClient(config);
+
+    const proxyResponse = await proxyPaymentClient.proxyAuthenticate(_buildProxyAuthenticateRequest());
+
+    return { status: proxyResponse.status };
+}
+
+// Flow: ProxyPaymentService.PostAuthenticate
+async function proxyPostAuthenticate(merchantTransactionId, config = _defaultConfig) {
+    const proxyPaymentClient = new ProxyPaymentClient(config);
+
+    const proxyResponse = await proxyPaymentClient.proxyPostAuthenticate(_buildProxyPostAuthenticateRequest());
+
+    return { status: proxyResponse.status };
+}
+
+
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processCheckoutBank, processRefund, processRecurring, processVoidPayment, processGetPayment, processCreateCustomer, processTokenize, processTokenizedCheckout, processTokenizedRecurring, processProxyCheckout, processProxy3DsCheckout, authorize, capture, createCustomer, get, recurringCharge, refund, setupRecurring, tokenize, voidPayment, tokenizedAuthorize, tokenizedSetupRecurring, proxyAuthorize, proxySetupRecurring, proxyPreAuthenticate, proxyAuthenticate, proxyPostAuthenticate, _buildAuthorizeRequest, _buildCaptureRequest, _buildCreateCustomerRequest, _buildGetRequest, _buildProxyAuthenticateRequest, _buildProxyAuthorizeRequest, _buildProxyPostAuthenticateRequest, _buildProxyPreAuthenticateRequest, _buildProxySetupRecurringRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildTokenizeRequest, _buildTokenizedAuthorizeRequest, _buildTokenizedSetupRecurringRequest, _buildVoidRequest };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_card';

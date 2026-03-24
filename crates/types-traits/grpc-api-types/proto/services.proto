@@ -292,3 +292,51 @@ service PayoutService {
   // Enroll disburse account.
   rpc EnrollDisburseAccount(PayoutServiceEnrollDisburseAccountRequest) returns (PayoutServiceEnrollDisburseAccountResponse);
 }
+
+// ============================================================================
+// TOKENIZED PAYMENT SERVICE — For merchants holding connector-issued payment
+// method tokens (e.g., Stripe pm_xxx, Adyen stored ref, Braintree nonce).
+// ============================================================================
+// 3DS flows (PaymentMethodAuthenticationService) are NOT available here —
+// PSP tokens cannot be passed to an external 3DS directory server.
+// For 3DS on stored tokens, use connector_feature_data to trigger
+// connector-side delegated authentication (Stripe, Adyen, etc. support this).
+
+service TokenizedPaymentService {
+  // Authorize using a connector-issued payment method token.
+  rpc Authorize(TokenizedPaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
+
+  // Setup a recurring mandate using a connector token.
+  rpc SetupRecurring(TokenizedPaymentServiceSetupRecurringRequest) returns (PaymentServiceSetupRecurringResponse);
+}
+
+// ============================================================================
+// PROXY PAYMENT SERVICE — For merchants using VGS, Basis Theory, Spreedly,
+// or similar vault providers that proxy traffic and substitute aliases.
+// ============================================================================
+// VaultAliasCard fields contain vault alias tokens that the proxy substitutes
+// with real card data before forwarding to the connector.
+//
+// The proxy URL must be set in RequestConfig.http.proxy when constructing
+// the client, or set in the gRPC server's outbound HTTP configuration.
+//
+// 3DS flows (PreAuthenticate, Authenticate, PostAuthenticate) are available
+// because the vault proxy substitutes aliases with the real PAN before
+// forwarding to the 3DS server (Netcetera, JuspayThreeDsServer, etc.).
+
+service ProxyPaymentService {
+  // Authorize using vault-aliased card data. Proxy substitutes before connector.
+  rpc Authorize(ProxyPaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
+
+  // Setup recurring mandate using vault-aliased card data.
+  rpc SetupRecurring(ProxyPaymentServiceSetupRecurringRequest) returns (PaymentServiceSetupRecurringResponse);
+
+  // Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
+  rpc PreAuthenticate(ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest) returns (PaymentMethodAuthenticationServicePreAuthenticateResponse);
+
+  // Execute 3DS challenge/frictionless step via vault proxy.
+  rpc Authenticate(ProxyPaymentMethodAuthenticationServiceAuthenticateRequest) returns (PaymentMethodAuthenticationServiceAuthenticateResponse);
+
+  // Post-authenticate via vault proxy.
+  rpc PostAuthenticate(ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest) returns (PaymentMethodAuthenticationServicePostAuthenticateResponse);
+}

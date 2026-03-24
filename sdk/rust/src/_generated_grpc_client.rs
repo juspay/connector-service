@@ -13,7 +13,9 @@ use grpc_api_types::payments::{
     payment_method_service_client::PaymentMethodServiceClient,
     payment_service_client::PaymentServiceClient,
     payout_service_client::PayoutServiceClient,
+    proxy_payment_service_client::ProxyPaymentServiceClient,
     recurring_payment_service_client::RecurringPaymentServiceClient,
+    tokenized_payment_service_client::TokenizedPaymentServiceClient,
     // request / response types (all unique types across all services)
     CustomerServiceCreateRequest,
     CustomerServiceCreateResponse,
@@ -70,11 +72,18 @@ use grpc_api_types::payments::{
     PayoutServiceStageResponse,
     PayoutServiceTransferRequest,
     PayoutServiceTransferResponse,
+    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    ProxyPaymentServiceAuthorizeRequest,
+    ProxyPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse,
     RefundResponse,
+    TokenizedPaymentServiceAuthorizeRequest,
+    TokenizedPaymentServiceSetupRecurringRequest,
 };
 use tonic::{
     metadata::{MetadataKey, MetadataValue},
@@ -92,7 +101,7 @@ use crate::grpc_config::GrpcConfig;
 //   - injects all auth headers from the shared header map
 //   - returns the unwrapped inner response on success
 macro_rules! impl_grpc_client {
-    ($name:ident, $stub:ident, $( ($method:ident, $req:ty, $res:ty) ),+ $(,)?) => {
+    ($name:ident, $stub:ident, $( ($method:ident, $stub_method:ident, $req:ty, $res:ty) ),+ $(,)?) => {
         pub struct $name {
             channel: Channel,
             headers: Arc<HashMap<String, String>>,
@@ -119,7 +128,7 @@ macro_rules! impl_grpc_client {
             $(
                 pub async fn $method(&self, request: $req) -> Result<$res, Status> {
                     $stub::new(self.channel.clone())
-                        .$method(self.inject_headers(request))
+                        .$stub_method(self.inject_headers(request))
                         .await
                         .map(|r| r.into_inner())
                 }
@@ -136,6 +145,7 @@ impl_grpc_client!(
     CustomerServiceClient,
     (
         create,
+        create,
         CustomerServiceCreateRequest,
         CustomerServiceCreateResponse
     ),
@@ -147,15 +157,18 @@ impl_grpc_client!(
     DisputeServiceClient,
     (
         submit_evidence,
+        submit_evidence,
         DisputeServiceSubmitEvidenceRequest,
         DisputeServiceSubmitEvidenceResponse
     ),
     (
         defend,
+        defend,
         DisputeServiceDefendRequest,
         DisputeServiceDefendResponse
     ),
     (
+        accept,
         accept,
         DisputeServiceAcceptRequest,
         DisputeServiceAcceptResponse
@@ -168,6 +181,7 @@ impl_grpc_client!(
     EventServiceClient,
     (
         handle_event,
+        handle_event,
         EventServiceHandleRequest,
         EventServiceHandleResponse
     ),
@@ -179,15 +193,18 @@ impl_grpc_client!(
     MerchantAuthenticationServiceClient,
     (
         create_access_token,
+        create_access_token,
         MerchantAuthenticationServiceCreateAccessTokenRequest,
         MerchantAuthenticationServiceCreateAccessTokenResponse
     ),
     (
         create_session_token,
+        create_session_token,
         MerchantAuthenticationServiceCreateSessionTokenRequest,
         MerchantAuthenticationServiceCreateSessionTokenResponse
     ),
     (
+        create_sdk_session_token,
         create_sdk_session_token,
         MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
         MerchantAuthenticationServiceCreateSdkSessionTokenResponse
@@ -200,15 +217,18 @@ impl_grpc_client!(
     PaymentMethodAuthenticationServiceClient,
     (
         pre_authenticate,
+        pre_authenticate,
         PaymentMethodAuthenticationServicePreAuthenticateRequest,
         PaymentMethodAuthenticationServicePreAuthenticateResponse
     ),
     (
         authenticate,
+        authenticate,
         PaymentMethodAuthenticationServiceAuthenticateRequest,
         PaymentMethodAuthenticationServiceAuthenticateResponse
     ),
     (
+        post_authenticate,
         post_authenticate,
         PaymentMethodAuthenticationServicePostAuthenticateRequest,
         PaymentMethodAuthenticationServicePostAuthenticateResponse
@@ -221,10 +241,12 @@ impl_grpc_client!(
     PaymentMethodServiceClient,
     (
         tokenize,
+        tokenize,
         PaymentMethodServiceTokenizeRequest,
         PaymentMethodServiceTokenizeResponse
     ),
     (
+        eligibility,
         eligibility,
         PayoutMethodEligibilityRequest,
         PayoutMethodEligibilityResponse
@@ -237,38 +259,55 @@ impl_grpc_client!(
     PaymentServiceClient,
     (
         authorize,
+        authorize,
         PaymentServiceAuthorizeRequest,
         PaymentServiceAuthorizeResponse
     ),
-    (get, PaymentServiceGetRequest, PaymentServiceGetResponse),
-    (void, PaymentServiceVoidRequest, PaymentServiceVoidResponse),
     (
+        get,
+        get,
+        PaymentServiceGetRequest,
+        PaymentServiceGetResponse
+    ),
+    (
+        void,
+        void,
+        PaymentServiceVoidRequest,
+        PaymentServiceVoidResponse
+    ),
+    (
+        reverse,
         reverse,
         PaymentServiceReverseRequest,
         PaymentServiceReverseResponse
     ),
     (
         capture,
+        capture,
         PaymentServiceCaptureRequest,
         PaymentServiceCaptureResponse
     ),
     (
         create_order,
+        create_order,
         PaymentServiceCreateOrderRequest,
         PaymentServiceCreateOrderResponse
     ),
-    (refund, PaymentServiceRefundRequest, RefundResponse),
+    (refund, refund, PaymentServiceRefundRequest, RefundResponse),
     (
+        incremental_authorization,
         incremental_authorization,
         PaymentServiceIncrementalAuthorizationRequest,
         PaymentServiceIncrementalAuthorizationResponse
     ),
     (
         verify_redirect_response,
+        verify_redirect_response,
         PaymentServiceVerifyRedirectResponseRequest,
         PaymentServiceVerifyRedirectResponseResponse
     ),
     (
+        setup_recurring,
         setup_recurring,
         PaymentServiceSetupRecurringRequest,
         PaymentServiceSetupRecurringResponse
@@ -281,24 +320,69 @@ impl_grpc_client!(
     PayoutServiceClient,
     (
         transfer,
+        transfer,
         PayoutServiceTransferRequest,
         PayoutServiceTransferResponse
     ),
-    (stage, PayoutServiceStageRequest, PayoutServiceStageResponse),
     (
+        stage,
+        stage,
+        PayoutServiceStageRequest,
+        PayoutServiceStageResponse
+    ),
+    (
+        create_link,
         create_link,
         PayoutServiceCreateLinkRequest,
         PayoutServiceCreateLinkResponse
     ),
     (
         create_recipient,
+        create_recipient,
         PayoutServiceCreateRecipientRequest,
         PayoutServiceCreateRecipientResponse
     ),
     (
         enroll_disburse_account,
+        enroll_disburse_account,
         PayoutServiceEnrollDisburseAccountRequest,
         PayoutServiceEnrollDisburseAccountResponse
+    ),
+);
+
+// ProxyPaymentService
+impl_grpc_client!(
+    GrpcProxyPaymentClient,
+    ProxyPaymentServiceClient,
+    (
+        proxy_authorize,
+        authorize,
+        ProxyPaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse
+    ),
+    (
+        proxy_setup_recurring,
+        setup_recurring,
+        ProxyPaymentServiceSetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse
+    ),
+    (
+        proxy_pre_authenticate,
+        pre_authenticate,
+        ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+        PaymentMethodAuthenticationServicePreAuthenticateResponse
+    ),
+    (
+        proxy_authenticate,
+        authenticate,
+        ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+        PaymentMethodAuthenticationServiceAuthenticateResponse
+    ),
+    (
+        proxy_post_authenticate,
+        post_authenticate,
+        ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+        PaymentMethodAuthenticationServicePostAuthenticateResponse
     ),
 );
 
@@ -308,13 +392,33 @@ impl_grpc_client!(
     RecurringPaymentServiceClient,
     (
         charge,
+        charge,
         RecurringPaymentServiceChargeRequest,
         RecurringPaymentServiceChargeResponse
     ),
     (
         revoke,
+        revoke,
         RecurringPaymentServiceRevokeRequest,
         RecurringPaymentServiceRevokeResponse
+    ),
+);
+
+// TokenizedPaymentService
+impl_grpc_client!(
+    GrpcTokenizedPaymentClient,
+    TokenizedPaymentServiceClient,
+    (
+        tokenized_authorize,
+        authorize,
+        TokenizedPaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse
+    ),
+    (
+        tokenized_setup_recurring,
+        setup_recurring,
+        TokenizedPaymentServiceSetupRecurringRequest,
+        PaymentServiceSetupRecurringResponse
     ),
 );
 
@@ -355,7 +459,9 @@ pub struct GrpcClient {
     pub payment_method: GrpcPaymentMethodClient,
     pub payment: GrpcPaymentClient,
     pub payout: GrpcPayoutClient,
+    pub proxy_payment: GrpcProxyPaymentClient,
     pub recurring_payment: GrpcRecurringPaymentClient,
+    pub tokenized_payment: GrpcTokenizedPaymentClient,
 }
 
 impl GrpcClient {
@@ -388,7 +494,12 @@ impl GrpcClient {
             payment_method: GrpcPaymentMethodClient::new(channel.clone(), Arc::clone(&headers)),
             payment: GrpcPaymentClient::new(channel.clone(), Arc::clone(&headers)),
             payout: GrpcPayoutClient::new(channel.clone(), Arc::clone(&headers)),
+            proxy_payment: GrpcProxyPaymentClient::new(channel.clone(), Arc::clone(&headers)),
             recurring_payment: GrpcRecurringPaymentClient::new(
+                channel.clone(),
+                Arc::clone(&headers),
+            ),
+            tokenized_payment: GrpcTokenizedPaymentClient::new(
                 channel.clone(),
                 Arc::clone(&headers),
             ),

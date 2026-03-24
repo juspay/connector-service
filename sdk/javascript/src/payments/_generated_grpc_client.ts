@@ -308,6 +308,42 @@ export class GrpcPayoutClient {
 
 }
 
+// ProxyPaymentService
+export class GrpcProxyPaymentClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector. */
+  async proxyAuthorize(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_authorize",
+      req, types.ProxyPaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
+  }
+
+  /** ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data. */
+  async proxySetupRecurring(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_setup_recurring",
+      req, types.ProxyPaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
+  }
+
+  /** ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server. */
+  async proxyPreAuthenticate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_pre_authenticate",
+      req, types.ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, types.PaymentMethodAuthenticationServicePreAuthenticateResponse);
+  }
+
+  /** ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy. */
+  async proxyAuthenticate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_authenticate",
+      req, types.ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, types.PaymentMethodAuthenticationServiceAuthenticateResponse);
+  }
+
+  /** ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy. */
+  async proxyPostAuthenticate(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "proxy_payment/proxy_post_authenticate",
+      req, types.ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, types.PaymentMethodAuthenticationServicePostAuthenticateResponse);
+  }
+
+}
+
 // RecurringPaymentService
 export class GrpcRecurringPaymentClient {
   constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
@@ -322,6 +358,24 @@ export class GrpcRecurringPaymentClient {
   async revoke(req: unknown): Promise<unknown> {
     return callGrpc(this.ffi, this.config, "recurring_payment/revoke",
       req, types.RecurringPaymentServiceRevokeRequest, types.RecurringPaymentServiceRevokeResponse);
+  }
+
+}
+
+// TokenizedPaymentService
+export class GrpcTokenizedPaymentClient {
+  constructor(private ffi: GrpcFfi, private config: GrpcConfig) {}
+
+  /** TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token. */
+  async tokenizedAuthorize(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "tokenized_payment/tokenized_authorize",
+      req, types.TokenizedPaymentServiceAuthorizeRequest, types.PaymentServiceAuthorizeResponse);
+  }
+
+  /** TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token. */
+  async tokenizedSetupRecurring(req: unknown): Promise<unknown> {
+    return callGrpc(this.ffi, this.config, "tokenized_payment/tokenized_setup_recurring",
+      req, types.TokenizedPaymentServiceSetupRecurringRequest, types.PaymentServiceSetupRecurringResponse);
   }
 
 }
@@ -357,7 +411,9 @@ export class GrpcClient {
   public paymentMethod: GrpcPaymentMethodClient;
   public payment: GrpcPaymentClient;
   public payout: GrpcPayoutClient;
+  public proxyPayment: GrpcProxyPaymentClient;
   public recurringPayment: GrpcRecurringPaymentClient;
+  public tokenizedPayment: GrpcTokenizedPaymentClient;
 
   constructor(config: GrpcConfig, libPath?: string) {
     const ffi = loadGrpcFfi(libPath);
@@ -369,6 +425,8 @@ export class GrpcClient {
     this.paymentMethod = new GrpcPaymentMethodClient(ffi, config);
     this.payment = new GrpcPaymentClient(ffi, config);
     this.payout = new GrpcPayoutClient(ffi, config);
+    this.proxyPayment = new GrpcProxyPaymentClient(ffi, config);
     this.recurringPayment = new GrpcRecurringPaymentClient(ffi, config);
+    this.tokenizedPayment = new GrpcTokenizedPaymentClient(ffi, config);
   }
 }

@@ -49,9 +49,27 @@ SERVICE_FLOWS = {
         # create_session_token: MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.
         "create_session_token": "MerchantAuthenticationServiceCreateSessionTokenResponse",
     },
+    "ProxyPaymentClient": {
+        # proxy_authenticate: ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy.
+        "proxy_authenticate": "PaymentMethodAuthenticationServiceAuthenticateResponse",
+        # proxy_authorize: ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector.
+        "proxy_authorize": "PaymentServiceAuthorizeResponse",
+        # proxy_post_authenticate: ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy.
+        "proxy_post_authenticate": "PaymentMethodAuthenticationServicePostAuthenticateResponse",
+        # proxy_pre_authenticate: ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server.
+        "proxy_pre_authenticate": "PaymentMethodAuthenticationServicePreAuthenticateResponse",
+        # proxy_setup_recurring: ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data.
+        "proxy_setup_recurring": "PaymentServiceSetupRecurringResponse",
+    },
     "PaymentMethodClient": {
         # tokenize: PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
         "tokenize": "PaymentMethodServiceTokenizeResponse",
+    },
+    "TokenizedPaymentClient": {
+        # tokenized_authorize: TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token.
+        "tokenized_authorize": "PaymentServiceAuthorizeResponse",
+        # tokenized_setup_recurring: TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token.
+        "tokenized_setup_recurring": "PaymentServiceSetupRecurringResponse",
     },
 }
 

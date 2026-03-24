@@ -42,9 +42,16 @@ from payments.generated.payment_pb2 import (
     PaymentServiceSetupRecurringResponse,
     PaymentServiceVoidRequest,
     PaymentServiceVoidResponse,
+    ProxyPaymentMethodAuthenticationServiceAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest,
+    ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest,
+    ProxyPaymentServiceAuthorizeRequest,
+    ProxyPaymentServiceSetupRecurringRequest,
     RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse,
     RefundResponse,
+    TokenizedPaymentServiceAuthorizeRequest,
+    TokenizedPaymentServiceSetupRecurringRequest,
 )
 
 class _ConnectorClientBase:
@@ -140,7 +147,39 @@ class PaymentClient(_ConnectorClientBase):
         ...
 
 
+class ProxyPaymentClient(_ConnectorClientBase):
+    def proxy_authenticate(self, request: ProxyPaymentMethodAuthenticationServiceAuthenticateRequest, options: RequestConfig | None = ...) -> PaymentMethodAuthenticationServiceAuthenticateResponse:
+        """ProxyPaymentService.Authenticate — Execute 3DS challenge/frictionless step via vault proxy."""
+        ...
+
+    def proxy_authorize(self, request: ProxyPaymentServiceAuthorizeRequest, options: RequestConfig | None = ...) -> PaymentServiceAuthorizeResponse:
+        """ProxyPaymentService.Authorize — Authorize using vault-aliased card data. Proxy substitutes before connector."""
+        ...
+
+    def proxy_post_authenticate(self, request: ProxyPaymentMethodAuthenticationServicePostAuthenticateRequest, options: RequestConfig | None = ...) -> PaymentMethodAuthenticationServicePostAuthenticateResponse:
+        """ProxyPaymentService.PostAuthenticate — Post-authenticate via vault proxy."""
+        ...
+
+    def proxy_pre_authenticate(self, request: ProxyPaymentMethodAuthenticationServicePreAuthenticateRequest, options: RequestConfig | None = ...) -> PaymentMethodAuthenticationServicePreAuthenticateResponse:
+        """ProxyPaymentService.PreAuthenticate — Start 3DS pre-auth. Proxy substitutes aliases before forwarding to 3DS server."""
+        ...
+
+    def proxy_setup_recurring(self, request: ProxyPaymentServiceSetupRecurringRequest, options: RequestConfig | None = ...) -> PaymentServiceSetupRecurringResponse:
+        """ProxyPaymentService.SetupRecurring — Setup recurring mandate using vault-aliased card data."""
+        ...
+
+
 class RecurringPaymentClient(_ConnectorClientBase):
     def charge(self, request: RecurringPaymentServiceChargeRequest, options: RequestConfig | None = ...) -> RecurringPaymentServiceChargeResponse:
         """RecurringPaymentService.Charge — Charge using an existing stored recurring payment instruction. Processes repeat payments for subscriptions or recurring billing without collecting payment details."""
+        ...
+
+
+class TokenizedPaymentClient(_ConnectorClientBase):
+    def tokenized_authorize(self, request: TokenizedPaymentServiceAuthorizeRequest, options: RequestConfig | None = ...) -> PaymentServiceAuthorizeResponse:
+        """TokenizedPaymentService.Authorize — Authorize using a connector-issued payment method token."""
+        ...
+
+    def tokenized_setup_recurring(self, request: TokenizedPaymentServiceSetupRecurringRequest, options: RequestConfig | None = ...) -> PaymentServiceSetupRecurringResponse:
+        """TokenizedPaymentService.SetupRecurring — Setup a recurring mandate using a connector token."""
         ...

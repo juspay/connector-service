@@ -377,7 +377,7 @@
       },
       "GooglePayDecrypted": {
         "status": "error",
-        "error": "Stuck on field: gpay wallet_token — Missing required field: gpay wallet_token"
+        "error": "Stuck on field: gpay wallet_token \u2014 Missing required field: gpay wallet_token"
       },
       "Ideal": {
         "status": "supported",
@@ -755,6 +755,176 @@
             "via": "HyperSwitch"
           },
           "body": ""
+        }
+      }
+    },
+    "tokenized_authorize": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_tokenized_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "connector_token": {
+            "value": "pm_1AbcXyzStripeTestToken"
+          },
+          "capture_method": "AUTOMATIC",
+          "address": {
+            "billing_address": {}
+          },
+          "return_url": "https://example.com/return"
+        }
+      }
+    },
+    "tokenized_setup_recurring": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_tokenized_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "connector_token": {
+            "value": "pm_1AbcXyzStripeTestToken"
+          },
+          "address": {
+            "billing_address": {}
+          },
+          "customer_acceptance": {
+            "acceptance_type": "ONLINE",
+            "online": {
+              "ip_address": "127.0.0.1",
+              "user_agent": "Mozilla/5.0"
+            }
+          }
+        }
+      }
+    },
+    "proxy_authorize": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_transaction_id": "probe_proxy_txn_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "vault_card": {
+            "card_number_alias": {
+              "value": "tok_sandbox_abc123"
+            },
+            "exp_month": "03",
+            "exp_year": "2030",
+            "cvc_alias": {
+              "value": "tok_sandbox_cvc456"
+            },
+            "card_holder_name": "John Doe"
+          },
+          "capture_method": "AUTOMATIC",
+          "auth_type": "NO_THREE_DS",
+          "address": {
+            "billing_address": {}
+          },
+          "return_url": "https://example.com/return"
+        }
+      }
+    },
+    "proxy_setup_recurring": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_recurring_payment_id": "probe_proxy_mandate_001",
+          "amount": {
+            "minor_amount": 0,
+            "currency": "USD"
+          },
+          "vault_card": {
+            "card_number_alias": {
+              "value": "tok_sandbox_abc123"
+            },
+            "exp_month": "03",
+            "exp_year": "2030",
+            "cvc_alias": {
+              "value": "tok_sandbox_cvc456"
+            },
+            "card_holder_name": "John Doe"
+          },
+          "auth_type": "NO_THREE_DS",
+          "address": {
+            "billing_address": {}
+          }
+        }
+      }
+    },
+    "proxy_pre_authenticate": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_order_id": "probe_proxy_order_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "vault_card": {
+            "card_number_alias": {
+              "value": "tok_sandbox_abc123"
+            },
+            "exp_month": "03",
+            "exp_year": "2030",
+            "card_holder_name": "John Doe"
+          },
+          "browser_info": {
+            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+            "accept_header": "application/json",
+            "language": "en-US",
+            "color_depth": 24,
+            "screen_height": 1080,
+            "screen_width": 1920,
+            "time_zone_offset": -330,
+            "java_enabled": false,
+            "java_script_enabled": true
+          },
+          "return_url": "https://example.com/3ds-return"
+        }
+      }
+    },
+    "proxy_authenticate": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_order_id": "probe_proxy_order_001",
+          "amount": {
+            "minor_amount": 1000,
+            "currency": "USD"
+          },
+          "vault_card": {
+            "card_number_alias": {
+              "value": "tok_sandbox_abc123"
+            },
+            "exp_month": "03",
+            "exp_year": "2030",
+            "card_holder_name": "John Doe"
+          },
+          "return_url": "https://example.com/3ds-return"
+        }
+      }
+    },
+    "proxy_post_authenticate": {
+      "default": {
+        "status": "supported",
+        "proto_request": {
+          "merchant_order_id": "probe_proxy_order_001",
+          "vault_card": {
+            "card_number_alias": {
+              "value": "tok_sandbox_abc123"
+            },
+            "exp_month": "03",
+            "exp_year": "2030",
+            "card_holder_name": "John Doe"
+          }
         }
       }
     }

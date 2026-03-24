@@ -225,6 +225,91 @@ export class UniffiClient extends _UniffiClientBase {
     return this.callRes('pre_authenticate', responseBytes, requestBytes, optionsBytes);
   }
 
+  /** Build connector HTTP request for proxy_authenticate flow. */
+  proxyAuthenticateReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('proxy_authenticate', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for proxy_authenticate flow. */
+  proxyAuthenticateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('proxy_authenticate', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for proxy_authorize flow. */
+  proxyAuthorizeReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('proxy_authorize', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for proxy_authorize flow. */
+  proxyAuthorizeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('proxy_authorize', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for proxy_post_authenticate flow. */
+  proxyPostAuthenticateReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('proxy_post_authenticate', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for proxy_post_authenticate flow. */
+  proxyPostAuthenticateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('proxy_post_authenticate', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for proxy_pre_authenticate flow. */
+  proxyPreAuthenticateReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('proxy_pre_authenticate', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for proxy_pre_authenticate flow. */
+  proxyPreAuthenticateRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('proxy_pre_authenticate', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for proxy_setup_recurring flow. */
+  proxySetupRecurringReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('proxy_setup_recurring', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for proxy_setup_recurring flow. */
+  proxySetupRecurringRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('proxy_setup_recurring', responseBytes, requestBytes, optionsBytes);
+  }
+
   /** Build connector HTTP request for refund flow. */
   refundReq(
     requestBytes: Buffer | Uint8Array,
@@ -308,6 +393,40 @@ export class UniffiClient extends _UniffiClientBase {
     optionsBytes: Buffer | Uint8Array
   ): Buffer {
     return this.callRes('tokenize', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for tokenized_authorize flow. */
+  tokenizedAuthorizeReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('tokenized_authorize', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for tokenized_authorize flow. */
+  tokenizedAuthorizeRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('tokenized_authorize', responseBytes, requestBytes, optionsBytes);
+  }
+
+  /** Build connector HTTP request for tokenized_setup_recurring flow. */
+  tokenizedSetupRecurringReq(
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callReq('tokenized_setup_recurring', requestBytes, optionsBytes);
+  }
+
+  /** Parse connector HTTP response for tokenized_setup_recurring flow. */
+  tokenizedSetupRecurringRes(
+    responseBytes: Buffer | Uint8Array,
+    requestBytes: Buffer | Uint8Array,
+    optionsBytes: Buffer | Uint8Array
+  ): Buffer {
+    return this.callRes('tokenized_setup_recurring', responseBytes, requestBytes, optionsBytes);
   }
 
   /** Build connector HTTP request for void flow. */
