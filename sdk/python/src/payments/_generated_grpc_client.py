@@ -33,6 +33,23 @@ class GrpcConfig:
     merchant_id: Optional[str] = None
     tenant_id:  Optional[str] = None
 
+    def validate(self) -> None:
+        """Validate the configuration.
+
+        Raises:
+            ValueError: If any required field is empty or invalid.
+        """
+        if not self.endpoint:
+            raise ValueError("endpoint cannot be empty")
+        if not self.endpoint.startswith(("http://", "https://")):
+            raise ValueError(f"endpoint must start with 'http://' or 'https://', got: {self.endpoint}")
+        if not self.connector:
+            raise ValueError("connector cannot be empty")
+        if not self.auth_type:
+            raise ValueError("auth_type cannot be empty")
+        if not self.api_key:
+            raise ValueError("api_key cannot be empty")
+
     def to_json_bytes(self) -> bytes:
         d: dict = {
             "endpoint":   self.endpoint,
