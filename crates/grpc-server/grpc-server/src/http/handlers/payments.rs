@@ -27,9 +27,8 @@ use grpc_api_types::payments::{
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVerifyRedirectResponseRequest,
     PaymentServiceVerifyRedirectResponseResponse, PaymentServiceVerifyVpaRequest,
-    PaymentServiceVerifyVpaResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
-    RecurringPaymentServiceChargeResponse, RefundResponse,
+    PaymentServiceVerifyVpaResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse, RefundResponse,
 };
 use std::sync::Arc;
 

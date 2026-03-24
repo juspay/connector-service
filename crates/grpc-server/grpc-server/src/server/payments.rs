@@ -12,7 +12,7 @@ use domain_types::connector_types::ConnectorEnum;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken,         IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
+        CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
         VerifyVpa, VerifyWebhookSource, Void, VoidPC,
     },
@@ -74,11 +74,10 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceVerifyVpaRequest, PaymentServiceVerifyVpaResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
-    PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
-    RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
-    RecurringPaymentServiceRevokeResponse, RefundResponse,
+    PaymentServiceVerifyVpaRequest, PaymentServiceVerifyVpaResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, PayoutMethodEligibilityRequest, PayoutMethodEligibilityResponse,
+    RecurringPaymentServiceChargeRequest, RecurringPaymentServiceChargeResponse,
+    RecurringPaymentServiceRevokeRequest, RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
 use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
@@ -3950,12 +3949,7 @@ pub fn generate_mandate_revoke_response(
 }
 
 pub fn generate_verify_vpa_response(
-    router_data_v2: RouterDataV2<
-        VerifyVpa,
-        PaymentFlowData,
-        VerifyVpaData,
-        VerifyVpaResponseData,
-    >,
+    router_data_v2: RouterDataV2<VerifyVpa, PaymentFlowData, VerifyVpaData, VerifyVpaResponseData>,
 ) -> Result<PaymentServiceVerifyVpaResponse, error_stack::Report<ApplicationErrorResponse>> {
     let raw_connector_response = router_data_v2
         .resource_common_data
@@ -3971,13 +3965,13 @@ pub fn generate_verify_vpa_response(
             vpa: response.vpa,
             status: match response.status {
                 domain_types::connector_types::VpaStatus::Valid => {
-                    grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusValid
+                    grpc_api_types::payments::VpaVerificationStatus::Valid
                 }
                 domain_types::connector_types::VpaStatus::Invalid => {
-                    grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusInvalid
+                    grpc_api_types::payments::VpaVerificationStatus::Invalid
                 }
                 domain_types::connector_types::VpaStatus::Unknown => {
-                    grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusUnknown
+                    grpc_api_types::payments::VpaVerificationStatus::Unknown
                 }
             }
             .into(),
@@ -3991,8 +3985,7 @@ pub fn generate_verify_vpa_response(
         }),
         Err(e) => Ok(PaymentServiceVerifyVpaResponse {
             vpa: String::new(),
-            status: grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusUnspecified
-                .into(),
+            status: grpc_api_types::payments::VpaVerificationStatus::Unspecified.into(),
             customer_name: String::new(),
             description: None,
             error: Some(grpc_api_types::payments::ErrorInfo {

@@ -14,7 +14,7 @@ use domain_types::connector_types::{
     PaymentsCancelPostCaptureData, PaymentsCaptureData, PaymentsIncrementalAuthorizationData,
     PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSdkSessionTokenData,
     PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    SetupMandateRequestData, SubmitEvidenceData, VerifyVpaData,
 };
 use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
@@ -31,7 +31,8 @@ use domain_types::{
         PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
         PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
         RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
+        SubmitEvidenceIntegrityObject, VerifyVpaIntegrityObject,
+        VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -176,6 +177,7 @@ impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
+impl_check_integrity!(VerifyVpaData);
 impl_check_integrity!(PayoutCreateRequest);
 
 // ========================================================================
@@ -1249,6 +1251,40 @@ impl FlowIntegrity for PayoutCreateIntegrityObject {
                 "currency",
                 &req_integrity_object.currency.to_string(),
                 &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl GetIntegrityObject<VerifyVpaIntegrityObject> for VerifyVpaData {
+    fn get_response_integrity_object(&self) -> Option<VerifyVpaIntegrityObject> {
+        None // VerifyVpa responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> VerifyVpaIntegrityObject {
+        VerifyVpaIntegrityObject {
+            vpa: self.vpa.clone(),
+        }
+    }
+}
+
+impl FlowIntegrity for VerifyVpaIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.vpa != res_integrity_object.vpa {
+            mismatched_fields.push(format_mismatch(
+                "vpa",
+                &req_integrity_object.vpa,
+                &res_integrity_object.vpa,
             ));
         }
 

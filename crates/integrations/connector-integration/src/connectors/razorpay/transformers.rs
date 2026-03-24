@@ -8,7 +8,7 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, VerifyVpaData, VerifyVpaResponseData, VpaStatus,
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -1650,5 +1650,100 @@ pub fn json_value_to_string(value: &serde_json::Value) -> String {
     match value {
         serde_json::Value::String(s) => s.clone(),
         _ => value.to_string(), // For Number, Bool, Null, Object, Array - serialize as JSON
+    }
+}
+
+// ============ VerifyVpa Types ============
+
+/// Razorpay VPA validation request body
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Serialize)]
+pub struct RazorpayVerifyVpaRequest {
+    pub vpa: String,
+    pub account_id: Option<String>,
+}
+
+impl TryFrom<&VerifyVpaData> for RazorpayVerifyVpaRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(data: &VerifyVpaData) -> Result<Self, Self::Error> {
+        Ok(Self {
+            vpa: data.vpa.clone(),
+            account_id: data.account_id.clone(),
+        })
+    }
+}
+
+/// Razorpay VPA validation response — can be either a successful validation result
+/// or an error response from Razorpay.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum RazorpayVerifyVpaResponse {
+    Valid(RazorpayValidateVpaRes),
+    Error(RazorpayVpaErrorWrapper),
+}
+
+/// Successful VPA validation result from Razorpay
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RazorpayValidateVpaRes {
+    pub vpa: String,
+    pub success: bool,
+    pub customer_name: Option<String>,
+}
+
+/// Error wrapper matching Razorpay's `{ "error": { ... } }` shape
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RazorpayVpaErrorWrapper {
+    pub error: RazorpayVpaError,
+}
+
+/// Inner error object from Razorpay
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RazorpayVpaError {
+    pub code: Option<String>,
+    pub description: String,
+    pub field: Option<String>,
+    pub source: Option<String>,
+    pub step: Option<String>,
+    pub reason: Option<String>,
+}
+
+const INVALID_VPA_DESCRIPTION: &str = "Invalid VPA. Please enter a valid Virtual Payment Address";
+
+impl ForeignTryFrom<(RazorpayVerifyVpaResponse, u16)> for VerifyVpaResponseData {
+    type Error = errors::ConnectorError;
+    fn foreign_try_from(
+        (response, status_code): (RazorpayVerifyVpaResponse, u16),
+    ) -> Result<Self, Self::Error> {
+        match response {
+            RazorpayVerifyVpaResponse::Valid(res) => {
+                let status = if res.success {
+                    VpaStatus::Valid
+                } else {
+                    VpaStatus::Invalid
+                };
+                Ok(Self {
+                    vpa: res.vpa,
+                    status,
+                    customer_name: res.customer_name.unwrap_or_default(),
+                    description: None,
+                    status_code,
+                })
+            }
+            RazorpayVerifyVpaResponse::Error(err) => {
+                let status = if err.error.description == INVALID_VPA_DESCRIPTION {
+                    VpaStatus::Invalid
+                } else {
+                    VpaStatus::Unknown
+                };
+                Ok(Self {
+                    vpa: String::new(),
+                    status,
+                    customer_name: String::new(),
+                    description: Some(err.error.description),
+                    status_code,
+                })
+            }
+        }
     }
 }

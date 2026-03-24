@@ -95,10 +95,7 @@ pub fn create_router(state: AppState) -> Router {
             "/payments/verify_redirect_response",
             post(handlers::payments::verify_redirect_response),
         )
-        .route(
-            "/payments/verify_vpa",
-            post(handlers::payments::verify_vpa),
-        )
+        .route("/payments/verify_vpa", post(handlers::payments::verify_vpa))
         // RefundService routes
         .route("/refunds/get", post(handlers::refunds::get_refund))
         .route(

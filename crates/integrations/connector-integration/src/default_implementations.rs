@@ -9,18 +9,18 @@
 
 use crate::connectors::*;
 use domain_types::{
+    connector_flow::VerifyVpa,
+    connector_types::{PaymentFlowData, VerifyVpaData, VerifyVpaResponseData},
+};
+use domain_types::{
     connector_flow::VerifyWebhookSource, connector_types::VerifyWebhookSourceFlowData,
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
 };
-use domain_types::{
-    connector_flow::VerifyVpa,
-    connector_types::{PaymentFlowData, VerifyVpaData, VerifyVpaResponseData},
-};
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
-use interfaces::connector_types::VerifyWebhookSourceV2;
 use interfaces::connector_types::VerifyVpaV2;
+use interfaces::connector_types::VerifyWebhookSourceV2;
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
 /// that don't need external webhook verification.
@@ -159,7 +159,7 @@ macro_rules! default_impl_verify_vpa_v2 {
 }
 
 // Generate default implementations for all connectors
-// Razorpay will get a real implementation in Phase 2 (S3 agent)
+// Razorpay has a real implementation in razorpay.rs
 default_impl_verify_vpa_v2!(
     Adyen,
     Aci,
@@ -216,7 +216,6 @@ default_impl_verify_vpa_v2!(
     Placetopay,
     Powertranz,
     Rapyd,
-    Razorpay,
     RazorpayV2,
     Redsys,
     Revolut,

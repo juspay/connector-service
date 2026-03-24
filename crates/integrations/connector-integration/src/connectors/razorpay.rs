@@ -18,7 +18,7 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, IncrementalAuthorization, MandateRevoke,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund,
-        SdkSessionToken, SetupMandate, SubmitEvidence, Void, VoidPC,
+        SdkSessionToken, SetupMandate, SubmitEvidence, VerifyVpa, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -33,7 +33,7 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RequestDetails, ResponseId, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        SupportedPaymentMethodsExt, VerifyVpaData, VerifyVpaResponseData, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -217,6 +217,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::MandateRevokeV2 for Razorpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    connector_types::VerifyVpaV2 for Razorpay<T>
 {
 }
 impl<T> Razorpay<T> {
@@ -1271,4 +1275,85 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         MandateRevokeResponseData,
     > for Razorpay<T>
 {
+}
+
+// ============ VerifyVpa Implementation ============
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<VerifyVpa, PaymentFlowData, VerifyVpaData, VerifyVpaResponseData>
+    for Razorpay<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<VerifyVpa, PaymentFlowData, VerifyVpaData, VerifyVpaResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_config)?;
+        header.append(&mut api_key);
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<VerifyVpa, PaymentFlowData, VerifyVpaData, VerifyVpaResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Ok(format!(
+            "{}v1/payments/validate/vpa",
+            req.resource_common_data.connectors.razorpay.base_url
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<VerifyVpa, PaymentFlowData, VerifyVpaData, VerifyVpaResponseData>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let connector_req = razorpay::RazorpayVerifyVpaRequest::try_from(&req.request)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<VerifyVpa, PaymentFlowData, VerifyVpaData, VerifyVpaResponseData>,
+        event_builder: Option<&mut events::Event>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<VerifyVpa, PaymentFlowData, VerifyVpaData, VerifyVpaResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: razorpay::RazorpayVerifyVpaResponse = res
+            .response
+            .parse_struct("RazorpayVerifyVpaResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        let verify_vpa_response =
+            VerifyVpaResponseData::foreign_try_from((response, res.status_code))
+                .map_err(|e| report!(e))?;
+
+        Ok(RouterDataV2 {
+            response: Ok(verify_vpa_response),
+            ..data.clone()
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut events::Event>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }

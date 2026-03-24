@@ -32,8 +32,8 @@ use grpc_api_types::payments::{
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
     PaymentServiceSetupRecurringResponse, PaymentServiceVerifyVpaRequest,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RecurringPaymentServiceRevokeRequest, RefundResponse,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceRevokeRequest,
+    RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -11339,12 +11339,8 @@ impl ForeignTryFrom<PaymentServiceVerifyVpaRequest> for VerifyVpaData {
     }
 }
 
-impl
-    ForeignTryFrom<(
-        PaymentServiceVerifyVpaRequest,
-        Connectors,
-        &MaskedMetadata,
-    )> for PaymentFlowData
+impl ForeignTryFrom<(PaymentServiceVerifyVpaRequest, Connectors, &MaskedMetadata)>
+    for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
 
