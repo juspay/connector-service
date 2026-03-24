@@ -151,12 +151,18 @@ fn inject<T>(payload: T, headers: &HashMap<String, String>) -> Request<T> {
 
 // ── Response encoding helpers ─────────────────────────────────────────────────
 
+/// Encode a successful response.
+///
+/// Prepends a `0x00` tag to indicate success, followed by the protobuf-encoded response bytes.
 fn encode_ok(bytes: Vec<u8>) -> Vec<u8> {
     let mut out = vec![0u8];
     out.extend_from_slice(&bytes);
     out
 }
 
+/// Encode an error response.
+///
+/// Prepends a `0x01` tag to indicate error, followed by the UTF-8 error message bytes.
 fn encode_err(msg: &str) -> Vec<u8> {
     let mut out = vec![1u8];
     out.extend_from_slice(msg.as_bytes());
