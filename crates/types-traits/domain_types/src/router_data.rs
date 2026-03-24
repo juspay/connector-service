@@ -697,6 +697,12 @@ pub enum ConnectorSpecificConfig {
         terminal_id: Secret<String>,
         base_url: Option<String>,
     },
+    Imerchantsolutions {
+        api_key: Secret<String>,
+        api_secret: Secret<String>,
+        merchant_id: Secret<String>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -987,6 +993,11 @@ impl ConnectorSpecificConfig {
                 secret,
                 merchant_id,
                 terminal_id
+            },
+            Imerchantsolutions {
+                api_key,
+                api_secret,
+                merchant_id
             },
         )
     }
