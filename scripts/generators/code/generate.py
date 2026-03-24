@@ -31,12 +31,12 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent
 SDK_ROOT = REPO_ROOT / "sdk"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
 
-SERVICES_PROTO = REPO_ROOT / "backend/grpc-api-types/proto/services.proto"
-FFI_SERVICES = REPO_ROOT / "backend/ffi/src/services/payments.rs"
+SERVICES_PROTO = REPO_ROOT / "crates/types-traits/grpc-api-types/proto/services.proto"
+FFI_SERVICES = REPO_ROOT / "crates/ffi/ffi/src/services/payments.rs"
 PROTO_DESCRIPTOR = Path(__file__).parent / "services.desc"
 
-RUST_HANDLERS_OUT = REPO_ROOT / "backend/ffi/src/handlers/_generated_flow_registrations.rs"
-RUST_FFI_FLOWS_OUT = REPO_ROOT / "backend/ffi/src/bindings/_generated_ffi_flows.rs"
+RUST_HANDLERS_OUT = REPO_ROOT / "crates/ffi/ffi/src/handlers/_generated_flow_registrations.rs"
+RUST_FFI_FLOWS_OUT = REPO_ROOT / "crates/ffi/ffi/src/bindings/_generated_ffi_flows.rs"
 
 # ── Jinja2 environment ──────────────────────────────────────────────────────
 
