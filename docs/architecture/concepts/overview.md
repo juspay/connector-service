@@ -1,44 +1,31 @@
-# Architecture Overview
+## Overview of Architecture
 
-##
+If you've integrated multiple payment providers, you know the pain:
+- Stripe uses PaymentIntents
+- Adyen uses payments
+- PayPal uses orders
 
-<!-- 
-title: Architecture Overview
-description: How Prism library is architected for multi-language SDKs and unified payment processing
-last_updated: 2026-03-03
-generated_from: N/A
-auto_generated: false
-reviewed_by: engineering
-reviewed_at: 2026-03-03
-approved: true 
--->
+All of them do the same job, but each has different field names, different status enums, different error formats.
 
----
+This problem exists in other domains too, but solved with well maintained developer centric libraries, open source and free from vendor lock-in.
 
+| Domain | Unified Interface | What It Solves |
+|--------|-------------------|----------------|
+| **LLMs** | [LiteLLM](https://github.com/BerriAI/litellm) | One interface for OpenAI, Anthropic, Google, etc. |
+| **Databases** | [Prisma](https://www.prisma.io/) | One ORM for PostgreSQL, MySQL, MongoDB, etc. |
+| **Cloud Storage** | [Rclone](https://rclone.org/) | One CLI for S3, GCS, Azure Blob, etc. |
 
+**But for payments, no such equivalent exists for developers.**
+
+Hyperswitch Prism is the unified abstraction layer for payment processors—giving you one API, one set of types, and one mental model for 100+ payment connectors.
 
 ## Architecture Components
 
-As at 10,000 feet overview, the Prism library can be broken into a three layered architecture, each solving a unique purpose.
-
-| Component | Why It Exists | Problem It Solves | Technologies |
-|-----------|---------------|-------------------|--------------|
-| **Interface layer** | Enabled developers to think in their language's patterns whicle using the unified payments grammar provided by the library | You use `client.payments.authorize()` with idiomatic types in your codebase | Node.js, Python, Java, .NET, Go, Haskell |
-| **Binding Layer** | Every language SDK needs native-performance gRPC to trigger API calls | Seamless transport without language bridges; handles serialization, HTTP/2, streaming | tonic, grpcio, grpc-dotnet, go-grpc |
-| **Core** | Single source of truth for payment logic. Also includes the API transformations into the | One implementation of payment services serves all languages; unified errors, routing, types | Rust, tonic, protocol buffers |
-
-The architecture prioritizes four important pillars
-
-1. **Consistency**: The protobuf ensures same domain types, patterns, and errors shall be used across all connectors. It ensure the glue between the gRPC Client and the SDK interface.
-2. **Extensibility**: Being able to add more connectors without any having to change the Interface of the library.
-3. **Near zero overhead**: The gRPC interface was chosen to provide significant advantage compared REST APIs for high volume payment processing. If the library is chosen to be used as a microservice the gRPC interface enable with 10x smaller payloads, faster serialization/ deserialization hops, reduced bandwidth consumption and optimized for concurrent requests on a single connection
-4. **Developer Experience**: Idiomatic payments interface with multi language SDKs 
-
-
+At a 10,000 feet view, the Prism supports a three layered architecture, each solving a purpose.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                  UNIFIED CONNECTOR LIBRARY - INTERFACE                      │
+│                           SDK INTERFACE LAYER                               │
 │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐      │
 │  │  Node.js  │ │  Python   │ │   Java    │ │   .NET    │ │    Go     │ ...  │
 │  │    SDK    │ │    SDK    │ │    SDK    │ │    SDK    │ │    SDK    │      │
@@ -47,19 +34,18 @@ The architecture prioritizes four important pillars
          │             │             │             │             │
          ▼             ▼             ▼             ▼             ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                   UNIFIED CONNECTOR LIBRARY - BINDING LAYER                  │
+│                          FFI / BINDING LAYER                                 │
 │  ┌────────────────────────────────────────────────────────────────────────┐  │
 │  │  Native gRPC Clients (tonic, grpcio, grpc-dotnet, go-grpc, etc.)       │  │
 │  │                                                                        │  │
 │  │  • Protobuf serialization/deserialization                              │  │
-│  │  • HTTP/2 connection management                                        │  │
-│  │  • Streaming support                                                   │  │
 │  └────────────────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                   UNIFIED CONNECTOR LIBRARY - CORE                         │
+│                                  CORE                                      │
+│                                                                            │
 │  ┌────────────────────────────────────┐    ┌────────────────────────────┐  │
 │  │           gRPC Server              │    │    Connector Adapters      │  │
 │  │                                    │    │    (100+ connectors)       │  │
@@ -89,6 +75,13 @@ The architecture prioritizes four important pillars
 ```
 
 ### Component Descriptions
+
+| Component | Why It Exists | Problem It Solves | Technologies |
+|-----------|---------------|-------------------|--------------|
+| **SDK Interface** | Developers can think in their language's patterns whicle using the unified payments grammar provided by the library | You use `client.payments.authorize()` with idiomatic types in your codebase | Node.js, Python, Java, .NET, Go, Haskell |
+| **FFI / Binding Layer** | Each language needs native-performance gRPC | Seamless transport without language bridges; handles serialization, HTTP/2, streaming | tonic, grpcio, grpc-dotnet, go-grpc |
+| **gRPC Server** | Single source of truth for payment logic. Also offers freedom to use connector service as a separate microservice | One implementation of payment services serves all languages; unified errors, routing, types | Rust, tonic, protocol buffers |
+| **Connector Adapters** | Each connector has unique APIs and formats | You use one `AuthorizeRequest`; the library maps to Stripe's `PaymentIntent` or Adyen's `payments` | Rust, 100+ connector implementations |
 
 ## Data Flow
 
@@ -121,22 +114,22 @@ sequenceDiagram
     FFI-->>SDK: Deserialize from protobuf
 ```
 
-### Connector Transformation
+## Connector Transformation
 
-Prism transforms unified requests to connector-specific formats.
+The core value: Connector Service transforms unified requests to connector-specific formats.
 
 **Authorization Mapping:**
 
-| Unified Field                     | Stripe                         | Adyen                   |
-| --------------------------------- | ------------------------------ | ----------------------- |
-| `amount.currency`                 | `currency`                     | `amount.currency`       |
-| `amount.amount`                   | `amount` (cents)               | `value` (cents)         |
+| Unified Field | Stripe | Adyen |
+|---------------|--------|-------|
+| `amount.currency` | `currency` | `amount.currency` |
+| `amount.amount` | `amount` (cents) | `value` (cents) |
 | `payment_method.card.card_number` | `payment_method[card][number]` | `paymentMethod[number]` |
-| `connector_metadata`              | `metadata`                     | `additionalData`        |
+| `connector_metadata` | `metadata` | `additionalData` |
 
-This transformation happens server-side, so the multi-language SDKs of Prism remain unchanged when adding new connectors.
+This transformation happens server-side, so SDKs remain unchanged when adding new connectors.
 
-### Connector Adapter Pattern
+## Connector Adapter Pattern
 
 Each connector implements a standard interface:
 
@@ -149,7 +142,6 @@ trait ConnectorAdapter {
     // ... 20+ operations
 }
 ```
-
 Adding new connectors only need an adapter implementation. SDKs require zero changes.
 
 ## Summary
@@ -157,7 +149,7 @@ Adding new connectors only need an adapter implementation. SDKs require zero cha
 The architecture prioritizes:
 
 1. **Consistency**: Same types, patterns, and errors across all connectors
-2. **Extensibility**: Being able to add more connectors without any SDK side changes
+2. **Extensibility**: Add connectors without SDK changes
 3. **Performance**: gRPC interface provides significant advantage over REST APIs for high volume payment processing. The library could also be used as microservice with 10x smaller payloads, faster serialization/ deserialization hops, reduced bandwidth consumption and optimized for concurrent requests on a single connection
 4. **Developer Experience**: Idiomatic payments interface with multi language SDKs 
 

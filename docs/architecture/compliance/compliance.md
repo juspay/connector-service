@@ -7,6 +7,12 @@ Hyperswitch Prism offers multiple flavors to manage PCI DSS (Payment Card Indust
 - Outsource the PCI data handling to processor agnostic PCI vaults (example: VGS, Tokenex, Juspay etc.,)
 - Self-manage the PCI compliance by handling raw card data
 
+| PCI Mode for Payment Clients | PCI Scope | Description |
+|------|-----------|-------------|
+| **Tokenized Payment Client** | You do not have to manage PCI compliance | Payment processor vault handles card data |
+| **Proxied Payment Client** | You do not have to manage PCI compliance | Third-party vault handles card data |
+| **Direct Payment Client** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
+
 The choice you make here determines your risk profile, operational burden, and agility. It affects:
 
 1. **Security liability** — Handling raw card data makes you responsible for breaches
@@ -22,12 +28,6 @@ Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **inde
 | **PSP-Native Vault** | You rely on Stripe/Adyen vault for PCI scope reduction | Abstracts PSP-specific token formats; single API regardless of which PSP vault you use |
 | **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Hyperswitch Vault as a vault layer | Supports two proxy patterns (Network, Application) with zero to minimal code changes |
 | **In-House Vault** | You have your own PCI-certified card vault infrastructure | PCI-Enabled Mode lets you send raw card data through while maintaining full control |
-
-| PCI Mode for Payment Clients | PCI Scope | Description |
-|------|-----------|-------------|
-| **Tokenized Payment Client** | You do not have to manage PCI compliance | Payment processor vault handles card data |
-| **Proxied Payment Client** | You do not have to manage PCI compliance | Third-party vault handles card data |
-| **Standard Payment Client** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
 
 ---
 
@@ -141,9 +141,12 @@ sequenceDiagram
 
 ---
 
-## Standard Payment Client
+## Direct Payment Client
 
 In this mode, your application receives and processes raw card data. You will have to self-manage the PCI DSS compliance.
+- Raw card data flows through your infrastructure
+- Direct control over payment flow
+- No additional vault subscription needed
 
 ### When to use the Standard Payment Client?
 - You have existing PCI DSS certification
@@ -171,12 +174,6 @@ sequenceDiagram
     Prism-->>BE: Unified response
     BE-->>FE: Payment result
 ```
-
-### Key Characteristics
-- Raw card data flows through your infrastructure
-- Full PCI DSS compliance required
-- Direct control over payment flow
-- No additional vault subscription needed
 
 ---
 

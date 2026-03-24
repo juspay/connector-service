@@ -26,7 +26,7 @@ It is strongly recommended You want security patches and critical fixes without 
 ```json
 {
   "dependencies": {
-    "@juspay/connector-service-node": "1.2.*"
+    "@juspay-tech/hyperswitch-prism": "1.2.*"
   }
 }
 ```
@@ -37,14 +37,14 @@ This rejects: `1.3.0`, `2.0.0`
 #### **Python (requirements.txt)**
 
 ```
-juspay-connector-service==1.2.*
+hyperswitch-prism==1.2.*
 ```
 
 Or in `pyproject.toml`:
 
 ```toml
 [tool.poetry.dependencies]
-juspay-connector-service = "1.2.*"
+hyperswitch-prism = "1.2.*"
 ```
 
 #### **Java (Maven)**
@@ -52,7 +52,7 @@ juspay-connector-service = "1.2.*"
 ```xml
 <dependency>
     <groupId>com.juspay</groupId>
-    <artifactId>connector-service</artifactId>
+    <artifactId>hyperswitch-prism</artifactId>
     <version>[1.2.0,1.3.0)</version>
 </dependency>
 ```
@@ -63,7 +63,7 @@ The `[1.2.0,1.3.0)` syntax means: 1.2.0 inclusive, 1.3.0 exclusive.
 
 ```toml
 [dependencies]
-connector-service = "1.2"
+hyperswitch-prism = "1.2"
 ```
 
 Cargo treats `1.2` as `^1.2.0`, which accepts `1.2.0` through `1.2.999` but not `1.3.0`.
@@ -96,7 +96,7 @@ When you pin to `1.2.*`, your build system pulls these automatically:
 ```json
 {
   "dependencies": {
-    "@juspay/connector-service-node": "1.2.3"
+    "hyperswitch-prism": "1.2.3"
   }
 }
 ```
@@ -113,7 +113,7 @@ Your code works today. It breaks tomorrow when Stripe rotates certificates and y
 ```json
 {
   "dependencies": {
-    "@juspay/connector-service-node": "*"
+    "hyperswitch-prism": "*"
   }
 }
 ```
@@ -151,16 +151,16 @@ All SDKs for version `1.2.x` speak the same protocol, support the same connector
 
 ```bash
 # Node.js
-npm list @juspay/connector-service-node
+npm list hyperswitch-prism
 
 # Python
-pip show juspay-connector-service
+pip show hyperswitch-prism
 
 # Java
-mvn dependency:tree | grep connector-service
+mvn dependency:tree | grep hyperswitch-prism
 
 # Rust
-cargo tree | grep connector-service
+cargo tree | grep hyperswitch-prism
 ```
 
 ## Deprecation Policy
