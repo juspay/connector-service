@@ -39,11 +39,12 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 pub use super::request::{
-    PaytmAmount, PaytmAuthorizeRequest, PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo,
-    PaytmInitiateReqBody, PaytmInitiateTxnRequest, PaytmNativeProcessRequestBody,
-    PaytmNativeProcessTxnRequest, PaytmProcessBodyTypes, PaytmProcessHeadTypes,
-    PaytmProcessTxnRequest, PaytmRequestHeader, PaytmShippingInfo, PaytmTransactionStatusReqBody,
-    PaytmTransactionStatusRequest, PaytmTxnTokenType, PaytmUserInfo,
+    PaytmAmount, PaytmAuthorizeRequest, PaytmCardProcessBodyTypes, PaytmCardProcessTxnRequest,
+    PaytmEnableMethod, PaytmExtendInfo, PaytmGoodsInfo, PaytmInitiateReqBody,
+    PaytmInitiateTxnRequest, PaytmNativeProcessRequestBody, PaytmNativeProcessTxnRequest,
+    PaytmProcessBodyTypes, PaytmProcessHeadTypes, PaytmProcessTxnRequest, PaytmRequestHeader,
+    PaytmShippingInfo, PaytmTransactionStatusReqBody, PaytmTransactionStatusRequest,
+    PaytmTxnTokenType, PaytmUserInfo,
 };
 pub use super::response::{
     PaytmBankForm, PaytmBankFormBody, PaytmBankFormResponse, PaytmCallbackErrorBody,
@@ -70,6 +71,10 @@ pub mod constants {
     pub const PAYMENT_MODE_UPI: &str = "UPI";
     pub const UPI_CHANNEL_UPIPUSH: &str = "UPIPUSH";
     pub const PAYMENT_FLOW_NONE: &str = "NONE";
+
+    // Card payment mode constants
+    pub const PAYMENT_MODE_CREDIT_CARD: &str = "CREDIT_CARD";
+    pub const PAYMENT_MODE_DEBIT_CARD: &str = "DEBIT_CARD";
 
     // Default values
     pub const DEFAULT_CALLBACK_URL: &str = "https://default-callback.com";
@@ -315,13 +320,23 @@ impl<
             website_name: Secret::new(auth.website.peek().to_string()),
             txn_amount: paytm_amount,
             user_info,
-            enable_payment_mode: vec![PaytmEnableMethod {
-                mode: constants::PAYMENT_MODE_UPI.to_string(),
-                channels: Some(vec![
-                    constants::UPI_CHANNEL_UPIPUSH.to_string(), // UPI_INTENT
-                    constants::PAYMENT_MODE_UPI.to_string(),    // UPI_COLLECT
-                ]),
-            }],
+            enable_payment_mode: vec![
+                PaytmEnableMethod {
+                    mode: constants::PAYMENT_MODE_CREDIT_CARD.to_string(),
+                    channels: None,
+                },
+                PaytmEnableMethod {
+                    mode: constants::PAYMENT_MODE_DEBIT_CARD.to_string(),
+                    channels: None,
+                },
+                PaytmEnableMethod {
+                    mode: constants::PAYMENT_MODE_UPI.to_string(),
+                    channels: Some(vec![
+                        constants::UPI_CHANNEL_UPIPUSH.to_string(), // UPI_INTENT
+                        constants::PAYMENT_MODE_UPI.to_string(),    // UPI_COLLECT
+                    ]),
+                },
+            ],
             callback_url: return_url.unwrap_or_else(|| constants::DEFAULT_CALLBACK_URL.to_string()),
             goods,
             shipping_info: Some(vec![shipping_info]),
@@ -443,11 +458,16 @@ impl<
         let session_token = item.router_data.resource_common_data.get_session_token()?;
         let payment_method_data = &item.router_data.request.payment_method_data;
 
-        // Determine the UPI flow type based on payment method data
-        let upi_flow = determine_upi_flow(payment_method_data)?;
+        match payment_method_data {
+            PaymentMethodData::Card(card) => {
+                // Build card info string in Paytm format: "|cardNo|cvv|expDate(MMYYYY)"
+                let card_number = card.card_number.peek();
+                let cvv = card.card_cvc.peek();
+                let exp_month = card.card_exp_month.peek();
+                let exp_year = card.get_expiry_year_4_digit();
+                let exp_date = format!("{exp_month}{}", exp_year.peek());
+                let card_info = Secret::new(format!("|{card_number}|{cvv}|{exp_date}"));
 
-        match upi_flow {
-            UpiFlowType::Intent => {
                 let timestamp = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .map_err(|_| ConnectorError::InvalidDataFormat {
@@ -466,52 +486,99 @@ impl<
                     txn_token: Secret::new(session_token),
                 };
 
-                let body = PaytmProcessBodyTypes {
+                let body = PaytmCardProcessBodyTypes {
                     mid: auth.merchant_id.clone(),
                     order_id: payment_id,
                     request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
-                    payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"),
+                    payment_mode: constants::PAYMENT_MODE_CREDIT_CARD.to_string(),
+                    card_info,
+                    auth_mode: None,
                     payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
                     txn_note: item.router_data.resource_common_data.description.clone(),
                     extend_info: None,
                 };
 
-                let intent_request = PaytmProcessTxnRequest { head, body };
-                Ok(Self::Intent(intent_request))
+                let card_request = PaytmCardProcessTxnRequest { head, body };
+                Ok(Self::Card(card_request))
             }
-            UpiFlowType::Collect => {
-                let vpa = match extract_upi_vpa(payment_method_data)? {
-                    Some(vpa) => vpa,
-                    None => {
-                        return Err(ConnectorError::MissingRequiredField {
-                            field_name: "vpa_id",
-                        }
-                        .into())
+            PaymentMethodData::Upi(_) => {
+                // Determine the UPI flow type based on payment method data
+                let upi_flow = determine_upi_flow(payment_method_data)?;
+
+                match upi_flow {
+                    UpiFlowType::Intent => {
+                        let timestamp = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .map_err(|_| ConnectorError::InvalidDataFormat {
+                                field_name: "timestamp",
+                            })?
+                            .as_secs()
+                            .to_string();
+
+                        let channel_id = get_channel_id_from_browser_info(
+                            item.router_data.request.browser_info.as_ref(),
+                        );
+                        let head = PaytmProcessHeadTypes {
+                            version: constants::API_VERSION.to_string(),
+                            request_timestamp: timestamp,
+                            channel_id,
+                            txn_token: Secret::new(session_token),
+                        };
+
+                        let body = PaytmProcessBodyTypes {
+                            mid: auth.merchant_id.clone(),
+                            order_id: payment_id,
+                            request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
+                            payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"),
+                            payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
+                            txn_note: item.router_data.resource_common_data.description.clone(),
+                            extend_info: None,
+                        };
+
+                        let intent_request = PaytmProcessTxnRequest { head, body };
+                        Ok(Self::Intent(intent_request))
                     }
-                };
+                    UpiFlowType::Collect => {
+                        let vpa = match extract_upi_vpa(payment_method_data)? {
+                            Some(vpa) => vpa,
+                            None => {
+                                return Err(ConnectorError::MissingRequiredField {
+                                    field_name: "vpa_id",
+                                }
+                                .into())
+                            }
+                        };
 
-                let head = PaytmTxnTokenType {
-                    txn_token: Secret::new(session_token.clone()),
-                };
+                        let head = PaytmTxnTokenType {
+                            txn_token: Secret::new(session_token.clone()),
+                        };
 
-                let channel_id = get_channel_id_from_browser_info(
-                    item.router_data.request.browser_info.as_ref(),
-                );
-                let body = PaytmNativeProcessRequestBody {
-                    request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
-                    mid: auth.merchant_id.clone(),
-                    order_id: payment_id,
-                    payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
-                    payer_account: Some(vpa),
-                    channel_code: Some("".to_string()), //BankCode (only in NET_BANKING)
-                    channel_id: channel_id.unwrap_or_else(|| constants::CHANNEL_ID_WEB.to_string()),
-                    txn_token: Secret::new(session_token),
-                    auth_mode: None, //authentication mode if any
-                };
+                        let channel_id = get_channel_id_from_browser_info(
+                            item.router_data.request.browser_info.as_ref(),
+                        );
+                        let body = PaytmNativeProcessRequestBody {
+                            request_type: constants::REQUEST_TYPE_NATIVE.to_string(),
+                            mid: auth.merchant_id.clone(),
+                            order_id: payment_id,
+                            payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
+                            payer_account: Some(vpa),
+                            channel_code: Some("".to_string()),
+                            channel_id: channel_id
+                                .unwrap_or_else(|| constants::CHANNEL_ID_WEB.to_string()),
+                            txn_token: Secret::new(session_token),
+                            auth_mode: None,
+                        };
 
-                let collect_request = PaytmNativeProcessTxnRequest { head, body };
-                Ok(Self::Collect(collect_request))
+                        let collect_request = PaytmNativeProcessTxnRequest { head, body };
+                        Ok(Self::Collect(collect_request))
+                    }
+                }
             }
+            _ => Err(ConnectorError::NotSupported {
+                message: "Only Card and UPI payment methods are supported".to_string(),
+                connector: "Paytm",
+            }
+            .into()),
         }
     }
 }
@@ -538,7 +605,7 @@ impl<
         // Handle both success and failure cases from the enum body
         let (redirection_data, connector_ref_id, connector_txn_id) = match &response.body {
             PaytmProcessRespBodyTypes::SuccessBody(success_body) => {
-                // Extract redirection URL if present
+                // Extract redirection URL if present (from deep_link_info for UPI or bank_form for cards)
                 let redirection_data = if let Some(deep_link_info) = &success_body.deep_link_info {
                     if !deep_link_info.deep_link.is_empty() {
                         // Check if it's a UPI deep link (starts with upi://) or regular URL
@@ -556,6 +623,9 @@ impl<
                     } else {
                         None
                     }
+                } else if let Some(bank_form) = &success_body.bank_form {
+                    // Handle card payment redirects (3DS/OTP bank page)
+                    extract_bank_form_redirect(bank_form)
                 } else {
                     None
                 };
@@ -568,7 +638,7 @@ impl<
                         let connector_ref_id = Some(deep_link_info.order_id.clone());
                         (connector_ref_id, connector_txn_id)
                     } else {
-                        // Fallback when deep_link_info is not present
+                        // Fallback when deep_link_info is not present (card payments, etc.)
                         let connector_ref_id = Some(
                             router_data
                                 .resource_common_data
@@ -600,8 +670,13 @@ impl<
             }
         };
 
-        // Map status using the result code
-        let attempt_status = map_paytm_authorize_status_to_attempt_status(result_code);
+        // Map status using the result code, then check if redirect is needed
+        let mut attempt_status = map_paytm_authorize_status_to_attempt_status(result_code);
+
+        // If a redirect/bank form is present, the customer needs to complete authentication
+        if redirection_data.is_some() && attempt_status == AttemptStatus::Authorized {
+            attempt_status = AttemptStatus::AuthenticationPending;
+        }
         router_data.resource_common_data.set_status(attempt_status);
 
         let connector_metadata = get_wait_screen_metadata();
@@ -1106,4 +1181,35 @@ pub fn get_wait_screen_metadata() -> Option<serde_json::Value> {
         e
     })
     .ok()
+}
+
+/// Extract redirect form from Paytm's bankForm response (used for card 3DS/OTP flows)
+fn extract_bank_form_redirect(bank_form: &serde_json::Value) -> Option<Box<RedirectForm>> {
+    // Try to extract redirectForm from bankForm
+    let redirect_form = bank_form.get("redirectForm")?;
+    let action_url = redirect_form.get("actionUrl")?.as_str()?;
+    let method_str = redirect_form
+        .get("method")
+        .and_then(|m| m.as_str())
+        .unwrap_or("post");
+    let content = redirect_form
+        .get("content")
+        .and_then(|c| c.as_object())
+        .map(|obj| {
+            obj.iter()
+                .filter_map(|(k, v)| v.as_str().map(|val| (k.clone(), val.to_string())))
+                .collect::<std::collections::HashMap<String, String>>()
+        })
+        .unwrap_or_default();
+
+    let method = match method_str.to_lowercase().as_str() {
+        "get" => Method::Get,
+        _ => Method::Post,
+    };
+
+    Some(Box::new(RedirectForm::Form {
+        endpoint: action_url.to_string(),
+        method,
+        form_fields: content,
+    }))
 }
