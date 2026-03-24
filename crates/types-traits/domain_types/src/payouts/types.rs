@@ -925,3 +925,620 @@ impl ForeignTryFrom<grpc_api_types::payouts::PayoutMethod>
         }
     }
 }
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceTransferRequest>
+    for crate::payouts::payouts_types::PayoutTransferRequest
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceTransferRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount = match value.amount {
+            Some(amount) => amount,
+            None => {
+                return Err(error_stack::report!(ApplicationErrorResponse::BadRequest(
+                    crate::errors::ApiError {
+                        sub_code: "MISSING_AMOUNT".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Amount is required".to_owned(),
+                        error_object: None,
+                    }
+                )));
+            }
+        };
+
+        let source_currency = {
+            let curr =
+                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        let destination_currency = {
+            let curr = grpc_api_types::payments::Currency::try_from(value.destination_currency)
+                .map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_DESTINATION_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid destination currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        let payout_method_data = value
+            .payout_method_data
+            .map(crate::payouts::payout_method_data::PayoutMethodData::foreign_try_from)
+            .transpose()?;
+
+        Ok(Self {
+            merchant_payout_id: value.merchant_payout_id.clone(),
+            connector_quote_id: value.connector_quote_id.clone(),
+            connector_payout_id: value.connector_payout_id.clone(),
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            source_currency,
+            destination_currency,
+            priority: value
+                .priority
+                .map(|p| {
+                    common_enums::PayoutPriority::foreign_try_from(
+                        grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(p).unwrap(),
+                    )
+                })
+                .transpose()?,
+            connector_payout_method_id: value.connector_payout_method_id,
+            webhook_url: value.webhook_url,
+            payout_method_data,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceGetRequest>
+    for crate::payouts::payouts_types::PayoutGetRequest
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceGetRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            merchant_payout_id: value.merchant_payout_id,
+            connector_payout_id: value.connector_payout_id,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceVoidRequest>
+    for crate::payouts::payouts_types::PayoutVoidRequest
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceVoidRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            merchant_payout_id: value.merchant_payout_id,
+            connector_payout_id: value.connector_payout_id,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceStageRequest>
+    for crate::payouts::payouts_types::PayoutStageRequest
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceStageRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount = match value.amount {
+            Some(amount) => amount,
+            None => {
+                return Err(error_stack::report!(ApplicationErrorResponse::BadRequest(
+                    crate::errors::ApiError {
+                        sub_code: "MISSING_AMOUNT".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Amount is required".to_owned(),
+                        error_object: None,
+                    }
+                )));
+            }
+        };
+
+        let source_currency = {
+            let curr =
+                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        let destination_currency = {
+            let curr = grpc_api_types::payments::Currency::try_from(value.destination_currency)
+                .map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_DESTINATION_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid destination currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        Ok(Self {
+            merchant_quote_id: value.merchant_quote_id.clone(),
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            source_currency,
+            destination_currency,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateLinkRequest>
+    for crate::payouts::payouts_types::PayoutCreateLinkRequest
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceCreateLinkRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount = match value.amount {
+            Some(amount) => amount,
+            None => {
+                return Err(error_stack::report!(ApplicationErrorResponse::BadRequest(
+                    crate::errors::ApiError {
+                        sub_code: "MISSING_AMOUNT".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Amount is required".to_owned(),
+                        error_object: None,
+                    }
+                )));
+            }
+        };
+
+        let source_currency = {
+            let curr =
+                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        let destination_currency = {
+            let curr = grpc_api_types::payments::Currency::try_from(value.destination_currency)
+                .map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_DESTINATION_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid destination currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        let payout_method_data = value
+            .payout_method_data
+            .map(crate::payouts::payout_method_data::PayoutMethodData::foreign_try_from)
+            .transpose()?;
+
+        Ok(Self {
+            merchant_payout_id: value.merchant_payout_id.clone(),
+            connector_quote_id: value.connector_quote_id.clone(),
+            connector_payout_id: value.connector_payout_id.clone(),
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            source_currency,
+            destination_currency,
+            priority: value
+                .priority
+                .map(|p| {
+                    common_enums::PayoutPriority::foreign_try_from(
+                        grpc_api_types::payouts::payout_enums::PayoutPriority::try_from(p).unwrap(),
+                    )
+                })
+                .transpose()?,
+            connector_payout_method_id: value.connector_payout_method_id,
+            webhook_url: value.webhook_url,
+            payout_method_data,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRecipientRequest>
+    for crate::payouts::payouts_types::PayoutCreateRecipientRequest
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceCreateRecipientRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount = match value.amount {
+            Some(amount) => amount,
+            None => {
+                return Err(error_stack::report!(ApplicationErrorResponse::BadRequest(
+                    crate::errors::ApiError {
+                        sub_code: "MISSING_AMOUNT".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Amount is required".to_owned(),
+                        error_object: None,
+                    }
+                )));
+            }
+        };
+
+        let source_currency = {
+            let curr =
+                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        let payout_method_data = value
+            .payout_method_data
+            .map(crate::payouts::payout_method_data::PayoutMethodData::foreign_try_from)
+            .transpose()?;
+
+        Ok(Self {
+            merchant_payout_id: value.merchant_payout_id.clone(),
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            source_currency,
+            payout_method_data,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountRequest>
+    for crate::payouts::payouts_types::PayoutEnrollDisburseAccountRequest
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let amount = match value.amount {
+            Some(amount) => amount,
+            None => {
+                return Err(error_stack::report!(ApplicationErrorResponse::BadRequest(
+                    crate::errors::ApiError {
+                        sub_code: "MISSING_AMOUNT".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Amount is required".to_owned(),
+                        error_object: None,
+                    }
+                )));
+            }
+        };
+
+        let source_currency = {
+            let curr =
+                grpc_api_types::payments::Currency::try_from(amount.currency).map_err(|_| {
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(
+                        crate::errors::ApiError {
+                            sub_code: "INVALID_CURRENCY".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid currency".to_owned(),
+                            error_object: None,
+                        }
+                    ))
+                })?;
+            common_enums::Currency::foreign_try_from(curr)?
+        };
+
+        let payout_method_data = value
+            .payout_method_data
+            .map(crate::payouts::payout_method_data::PayoutMethodData::foreign_try_from)
+            .transpose()?;
+
+        Ok(Self {
+            merchant_payout_id: value.merchant_payout_id.clone(),
+            amount: common_utils::types::MinorUnit::new(amount.minor_amount),
+            source_currency,
+            payout_method_data,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceTransferRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::payouts::payouts_types::PayoutFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceTransferRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            payout_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            connectors,
+            connector_request_reference_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            test_mode: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceGetRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::payouts::payouts_types::PayoutFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceGetRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            payout_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            connectors,
+            connector_request_reference_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            test_mode: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceVoidRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::payouts::payouts_types::PayoutFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceVoidRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            payout_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            connectors,
+            connector_request_reference_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            test_mode: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceStageRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::payouts::payouts_types::PayoutFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceStageRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            payout_id: value.merchant_quote_id.clone().unwrap_or_default(),
+            connectors,
+            connector_request_reference_id: value.merchant_quote_id.clone().unwrap_or_default(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            test_mode: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceCreateLinkRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::payouts::payouts_types::PayoutFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceCreateLinkRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            payout_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            connectors,
+            connector_request_reference_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            test_mode: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceCreateRecipientRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::payouts::payouts_types::PayoutFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceCreateRecipientRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            payout_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            connectors,
+            connector_request_reference_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            test_mode: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for crate::payouts::payouts_types::PayoutFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payouts::PayoutServiceEnrollDisburseAccountRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id,
+            payout_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            connectors,
+            connector_request_reference_id: value.merchant_payout_id.clone().unwrap_or_default(),
+            raw_connector_response: None,
+            connector_response_headers: None,
+            raw_connector_request: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
+            test_mode: None,
+        })
+    }
+}

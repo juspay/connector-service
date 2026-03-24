@@ -15,19 +15,12 @@ use domain_types::{
         PayoutCreate, PayoutCreateLink, PayoutCreateRecipient, PayoutEnrollDisburseAccount,
         PayoutGet, PayoutStage, PayoutTransfer, PayoutVoid,
     },
-    payouts::payouts_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
-    payout_types::{
+    payouts::payouts_types::{
         PayoutCreateLinkRequest, PayoutCreateLinkResponse, PayoutCreateRecipientRequest,
         PayoutCreateRecipientResponse, PayoutCreateRequest, PayoutCreateResponse,
-        PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse,
+        PayoutEnrollDisburseAccountRequest, PayoutEnrollDisburseAccountResponse, PayoutFlowData,
         PayoutGetRequest, PayoutGetResponse, PayoutStageRequest, PayoutStageResponse,
         PayoutTransferRequest, PayoutTransferResponse, PayoutVoidRequest, PayoutVoidResponse,
-    },
-    types::{
-        generate_payout_create_link_response, generate_payout_create_recipient_response,
-        generate_payout_create_response, generate_payout_enroll_disburse_account_response,
-        generate_payout_get_response, generate_payout_stage_response,
-        generate_payout_transfer_response, generate_payout_void_response,
     },
 };
 

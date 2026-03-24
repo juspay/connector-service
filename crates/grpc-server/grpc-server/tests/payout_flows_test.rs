@@ -5,10 +5,10 @@ use ucs_env::configs;
 mod common;
 
 use grpc_api_types::payouts::{
-    payout_service_client::PayoutServiceClient, Currency, Money,
-    PayoutServiceCreateRequest, PayoutServiceTransferRequest, PayoutServiceGetRequest,
-    PayoutServiceVoidRequest, PayoutServiceStageRequest, PayoutServiceCreateLinkRequest,
-    PayoutServiceCreateRecipientRequest, PayoutServiceEnrollDisburseAccountRequest
+    payout_service_client::PayoutServiceClient, Currency, Money, PayoutServiceCreateLinkRequest,
+    PayoutServiceCreateRecipientRequest, PayoutServiceCreateRequest,
+    PayoutServiceEnrollDisburseAccountRequest, PayoutServiceGetRequest, PayoutServiceStageRequest,
+    PayoutServiceTransferRequest, PayoutServiceVoidRequest,
 };
 use tonic::{transport::Channel, Request};
 

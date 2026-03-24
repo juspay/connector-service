@@ -16,21 +16,19 @@ use domain_types::connector_types::{
     PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
     SetupMandateRequestData, SubmitEvidenceData,
 };
-use domain_types::payout_types::{
-    PayoutCreateRequest,
-    PayoutTransferRequest,
-    PayoutStageRequest,
-    PayoutCreateLinkRequest,
-    PayoutCreateRecipientRequest,
-    PayoutEnrollDisburseAccountRequest,
-    PayoutGetRequest,
-    PayoutVoidRequest,
+use domain_types::payouts::payouts_types::{
+    PayoutCreateLinkRequest, PayoutCreateRecipientRequest, PayoutCreateRequest,
+    PayoutEnrollDisburseAccountRequest, PayoutGetRequest, PayoutStageRequest,
+    PayoutTransferRequest, PayoutVoidRequest,
 };
 use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
-    payouts::{
-        payouts_types::PayoutCreateRequest, router_request_types::PayoutCreateIntegrityObject,
+    payouts::router_request_types::{
+        PayoutCreateIntegrityObject, PayoutCreateLinkIntegrityObject,
+        PayoutCreateRecipientIntegrityObject, PayoutEnrollDisburseAccountIntegrityObject,
+        PayoutGetIntegrityObject, PayoutStageIntegrityObject, PayoutTransferIntegrityObject,
+        PayoutVoidIntegrityObject,
     },
     router_request_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
@@ -38,18 +36,10 @@ use domain_types::{
         CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         IncrementalAuthorizationIntegrityObject, MandateRevokeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
-        PaymentVoidPostCaptureIntegrityObject, PayoutCreateIntegrityObject,
-        PayoutTransferIntegrityObject,
-        PayoutStageIntegrityObject,
-        PayoutCreateLinkIntegrityObject,
-        PayoutCreateRecipientIntegrityObject,
-        PayoutEnrollDisburseAccountIntegrityObject,
-        PayoutGetIntegrityObject,
-        PayoutVoidIntegrityObject,
-        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
-        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
-        VerifyWebhookSourceIntegrityObject,
+        PaymentVoidPostCaptureIntegrityObject, PostAuthenticateIntegrityObject,
+        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
+        SubmitEvidenceIntegrityObject, VerifyWebhookSourceIntegrityObject,
     },
 };
 
@@ -1335,7 +1325,9 @@ impl GetIntegrityObject<PayoutCreateRecipientIntegrityObject> for PayoutCreateRe
     }
 }
 
-impl GetIntegrityObject<PayoutEnrollDisburseAccountIntegrityObject> for PayoutEnrollDisburseAccountRequest {
+impl GetIntegrityObject<PayoutEnrollDisburseAccountIntegrityObject>
+    for PayoutEnrollDisburseAccountRequest
+{
     fn get_response_integrity_object(&self) -> Option<PayoutEnrollDisburseAccountIntegrityObject> {
         None
     }
@@ -1539,7 +1531,10 @@ impl FlowIntegrity for PayoutGetIntegrityObject {
         if req_integrity_object.merchant_payout_id != res_integrity_object.merchant_payout_id {
             mismatched_fields.push(format_mismatch(
                 "merchant_payout_id",
-                &req_integrity_object.merchant_payout_id.clone().unwrap_or_default(),
+                &req_integrity_object
+                    .merchant_payout_id
+                    .clone()
+                    .unwrap_or_default(),
                 &res_integrity_object.merchant_payout_id.unwrap_or_default(),
             ));
         }
@@ -1561,7 +1556,10 @@ impl FlowIntegrity for PayoutVoidIntegrityObject {
         if req_integrity_object.merchant_payout_id != res_integrity_object.merchant_payout_id {
             mismatched_fields.push(format_mismatch(
                 "merchant_payout_id",
-                &req_integrity_object.merchant_payout_id.clone().unwrap_or_default(),
+                &req_integrity_object
+                    .merchant_payout_id
+                    .clone()
+                    .unwrap_or_default(),
                 &res_integrity_object.merchant_payout_id.unwrap_or_default(),
             ));
         }
