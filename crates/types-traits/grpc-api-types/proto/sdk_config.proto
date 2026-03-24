@@ -22,11 +22,14 @@ option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/
 
 // Deployment environment for the SDK.
 enum Environment {
-  // Sandbox/Testing environment (Default)
-  SANDBOX = 0;
-  
+  // Unspecified environment (Default)
+  ENVIRONMENT_UNSPECIFIED = 0;
+
+  // Sandbox/Testing environment
+  SANDBOX = 1;
+
   // Production environment
-  PRODUCTION = 1;
+  PRODUCTION = 2;
 }
 
 // ============================================================
