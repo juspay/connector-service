@@ -102,6 +102,16 @@ struct GrpcConfigInput {
     tenant_id: Option<String>,
 }
 
+/// Build the gRPC metadata headers from the config.
+///
+/// Maps config fields to their corresponding header names:
+/// - `connector` → `x-connector`
+/// - `auth_type` → `x-auth`
+/// - `api_key` → `x-api-key`
+/// - `api_secret` → `x-api-secret` (optional)
+/// - `key1` → `x-key1` (optional)
+/// - `merchant_id` → `x-merchant-id` (optional)
+/// - `tenant_id` → `x-tenant-id` (optional)
 fn build_headers(cfg: &GrpcConfigInput) -> Arc<HashMap<String, String>> {
     let mut h = HashMap::new();
     h.insert("x-connector".into(), cfg.connector.clone());
