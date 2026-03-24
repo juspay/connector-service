@@ -40,6 +40,10 @@ const PREFIX: &str = "/api";
 pub struct TruelayerAuthType {
     pub(super) client_id: Secret<String>,
     pub(super) client_secret: Secret<String>,
+    pub(super) merchant_account_id: Option<Secret<String>>,
+    pub(super) account_holder_name: Option<Secret<String>>,
+    pub(super) private_key: Option<Secret<String>>,
+    pub(super) kid: Option<Secret<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -79,10 +83,18 @@ impl TryFrom<&ConnectorSpecificConfig> for TruelayerAuthType {
             ConnectorSpecificConfig::Truelayer {
                 client_id,
                 client_secret,
+                merchant_account_id,
+                account_holder_name,
+                private_key,
+                kid,
                 ..
             } => Ok(Self {
                 client_id: client_id.to_owned(),
                 client_secret: client_secret.to_owned(),
+                merchant_account_id: merchant_account_id.clone(),
+                account_holder_name: account_holder_name.clone(),
+                private_key: private_key.clone(),
+                kid: kid.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -157,14 +169,38 @@ pub struct TruelayerMetadata {
     pub kid: Secret<String>,
 }
 
-impl TryFrom<&Option<pii::SecretSerdeValue>> for TruelayerMetadata {
+impl TryFrom<&ConnectorSpecificConfig> for TruelayerMetadata {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
-        let metadata: Self = utils::to_connector_meta_from_secret::<Self>(meta_data.clone())
-            .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata",
-            })?;
-        Ok(metadata)
+    fn try_from(auth_type: &ConnectorSpecificConfig) -> Result<Self, Self::Error> {
+        let auth = TruelayerAuthType::try_from(auth_type)?;
+        Self::try_from(&auth)
+    }
+}
+
+impl TryFrom<&TruelayerAuthType> for TruelayerMetadata {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(auth: &TruelayerAuthType) -> Result<Self, Self::Error> {
+        Ok(Self {
+            merchant_account_id: auth.merchant_account_id.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "merchant_account_id",
+                },
+            )?,
+            account_holder_name: auth.account_holder_name.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "account_holder_name",
+                },
+            )?,
+            private_key: auth.private_key.clone().ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "private_key",
+                },
+            )?,
+            kid: auth
+                .kid
+                .clone()
+                .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "kid" })?,
+        })
     }
 }
 
@@ -295,9 +331,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
                     )?,
                 };
 
-                let metadata = TruelayerMetadata::try_from(
-                    &item.router_data.resource_common_data.connector_feature_data,
-                )?;
+                let metadata = TruelayerMetadata::try_from(&item.router_data.connector_config)?;
 
                 let payment_method = PaymentMethod {
                     _type: "bank_transfer".to_string(),

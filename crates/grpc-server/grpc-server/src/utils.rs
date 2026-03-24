@@ -28,7 +28,6 @@ use tonic::metadata;
 use ucs_env::{configs, configs::ConfigPatch, error::ResultExtGrpc};
 
 use crate::request::RequestData;
-use ucs_env::error::IntoGrpcStatus;
 
 /// Record the header's fields in request's trace
 pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> tracing::Span {
@@ -602,6 +601,7 @@ macro_rules! implement_connector_operation {
             &self,
             request: $crate::request::RequestData<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
+            use ucs_env::error::IntoGrpcStatus;
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
             let config = request
                 .extensions

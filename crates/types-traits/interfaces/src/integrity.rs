@@ -19,6 +19,9 @@ use domain_types::connector_types::{
 use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
+    payouts::{
+        payouts_types::PayoutCreateRequest, router_request_types::PayoutCreateIntegrityObject,
+    },
     router_request_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateConnectorCustomerIntegrityObject,
@@ -173,6 +176,7 @@ impl_check_integrity!(PaymentsSdkSessionTokenData);
 impl_check_integrity!(PaymentsIncrementalAuthorizationData);
 impl_check_integrity!(MandateRevokeRequestData);
 impl_check_integrity!(VerifyWebhookSourceRequestData);
+impl_check_integrity!(PayoutCreateRequest);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -507,6 +511,19 @@ impl GetIntegrityObject<CreateConnectorCustomerIntegrityObject> for ConnectorCus
                 let email_inner = e.peek().clone().expose();
                 Secret::new(email_inner.expose())
             }),
+        }
+    }
+}
+
+impl GetIntegrityObject<PayoutCreateIntegrityObject> for PayoutCreateRequest {
+    fn get_response_integrity_object(&self) -> Option<PayoutCreateIntegrityObject> {
+        None
+    }
+
+    fn get_request_integrity_object(&self) -> PayoutCreateIntegrityObject {
+        PayoutCreateIntegrityObject {
+            amount: self.amount,
+            currency: self.source_currency,
         }
     }
 }
@@ -1206,5 +1223,35 @@ fn check_integrity_result(
             field_names,
             connector_transaction_id,
         })
+    }
+}
+
+impl FlowIntegrity for PayoutCreateIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
     }
 }

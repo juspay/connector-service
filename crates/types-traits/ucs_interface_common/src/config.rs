@@ -164,6 +164,7 @@ mod tests {
             review_key: None,
             base_url: Some("https://override.adyen.example".to_string()),
             dispute_base_url: Some("https://override-dispute.adyen.example".to_string()),
+            endpoint_prefix: None,
         };
 
         let connectors =
