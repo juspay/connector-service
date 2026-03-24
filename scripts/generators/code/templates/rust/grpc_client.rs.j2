@@ -54,6 +54,8 @@ macro_rules! impl_grpc_client {
             }
 
             $(
+                /// Calls the gRPC method and returns the response.
+                #[must_use = "gRPC responses should be checked for errors"]
                 pub async fn $method(&self, request: $req) -> Result<$res, Status> {
                     $stub::new(self.channel.clone())
                         .$method(self.inject_headers(request))
