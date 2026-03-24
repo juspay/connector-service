@@ -49,6 +49,10 @@ SERVICE_FLOWS = {
         # create_session_token: MerchantAuthenticationService.CreateSessionToken — Create session token for payment processing. Maintains session state across multiple payment operations for improved security and tracking.
         "create_session_token": "MerchantAuthenticationServiceCreateSessionTokenResponse",
     },
+    "PayoutClient": {
+        # payout_create: PayoutService.Create — Creates a payout.
+        "payout_create": "PayoutServiceCreateResponse",
+    },
     "PaymentMethodClient": {
         # tokenize: PaymentMethodService.Tokenize — Tokenize payment method for secure storage. Replaces raw card details with secure token for one-click payments and recurring billing.
         "tokenize": "PaymentMethodServiceTokenizeResponse",
