@@ -364,13 +364,11 @@ impl GrpcClient {
     /// # Errors
     /// Returns [`tonic::transport::Error`] if the URI is invalid or the TCP
     /// connection cannot be established.
-    pub async fn new(config: GrpcConfig) -> Result<Self, tonic::transport::Error> {
+    pub async fn new(config: GrpcConfig) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         // Validate config before attempting connection
-        if let Err(e) = config.validate() {
-            return Err(tonic::transport::Error::from(
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
-            ));
-        }
+        config.validate().map_err(|e| {
+            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidInput, e)) as Box<dyn std::error::Error + Send + Sync>
+        })?;
         let endpoint = config.endpoint.clone();
         let headers = Arc::new(config.into_headers());
 
