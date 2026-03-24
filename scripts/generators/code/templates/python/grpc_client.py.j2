@@ -8,7 +8,7 @@ import json
 import os
 import platform
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from payments.generated import payment_pb2
