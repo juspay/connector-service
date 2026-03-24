@@ -25,10 +25,9 @@ Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **inde
 
 | PCI Mode for Payment Clients | PCI Scope | Description |
 |------|-----------|-------------|
-| **Standard Payment Client** | You do not have to manage PCI compliance | Payment processor vault handles card data |
+| **Tokenize Payment Client** | You do not have to manage PCI compliance | Payment processor vault handles card data |
+| **Standard Payment Client** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
 | **Proxy Payment Client** | You do not have to manage PCI compliance | Third-party vault handles card data |
-| **Payment Client** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
-
 
 ---
 
