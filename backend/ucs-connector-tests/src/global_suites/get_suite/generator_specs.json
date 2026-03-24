@@ -1,0 +1,67 @@
+{
+  "suite": "get",
+  "rpc": "PaymentService.Get",
+  "success": {
+    "status": ["CHARGED", "AUTHORIZED", "VOIDED", "PENDING"],
+    "error": "must_not_exist",
+    "must_exist": []
+  },
+  "groups": {
+    "required": {
+      "fields": {
+        "connector_transaction_id": {
+          "source": "prev_service",
+          "suite": "authorize"
+        },
+        "amount": {
+          "source": "static",
+          "value": {"minor_amount": 6000},
+          "variants": {
+            "field": "currency",
+            "values": ["USD", "EUR", "GBP"]
+          }
+        },
+        "state.access_token.token.value": {
+          "source": "prev_service",
+          "suite": "create_access_token"
+        },
+        "state.access_token.token_type": {
+          "source": "prev_service",
+          "suite": "create_access_token"
+        },
+        "state.access_token.expires_in_seconds": {
+          "source": "prev_service",
+          "suite": "create_access_token"
+        },
+        "state.connector_customer_id": {
+          "source": "prev_service",
+          "suite": "create_customer"
+        }
+      }
+    },
+    "sync_type": {
+      "fields": {
+        "sync_type": {
+          "source": "enum",
+          "variants": ["SYNC_PAYMENT_STATUS", "SYNC_PAYMENT_STATUS_AND_REFUND_STATUS"]
+        }
+      }
+    },
+    "capture_method": {
+      "fields": {
+        "capture_method": {
+          "source": "enum",
+          "variants": ["AUTOMATIC", "MANUAL"]
+        }
+      }
+    },
+    "environment_configuration": {
+      "fields": {
+        "test_mode": {
+          "source": "static",
+          "value": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "suite": "recurring_charge",
+  "rpc": "RecurringPaymentService.Charge",
+  "success": {
+    "status": [],
+    "error": "must_not_exist",
+    "must_exist": ["connector_transaction_id"]
+  },
+  "groups": {
+    "required": {
+      "fields": {
+        "merchant_charge_id": {
+          "source": "auto"
+        },
+        "connector_recurring_payment_id": {
+          "source": "prev_service",
+          "suite": "setup_recurring"
+        },
+        "amount": {
+          "source": "static",
+          "value": {"minor_amount": 6000},
+          "variants": {
+            "field": "currency",
+            "values": ["USD", "EUR", "GBP"]
+          }
+        },
+        "customer.connector_customer_id": {
+          "source": "prev_service",
+          "suite": "create_customer"
+        },
+        "state.access_token.token.value": {
+          "source": "prev_service",
+          "suite": "create_access_token"
+        },
+        "state.access_token.token_type": {
+          "source": "prev_service",
+          "suite": "create_access_token"
+        },
+        "state.access_token.expires_in_seconds": {
+          "source": "prev_service",
+          "suite": "create_access_token"
+        }
+      }
+    },
+    "order_context": {
+      "fields": {
+        "merchant_order_id": {
+          "source": "auto"
+        },
+        "description": {
+          "source": "static",
+          "value": "Recurring charge"
+        },
+        "webhook_url": {
+          "source": "static",
+          "value": "https://example.com/payment/webhook"
+        },
+        "return_url": {
+          "source": "static",
+          "value": "https://example.com/payment/return"
+        }
+      }
+    },
+    "behavioral_flags": {
+      "fields": {
+        "off_session": {
+          "source": "static",
+          "value": true
+        }
+      }
+    },
+    "capture_method": {
+      "fields": {
+        "capture_method": {
+          "source": "enum",
+          "variants": ["AUTOMATIC", "MANUAL"]
+        }
+      }
+    },
+    "environment_configuration": {
+      "fields": {
+        "test_mode": {
+          "source": "static",
+          "value": true
+        }
+      }
+    }
+  }
+}

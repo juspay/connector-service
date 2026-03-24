@@ -12,87 +12,85 @@
 
 ```bash
 grpcurl -plaintext \
-  -H "x-connector: stripe" \
   -H "x-merchant-id: test_merchant" \
   -H "x-tenant-id: default" \
   -H "x-request-id: create_customer_create_customer_req" \
   -H "x-connector-request-reference-id: create_customer_create_customer_ref" \
-  -H "x-auth: ***MASKED***" \
-  -H "x-api-key: ***MASKED***" \
-  -d @ localhost:8000 types.CustomerService/Create <<'JSON'
+  -H "x-connector-config: ***MASKED***" \
+  -d @ localhost:50051 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_9527be36299446b5a9256ad0ac64e8cb",
-  "customer_name": "Mia Miller",
+  "merchant_customer_id": "mcui_95623be81d524c9db74588c0",
+  "customer_name": "Ethan Johnson",
   "email": {
-    "value": "sam.2258@sandbox.example.com"
+    "value": "jordan.1790@testmail.io"
   },
-  "phone_number": "+12259000682",
+  "phone_number": "+918134097206",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Liam"
+        "value": "Emma"
       },
       "last_name": {
         "value": "Wilson"
       },
       "line1": {
-        "value": "2921 Pine Blvd"
+        "value": "2548 Oak Ln"
       },
       "line2": {
-        "value": "859 Main Rd"
+        "value": "4516 Main Ln"
       },
       "line3": {
-        "value": "9687 Oak Blvd"
+        "value": "7982 Sunset Ln"
       },
       "city": {
-        "value": "Los Angeles"
+        "value": "New York"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "43198"
+        "value": "98485"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "casey.6980@example.com"
+        "value": "morgan.5343@testmail.io"
       },
       "phone_number": {
-        "value": "1129083218"
+        "value": "8207874876"
       },
       "phone_country_code": "+91"
     },
     "billing_address": {
       "first_name": {
-        "value": "Liam"
+        "value": "Ethan"
       },
       "last_name": {
-        "value": "Wilson"
+        "value": "Taylor"
       },
       "line1": {
-        "value": "1045 Lake Blvd"
+        "value": "7031 Lake St"
       },
       "line2": {
-        "value": "3666 Main Ave"
+        "value": "6447 Market Ln"
       },
       "line3": {
-        "value": "7228 Pine Dr"
+        "value": "5690 Pine Ave"
       },
       "city": {
-        "value": "Austin"
+        "value": "New York"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "20467"
+        "value": "42806"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "morgan.5349@sandbox.example.com"
+        "value": "riley.4481@sandbox.example.com"
       },
       "phone_number": {
-        "value": "8518162761"
+        "value": "5507684027"
       },
       "phone_country_code": "+91"
     }
@@ -114,9 +112,7 @@ Resolved method descriptor:
 rpc Create ( .types.CustomerServiceCreateRequest ) returns ( .types.CustomerServiceCreateResponse );
 
 Request metadata to send:
-x-api-key: ***MASKED***
-x-auth: ***MASKED***
-x-connector: stripe
+x-connector-config: ***MASKED***
 x-connector-request-reference-id: create_customer_create_customer_ref
 x-merchant-id: test_merchant
 x-request-id: create_customer_create_customer_req
@@ -124,13 +120,13 @@ x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Fri, 13 Mar 2026 06:48:32 GMT
+date: Tue, 24 Mar 2026 08:48:12 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "cus_U8guXw4YUbS6tv",
-  "connectorCustomerId": "cus_U8guXw4YUbS6tv",
+  "merchantCustomerId": "cus_UCqJRyrcTQ3ATC",
+  "connectorCustomerId": "cus_UCqJRyrcTQ3ATC",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -140,13 +136,13 @@ Response contents:
     "access-control-max-age": "300",
     "cache-control": "no-cache, no-store",
     "connection": "keep-alive",
-    "content-length": "676",
-    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=Fs0bD9c8eAKaAMbkesta93NT_ClKvj9FJMA2A6r9tzizbcCkwTwqCj74mLGvFFmdY2ltFH3H3sLcA-9h",
+    "content-length": "674",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=cf2m0QZllQ_cO_-ua0bmze_ZEC6zU5cKsor4N_WReyb_KG6mR6TnzmyVa9YaYVkePdSCzFeftRkot2ZX",
     "content-type": "application/json",
-    "date": "Fri, 13 Mar 2026 06:48:32 GMT",
-    "idempotency-key": "814ffca1-df6b-48a5-8619-fdc368b96e8e",
-    "original-request": "req_z94rSgcDsmHSaA",
-    "request-id": "req_z94rSgcDsmHSaA",
+    "date": "Tue, 24 Mar 2026 08:48:12 GMT",
+    "idempotency-key": "22d73eed-0a0b-481a-b291-4d386efcc320",
+    "original-request": "req_crA0tv9ym6yh4i",
+    "request-id": "req_crA0tv9ym6yh4i",
     "server": "nginx",
     "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
     "stripe-should-retry": "false",

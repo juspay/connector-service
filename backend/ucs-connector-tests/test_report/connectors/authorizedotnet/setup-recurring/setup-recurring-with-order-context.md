@@ -14,88 +14,85 @@
 
 ```bash
 grpcurl -plaintext \
-  -H "x-connector: authorizedotnet" \
   -H "x-merchant-id: test_merchant" \
   -H "x-tenant-id: default" \
   -H "x-request-id: create_customer_create_customer_req" \
   -H "x-connector-request-reference-id: create_customer_create_customer_ref" \
-  -H "x-auth: ***MASKED***" \
-  -H "x-api-key: ***MASKED***" \
-  -H "x-key1: ***MASKED***" \
-  -d @ localhost:8000 types.CustomerService/Create <<'JSON'
+  -H "x-connector-config: ***MASKED***" \
+  -d @ localhost:50051 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_db7fc976a8e441fbb4d15c2649a5fe01",
-  "customer_name": "Ava Miller",
+  "merchant_customer_id": "mcui_df4e46bb19da481cb4207e93",
+  "customer_name": "Noah Brown",
   "email": {
-    "value": "sam.4640@testmail.io"
+    "value": "riley.3419@testmail.io"
   },
-  "phone_number": "+448289811420",
+  "phone_number": "+449547851320",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Noah"
+        "value": "Ethan"
       },
       "last_name": {
-        "value": "Brown"
+        "value": "Wilson"
       },
       "line1": {
-        "value": "6910 Oak Rd"
+        "value": "1874 Lake Blvd"
       },
       "line2": {
-        "value": "7833 Lake Ave"
+        "value": "2302 Main Rd"
       },
       "line3": {
-        "value": "5269 Sunset Rd"
+        "value": "6319 Sunset Dr"
       },
       "city": {
-        "value": "Austin"
+        "value": "Chicago"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "35274"
+        "value": "18042"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "casey.1332@testmail.io"
+        "value": "casey.2214@sandbox.example.com"
       },
       "phone_number": {
-        "value": "9702886636"
+        "value": "9993487281"
       },
       "phone_country_code": "+91"
     },
     "billing_address": {
       "first_name": {
-        "value": "Liam"
+        "value": "Ethan"
       },
       "last_name": {
-        "value": "Johnson"
+        "value": "Miller"
       },
       "line1": {
-        "value": "5248 Lake Ave"
+        "value": "3054 Pine Ln"
       },
       "line2": {
-        "value": "6278 Market Dr"
+        "value": "1394 Pine Ave"
       },
       "line3": {
-        "value": "6361 Market Ave"
+        "value": "602 Pine Rd"
       },
       "city": {
-        "value": "Seattle"
+        "value": "Los Angeles"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "27477"
+        "value": "45753"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "sam.5390@testmail.io"
+        "value": "alex.5092@sandbox.example.com"
       },
       "phone_number": {
-        "value": "4671476965"
+        "value": "6400565537"
       },
       "phone_country_code": "+91"
     }
@@ -117,24 +114,21 @@ Resolved method descriptor:
 rpc Create ( .types.CustomerServiceCreateRequest ) returns ( .types.CustomerServiceCreateResponse );
 
 Request metadata to send:
-x-api-key: ***MASKED***
-x-auth: ***MASKED***
-x-connector: authorizedotnet
+x-connector-config: ***MASKED***
 x-connector-request-reference-id: create_customer_create_customer_ref
-x-key1: ***MASKED***
 x-merchant-id: test_merchant
 x-request-id: create_customer_create_customer_req
 x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Fri, 13 Mar 2026 06:46:45 GMT
+date: Mon, 23 Mar 2026 18:28:00 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "525893669",
-  "connectorCustomerId": "525893669",
+  "merchantCustomerId": "525968126",
+  "connectorCustomerId": "525968126",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -144,13 +138,13 @@ Response contents:
     "cache-control": "no-cache, no-store, max-age=0",
     "content-length": "232",
     "content-type": "application/json; charset=utf-8",
-    "date": "Fri, 13 Mar 2026 06:46:44 GMT",
+    "date": "Mon, 23 Mar 2026 18:27:59 GMT",
     "expires": "-1",
     "pragma": "no-cache",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-cnection": "close",
     "x-download-options": "noopen",
-    "x-opnet-transaction-trace": "53649f1c-cce8-4d4d-9a6c-f2139cb719a0-17392-4054179"
+    "x-opnet-transaction-trace": "b49908eb-ad2c-49e6-ab5f-6e2044ad53c6-8872-12548294"
   }
 }
 
@@ -167,17 +161,14 @@ Sent 1 request and received 1 response
 
 ```bash
 grpcurl -plaintext \
-  -H "x-connector: authorizedotnet" \
   -H "x-merchant-id: test_merchant" \
   -H "x-tenant-id: default" \
   -H "x-request-id: setup_recurring_setup_recurring_with_order_context_req" \
   -H "x-connector-request-reference-id: setup_recurring_setup_recurring_with_order_context_ref" \
-  -H "x-auth: ***MASKED***" \
-  -H "x-api-key: ***MASKED***" \
-  -H "x-key1: ***MASKED***" \
-  -d @ localhost:8000 types.PaymentService/SetupRecurring <<'JSON'
+  -H "x-connector-config: ***MASKED***" \
+  -d @ localhost:50051 types.PaymentService/SetupRecurring <<'JSON'
 {
-  "merchant_recurring_payment_id": "mrpi_919fa884a1114a89b56d2ecb75daa426",
+  "merchant_recurring_payment_id": "mrpi_8357e07a4b0b4285885c70c4",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -197,53 +188,64 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Mia Smith"
+        "value": "Liam Johnson"
       },
       "card_type": "credit"
     }
   },
   "customer": {
-    "name": "Ava Wilson",
+    "name": "Mia Brown",
     "email": {
-      "value": "morgan.6256@example.com"
+      "value": "sam.6590@testmail.io"
     },
-    "id": "cust_951cd811cd32477da39fbfad3ff3443d",
-    "phone_number": "+16712733400",
-    "connector_customer_id": "525893669"
+    "id": "cust_3da0a947416d4af2bfad2937",
+    "phone_number": "+442916610716",
+    "connector_customer_id": "525968126"
   },
-  "complete_authorize_url": "https://example.com/payment/complete",
+  "browser_info": {
+    "ip_address": "127.0.0.1",
+    "accept_header": "application/json",
+    "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+    "accept_language": "en-US",
+    "color_depth": 24,
+    "screen_height": 1080,
+    "screen_width": 1920,
+    "java_enabled": false,
+    "java_script_enabled": true,
+    "time_zone_offset_minutes": -480
+  },
   "address": {
     "billing_address": {
       "first_name": {
-        "value": "Liam"
+        "value": "Ethan"
       },
       "last_name": {
-        "value": "Johnson"
+        "value": "Miller"
       },
       "line1": {
-        "value": "5248 Lake Ave"
+        "value": "3054 Pine Ln"
       },
       "line2": {
-        "value": "6278 Market Dr"
+        "value": "1394 Pine Ave"
       },
       "line3": {
-        "value": "6361 Market Ave"
+        "value": "602 Pine Rd"
       },
       "city": {
-        "value": "Seattle"
+        "value": "Los Angeles"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "27477"
+        "value": "45753"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "sam.5390@testmail.io"
+        "value": "alex.5092@sandbox.example.com"
       },
       "phone_number": {
-        "value": "4671476965"
+        "value": "6400565537"
       },
       "phone_country_code": "+91"
     }
@@ -255,10 +257,11 @@ grpcurl -plaintext \
   },
   "setup_future_usage": "OFF_SESSION",
   "off_session": true,
-  "merchant_order_id": "gen_495968",
+  "merchant_order_id": "gen_585083",
   "order_category": "subscription",
   "return_url": "https://example.com/payment/return",
-  "webhook_url": "https://example.com/payment/webhook"
+  "webhook_url": "https://example.com/payment/webhook",
+  "complete_authorize_url": "https://example.com/payment/complete"
 }
 JSON
 ```
@@ -275,18 +278,15 @@ Resolved method descriptor:
 rpc SetupRecurring ( .types.PaymentServiceSetupRecurringRequest ) returns ( .types.PaymentServiceSetupRecurringResponse );
 
 Request metadata to send:
-x-api-key: ***MASKED***
-x-auth: ***MASKED***
-x-connector: authorizedotnet
+x-connector-config: ***MASKED***
 x-connector-request-reference-id: setup_recurring_setup_recurring_with_order_context_ref
-x-key1: ***MASKED***
 x-merchant-id: test_merchant
 x-request-id: setup_recurring_setup_recurring_with_order_context_req
 x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Fri, 13 Mar 2026 06:46:46 GMT
+date: Mon, 23 Mar 2026 18:28:02 GMT
 x-request-id: setup_recurring_setup_recurring_with_order_context_req
 
 Response contents:
@@ -299,27 +299,26 @@ Response contents:
     "access-control-allow-methods": "PUT,OPTIONS,POST,GET",
     "access-control-allow-origin": "*",
     "cache-control": "no-cache, no-store, max-age=0",
-    "content-length": "552",
+    "content-length": "550",
     "content-type": "application/json; charset=utf-8",
-    "date": "Fri, 13 Mar 2026 06:46:45 GMT",
+    "date": "Mon, 23 Mar 2026 18:28:01 GMT",
     "expires": "-1",
     "pragma": "no-cache",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-cnection": "close",
     "x-download-options": "noopen",
-    "x-opnet-transaction-trace": "53649f1c-cce8-4d4d-9a6c-f2139cb719a0-17392-4054351"
+    "x-opnet-transaction-trace": "b49908eb-ad2c-49e6-ab5f-6e2044ad53c6-8872-12548365"
   },
   "mandateReference": {
     "connectorMandateId": {
-      "connectorMandateId": "525893669-537998895"
+      "connectorMandateId": "525968126-538075832"
     }
   },
-  "capturedAmount": "0",
+  "capturedAmount": "6000",
   "state": {
-    "connectorCustomerId": "525893669"
+    "connectorCustomerId": "525968126"
   },
-  "rawConnectorRequest": {
-    "value": "{\"url\":\"https://apitest.authorize.net/xml/v1/request.api\",\"method\":\"POST\",\"headers\":{\"Content-Type\":\"application/json\",\"via\":\"HyperSwitch\"},\"body\":{\"createCustomerPaymentProfileRequest\":{\"merchantAuthentication\":{\"name\":\"9ARWr5wz49D3\",\"transactionKey\":\"3d9SHV2699mgmHre\"},\"customerProfileId\":\"525893669\",\"paymentProfile\":{\"billTo\":{\"firstName\":\"Liam\",\"lastName\":\"Johnson\",\"address\":\"5248 Lake Ave 6278 Market Dr 6361 Market Ave\",\"city\":\"Seattle\",\"state\":\"CA\",\"zip\":\"27477\",\"country\":\"US\"},\"payment\":{\"creditCard\":{\"cardNumber\":\"4111111111111111\",\"expirationDate\":\"2030-08\",\"cardCode\":\"999\"}}},\"validationMode\":\"testMode\"}}}"
+  "rawConnectorRequest": "***MASKED***"
   }
 }
 

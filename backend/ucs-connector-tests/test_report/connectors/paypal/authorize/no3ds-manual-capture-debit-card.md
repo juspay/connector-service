@@ -14,15 +14,12 @@
 
 ```bash
 grpcurl -plaintext \
-  -H "x-connector: paypal" \
   -H "x-merchant-id: test_merchant" \
   -H "x-tenant-id: default" \
   -H "x-request-id: create_access_token_create_access_token_req" \
   -H "x-connector-request-reference-id: create_access_token_create_access_token_ref" \
-  -H "x-auth: ***MASKED***" \
-  -H "x-api-key: ***MASKED***" \
-  -H "x-key1: ***MASKED***" \
-  -d @ localhost:8000 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'
+  -H "x-connector-config: ***MASKED***" \
+  -d @ localhost:50051 types.MerchantAuthenticationService/CreateAccessToken <<'JSON'
 {
   "merchant_access_token_id": ***MASKED***"
   "connector": "STRIPE",
@@ -43,26 +40,23 @@ Resolved method descriptor:
 rpc CreateAccessToken ( .types.MerchantAuthenticationServiceCreateAccessTokenRequest ) returns ( .types.MerchantAuthenticationServiceCreateAccessTokenResponse );
 
 Request metadata to send:
-x-api-key: ***MASKED***
-x-auth: ***MASKED***
-x-connector: paypal
+x-connector-config: ***MASKED***
 x-connector-request-reference-id: create_access_token_create_access_token_ref
-x-key1: ***MASKED***
 x-merchant-id: test_merchant
 x-request-id: create_access_token_create_access_token_req
 x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Fri, 13 Mar 2026 06:46:53 GMT
+date: Mon, 23 Mar 2026 16:25:06 GMT
 x-request-id: create_access_token_create_access_token_req
 
 Response contents:
 {
   "accessToken": ***MASKED***
-    "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
+    "value": "A21AAJZjSsDmCuE5WX3HtseBQeY2EE9Hnb7dx0oLx2msatk8EQXES2DtKeeLgw5x-Lt04D71PcF7COTmnrPA2Hd52N5PZJVlQ"
   },
-  "expiresInSeconds": "29633",
+  "expiresInSeconds": "32399",
   "status": "OPERATION_STATUS_SUCCESS",
   "statusCode": 200
 }
@@ -80,17 +74,14 @@ Sent 1 request and received 1 response
 
 ```bash
 grpcurl -plaintext \
-  -H "x-connector: paypal" \
   -H "x-merchant-id: test_merchant" \
   -H "x-tenant-id: default" \
   -H "x-request-id: authorize_no3ds_manual_capture_debit_card_req" \
   -H "x-connector-request-reference-id: authorize_no3ds_manual_capture_debit_card_ref" \
-  -H "x-auth: ***MASKED***" \
-  -H "x-api-key: ***MASKED***" \
-  -H "x-key1: ***MASKED***" \
-  -d @ localhost:8000 types.PaymentService/Authorize <<'JSON'
+  -H "x-connector-config: ***MASKED***" \
+  -d @ localhost:50051 types.PaymentService/Authorize <<'JSON'
 {
-  "merchant_transaction_id": "mti_7f71c843a4254cada5b9baf0d0e7ab31",
+  "merchant_transaction_id": "mti_9a7ac56c3c554b18949c2100b84deedb",
   "amount": {
     "minor_amount": 6000,
     "currency": "USD"
@@ -112,94 +103,94 @@ grpcurl -plaintext \
         "value": "999"
       },
       "card_holder_name": {
-        "value": "Noah Miller"
+        "value": "Ava Taylor"
       },
       "card_type": "debit"
     }
   },
   "capture_method": "MANUAL",
   "customer": {
-    "name": "Liam Smith",
+    "name": "Mia Johnson",
     "email": {
-      "value": "jordan.3095@example.com"
+      "value": "riley.1551@example.com"
     },
-    "id": "cust_ab9548b5c304489e9d862432d3c14d79",
-    "phone_number": "+16139895794"
+    "id": "cust_8593dd40c3944d7b8b10c6b6495c85ea",
+    "phone_number": "+11986476880"
   },
   "state": {
     "access_token": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
+        "value": "A21AAJZjSsDmCuE5WX3HtseBQeY2EE9Hnb7dx0oLx2msatk8EQXES2DtKeeLgw5x-Lt04D71PcF7COTmnrPA2Hd52N5PZJVlQ"
       },
-      "expires_in_seconds": "29633"
+      "expires_in_seconds": "32399"
     }
   },
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Liam"
+        "value": "Mia"
       },
       "last_name": {
-        "value": "Wilson"
+        "value": "Brown"
       },
       "line1": {
-        "value": "2096 Lake Ave"
+        "value": "7225 Main Ln"
       },
       "line2": {
-        "value": "8063 Sunset St"
+        "value": "1426 Pine St"
       },
       "line3": {
-        "value": "8381 Lake Blvd"
+        "value": "9733 Market Dr"
       },
       "city": {
-        "value": "New York"
+        "value": "Seattle"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "53612"
+        "value": "92626"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "riley.8890@sandbox.example.com"
+        "value": "sam.8477@example.com"
       },
       "phone_number": {
-        "value": "8257021763"
+        "value": "4803315258"
       },
       "phone_country_code": "+91"
     },
     "billing_address": {
       "first_name": {
-        "value": "Mia"
+        "value": "Ethan"
       },
       "last_name": {
-        "value": "Johnson"
+        "value": "Smith"
       },
       "line1": {
-        "value": "3363 Market Ln"
+        "value": "2163 Main Ave"
       },
       "line2": {
-        "value": "8470 Lake Blvd"
+        "value": "2091 Lake St"
       },
       "line3": {
-        "value": "6392 Lake Ave"
+        "value": "3085 Pine Rd"
       },
       "city": {
-        "value": "San Francisco"
+        "value": "Austin"
       },
       "state": {
         "value": "CA"
       },
       "zip_code": {
-        "value": "31057"
+        "value": "57997"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "riley.4523@example.com"
+        "value": "jordan.4896@sandbox.example.com"
       },
       "phone_number": {
-        "value": "3326107812"
+        "value": "6651827517"
       },
       "phone_country_code": "+91"
     }
@@ -215,7 +206,19 @@ grpcurl -plaintext \
   "description": "No3DS manual capture card payment (debit)",
   "payment_channel": "ECOMMERCE",
   "test_mode": true,
-  "locale": "en-US"
+  "locale": "en-US",
+  "browser_info": {
+    "ip_address": "127.0.0.1",
+    "accept_header": "application/json",
+    "user_agent": "Mozilla/5.0 (ucs-connector-tests)",
+    "accept_language": "en-US",
+    "color_depth": 24,
+    "screen_height": 1080,
+    "screen_width": 1920,
+    "java_enabled": false,
+    "java_script_enabled": true,
+    "time_zone_offset_minutes": -480
+  }
 }
 JSON
 ```
@@ -232,24 +235,21 @@ Resolved method descriptor:
 rpc Authorize ( .types.PaymentServiceAuthorizeRequest ) returns ( .types.PaymentServiceAuthorizeResponse );
 
 Request metadata to send:
-x-api-key: ***MASKED***
-x-auth: ***MASKED***
-x-connector: paypal
+x-connector-config: ***MASKED***
 x-connector-request-reference-id: authorize_no3ds_manual_capture_debit_card_ref
-x-key1: ***MASKED***
 x-merchant-id: test_merchant
 x-request-id: authorize_no3ds_manual_capture_debit_card_req
 x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Fri, 13 Mar 2026 06:47:06 GMT
+date: Mon, 23 Mar 2026 16:25:29 GMT
 x-request-id: authorize_no3ds_manual_capture_debit_card_req
 
 Response contents:
 {
-  "merchantTransactionId": "mti_7f71c843a4254cada5b9baf0d0e7ab31",
-  "connectorTransactionId": "4UT722985X160360R",
+  "merchantTransactionId": "mti_9a7ac56c3c554b18949c2100b84deedb",
+  "connectorTransactionId": "72U48955LU450941K",
   "status": "AUTHORIZED",
   "statusCode": 201,
   "responseHeaders": {
@@ -257,41 +257,40 @@ Response contents:
     "access-control-expose-headers": "Server-Timing",
     "cache-control": "max-age=0, no-cache, no-store, must-revalidate",
     "connection": "keep-alive",
-    "content-length": "2519",
+    "content-length": "2516",
     "content-type": "application/json",
-    "date": "Fri, 13 Mar 2026 06:47:06 GMT",
+    "date": "Mon, 23 Mar 2026 16:25:29 GMT",
     "edge-control": "max-age=0",
     "http_x_pp_az_locator": "ccg18.slc",
-    "paypal-debug-id": "f2100154a0bae",
+    "paypal-debug-id": "f117595503e04",
     "server": "nginx",
-    "server-timing": "traceparent;desc=\"00-0000000000000000000f2100154a0bae-b1cbc505cc2e4b54-01\"",
+    "server-timing": "traceparent;desc=\"00-0000000000000000000f117595503e04-8f7ebad04f5b8961-01\"",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "vary": "Accept-Encoding",
     "via": "1.1 varnish, 1.1 varnish",
-    "x-cache": "MISS, MISS",
-    "x-cache-hits": "0, 0",
-    "x-served-by": "cache-sin-wsss1830091-SIN, cache-bom-vanm7210067-BOM",
-    "x-timer": "S1773384424.190405,VS0,VE2660"
+    "x-backend-info": "v=1;name=2k1u3gOGb2cebCyZJujTUN--F_ccg18_wju_origin_api_m_2_sandbox_paypal_com;ip=34.106.111.220;port=443;ssl=1;max=200;mr=0;ka_ns=0;ml_ns=0;tka_s=300;tki_s=10;tkp=3;host=api-m.sandbox.paypal.com;min_tls=;max_tls=;sni=edge.sandbox.paypal.com;cert_host=edge.sandbox.paypal.com;ciphers=;check_cert=1;no_reneg=1;to_ns=1000000000;fbto_ns=59000000000;bbto_ns=10000000000;fto_ns=0",
+    "x-cache": "MISS, MISS, MISS",
+    "x-cache-hits": "0, 0, 0",
+    "x-served-by": "cache-sin-wsat1880025-SIN, cache-sin-wsat1880025-SIN, cache-bom-vanm7210065-BOM",
+    "x-timer": "S1774283127.106682,VS0,VE2095"
   },
   "state": {
     "accessToken": ***MASKED***
       "token": ***MASKED***
-        "value": "A21AALDBy1KjC6R64l4BnblKtors4dsNxLjgcjLr9oxRW5p9qxkmnymJdOy1OXk9z6Bl3y28P6cFAgytM59ffYllZVtZpmNoQ"
+        "value": "A21AAJZjSsDmCuE5WX3HtseBQeY2EE9Hnb7dx0oLx2msatk8EQXES2DtKeeLgw5x-Lt04D71PcF7COTmnrPA2Hd52N5PZJVlQ"
       },
-      "expiresInSeconds": "29633"
+      "expiresInSeconds": "32399"
     }
   },
-  "rawConnectorResponse": {
-    "value": "{\"id\":\"4UT722985X160360R\",\"intent\":\"AUTHORIZE\",\"status\":\"COMPLETED\",\"payment_source\":{\"card\":{\"name\":\"Mia Johnson\",\"last_digits\":\"1111\",\"expiry\":\"2030-08\",\"brand\":\"VISA\",\"type\":\"UNKNOWN\",\"bin_details\":{}}},\"purchase_units\":[{\"reference_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"handling\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"insurance\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"shipping_discount\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"payee\":{\"email_address\":\"sb-itwmi27136406@business.example.com\",\"merchant_id\":\"DUM69V9DDNYEJ\"},\"description\":\"Payment for invoice mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"invoice_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"soft_descriptor\":\"TEST STORE\",\"items\":[{\"name\":\"Payment for invoice mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":{\"currency_code\":\"USD\",\"value\":\"0.00\"},\"quantity\":\"1\"}],\"shipping\":{\"name\":{\"full_name\":\"Liam\"},\"address\":{\"address_line_1\":\"2096 Lake Ave\",\"admin_area_2\":\"New York\",\"admin_area_1\":\"XX\",\"postal_code\":\"53612\",\"country_code\":\"US\"}},\"payments\":{\"authorizations\":[{\"status\":\"CREATED\",\"id\":\"65W18338PH3561837\",\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"invoice_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"seller_protection\":{\"status\":\"NOT_ELIGIBLE\"},\"processor_response\":{\"avs_code\":\"A\",\"cvv_code\":\"M\",\"response_code\":\"0000\"},\"expiration_time\":\"2026-04-11T06:47:06Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837\",\"rel\":\"self\",\"method\":\"GET\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837/capture\",\"rel\":\"capture\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837/void\",\"rel\":\"void\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/payments/authorizations/65W18338PH3561837/reauthorize\",\"rel\":\"reauthorize\",\"method\":\"POST\"},{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/4UT722985X160360R\",\"rel\":\"up\",\"method\":\"GET\"}],\"create_time\":\"2026-03-13T06:47:06Z\",\"update_time\":\"2026-03-13T06:47:06Z\",\"network_transaction_reference\":{\"id\":\"654712078956512\",\"network\":\"VISA\"}}]}}],\"create_time\":\"2026-03-13T06:47:06Z\",\"update_time\":\"2026-03-13T06:47:06Z\",\"links\":[{\"href\":\"https://api.sandbox.paypal.com/v2/checkout/orders/4UT722985X160360R\",\"rel\":\"self\",\"method\":\"GET\"}]}"
+  "rawConnectorResponse": "***MASKED***"
   },
-  "rawConnectorRequest": {
-    "value": "{\"url\":\"https://api-m.sandbox.paypal.com/v2/checkout/orders\",\"method\":\"POST\",\"headers\":{\"Content-Type\":\"application/json\",\"Authorization\":\"Bearer ***MASKED***",\"PayPal-Partner-Attribution-Id\":\"HyperSwitchlegacy_Ecom\",\"PayPal-Request-Id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"via\":\"HyperSwitch\",\"Prefer\":\"return=representation\"},\"body\":{\"intent\":\"AUTHORIZE\",\"purchase_units\":[{\"reference_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"invoice_id\":\"mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"custom_id\":null,\"amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\",\"breakdown\":{\"item_total\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax_total\":null,\"shipping\":{\"currency_code\":\"USD\",\"value\":\"0.00\"}}},\"shipping\":{\"address\":{\"address_line_1\":\"2096 Lake Ave\",\"postal_code\":\"53612\",\"country_code\":\"US\",\"admin_area_2\":\"New York\"},\"name\":{\"full_name\":\"Liam\"}},\"items\":[{\"name\":\"Payment for invoice mti_7f71c843a4254cada5b9baf0d0e7ab31\",\"quantity\":1,\"unit_amount\":{\"currency_code\":\"USD\",\"value\":\"60.00\"},\"tax\":null}]}],\"payment_source\":{\"card\":{\"billing_address\":{\"address_line_1\":\"3363 Market Ln\",\"postal_code\":\"31057\",\"country_code\":\"US\",\"admin_area_2\":\"San Francisco\"},\"expiry\":\"2030-08\",\"name\":\"Mia Johnson\",\"number\":\"4111111111111111\",\"security_code\":\"999\",\"attributes\":{\"vault\":null,\"verification\":null}}}}}"
+  "rawConnectorRequest": "***MASKED***"
   },
   "mandateReference": {
     "connectorMandateId": {}
   },
   "connectorFeatureData": {
-    "value": "{\"authorize_id\":\"65W18338PH3561837\",\"capture_id\":null,\"incremental_authorization_id\":\"65W18338PH3561837\",\"psync_flow\":\"AUTHORIZE\",\"next_action\":null,\"order_id\":null}"
+    "value": "{\"authorize_id\":\"5R888886BY590435P\",\"capture_id\":null,\"incremental_authorization_id\":\"5R888886BY590435P\",\"psync_flow\":\"AUTHORIZE\",\"next_action\":null,\"order_id\":null}"
   }
 }
 

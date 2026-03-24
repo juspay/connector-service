@@ -12,38 +12,69 @@
 
 ```bash
 grpcurl -plaintext \
-  -H "x-connector: authorizedotnet" \
   -H "x-merchant-id: test_merchant" \
   -H "x-tenant-id: default" \
   -H "x-request-id: create_customer_create_customer_req" \
   -H "x-connector-request-reference-id: create_customer_create_customer_ref" \
-  -H "x-auth: ***MASKED***" \
-  -H "x-api-key: ***MASKED***" \
-  -H "x-key1: ***MASKED***" \
-  -d @ localhost:8000 types.CustomerService/Create <<'JSON'
+  -H "x-connector-config: ***MASKED***" \
+  -d @ localhost:50051 types.CustomerService/Create <<'JSON'
 {
-  "merchant_customer_id": "mcui_7461b382ec47401c91bac9b1b2ac3fee",
-  "customer_name": "Emma Wilson",
+  "merchant_customer_id": "mcui_11ab09a5580548db9e0fe9d6",
+  "customer_name": "Ava Taylor",
   "email": {
-    "value": "alex.2547@example.com"
+    "value": "sam.7312@testmail.io"
   },
-  "phone_number": "+441435075727",
+  "phone_number": "+442727265837",
   "address": {
     "shipping_address": {
       "first_name": {
-        "value": "Mia"
+        "value": "Noah"
       },
       "last_name": {
-        "value": "Smith"
+        "value": "Brown"
       },
       "line1": {
-        "value": "6405 Lake Dr"
+        "value": "555 Lake Ave"
       },
       "line2": {
-        "value": "5543 Sunset Blvd"
+        "value": "6170 Pine Ave"
       },
       "line3": {
-        "value": "2578 Pine St"
+        "value": "8620 Lake Ave"
+      },
+      "city": {
+        "value": "Chicago"
+      },
+      "state": {
+        "value": "CA"
+      },
+      "zip_code": {
+        "value": "25249"
+      },
+      "country_alpha2_code": "US",
+      "email": {
+        "value": "alex.5681@testmail.io"
+      },
+      "phone_number": {
+        "value": "6110264258"
+      },
+      "phone_country_code": "+91"
+    },
+    "billing_address": {
+      "first_name": {
+        "value": "Liam"
+      },
+      "last_name": {
+        "value": "Taylor"
+      },
+      "line1": {
+        "value": "3838 Lake St"
+      },
+      "line2": {
+        "value": "9266 Sunset Ln"
+      },
+      "line3": {
+        "value": "5008 Sunset Dr"
       },
       "city": {
         "value": "New York"
@@ -52,48 +83,14 @@ grpcurl -plaintext \
         "value": "CA"
       },
       "zip_code": {
-        "value": "56387"
+        "value": "55195"
       },
       "country_alpha2_code": "US",
       "email": {
-        "value": "morgan.3492@testmail.io"
+        "value": "casey.6258@sandbox.example.com"
       },
       "phone_number": {
-        "value": "7989778555"
-      },
-      "phone_country_code": "+91"
-    },
-    "billing_address": {
-      "first_name": {
-        "value": "Mia"
-      },
-      "last_name": {
-        "value": "Taylor"
-      },
-      "line1": {
-        "value": "5960 Pine St"
-      },
-      "line2": {
-        "value": "968 Market Ave"
-      },
-      "line3": {
-        "value": "5284 Lake Ave"
-      },
-      "city": {
-        "value": "Los Angeles"
-      },
-      "state": {
-        "value": "CA"
-      },
-      "zip_code": {
-        "value": "88268"
-      },
-      "country_alpha2_code": "US",
-      "email": {
-        "value": "sam.9778@testmail.io"
-      },
-      "phone_number": {
-        "value": "5300347744"
+        "value": "4370952310"
       },
       "phone_country_code": "+91"
     }
@@ -115,24 +112,21 @@ Resolved method descriptor:
 rpc Create ( .types.CustomerServiceCreateRequest ) returns ( .types.CustomerServiceCreateResponse );
 
 Request metadata to send:
-x-api-key: ***MASKED***
-x-auth: ***MASKED***
-x-connector: authorizedotnet
+x-connector-config: ***MASKED***
 x-connector-request-reference-id: create_customer_create_customer_ref
-x-key1: ***MASKED***
 x-merchant-id: test_merchant
 x-request-id: create_customer_create_customer_req
 x-tenant-id: default
 
 Response headers received:
 content-type: application/grpc
-date: Fri, 13 Mar 2026 06:46:10 GMT
+date: Mon, 23 Mar 2026 18:27:19 GMT
 x-request-id: create_customer_create_customer_req
 
 Response contents:
 {
-  "merchantCustomerId": "525893640",
-  "connectorCustomerId": "525893640",
+  "merchantCustomerId": "525968091",
+  "connectorCustomerId": "525968091",
   "statusCode": 200,
   "responseHeaders": {
     "access-control-allow-credentials": "true",
@@ -142,13 +136,13 @@ Response contents:
     "cache-control": "no-cache, no-store, max-age=0",
     "content-length": "232",
     "content-type": "application/json; charset=utf-8",
-    "date": "Fri, 13 Mar 2026 06:46:09 GMT",
+    "date": "Mon, 23 Mar 2026 18:27:19 GMT",
     "expires": "-1",
     "pragma": "no-cache",
     "strict-transport-security": "max-age=31536000; includeSubDomains",
     "x-cnection": "close",
     "x-download-options": "noopen",
-    "x-opnet-transaction-trace": "53649f1c-cce8-4d4d-9a6c-f2139cb719a0-17392-4049818"
+    "x-opnet-transaction-trace": "b49908eb-ad2c-49e6-ab5f-6e2044ad53c6-8872-12547222"
   }
 }
 
