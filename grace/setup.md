@@ -21,7 +21,7 @@ Your folder should now look like:
 
 ```
 connector-service/
-├── backend/         ← Rust connector code
+├── crates/         ← Rust connector code
 ├── config/          ← Server configs
 ├── grace/           ← Grace CLI + codegen rules
 └── ...

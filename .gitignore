@@ -434,13 +434,15 @@ artifacts/
 sdk/tests/client_sanity/artifacts/
 
 .claude
+
+# Generated proto descriptor files
 scripts/generators/code/services.desc
 
 # Local Netlify folder
 .netlify
 
 # UCS Connector Test Runtime Artifacts
-backend/ucs-connector-tests/report.json
+crates/internal/ucs-connector-tests/report.json
 *.test.log
 /tmp/*test*.log
 .grpc-server.pid

@@ -79,7 +79,7 @@ Crypto payments allow customers to pay for goods and services using cryptocurren
 ### Domain Type Definition
 
 ```rust
-// File: backend/domain_types/src/payment_method_data.rs
+// File: crates/types-traits/domain_types/src/payment_method_data.rs
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -617,7 +617,7 @@ fn build_error_response(
 ### Complete Connector Implementation
 
 ```rust
-// File: backend/connector-integration/src/connectors/cryptopay.rs
+// File: crates/integrations/connector-integration/src/connectors/cryptopay.rs
 
 pub mod transformers;
 
@@ -1075,8 +1075,8 @@ mod integration_tests {
 
 ### Cryptopay Reference Implementation
 
-- **Main File**: `backend/connector-integration/src/connectors/cryptopay.rs`
-- **Transformers**: `backend/connector-integration/src/connectors/cryptopay/transformers.rs`
+- **Main File**: `crates/integrations/connector-integration/src/connectors/cryptopay.rs`
+- **Transformers**: `crates/integrations/connector-integration/src/connectors/cryptopay/transformers.rs`
 - **Amount Converter**: Uses `StringMajorUnit` via `CryptopayAmountConvertor`
 - **Auth**: HMAC-SHA1 signature with API key and secret
 - **Endpoints**:

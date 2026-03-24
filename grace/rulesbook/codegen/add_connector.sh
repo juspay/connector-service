@@ -1200,15 +1200,15 @@ show_implementation_plan() {
     echo "====================="
     echo
     echo "📁 Files to create:"
-    echo "   ├── backend/connector-integration/src/connectors/$NAME_SNAKE.rs"
-    echo "   └── backend/connector-integration/src/connectors/$NAME_SNAKE/transformers.rs"
+    echo "   ├── crates/integrations/connector-integration/src/connectors/$NAME_SNAKE.rs"
+    echo "   └── crates/integrations/connector-integration/src/connectors/$NAME_SNAKE/transformers.rs"
     echo
     echo "📝 Files to modify:"
-    echo "   ├── backend/grpc-api-types/proto/payment.proto"
-    echo "   ├── backend/domain_types/src/connector_types.rs"
-    echo "   ├── backend/domain_types/src/router_data.rs"
-    echo "   ├── backend/connector-integration/src/connectors.rs"
-    echo "   ├── backend/connector-integration/src/types.rs"
+    echo "   ├── crates/types-traits/grpc-api-types/proto/payment.proto"
+    echo "   ├── crates/types-traits/domain_types/src/connector_types.rs"
+    echo "   ├── crates/types-traits/domain_types/src/router_data.rs"
+    echo "   ├── crates/integrations/connector-integration/src/connectors.rs"
+    echo "   ├── crates/integrations/connector-integration/src/types.rs"
     echo "   └── config/development.toml"
     echo
     echo "🎯 Configuration:"
@@ -1234,13 +1234,13 @@ show_next_steps() {
     echo "============"
     echo
     echo "1️⃣  Implement Core Logic:"
-    echo "   📁 Edit: backend/connector-integration/src/connectors/$NAME_SNAKE/transformers.rs"
+    echo "   📁 Edit: crates/integrations/connector-integration/src/connectors/$NAME_SNAKE/transformers.rs"
     echo "      • Update request/response structures for your API"
     echo "      • Implement proper field mappings"
     echo "      • Handle authentication requirements"
     echo
     echo "2️⃣  Customize Connector:"
-    echo "   📁 Edit: backend/connector-integration/src/connectors/$NAME_SNAKE.rs"
+    echo "   📁 Edit: crates/integrations/connector-integration/src/connectors/$NAME_SNAKE.rs"
     echo "      • Update URL patterns and endpoints"
     echo "      • Implement error handling"
     echo "      • Add connector-specific logic"

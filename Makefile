@@ -28,7 +28,8 @@ GRPC_PID_FILE := .grpc-server.pid
         generate certify-client-sanity field-probe docs docs-check all-connectors-doc \
         setup-connector-tests \
         start-grpc stop-grpc \
-        test-prism test-ucs test-connector test-scenario cargo
+        test-prism test-ucs test-connector test-scenario cargo \
+        validate-pre-push
 
 # ── Standard build/lint targets ────────────────────────────────────────────────
 
@@ -249,6 +250,21 @@ field-probe:
 	@echo "▶ Running field-probe to generate connector flow data…"
 	-cargo run -p field-probe
 
+## Run comprehensive pre-push validation (format, check, clippy, generate, docs)
+validate-pre-push:
+	@echo "▶ Running pre-push validation..."
+	@./scripts/validation/pre-push.sh
+
+## Run pre-push validation with tests (slower but more thorough)
+validate-pre-push-full:
+	@echo "▶ Running pre-push validation with tests..."
+	@./scripts/validation/pre-push.sh --with-tests
+
+## Fix formatting and run pre-push validation
+validate-pre-push-fix:
+	@echo "▶ Running pre-push validation with auto-fix..."
+	@./scripts/validation/pre-push.sh --fix
+
 ## Generate connector docs from source code (all connectors)
 docs: field-probe
 	@echo "▶ Generating connector docs…"
@@ -324,6 +340,11 @@ help:
 	@echo "Google Pay tests require GPAY_HOSTED_URL to be set."
 	@echo "Run 'make setup-connector-tests' to configure it automatically via Netlify."
 	@echo ""
+	@echo "Validation Targets:"
+	@echo "  validate-pre-push      Run comprehensive pre-push validation (format, check, clippy, generate, docs)"
+	@echo "  validate-pre-push-full Run pre-push validation with tests (slower)"
+	@echo "  validate-pre-push-fix  Run pre-push validation with auto-fix"
+	@echo
 	@echo "Proto Targets:"
 	@echo "  proto-format     Format proto files"
 	@echo "  proto-generate   Generate code from proto files"
