@@ -117,6 +117,8 @@ macro_rules! impl_grpc_client {
             }
 
             $(
+                /// Calls the gRPC method and returns the response.
+                #[must_use = "gRPC responses should be checked for errors"]
                 pub async fn $method(&self, request: $req) -> Result<$res, Status> {
                     $stub::new(self.channel.clone())
                         .$method(self.inject_headers(request))
@@ -368,7 +370,7 @@ impl GrpcClient {
     /// # Panics
     /// Panics if the config fails validation (empty endpoint, connector, etc.).
     pub async fn new(config: GrpcConfig) -> Result<Self, tonic::transport::Error> {
-        // Validate config before attempting connection - panic on invalid config
+        // Validate config before attempting connection
         if let Err(e) = config.validate() {
             panic!("GrpcConfig validation failed: {e}");
         }
