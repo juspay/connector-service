@@ -252,7 +252,11 @@ unsafe fn to_raw_buf(bytes: Vec<u8>, out_len: *mut u32) -> *mut u8 {
 /// Free with [`hyperswitch_grpc_free`].
 ///
 /// # Safety
-/// All pointer parameters must be non-null and valid for the given lengths.
+/// - `method_ptr` must be a valid null-terminated UTF-8 string pointer
+/// - `config_ptr` must be a valid pointer to at least `config_len` bytes
+/// - `req_ptr` must be a valid pointer to at least `req_len` bytes
+/// - `out_len` must be a valid pointer to a u32
+/// - All pointers must be non-null and properly aligned
 #[no_mangle]
 pub unsafe extern "C" fn hyperswitch_grpc_call(
     method_ptr: *const c_char,
@@ -262,6 +266,21 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
     req_len: u32,
     out_len: *mut u32,
 ) -> *mut u8 {
+    // Null pointer checks for safety
+    if method_ptr.is_null() {
+        return unsafe { to_raw_buf(encode_err("method_ptr is null"), out_len) };
+    }
+    if config_ptr.is_null() && config_len > 0 {
+        return unsafe { to_raw_buf(encode_err("config_ptr is null but config_len > 0"), out_len) };
+    }
+    if req_ptr.is_null() && req_len > 0 {
+        return unsafe { to_raw_buf(encode_err("req_ptr is null but req_len > 0"), out_len) };
+    }
+    if out_len.is_null() {
+        // Cannot report length, return null as last resort
+        return std::ptr::null_mut();
+    }
+
     let method = match unsafe { std::ffi::CStr::from_ptr(method_ptr) }.to_str() {
         Ok(s) => s,
         Err(e) => {
