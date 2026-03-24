@@ -28,7 +28,7 @@ if (connector === 'stripe') {
 // Repeat for 60+ connectors...
 ```
 
-With Prism, you write the handling logic once across acll connectors.
+With Prism, you write the handling logic once across all connectors.
 
 ```javascript
 // With Prism—unified error codes
@@ -40,7 +40,7 @@ if (error.code === 'PAYMENT_DECLINED') {
 
 ## How Mapping Works in Prism?
 
-Each connector adapter includes an error mapper that translates connector-specific codes to unified codes for easy interpreation.
+Each connector adapter includes an error mapper that translates connector-specific codes to unified codes for easy interpretation.
 
 ```
 Stripe Error ──────┐

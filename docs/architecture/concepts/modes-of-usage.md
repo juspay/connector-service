@@ -15,6 +15,6 @@ In this scenario, Prism SDK is directly embedded into your application. This is 
 You may deploy Prism as a standalone service only if you need service isolation due to 
 
 - **Independent deployments** - Being able to update Prism without redeploying your main application
-- **Fast release cycles** - Decoupling the SDK released from your app server releases, and you wish to update PRism more frequently thatn you application
+- **Fast release cycles** - Decoupling the SDK released from your app server releases, and you wish to update PRism more frequently than you application
 
 Choose this mode only if you need isolation for fast and independent deployments, because this mode comples with additional complxity to handle - such as deployment, privisioning of resources, uptime and monitoring.

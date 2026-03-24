@@ -5,7 +5,7 @@ Your code behaves differently in development, staging, and production. Prism let
 ## Why Environment Control Matters?
 
 Payment integrations have three distinct modes. And typically most processors support Sandbox and Production.
-The Developement environement will matter when there is a need to mock the payment processor request or response, especially if their sandboxes are flaky for your testing pipeline.
+The Development environment will matter when there is a need to mock the payment processor request or response, especially if their sandboxes are flaky for your testing pipeline.
 
 | Environment | Use Case |
 |-------------|----------|

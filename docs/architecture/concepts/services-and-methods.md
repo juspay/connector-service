@@ -30,7 +30,7 @@ Methods follow verb-noun naming (authorize, capture, void) to clearly indicate t
 
 ## Flow
 
-A smaple flow of the most frequently used methods will look like below.
+A sample flow of the most frequently used methods will look like below.
 
 ```
                          ┌─────────────────────────────────────────────────────┐
