@@ -1,4 +1,9 @@
-#![allow(clippy::print_stderr, clippy::print_stdout, clippy::too_many_arguments)]
+#![allow(
+    clippy::print_stderr,
+    clippy::print_stdout,
+    clippy::too_many_arguments,
+    clippy::indexing_slicing
+)]
 
 //! Interactive + non-interactive UCS test runner.
 //!
@@ -163,7 +168,7 @@ fn run_non_interactive(args: &[String]) -> Result<(), String> {
         report,
     };
 
-    let connector_selection = if let Some(name) = connector {
+    let connector_selection = if let Some(name) = connector.filter(|_| !all_connectors) {
         ConnectorSelection::Specific(vec![name])
     } else {
         ConnectorSelection::All(runnable_configured_connectors()?)

@@ -1,4 +1,4 @@
-#![allow(clippy::print_stderr, clippy::print_stdout)]
+#![allow(clippy::print_stderr, clippy::print_stdout, clippy::expect_used)]
 
 //! Pre-push safety check: scans all test report markdown files for unmasked
 //! credentials and exits with a non-zero status if any are found.

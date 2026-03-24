@@ -1,4 +1,4 @@
-#![allow(clippy::print_stderr, clippy::print_stdout)]
+#![allow(clippy::print_stderr, clippy::print_stdout, clippy::expect_used)]
 
 //! Retroactively masks credentials in existing test report markdown files and
 //! the report.json file.

@@ -406,7 +406,7 @@ fn ffi_environment() -> Environment {
     }
 }
 
-fn map_request_error(
+fn _map_request_error(
     stage: &str,
     suite: &str,
     scenario: &str,
