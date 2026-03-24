@@ -146,16 +146,18 @@ fn encode_err(msg: &str) -> Vec<u8> {
 
 async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Result<Vec<u8>, String> {
     let headers = build_headers(&cfg);
-    let channel = get_channel(&cfg.endpoint)?;
+    let channel = get_channel(&cfg.endpoint)
+        .map_err(|e| format!("failed to get channel for endpoint '{}': {e}", cfg.endpoint))?;
 
     macro_rules! call {
         ($stub:ident, $rpc:ident, $req_ty:ty) => {{
-            let req = <$req_ty>::decode(req_bytes).map_err(|e| e.to_string())?;
+            let req = <$req_ty>::decode(req_bytes)
+                .map_err(|e| format!("failed to decode request for '{method}': {e}"))?;
             let mut client = $stub::new(channel.clone());
             let res = client
                 .$rpc(inject(req, &headers))
                 .await
-                .map_err(|s| s.to_string())?;
+                .map_err(|s| format!("gRPC call '{method}' failed: {s}"))?;
             Ok(res.into_inner().encode_to_vec())
         }};
     }
