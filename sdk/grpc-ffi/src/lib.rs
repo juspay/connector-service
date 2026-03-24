@@ -224,7 +224,13 @@ async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Resul
 
 // ── C ABI helpers ─────────────────────────────────────────────────────────────
 
+/// Convert a byte vector into a raw pointer suitable for returning across FFI.
+///
+/// # Safety
+/// - `out_len` must be a valid, non-null pointer to a `u32` that can be written to.
+/// - The returned pointer must be freed using [`hyperswitch_grpc_free`] to avoid memory leaks.
 unsafe fn to_raw_buf(bytes: Vec<u8>, out_len: *mut u32) -> *mut u8 {
+    // SAFETY: Caller guarantees `out_len` is valid and non-null.
     unsafe {
         *out_len = bytes.len() as u32;
     }
