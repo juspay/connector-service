@@ -10,7 +10,7 @@ use domain_types::{
     },
     errors,
     payment_method_data::{
-        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        BankDebitData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
     },
     router_data::ConnectorSpecificConfig,
     router_data_v2::RouterDataV2,
@@ -128,6 +128,7 @@ impl From<NmiStatus> for RefundStatus {
 pub enum NmiPaymentMethod<T: PaymentMethodDataTypes> {
     Card(Box<CardData<T>>),
     Ach(Box<AchData>),
+    Wallet(Box<WalletPaymentData>),
 }
 
 #[derive(Debug, Serialize)]
@@ -135,6 +136,21 @@ pub struct CardData<T: PaymentMethodDataTypes> {
     ccnumber: RawCardNumber<T>,
     ccexp: Secret<String>, // MMYY format
     cvv: Secret<String>,
+}
+
+// Wallet Payment Data for digital wallets (Apple Pay, Google Pay, etc.)
+#[derive(Debug, Serialize)]
+pub struct WalletPaymentData {
+    #[serde(rename = "payment")]
+    payment_type: WalletPaymentType,
+    token: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum WalletPaymentType {
+    Applepay,
+    Googlepay,
 }
 
 // ACH Payment Type Constant
@@ -322,10 +338,39 @@ impl<T: PaymentMethodDataTypes> TryFrom<&PaymentMethodData<T>> for NmiPaymentMet
                     "Bank Debit type not supported for NMI".to_string()
                 )
             )),
+            PaymentMethodData::Wallet(wallet_data) => {
+                let wallet_payment = create_wallet_payment_data(wallet_data)?;
+                Ok(Self::Wallet(Box::new(wallet_payment)))
+            }
             _ => Err(error_stack::report!(
                 errors::ConnectorError::NotImplemented("Payment method not supported".to_string())
             )),
         }
+    }
+}
+
+/// Helper function to create Wallet payment data from WalletData
+fn create_wallet_payment_data(
+    wallet_data: &WalletData,
+) -> Result<WalletPaymentData, error_stack::Report<errors::ConnectorError>> {
+    match wallet_data {
+        WalletData::ApplePay(_) => {
+            let token = wallet_data.get_wallet_token()?;
+            Ok(WalletPaymentData {
+                payment_type: WalletPaymentType::Applepay,
+                token,
+            })
+        }
+        WalletData::GooglePay(_) => {
+            let token = wallet_data.get_wallet_token()?;
+            Ok(WalletPaymentData {
+                payment_type: WalletPaymentType::Googlepay,
+                token,
+            })
+        }
+        _ => Err(error_stack::report!(
+            errors::ConnectorError::NotImplemented("Wallet type not supported for NMI".to_string())
+        )),
     }
 }
 
