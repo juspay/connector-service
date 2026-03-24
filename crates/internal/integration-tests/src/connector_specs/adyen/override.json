@@ -192,7 +192,6 @@
     },
     "no3ds_auto_capture_klarna": {
       "grpc_req": {
-        "customer_id": "auto_generate",
         "browser_info": {
           "language": "en-US"
         }

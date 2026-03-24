@@ -456,7 +456,7 @@ mod tests {
     #[test]
     fn dependency_scope_defaults_and_overrides_are_loaded() {
         let authorize_spec = load_suite_spec("authorize").expect("authorize spec should load");
-        assert_eq!(authorize_spec.dependency_scope, DependencyScope::Suite);
+        assert_eq!(authorize_spec.dependency_scope, DependencyScope::Scenario);
 
         for suite in ["capture", "void", "refund", "get", "refund_sync"] {
             let spec = load_suite_spec(suite).expect("suite spec should load");

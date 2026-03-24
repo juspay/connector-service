@@ -2,7 +2,6 @@
   "pre_authenticate": {
     "threeds_card_pre_authenticate": {
       "grpc_req": {
-        "merchant_transaction_id": "pay_1234",
         "merchant_order_id": "pay_1234",
         "amount": {
           "minor_amount": 100,

@@ -10,7 +10,7 @@
       }
     },
     "assert": {
-      "source_verified": true,
+      "source_verified": { "equals": true },
       "connector_transaction_id": {
         "must_exist": true
       },
@@ -31,7 +31,7 @@
       }
     },
     "assert": {
-      "source_verified": true,
+      "source_verified": { "equals": true },
       "connector_transaction_id": {
         "must_exist": true
       },
@@ -51,7 +51,7 @@
       }
     },
     "assert": {
-      "source_verified": false,
+      "source_verified": { "equals": false },
       "error": {
         "must_exist": true
       }

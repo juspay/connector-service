@@ -4166,7 +4166,7 @@ mod tests {
         connector_spec_dir, discover_all_connectors, load_suite_scenarios, load_suite_spec,
         load_supported_suites_for_connector,
     };
-    use crate::harness::scenario_types::ContextMap;
+    use crate::harness::scenario_types::{ContextMap, FieldAssert};
 
     fn validate_tonic_payload_shape<T: DeserializeOwned>(
         connector: &str,
@@ -4260,6 +4260,30 @@ mod tests {
             "recurring_charge" => validate_tonic_payload_shape::<
                 payments::RecurringPaymentServiceChargeRequest,
             >(connector, suite, scenario, grpc_req),
+            "revoke_mandate" => validate_tonic_payload_shape::<
+                payments::RecurringPaymentServiceRevokeRequest,
+            >(connector, suite, scenario, grpc_req),
+            "tokenize_payment_method" => validate_tonic_payload_shape::<
+                payments::PaymentMethodServiceTokenizeRequest,
+            >(connector, suite, scenario, grpc_req),
+            "incremental_authorization" => validate_tonic_payload_shape::<
+                payments::PaymentServiceIncrementalAuthorizationRequest,
+            >(connector, suite, scenario, grpc_req),
+            "create_session_token" => validate_tonic_payload_shape::<
+                payments::MerchantAuthenticationServiceCreateSessionTokenRequest,
+            >(connector, suite, scenario, grpc_req),
+            "create_sdk_session_token" => validate_tonic_payload_shape::<
+                payments::MerchantAuthenticationServiceCreateSdkSessionTokenRequest,
+            >(connector, suite, scenario, grpc_req),
+            "create_order" => validate_tonic_payload_shape::<
+                payments::PaymentServiceCreateOrderRequest,
+            >(connector, suite, scenario, grpc_req),
+            "reverse" => validate_tonic_payload_shape::<
+                payments::PaymentServiceReverseRequest,
+            >(connector, suite, scenario, grpc_req),
+            "verify_redirect_response" => validate_tonic_payload_shape::<
+                payments::PaymentServiceVerifyRedirectResponseRequest,
+            >(connector, suite, scenario, grpc_req),
             _ => Err(format!(
                 "{connector}/{suite}/{scenario}: suite '{effective_suite}' is not mapped to a tonic request type"
             )),
@@ -4300,12 +4324,12 @@ mod tests {
 
         assert!(matches!(
             base_message_rule,
-            crate::harness::scenario_types::FieldAssert::Contains { contains }
+            FieldAssert::Contains { contains }
                 if contains == "decline"
         ));
         assert!(matches!(
             overridden_message_rule,
-            crate::harness::scenario_types::FieldAssert::Contains { contains }
+            FieldAssert::Contains { contains }
                 if contains == "declin"
         ));
         assert!(base_assertions.contains_key("status"));
@@ -5143,6 +5167,18 @@ grpc-status: 0
                 scenario_names.sort();
 
                 for scenario in scenario_names {
+                    // Skip negative-test scenarios that deliberately use invalid
+                    // proto data (e.g. invalid card numbers, unknown enum values)
+                    // to trigger connector errors.  These will always fail schema
+                    // validation, which is expected.
+                    if let Some(def) = suite_scenarios.get(&scenario) {
+                        if let Some(FieldAssert::MustExist { must_exist: true }) =
+                            def.assert_rules.get("error")
+                        {
+                            continue;
+                        }
+                    }
+
                     let grpc_req = match get_the_grpc_req_for_connector(
                         &suite, &scenario, connector,
                     ) {

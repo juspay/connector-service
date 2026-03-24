@@ -13,8 +13,7 @@
         "email": {
           "value": "auto_generate"
         }
-      },
-      "test_mode": true
+      }
     },
     "assert": {
       "session_token": {
@@ -40,8 +39,7 @@
         "email": {
           "value": "auto_generate"
         }
-      },
-      "test_mode": true
+      }
     },
     "assert": {
       "session_token": {
@@ -68,8 +66,7 @@
         "email": {
           "value": "auto_generate"
         }
-      },
-      "test_mode": true
+      }
     },
     "assert": {
       "session_token": {
@@ -88,8 +85,7 @@
         "currency": "USD"
       },
       "payment_method_type": "APPLE_PAY",
-      "country_alpha2_code": "XX",
-      "test_mode": true
+      "country_alpha2_code": "XX"
     },
     "assert": {
       "error": {
