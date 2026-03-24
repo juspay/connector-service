@@ -12,7 +12,7 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         SubmitEvidenceData,
     },
-    errors::ConnectorRequestError,
+    errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::DefaultPCIHolder,
     router_data::{ConnectorSpecificConfig, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -179,11 +179,10 @@ impl DisputeService for Disputes {
                     )
                     .await
                     .switch()
-                    .into_grpc_status()?;
+                    .map_err(|e| e.into_grpc_status())?;
 
                     let dispute_response = generate_submit_evidence_response(response)
-                        .switch()
-                        .into_grpc_status()?;
+                        .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(dispute_response))
                 }
@@ -399,11 +398,10 @@ impl DisputeService for Disputes {
                     )
                     .await
                     .switch()
-                    .into_grpc_status()?;
+                    .map_err(|e| e.into_grpc_status())?;
 
                     let dispute_response = generate_accept_dispute_response(response)
-                        .switch()
-                        .into_grpc_status()?;
+                        .map_err(|e| e.into_grpc_status())?;
 
                     Ok(tonic::Response::new(dispute_response))
                 }
@@ -461,16 +459,14 @@ impl DisputeService for Disputes {
                                 "missing request_details in the payload",
                             )
                         })?
-                        .switch()
-                        .into_grpc_status()?;
+                        .map_err(|e| e.into_grpc_status())?;
                     let webhook_secrets = payload
                     .webhook_secrets
                     .map(|details| {
                         domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
                             details,
                         )
-                        .switch()
-                        .into_grpc_status()
+                        .map_err(|e| e.into_grpc_status())
                     })
                     .transpose()?;
                     // Get connector data
@@ -483,7 +479,7 @@ impl DisputeService for Disputes {
                             Some(connector_config.clone()),
                         )
                         .switch()
-                        .into_grpc_status()?;
+                        .map_err(|e| e.into_grpc_status())?;
 
                     let content = get_disputes_webhook_content(
                         connector_data,
@@ -492,8 +488,7 @@ impl DisputeService for Disputes {
                         Some(connector_config),
                     )
                     .await
-                    .switch()
-                    .into_grpc_status()?;
+                    .map_err(|e| e.into_grpc_status())?;
                     let response = EventServiceHandleResponse {
                         event_type: WebhookEventType::WebhookDisputeOpened.into(),
                         event_response: Some(content),
@@ -514,19 +509,20 @@ async fn get_disputes_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_config: Option<ConnectorSpecificConfig>,
-) -> CustomResult<EventResponse, ConnectorRequestError> {
-    let webhook_details = connector_data.connector.process_dispute_webhook(
-        request_details,
-        webhook_secrets,
-        connector_config,
-    )?;
+) -> CustomResult<EventResponse, ApplicationErrorResponse> {
+    let webhook_details = connector_data
+        .connector
+        .process_dispute_webhook(request_details, webhook_secrets, connector_config)
+        .switch()?;
 
     // Generate response
     let response = DisputeResponse::foreign_try_from(webhook_details).change_context(
-        ConnectorRequestError::config_error(
-            "RESPONSE_CONSTRUCTION_ERROR",
-            "Error while constructing response",
-        ),
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
+            error_identifier: 500,
+            error_message: "Error while constructing response".to_string(),
+            error_object: None,
+        }),
     )?;
 
     Ok(EventResponse {

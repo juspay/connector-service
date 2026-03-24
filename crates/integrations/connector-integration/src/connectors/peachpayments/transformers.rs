@@ -216,13 +216,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let auth = PeachpaymentsAuthType::try_from(&item.router_data.connector_config)?;
         let connector_meta_data = PeachpaymentsConnectorMetadataObject {
             client_merchant_reference_id: auth.client_merchant_reference_id.ok_or(
-                errors::ConnectorError::MissingRequiredField {
+                ConnectorRequestError::MissingRequiredField {
                     field_name: "client_merchant_reference_id",
+                    context: Default::default(),
                 },
             )?,
             merchant_payment_method_route_id: auth.merchant_payment_method_route_id.ok_or(
-                errors::ConnectorError::MissingRequiredField {
+                ConnectorRequestError::MissingRequiredField {
                     field_name: "merchant_payment_method_route_id",
+                    context: Default::default(),
                 },
             )?,
         };

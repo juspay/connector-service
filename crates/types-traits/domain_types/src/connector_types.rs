@@ -11,14 +11,14 @@ use common_utils::{
     types::{MinorUnit, Money, StringMajorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
-use error_stack::{Report, ResultExt};
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::ConnectorRequestError,
+    errors::{ApiError, ApplicationErrorResponse, ConnectorRequestError},
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
@@ -129,7 +129,7 @@ pub enum ConnectorEnum {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         connector: grpc_api_types::payments::Connector,
@@ -212,15 +212,21 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Peachpayments => Ok(Self::Peachpayments),
             grpc_api_types::payments::Connector::Finix => Ok(Self::Finix),
             grpc_api_types::payments::Connector::Unspecified => {
-                Err(Report::new(ConnectorRequestError::config_error(
-                    "UNSPECIFIED_CONNECTOR",
-                    "Connector must be specified",
-                )))
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Connector must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
             }
-            _ => Err(Report::new(ConnectorRequestError::config_error(
-                "INVALID_CONNECTOR",
-                format!("Connector {connector:?} is not supported"),
-            ))),
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CONNECTOR".to_owned(),
+                error_identifier: 400,
+                error_message: format!("Connector {connector:?} is not supported"),
+                error_object: None,
+            })
+            .into()),
         }
     }
 }
@@ -1997,7 +2003,7 @@ impl EventType {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::WebhookEventType,
@@ -2110,7 +2116,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
 }
 
 impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(value: EventType) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
@@ -2170,7 +2176,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::HttpMethod> for HttpMethod {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::HttpMethod,
@@ -2186,7 +2192,7 @@ impl ForeignTryFrom<grpc_api_types::payments::HttpMethod> for HttpMethod {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::RequestDetails,
@@ -2204,7 +2210,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebhookSecrets {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::WebhookSecrets,
@@ -2219,7 +2225,7 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
 impl ForeignTryFrom<grpc_api_types::payments::RedirectResponseSecrets>
     for ConnectorRedirectResponseSecrets
 {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::RedirectResponseSecrets,
@@ -3637,7 +3643,7 @@ pub struct BillingDescriptor {
     pub reference: Option<String>,
 }
 impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config> for ConnectorEnum {
-    type Error = ConnectorRequestError;
+    type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         auth_type: grpc_api_types::payments::connector_specific_config::Config,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
@@ -3709,27 +3715,47 @@ impl ForeignTryFrom<grpc_api_types::payments::connector_specific_config::Config>
             AuthType::Peachpayments(_) => Ok(Self::Peachpayments),
             AuthType::Zift(_) => Ok(Self::Zift),
             AuthType::Truelayer(_) => Ok(Self::Truelayer),
-            AuthType::Screenstream(_) => Err(Report::new(ConnectorRequestError::config_error(
-                "UNSUPPORTED_CONNECTOR",
-                "Connector is not supported",
-            ))),
-            AuthType::Ebanx(_) => Err(Report::new(ConnectorRequestError::config_error(
-                "UNSUPPORTED_CONNECTOR",
-                "Connector is not supported",
-            ))),
+            AuthType::Screenstream(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Ebanx(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
             AuthType::Fiuu(_) => Ok(Self::Fiuu),
-            AuthType::Globepay(_) => Err(Report::new(ConnectorRequestError::config_error(
-                "UNSUPPORTED_CONNECTOR",
-                "Connector is not supported",
-            ))),
-            AuthType::Coinbase(_) => Err(Report::new(ConnectorRequestError::config_error(
-                "UNSUPPORTED_CONNECTOR",
-                "Connector is not supported",
-            ))),
-            AuthType::Coingate(_) => Err(Report::new(ConnectorRequestError::config_error(
-                "UNSUPPORTED_CONNECTOR",
-                "Connector is not supported",
-            ))),
+            AuthType::Globepay(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coinbase(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
+            AuthType::Coingate(_) => Err(error_stack::Report::new(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_CONNECTOR".to_string(),
+                    error_identifier: 400,
+                    error_message: "Connector is not supported".to_string(),
+                    error_object: None,
+                }),
+            )),
             AuthType::Revolv3(_) => Ok(Self::Revolv3),
             AuthType::Authorizedotnet(_) => Ok(Self::Authorizedotnet),
         }

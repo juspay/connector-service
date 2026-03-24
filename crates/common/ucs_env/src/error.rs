@@ -19,7 +19,7 @@ pub trait ReportSwitchExt<T, U> {
 
 impl<T, U, V> ReportSwitchExt<T, U> for Result<T, error_stack::Report<V>>
 where
-    V: CommonErrorSwitch<U> + error_stack::Context,
+    V: ErrorSwitch<U> + error_stack::Context,
     U: error_stack::Context,
 {
     #[track_caller]
@@ -40,6 +40,55 @@ pub trait ErrorSwitch<T> {
     /// Get the next error type that the source error can be escalated into
     /// This does not consume the source error since we need to keep it in context
     fn switch(&self) -> T;
+}
+
+/// Allow [error_stack::Report] to convert between error types
+/// This serves as an alternative to [ErrorSwitch]
+pub trait ErrorSwitchFrom<T> {
+    /// Convert to an error type that the source error can be escalated into
+    /// This does not consume the source error since we need to keep it in context
+    fn switch_from(error: &T) -> Self;
+}
+
+impl<T, S> ErrorSwitch<T> for S
+where
+    T: ErrorSwitchFrom<Self>,
+{
+    fn switch(&self) -> T {
+        T::switch_from(self)
+    }
+}
+
+// Bridge domain_types' `common_utils::errors::ErrorSwitch` impls so `ReportSwitchExt` (which uses
+// this module's `ErrorSwitch`) can convert connector errors to `ApplicationErrorResponse`.
+impl ErrorSwitch<ApplicationErrorResponse> for ConnectorFlowError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        <Self as CommonErrorSwitch<ApplicationErrorResponse>>::switch(self)
+    }
+}
+
+impl ErrorSwitch<ApplicationErrorResponse> for ConnectorRequestError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        <Self as CommonErrorSwitch<ApplicationErrorResponse>>::switch(self)
+    }
+}
+
+impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        <Self as CommonErrorSwitch<ApplicationErrorResponse>>::switch(self)
+    }
+}
+
+impl ErrorSwitch<ApplicationErrorResponse> for WebhookError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        <Self as CommonErrorSwitch<ApplicationErrorResponse>>::switch(self)
+    }
+}
+
+impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        <Self as CommonErrorSwitch<ApplicationErrorResponse>>::switch(self)
+    }
 }
 
 pub trait IntoGrpcStatus {
@@ -81,37 +130,50 @@ impl IntoGrpcStatus for error_stack::Report<ApplicationErrorResponse> {
     fn into_grpc_status(self) -> Status {
         logger::error!(error=?self);
         match self.current_context() {
-            ApplicationErrorResponse::Unauthorized(_) => Status::unauthenticated(self.to_string()),
-            ApplicationErrorResponse::ForbiddenCommonResource(_)
-            | ApplicationErrorResponse::ForbiddenPrivateResource(_) => {
-                Status::permission_denied(self.to_string())
+            ApplicationErrorResponse::Unauthorized(api_error) => {
+                Status::unauthenticated(&api_error.error_message)
             }
-            ApplicationErrorResponse::BadRequest(_)
-            | ApplicationErrorResponse::MethodNotAllowed(_)
-            | ApplicationErrorResponse::Unprocessable(_) => {
-                Status::invalid_argument(self.to_string())
+            ApplicationErrorResponse::ForbiddenCommonResource(api_error)
+            | ApplicationErrorResponse::ForbiddenPrivateResource(api_error) => {
+                Status::permission_denied(&api_error.error_message)
             }
-            ApplicationErrorResponse::NotFound(_) | ApplicationErrorResponse::Gone(_) => {
-                Status::not_found(self.to_string())
+            ApplicationErrorResponse::Conflict(api_error)
+            | ApplicationErrorResponse::Gone(api_error)
+            | ApplicationErrorResponse::Unprocessable(api_error)
+            | ApplicationErrorResponse::InternalServerError(api_error)
+            | ApplicationErrorResponse::MethodNotAllowed(api_error)
+            | ApplicationErrorResponse::DomainError(api_error) => {
+                Status::internal(&api_error.error_message)
             }
-            ApplicationErrorResponse::Conflict(_) => Status::already_exists(self.to_string()),
-            ApplicationErrorResponse::NotImplemented(_) => Status::unimplemented(self.to_string()),
-            ApplicationErrorResponse::InternalServerError(_)
-            | ApplicationErrorResponse::DomainError(_) => Status::internal(self.to_string()),
+            ApplicationErrorResponse::NotImplemented(api_error) => {
+                Status::unimplemented(&api_error.error_message)
+            }
+            ApplicationErrorResponse::NotFound(api_error) => {
+                Status::not_found(&api_error.error_message)
+            }
+            ApplicationErrorResponse::BadRequest(api_error) => {
+                Status::invalid_argument(&api_error.error_message)
+            }
         }
     }
 }
 
-/// Merge central defaults with optional connector-provided [`IntegrationErrorContext`] on the error.
+/// Merge base UCS defaults with optional connector-provided [`IntegrationErrorContext`] on the error.
 fn merge_request_integration_context(
-    central: IntegrationErrorContext,
+    base_integration_context: IntegrationErrorContext,
     e: &ConnectorRequestError,
 ) -> IntegrationErrorContext {
     let v = e.integration_context();
     IntegrationErrorContext {
-        suggested_action: v.suggested_action.clone().or(central.suggested_action),
-        doc_url: v.doc_url.clone().or(central.doc_url),
-        additional_context: v.additional_context.clone().or(central.additional_context),
+        suggested_action: v
+            .suggested_action
+            .clone()
+            .or(base_integration_context.suggested_action),
+        doc_url: v.doc_url.clone().or(base_integration_context.doc_url),
+        additional_context: v
+            .additional_context
+            .clone()
+            .or(base_integration_context.additional_context),
     }
 }
 
@@ -196,40 +258,28 @@ fn connector_request_error_details(
             Some(format!("Fix configuration: {}", message))
         }
     };
-    let central = IntegrationErrorContext {
+    let base_integration_context = IntegrationErrorContext {
         suggested_action,
         doc_url: doc_url_for_error_code(&error_code),
         additional_context: None,
     };
-    let ctx = merge_request_integration_context(central, e);
-    (None, error_code, msg, ctx)
+    let merged_integration_context = merge_request_integration_context(base_integration_context, e);
+    (None, error_code, msg, merged_integration_context)
 }
 
 impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorRequestError {
     fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        let (_, error_code, base_message, ctx) = connector_request_error_details(self);
-        let error_message =
-            combine_error_message_with_context(&base_message, ctx.additional_context.as_deref());
+        let (_, error_code, base_message, merged_integration_context) =
+            connector_request_error_details(self);
+        let error_message = combine_error_message_with_context(
+            &base_message,
+            merged_integration_context.additional_context.as_deref(),
+        );
         grpc_api_types::payments::IntegrationError {
             error_message,
             error_code: error_code.clone(),
-            suggested_action: ctx.suggested_action,
-            doc_url: ctx.doc_url,
-        }
-    }
-}
-
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
-    for ConnectorRequestError
-{
-    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        let (_, error_code, base_message, ctx) = connector_request_error_details(self);
-        let error_message =
-            combine_error_message_with_context(&base_message, ctx.additional_context.as_deref());
-        grpc_api_types::payments::ConnectorResponseTransformationError {
-            error_message,
-            error_code: error_code.clone(),
-            http_status_code: None, // Request-phase: no connector HTTP call yet
+            suggested_action: merged_integration_context.suggested_action,
+            doc_url: merged_integration_context.doc_url,
         }
     }
 }
@@ -241,30 +291,21 @@ fn connector_response_error_details(
     let error_code = e.as_ref().to_string();
     // Use real connector HTTP status only; never invent when we don't have it.
     let http_status_code = e.http_status_code();
-    let error_message =
-        combine_error_message_with_context(&base_msg, e.additional_context());
+    let error_message = combine_error_message_with_context(&base_msg, e.additional_context());
     let suggested_action = match e {
         ConnectorResponseError::ResponseDeserializationFailed { .. }
         | ConnectorResponseError::ResponseHandlingFailed { .. }
         | ConnectorResponseError::UnexpectedResponseError { .. } => Some(
-            "Retry the request; if persistent, check connector response format and compatibility"
+            "Share the error code with support to verify integration compatibility and configuration."
                 .to_string(),
         ),
     };
-    (http_status_code, error_code, error_message, suggested_action)
-}
-
-impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorResponseError {
-    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        let (_, error_code, error_message, suggested_action) =
-            connector_response_error_details(self);
-        grpc_api_types::payments::IntegrationError {
-            error_message,
-            error_code: error_code.clone(),
-            suggested_action,
-            doc_url: doc_url_for_error_code(&error_code),
-        }
-    }
+    (
+        http_status_code,
+        error_code,
+        error_message,
+        suggested_action,
+    )
 }
 
 impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
@@ -276,31 +317,6 @@ impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
             error_message,
             error_code: error_code.clone(),
             http_status_code: self.http_status_code().map(Into::into),
-        }
-    }
-}
-
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
-    for ApplicationErrorResponse
-{
-    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        let api_err = self.get_api_error();
-        grpc_api_types::payments::ConnectorResponseTransformationError {
-            error_message: api_err.error_message.clone(),
-            error_code: api_err.sub_code.clone(),
-            http_status_code: Some(api_err.error_identifier.into()),
-        }
-    }
-}
-
-impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApplicationErrorResponse {
-    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        let api_err = self.get_api_error();
-        grpc_api_types::payments::IntegrationError {
-            error_message: api_err.error_message.clone(),
-            error_code: api_err.sub_code.clone(),
-            suggested_action: None,
-            doc_url: doc_url_for_error_code(&api_err.sub_code),
         }
     }
 }
@@ -320,41 +336,6 @@ impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApiClientError 
             error_code: error_code.clone(),
             suggested_action: None,
             doc_url: doc_url_for_error_code(&error_code),
-        }
-    }
-}
-
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
-    for ApiClientError
-{
-    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        let (_, error_code, error_message) = api_client_error_details(self);
-        grpc_api_types::payments::ConnectorResponseTransformationError {
-            error_message,
-            error_code: error_code.clone(),
-            http_status_code: None, // Client errors: no real connector HTTP status
-        }
-    }
-}
-
-impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ConnectorFlowError {
-    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
-        match self {
-            Self::Request(e) => ErrorSwitch::switch(e),
-            Self::Client(e) => ErrorSwitch::switch(e),
-            Self::Response(e) => ErrorSwitch::switch(e),
-        }
-    }
-}
-
-impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
-    for ConnectorFlowError
-{
-    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-        match self {
-            Self::Request(e) => ErrorSwitch::switch(e),
-            Self::Client(e) => ErrorSwitch::switch(e),
-            Self::Response(e) => ErrorSwitch::switch(e),
         }
     }
 }
@@ -397,8 +378,12 @@ pub fn connector_flow_error_to_error_details(
 ) -> (Option<u16>, String, String) {
     match e {
         ConnectorFlowError::Request(req) => {
-            let (_, code, base_msg, ctx) = connector_request_error_details(req);
-            let msg = combine_error_message_with_context(&base_msg, ctx.additional_context.as_deref());
+            let (_, code, base_msg, merged_integration_context) =
+                connector_request_error_details(req);
+            let msg = combine_error_message_with_context(
+                &base_msg,
+                merged_integration_context.additional_context.as_deref(),
+            );
             (None, code, msg)
         }
         ConnectorFlowError::Client(client) => {
@@ -429,13 +414,6 @@ where
     ErrorSwitch::switch(report.current_context())
 }
 
-/// Map a request-phase connector error report to `ConnectorResponseTransformationError`.
-pub fn connector_request_error_report_to_response_transformation(
-    report: error_stack::Report<ConnectorRequestError>,
-) -> grpc_api_types::payments::ConnectorResponseTransformationError {
-    ErrorSwitch::switch(report.current_context())
-}
-
 /// Map a connector response error report to `ConnectorResponseTransformationError`.
 pub fn connector_response_error_report_to_response_transformation(
     report: error_stack::Report<ConnectorResponseError>,
@@ -443,7 +421,8 @@ pub fn connector_response_error_report_to_response_transformation(
     ErrorSwitch::switch(report.current_context())
 }
 
-/// Map a report (ConnectorRequestError or ConnectorResponseError) into `ConnectorResponseTransformationError`.
+/// Map a report into `ConnectorResponseTransformationError` (e.g. `ApplicationErrorResponse`,
+/// `ConnectorResponseError`, `ApiClientError`, `WebhookError`).
 pub fn report_connector_context_to_response_transformation<E>(
     report: error_stack::Report<E>,
 ) -> grpc_api_types::payments::ConnectorResponseTransformationError
@@ -507,6 +486,33 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             captured_amount: None,
             authorized_amount: None,
             connector_response: None,
+        }
+    }
+}
+
+/// Convert ApplicationErrorResponse to proto IntegrationError
+impl ErrorSwitch<grpc_api_types::payments::IntegrationError> for ApplicationErrorResponse {
+    fn switch(&self) -> grpc_api_types::payments::IntegrationError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::IntegrationError {
+            error_message: api_error.error_message.clone(),
+            error_code: api_error.sub_code.clone(),
+            suggested_action: None,
+            doc_url: None,
+        }
+    }
+}
+
+/// Convert ApplicationErrorResponse to proto ConnectorResponseTransformationError
+impl ErrorSwitch<grpc_api_types::payments::ConnectorResponseTransformationError>
+    for ApplicationErrorResponse
+{
+    fn switch(&self) -> grpc_api_types::payments::ConnectorResponseTransformationError {
+        let api_error = self.get_api_error();
+        grpc_api_types::payments::ConnectorResponseTransformationError {
+            error_message: api_error.error_message.clone(),
+            error_code: api_error.sub_code.clone(),
+            http_status_code: Some(api_error.error_identifier.into()),
         }
     }
 }

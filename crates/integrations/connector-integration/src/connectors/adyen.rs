@@ -329,19 +329,20 @@ macros::create_all_prerequisites!(
 fn build_env_specific_endpoint(
     base_url: &str,
     test_mode: Option<bool>,
-    connector_metadata: &Option<SecretSerdeValue>,
-) -> CustomResult<String, errors::ConnectorError> {
+    connector_config: &ConnectorSpecificConfig,
+) -> CustomResult<String, ConnectorRequestError> {
     if test_mode.unwrap_or(true) {
         Ok(base_url.to_string())
     } else {
-        let adyen_connector_metadata_object =
-            transformers::AdyenConnectorMetadataObject::try_from(connector_metadata)?;
-        let endpoint_prefix = adyen_connector_metadata_object.endpoint_prefix.ok_or(
-            errors::ConnectorError::InvalidConnectorConfig {
-                config: "metadata.endpoint_prefix",
-            },
-        )?;
-        Ok(base_url.replace("{{merchant_endpoint_prefix}}", &endpoint_prefix))
+        let endpoint_prefix = match connector_config {
+            ConnectorSpecificConfig::Adyen { endpoint_prefix, .. } => endpoint_prefix.as_deref(),
+            _ => None,
+        }
+        .ok_or(ConnectorRequestError::InvalidConnectorConfig {
+            config: "endpoint_prefix",
+            context: Default::default(),
+        })?;
+        Ok(base_url.replace("{{merchant_endpoint_prefix}}", endpoint_prefix))
     }
 }
 

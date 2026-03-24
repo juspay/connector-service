@@ -1913,8 +1913,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Seria
         let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
         let merchant_account_id =
             auth.merchant_account_id
-                .ok_or(ConnectorError::InvalidConnectorConfig {
+                .ok_or(ConnectorRequestError::InvalidConnectorConfig {
                     config: "merchant_account_id",
+                    context: Default::default(),
                 })?;
         Ok(Self {
             query: constants::CLIENT_TOKEN_MUTATION.to_owned(),
@@ -1940,7 +1941,8 @@ impl<F> TryFrom<ResponseRouterData<BraintreeSessionResponse, Self>>
 
         match response {
             BraintreeSessionResponse::SessionTokenResponse(res) => {
-                let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)?;
+                let auth = BraintreeAuthType::try_from(&item.router_data.connector_config)
+                    .into_response_err()?;
                 let session_token = match item.router_data.request.payment_method_type {
                     Some(common_enums::PaymentMethodType::ApplePay) => {
                         let payment_request_data = PaymentRequestMetadata {

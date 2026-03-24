@@ -1284,6 +1284,7 @@ pub struct AdyenAuthType {
     pub(super) merchant_account: Secret<String>,
     #[allow(dead_code)]
     pub(super) review_key: Option<Secret<String>>,
+    #[allow(dead_code)]
     pub(super) endpoint_prefix: Option<String>,
 }
 

@@ -6,7 +6,6 @@ use common_utils::{
     ext_traits::OptionExt, new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email,
     ValidationError,
 };
-use error_stack::report;
 use error_stack::{self, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -15,7 +14,7 @@ use utoipa::ToSchema;
 
 pub use crate::router_data::PazeDecryptedData;
 use crate::{
-    errors::ConnectorRequestError,
+    errors::{ApiError, ApplicationErrorResponse, ConnectorRequestError},
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
 
@@ -73,7 +72,9 @@ impl PaymentMethodDataTypes for DefaultPCIHolder {
     fn is_cobadged_inner(inner: &Self::Inner) -> Result<bool, ConnectorRequestError> {
         inner
             .is_cobadged_card()
-            .map_err(|_| ConnectorRequestError::RequestEncodingFailed { context: Default::default() })
+            .map_err(|_| ConnectorRequestError::RequestEncodingFailed {
+                context: Default::default(),
+            })
     }
 }
 
@@ -97,7 +98,9 @@ impl<T: PaymentMethodDataTypes> Card<T> {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                .ok_or(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?
                 .to_string(),
         ))
     }
@@ -110,12 +113,12 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .parse::<u8>()
             .map_err(|_| ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default()
+                context: Default::default(),
             })?;
         let month = cards::validate::CardExpirationMonth::try_from(exp_month).map_err(|_| {
             ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default()
+                context: Default::default(),
             }
         })?;
         Ok(Secret::new(month.two_digits()))
@@ -149,7 +152,7 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             .parse::<i8>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default()
+                context: Default::default(),
             })
             .map(Secret::new)
     }
@@ -217,7 +220,7 @@ impl Card<DefaultPCIHolder> {
             .parse::<i32>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_year",
-                context: Default::default()
+                context: Default::default(),
             })
             .map(Secret::new)
     }
@@ -312,7 +315,9 @@ impl NetworkTokenData {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                .ok_or(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?
                 .to_string(),
         ))
     }
@@ -697,18 +702,22 @@ impl WalletData {
             Self::GooglePay(data) => Ok(data.get_googlepay_encrypted_payment_data()?),
             Self::ApplePay(data) => Ok(data.get_applepay_decoded_payment_data()?),
             Self::PaypalSdk(data) => Ok(Secret::new(data.token.clone())),
-            _ => Err(ConnectorRequestError::InvalidWallet { context: Default::default() }.into()),
+            _ => Err(ConnectorRequestError::InvalidWallet {
+                context: Default::default(),
+            }
+            .into()),
         }
     }
     pub fn get_wallet_token_as_json<T>(&self, wallet_name: String) -> Result<T, Error>
     where
         T: DeserializeOwned,
     {
-        serde_json::from_str::<T>(self.get_wallet_token()?.peek())
-            .change_context(ConnectorRequestError::InvalidWalletToken {
+        serde_json::from_str::<T>(self.get_wallet_token()?.peek()).change_context(
+            ConnectorRequestError::InvalidWalletToken {
                 wallet_name,
                 context: Default::default(),
-            })
+            },
+        )
     }
 
     pub fn get_encoded_wallet_token(&self) -> Result<String, Error> {
@@ -841,7 +850,7 @@ impl GooglePayWalletData {
             .get_encrypted_google_pay_payment_data_mandatory()
             .change_context(ConnectorRequestError::InvalidWalletToken {
                 wallet_name: "Google Pay".to_string(),
-                context: Default::default()
+                context: Default::default(),
             })?;
 
         Ok(Secret::new(encrypted_data.token.clone()))
@@ -849,34 +858,42 @@ impl GooglePayWalletData {
 
     pub fn validate_decrypted_card_exp_month(
         value: Option<Secret<String>>,
-    ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Secret<String>, error_stack::Report<ApplicationErrorResponse>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "card_exp_month",
-                context: Default::default()
-            })
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_CARD_EXP_MONTH".to_owned(),
+                error_identifier: 400,
+                error_message: "Google Pay tokenization data card exp month is required".to_owned(),
+                error_object: None,
+            }))
         })
     }
 
     pub fn validate_decrypted_card_exp_year(
         value: Option<Secret<String>>,
-    ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Secret<String>, error_stack::Report<ApplicationErrorResponse>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "card_exp_year",
-                context: Default::default()
-            })
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_CARD_EXP_YEAR".to_owned(),
+                error_identifier: 400,
+                error_message: "Google Pay tokenization data card exp year is required".to_owned(),
+                error_object: None,
+            }))
         })
     }
 
     pub fn validate_decrypted_primary_account_number(
         value: Option<cards::CardNumber>,
-    ) -> Result<cards::CardNumber, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<cards::CardNumber, error_stack::Report<ApplicationErrorResponse>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_primary_account_number",
-                context: Default::default()
-            })
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_APPLICATION_PRIMARY_ACCOUNT_NUMBER".to_owned(),
+                error_identifier: 400,
+                error_message:
+                    "Google Pay tokenization data application primary account number is required"
+                        .to_owned(),
+                error_object: None,
+            }))
         })
     }
 }
@@ -1166,55 +1183,71 @@ pub struct ApplePayWalletData {
 impl ApplePayWalletData {
     pub fn validate_decrypted_primary_account_number(
         value: Option<cards::CardNumber>,
-    ) -> Result<cards::CardNumber, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<cards::CardNumber, error_stack::Report<ApplicationErrorResponse>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_primary_account_number",
-                context: Default::default()
-            })
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_APPLICATION_PRIMARY_ACCOUNT_NUMBER".to_owned(),
+                error_identifier: 400,
+                error_message:
+                    "Apple Pay payment data application primary account number is required"
+                        .to_owned(),
+                error_object: None,
+            }))
         })
     }
 
     pub fn validate_decrypted_expiration_month(
         value: Option<Secret<String>>,
-    ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Secret<String>, error_stack::Report<ApplicationErrorResponse>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_expiration_month",
-                context: Default::default()
-            })
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_APPLICATION_EXPIRATION_MONTH".to_owned(),
+                error_identifier: 400,
+                error_message: "Apple Pay payment data application expiration month is required"
+                    .to_owned(),
+                error_object: None,
+            }))
         })
     }
 
     pub fn validate_decrypted_expiration_year(
         value: Option<Secret<String>>,
-    ) -> Result<Secret<String>, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<Secret<String>, error_stack::Report<ApplicationErrorResponse>> {
         value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "application_expiration_year",
-                context: Default::default()
-            })
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_APPLICATION_EXPIRATION_YEAR".to_owned(),
+                error_identifier: 400,
+                error_message: "Apple Pay payment data application expiration year is required"
+                    .to_owned(),
+                error_object: None,
+            }))
         })
     }
 
     pub fn validate_decrypted_payment_data(
         value: Option<grpc_api_types::payments::ApplePayCryptogramData>,
-    ) -> Result<ApplePayCryptogramData, error_stack::Report<ConnectorRequestError>> {
+    ) -> Result<ApplePayCryptogramData, error_stack::Report<ApplicationErrorResponse>> {
         let decrypted_payment_data = value.ok_or_else(|| {
-            report!(ConnectorRequestError::MissingRequiredField {
-                field_name: "decrypted_payment_data",
-                context: Default::default()
-            })
+            error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_DECRYPTED_PAYMENT_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Apple Pay decrypted payment data is required".to_owned(),
+                error_object: None,
+            }))
         })?;
 
         Ok(ApplePayCryptogramData {
             online_payment_cryptogram: decrypted_payment_data
                 .online_payment_cryptogram
                 .ok_or_else(|| {
-                    report!(ConnectorRequestError::MissingRequiredField {
-                        field_name: "online_payment_cryptogram",
-                context: Default::default()
-                    })
+                    error_stack::report!(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "MISSING_ONLINE_PAYMENT_CRYPTOGRAM".to_owned(),
+                        error_identifier: 400,
+                        error_message:
+                            "Apple Pay payment data online payment cryptogram is required"
+                                .to_owned(),
+                        error_object: None,
+                    }))
                 })?,
             eci_indicator: decrypted_payment_data.eci_indicator,
         })
@@ -1226,7 +1259,7 @@ impl ApplePayWalletData {
             .get_encrypted_apple_pay_payment_data_mandatory()
             .change_context(ConnectorRequestError::MissingRequiredField {
                 field_name: "Apple pay encrypted data",
-                context: Default::default()
+                context: Default::default(),
             })?;
         let token = Secret::new(
             String::from_utf8(
@@ -1234,12 +1267,12 @@ impl ApplePayWalletData {
                     .decode(apple_pay_encrypted_data)
                     .change_context(ConnectorRequestError::InvalidWalletToken {
                         wallet_name: "Apple Pay".to_string(),
-                context: Default::default()
+                        context: Default::default(),
                     })?,
             )
             .change_context(ConnectorRequestError::InvalidWalletToken {
                 wallet_name: "Apple Pay".to_string(),
-                context: Default::default()
+                context: Default::default(),
             })?,
         );
         Ok(token)
@@ -1301,7 +1334,9 @@ impl CardDetailsForNetworkTransactionId {
         let year = binding.peek();
         Ok(Secret::new(
             year.get(year.len() - 2..)
-                .ok_or(ConnectorRequestError::RequestEncodingFailed { context: Default::default() })?
+                .ok_or(ConnectorRequestError::RequestEncodingFailed {
+                    context: Default::default(),
+                })?
                 .to_string(),
         ))
     }
@@ -1364,7 +1399,7 @@ impl CardDetailsForNetworkTransactionId {
             .parse::<i8>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_month",
-                context: Default::default()
+                context: Default::default(),
             })
             .map(Secret::new)
     }
@@ -1375,7 +1410,7 @@ impl CardDetailsForNetworkTransactionId {
             .parse::<i32>()
             .change_context(ConnectorRequestError::InvalidDataFormat {
                 field_name: "payment_method_data.card.card_exp_year",
-                context: Default::default()
+                context: Default::default(),
             })
             .map(Secret::new)
     }

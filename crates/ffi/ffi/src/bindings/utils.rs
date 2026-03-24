@@ -5,15 +5,18 @@
 
 use bytes::Bytes;
 use domain_types::connector_types::ConnectorEnum;
+use domain_types::errors::ApplicationErrorResponse;
 use domain_types::router_data::ConnectorSpecificConfig;
 use domain_types::router_response_types::Response;
 use domain_types::utils::ForeignTryFrom;
+use error_stack::Report;
 use grpc_api_types::payments::{
     ConnectorResponseTransformationError, FfiConnectorHttpRequest, FfiConnectorHttpResponse,
     FfiOptions, IntegrationError,
 };
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use prost::Message;
+use ucs_env::error::ErrorSwitch;
 
 /// Helper to convert internal Request to Protobuf FfiConnectorHttpRequest bytes.
 pub fn build_ffi_request_bytes(
@@ -158,11 +161,14 @@ pub fn parse_metadata_for_req(
         })?;
 
     let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
-        .map_err(ucs_env::error::report_connector_context_to_integration)?;
+        .map_err(|e: Report<ApplicationErrorResponse>| e.current_context().switch())?;
 
     // 3. Convert proto config to domain ConnectorSpecificConfig
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-        .map_err(ucs_env::error::report_connector_context_to_integration)?;
+        .map_err(|e: Report<domain_types::errors::ConnectorRequestError>| {
+            let app: ApplicationErrorResponse = ErrorSwitch::switch(e.current_context());
+            ErrorSwitch::switch(&app)
+        })?;
 
     Ok(crate::types::FfiMetadataPayload {
         connector,
@@ -198,11 +204,14 @@ pub fn parse_metadata_for_res(
             })?;
 
     let connector = ConnectorEnum::foreign_try_from(config_variant.clone())
-        .map_err(ucs_env::error::report_connector_context_to_response_transformation)?;
+        .map_err(|e: Report<ApplicationErrorResponse>| e.current_context().switch())?;
 
     // 3. Convert proto config to domain ConnectorSpecificConfig
     let connector_config = ConnectorSpecificConfig::foreign_try_from(proto_config.clone())
-        .map_err(ucs_env::error::report_connector_context_to_response_transformation)?;
+        .map_err(|e: Report<domain_types::errors::ConnectorRequestError>| {
+            let app: ApplicationErrorResponse = ErrorSwitch::switch(e.current_context());
+            ErrorSwitch::switch(&app)
+        })?;
 
     Ok(crate::types::FfiMetadataPayload {
         connector,

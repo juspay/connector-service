@@ -218,7 +218,10 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<crate::disputes::DisputePayload, domain_types::errors::WebhookError> {
-        Err(domain_types::errors::WebhookError::WebhooksNotImplemented.into())
+        Err(domain_types::errors::WebhookError::WebhooksNotImplemented {
+            operation: "get_dispute_details",
+        }
+        .into())
     }
 
     /// fn get_external_authentication_details
@@ -229,7 +232,10 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         crate::authentication::ExternalAuthenticationPayload,
         domain_types::errors::WebhookError,
     > {
-        Err(domain_types::errors::WebhookError::WebhooksNotImplemented.into())
+        Err(domain_types::errors::WebhookError::WebhooksNotImplemented {
+            operation: "get_external_authentication_details",
+        }
+        .into())
     }
 
     /// fn get_mandate_details

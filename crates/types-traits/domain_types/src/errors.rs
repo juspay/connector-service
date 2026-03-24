@@ -652,8 +652,8 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorResponseError {
 #[derive(Debug, thiserror::Error, PartialEq, Clone, strum::AsRefStr)]
 #[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum WebhookError {
-    #[error("Webhooks not implemented for this connector")]
-    WebhooksNotImplemented,
+    #[error("Webhooks not implemented for this connector ({operation})")]
+    WebhooksNotImplemented { operation: &'static str },
     #[error("Failed to decode webhook event body")]
     WebhookBodyDecodingFailed,
     #[error("Signature not found for incoming webhook")]
@@ -735,7 +735,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for WebhookError {
             | Self::WebhookVerificationSecretInvalid => {
                 ApplicationErrorResponse::BadRequest(api_err("INVALID_WEBHOOK_DATA", 400))
             }
-            Self::WebhooksNotImplemented => {
+            Self::WebhooksNotImplemented { .. } => {
                 ApplicationErrorResponse::NotImplemented(api_err("NOT_IMPLEMENTED", 501))
             }
             Self::WebhookProcessingFailed | Self::WebhookResponseEncodingFailed => {
