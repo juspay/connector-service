@@ -67,8 +67,8 @@ generate-proto: install-deps
 	@cd $(SDK_ROOT) && ./node_modules/.bin/pbjs \
 		-t static-module -w commonjs --no-delimited --alt-comment \
 		-p $(PROTO_DIR) \
-		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto \
-		$(PROTO_DIR)/sdk_config.proto $(PROTO_DIR)/payouts.proto \
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payouts.proto $(PROTO_DIR)/payment_methods.proto \
+		$(PROTO_DIR)/sdk_config.proto \
 		-o $(GENERATED_OUT)/proto.js
 	@echo "Proto JS generated: $(GENERATED_OUT)/proto.js"
 	@cd $(SDK_ROOT) && ./node_modules/.bin/pbts \
