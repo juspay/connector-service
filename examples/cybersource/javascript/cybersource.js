@@ -69,100 +69,6 @@ function _buildGetRequest(connectorTransactionId) {
     };
 }
 
-function _buildPreAuthenticateRequest() {
-    return {
-        "amount": {  // Amount Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Payment Method
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
-            }
-        },
-        "address": {  // Address Information
-            "billingAddress": {
-            }
-        },
-        "enrolledFor3Ds": false,  // Authentication Details
-        "returnUrl": "https://example.com/3ds-return"  // URLs for Redirection
-    };
-}
-
-function _buildRecurringChargeRequest() {
-    return {
-        "connectorRecurringPaymentId": {  // Reference to existing mandate
-            "mandateIdType": {
-                "connectorMandateId": "probe-mandate-123"
-            }
-        },
-        "amount": {  // Amount Information
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {  // Optional payment Method Information (for network transaction flows)
-            "token": {"token": {"value": "probe_pm_token"}}  // Payment tokens
-        },
-        "returnUrl": "https://example.com/recurring-return",
-        "connectorCustomerId": "cust_probe_123",
-        "paymentMethodType": "PAY_PAL",
-        "offSession": true  // Behavioral Flags and Preferences
-    };
-}
-
-function _buildRefundRequest(connectorTransactionId) {
-    return {
-        "merchantRefundId": "probe_refund_001",  // Identification
-        "connectorTransactionId": connectorTransactionId,
-        "paymentAmount": 1000,  // Amount Information
-        "refundAmount": {
-            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "reason": "customer_request"  // Reason for the refund
-    };
-}
-
-function _buildSetupRecurringRequest() {
-    return {
-        "merchantRecurringPaymentId": "probe_mandate_001",  // Identification
-        "amount": {  // Mandate Details
-            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
-            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
-        },
-        "paymentMethod": {
-            "card": {  // Generic card payment
-                "cardNumber": {"value": "4111111111111111"},  // Card Identification
-                "cardExpMonth": {"value": "03"},
-                "cardExpYear": {"value": "2030"},
-                "cardCvc": {"value": "737"},
-                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
-            }
-        },
-        "customer": {
-            "email": {"value": "test@example.com"}  // Customer's email address
-        },
-        "address": {  // Address Information
-            "billingAddress": {
-            }
-        },
-        "authType": "NO_THREE_DS",  // Type of authentication to be used
-        "enrolledFor3Ds": false,  // Indicates if the customer is enrolled for 3D Secure
-        "metadata": {"value": "{\"reference_id\":\"probe_ref_001\",\"connector_request_id\":\"probe_req_001\",\"transaction_id\":\"probe_txn_001\"}"},  // Additional metadata for the connector
-        "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup
-        "setupFutureUsage": "OFF_SESSION",  // Indicates future usage intention
-        "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested
-        "customerAcceptance": {  // Details of customer acceptance
-            "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
-            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
-        }
-    };
-}
-
 function _buildVoidRequest(connectorTransactionId) {
     return {
         "merchantVoidId": "probe_void_001",  // Identification
@@ -175,8 +81,6 @@ function _buildVoidRequest(connectorTransactionId) {
     };
 }
 
-
-// ANCHOR: scenario_functions
 // Card Payment (Authorize + Capture)
 // Reserve funds with Authorize, then settle with a separate Capture call. Use for physical goods or delayed fulfillment where capture happens later.
 async function processCheckoutCard(merchantTransactionId, config = _defaultConfig) {
@@ -290,7 +194,16 @@ async function processRefund(merchantTransactionId, config = _defaultConfig) {
     }
 
     // Step 2: Refund — return funds to the customer
-    const refundResponse = await paymentClient.refund(_buildRefundRequest(authorizeResponse.connectorTransactionId));
+    const refundResponse = await paymentClient.refund({
+        "merchantRefundId": "probe_refund_001",  // Identification
+        "connectorTransactionId": authorizeResponse.connectorTransactionId,  // from authorize response
+        "paymentAmount": 1000,  // Amount Information
+        "refundAmount": {
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "reason": "customer_request"  // Reason for the refund
+    });
 
     if (refundResponse.status === 'FAILED') {
         throw new Error(`Refund failed: ${refundResponse.error?.message}`);
@@ -436,36 +349,101 @@ async function get(merchantTransactionId, config = _defaultConfig) {
 
 // Flow: PaymentMethodAuthenticationService.PreAuthenticate
 async function preAuthenticate(merchantTransactionId, config = _defaultConfig) {
-    const paymentMethodAuthenticationClient = new PaymentMethodAuthenticationClient(config);
-
-    const preResponse = await paymentMethodAuthenticationClient.preAuthenticate(_buildPreAuthenticateRequest());
+    // Step 1: Pre-Authenticate — initiate 3DS flow (collect device/browser data)
+    const preAuthenticateresponse = await paymentMethodAuthenticationClient.preAuthenticate({
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {  // Payment Method
+            "card": {  // Generic card payment
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+            }
+        },
+        "address": {  // Address Information
+            "billingAddress": {
+            }
+        },
+        "enrolledFor3Ds": false,  // Authentication Details
+        "returnUrl": "https://example.com/3ds-return"  // URLs for Redirection
+    });
 
     return { status: preResponse.status };
 }
 
 // Flow: RecurringPaymentService.Charge
 async function recurringCharge(merchantTransactionId, config = _defaultConfig) {
-    const recurringPaymentClient = new RecurringPaymentClient(config);
+    // Step 1: Recurring Charge — charge against the stored mandate
+    const recurringResponse = await recurringPaymentClient.charge({
+        "connectorRecurringPaymentId": {  // Reference to existing mandate
+            "mandateIdType": {
+                "connectorMandateId": "probe-mandate-123"
+            }
+        },
+        "amount": {  // Amount Information
+            "minorAmount": 1000,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {  // Optional payment Method Information (for network transaction flows)
+            "token": {"token": {"value": "probe_pm_token"}}  // Payment tokens
+        },
+        "returnUrl": "https://example.com/recurring-return",
+        "connectorCustomerId": "cust_probe_123",
+        "paymentMethodType": "PAY_PAL",
+        "offSession": true  // Behavioral Flags and Preferences
+    });
 
-    const recurringResponse = await recurringPaymentClient.charge(_buildRecurringChargeRequest());
+    if (recurringResponse.status === 'FAILED') {
+        throw new Error(`Recurring_Charge failed: ${recurringResponse.error?.message}`);
+    }
 
     return { status: recurringResponse.status };
 }
 
-// Flow: PaymentService.Refund
-async function refund(merchantTransactionId, config = _defaultConfig) {
-    const paymentClient = new PaymentClient(config);
-
-    const refundResponse = await paymentClient.refund(_buildRefundRequest('probe_connector_txn_001'));
-
-    return { status: refundResponse.status };
-}
-
 // Flow: PaymentService.SetupRecurring
 async function setupRecurring(merchantTransactionId, config = _defaultConfig) {
-    const paymentClient = new PaymentClient(config);
+    // Step 1: Setup Recurring — store the payment mandate
+    const setupResponse = await paymentClient.setupRecurring({
+        "merchantRecurringPaymentId": "probe_mandate_001",  // Identification
+        "amount": {  // Mandate Details
+            "minorAmount": 0,  // Amount in minor units (e.g., 1000 = $10.00)
+            "currency": "USD"  // ISO 4217 currency code (e.g., "USD", "EUR")
+        },
+        "paymentMethod": {
+            "card": {  // Generic card payment
+                "cardNumber": {"value": "4111111111111111"},  // Card Identification
+                "cardExpMonth": {"value": "03"},
+                "cardExpYear": {"value": "2030"},
+                "cardCvc": {"value": "737"},
+                "cardHolderName": {"value": "John Doe"}  // Cardholder Information
+            }
+        },
+        "customer": {
+            "email": {"value": "test@example.com"}  // Customer's email address
+        },
+        "address": {  // Address Information
+            "billingAddress": {
+            }
+        },
+        "authType": "NO_THREE_DS",  // Type of authentication to be used
+        "enrolledFor3Ds": false,  // Indicates if the customer is enrolled for 3D Secure
+        "metadata": {"value": "{\"reference_id\":\"probe_ref_001\",\"connector_request_id\":\"probe_req_001\",\"transaction_id\":\"probe_txn_001\"}"},  // Additional metadata for the connector
+        "returnUrl": "https://example.com/mandate-return",  // URL to redirect after setup
+        "setupFutureUsage": "OFF_SESSION",  // Indicates future usage intention
+        "requestIncrementalAuthorization": false,  // Indicates if incremental authorization is requested
+        "customerAcceptance": {  // Details of customer acceptance
+            "acceptanceType": "OFFLINE",  // Type of acceptance (e.g., online, offline).
+            "acceptedAt": 0  // Timestamp when the acceptance was made (Unix timestamp, seconds since epoch).
+        }
+    });
 
-    const setupResponse = await paymentClient.setupRecurring(_buildSetupRecurringRequest());
+    if (setupResponse.status === 'FAILED') {
+        throw new Error(`Recurring setup failed: ${setupResponse.error?.message}`);
+    }
 
     return { status: setupResponse.status, mandateId: setupResponse.connectorTransactionId };
 }
@@ -480,7 +458,7 @@ async function voidPayment(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, get, preAuthenticate, recurringCharge, refund, setupRecurring, voidPayment, _buildAuthorizeRequest, _buildCaptureRequest, _buildGetRequest, _buildPreAuthenticateRequest, _buildRecurringChargeRequest, _buildRefundRequest, _buildSetupRecurringRequest, _buildVoidRequest };
+module.exports = { processCheckoutCard, processCheckoutAutocapture, processCheckoutWallet, processRefund, processRecurring, processVoidPayment, processGetPayment, authorize, capture, get, preAuthenticate, recurringCharge, setupRecurring, voidPayment };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_card';

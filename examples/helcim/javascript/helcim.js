@@ -3,7 +3,7 @@
 // Regenerate: python3 scripts/generate-connector-docs.py helcim
 //
 // Helcim — all integration scenarios and flows in one file.
-// Run a scenario:  node helcim.js checkout_autocapture
+// Run a scenario:  node helcim.js checkout_card
 'use strict';
 
 const { PaymentClient } = require('hs-playlib');
@@ -61,8 +61,6 @@ function _buildGetRequest(connectorTransactionId) {
     };
 }
 
-
-// ANCHOR: scenario_functions
 // Card Payment (Automatic Capture)
 // Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digital goods or immediate fulfillment.
 async function processCheckoutAutocapture(merchantTransactionId, config = _defaultConfig) {
@@ -123,7 +121,7 @@ async function get(merchantTransactionId, config = _defaultConfig) {
 }
 
 
-module.exports = { processCheckoutAutocapture, processGetPayment, authorize, get, _buildAuthorizeRequest, _buildGetRequest };
+module.exports = { processCheckoutAutocapture, processGetPayment, authorize, get };
 
 if (require.main === module) {
     const scenario = process.argv[2] || 'checkout_autocapture';

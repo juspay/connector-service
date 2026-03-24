@@ -108,7 +108,7 @@ Reserve funds with Authorize, then settle with a separate Capture call. Use for 
 | `PENDING` | Awaiting async confirmation — wait for webhook before capturing |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L217) · [JavaScript](../../examples/paypal/javascript/paypal.js#L200) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L143) · [Rust](../../examples/paypal/rust/paypal.rs#L211)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L117) · [JavaScript](../../examples/paypal/javascript/paypal.js#L106) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L143) · [Rust](../../examples/paypal/rust/paypal.rs#L133)
 
 ### Card Payment (Automatic Capture)
 
@@ -122,13 +122,13 @@ Authorize and capture in one call using `capture_method=AUTOMATIC`. Use for digi
 | `PENDING` | Payment processing — await webhook for final status before fulfilling |
 | `FAILED` | Payment declined — surface error to customer, do not retry without new details |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L242) · [JavaScript](../../examples/paypal/javascript/paypal.js#L226) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L165) · [Rust](../../examples/paypal/rust/paypal.rs#L234)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L142) · [JavaScript](../../examples/paypal/javascript/paypal.js#L132) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L165) · [Rust](../../examples/paypal/rust/paypal.rs#L156)
 
 ### Refund a Payment
 
 Authorize with automatic capture, then refund the captured amount. `connector_transaction_id` from the Authorize response is reused for the Refund call.
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L261) · [JavaScript](../../examples/paypal/javascript/paypal.js#L245) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L181) · [Rust](../../examples/paypal/rust/paypal.rs#L250)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L161) · [JavaScript](../../examples/paypal/javascript/paypal.js#L151) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L181) · [Rust](../../examples/paypal/rust/paypal.rs#L172)
 
 ### Recurring / Mandate Payments
 
@@ -141,19 +141,19 @@ Store a payment mandate with SetupRecurring, then charge it repeatedly with Recu
 | `PENDING` | Mandate stored — save connector_transaction_id for future RecurringPaymentService.Charge calls |
 | `FAILED` | Setup failed — customer must re-enter payment details |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L286) · [JavaScript](../../examples/paypal/javascript/paypal.js#L271) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L203) · [Rust](../../examples/paypal/rust/paypal.rs#L273)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L205) · [JavaScript](../../examples/paypal/javascript/paypal.js#L193) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L203) · [Rust](../../examples/paypal/rust/paypal.rs#L195)
 
 ### Void a Payment
 
 Authorize funds with a manual capture flag, then cancel the authorization with Void before any capture occurs. Releases the hold on the customer's funds.
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L369) · [JavaScript](../../examples/paypal/javascript/paypal.js#L345) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L279) · [Rust](../../examples/paypal/rust/paypal.rs#L347)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L288) · [JavaScript](../../examples/paypal/javascript/paypal.js#L267) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L279) · [Rust](../../examples/paypal/rust/paypal.rs#L269)
 
 ### Get Payment Status
 
 Authorize a payment, then poll the connector for its current status using Get. Use this to sync payment state when webhooks are unavailable or delayed.
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L391) · [JavaScript](../../examples/paypal/javascript/paypal.js#L367) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L298) · [Rust](../../examples/paypal/rust/paypal.rs#L366)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L310) · [JavaScript](../../examples/paypal/javascript/paypal.js#L289) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L298) · [Rust](../../examples/paypal/rust/paypal.rs#L288)
 
 ## API Reference
 
@@ -234,7 +234,7 @@ Authorize a payment amount on a payment method. This reserves funds without capt
 }
 ```
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L413) · [JavaScript](../../examples/paypal/javascript/paypal.js#L388) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L316) · [Rust](../../examples/paypal/rust/paypal.rs#L384)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L332) · [JavaScript](../../examples/paypal/javascript/paypal.js#L310) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L316) · [Rust](../../examples/paypal/rust/paypal.rs#L306)
 
 #### PaymentService.Capture
 
@@ -245,7 +245,7 @@ Finalize an authorized payment transaction. Transfers reserved funds from custom
 | **Request** | `PaymentServiceCaptureRequest` |
 | **Response** | `PaymentServiceCaptureResponse` |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L422) · [JavaScript](../../examples/paypal/javascript/paypal.js#L397) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L328) · [Rust](../../examples/paypal/rust/paypal.rs#L396)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L341) · [JavaScript](../../examples/paypal/javascript/paypal.js#L319) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L328) · [Rust](../../examples/paypal/rust/paypal.rs#L318)
 
 #### PaymentService.Get
 
@@ -256,7 +256,7 @@ Retrieve current payment status from the payment processor. Enables synchronizat
 | **Request** | `PaymentServiceGetRequest` |
 | **Response** | `PaymentServiceGetResponse` |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L440) · [JavaScript](../../examples/paypal/javascript/paypal.js#L415) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L348) · [Rust](../../examples/paypal/rust/paypal.rs#L410)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L365) · [JavaScript](../../examples/paypal/javascript/paypal.js#L338) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L348) · [Rust](../../examples/paypal/rust/paypal.rs#L334)
 
 #### PaymentService.Refund
 
@@ -267,7 +267,7 @@ Initiate a refund to customer's payment method. Returns funds for returns, cance
 | **Request** | `PaymentServiceRefundRequest` |
 | **Response** | `RefundResponse` |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L458) · [JavaScript](../../examples/paypal/javascript/paypal.js#L433) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L392) · [Rust](../../examples/paypal/rust/paypal.rs#L424)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L161) · [JavaScript](../../examples/paypal/javascript/paypal.js#L151) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L392) · [Rust](../../examples/paypal/rust/paypal.rs#L374)
 
 #### PaymentService.SetupRecurring
 
@@ -278,7 +278,7 @@ Setup a recurring payment instruction for future payments/ debits. This could be
 | **Request** | `PaymentServiceSetupRecurringRequest` |
 | **Response** | `PaymentServiceSetupRecurringResponse` |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L467) · [JavaScript](../../examples/paypal/javascript/paypal.js#L442) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L402) · [Rust](../../examples/paypal/rust/paypal.rs#L431)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L414) · [JavaScript](../../examples/paypal/javascript/paypal.js#L383) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L402) · [Rust](../../examples/paypal/rust/paypal.rs#L381)
 
 #### PaymentService.Void
 
@@ -289,7 +289,7 @@ Cancel an authorized payment before capture. Releases held funds back to custome
 | **Request** | `PaymentServiceVoidRequest` |
 | **Response** | `PaymentServiceVoidResponse` |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L476) · [JavaScript](../../examples/paypal/javascript/paypal.js#L451) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L448) · [Rust](../../examples/paypal/rust/paypal.rs#L441)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L468) · [JavaScript](../../examples/paypal/javascript/paypal.js#L430) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L448) · [Rust](../../examples/paypal/rust/paypal.rs#L428)
 
 ### Mandates
 
@@ -302,7 +302,7 @@ Charge using an existing stored recurring payment instruction. Processes repeat 
 | **Request** | `RecurringPaymentServiceChargeRequest` |
 | **Response** | `RecurringPaymentServiceChargeResponse` |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L449) · [JavaScript](../../examples/paypal/javascript/paypal.js#L424) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L356) · [Rust](../../examples/paypal/rust/paypal.rs#L417)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L374) · [JavaScript](../../examples/paypal/javascript/paypal.js#L347) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L356) · [Rust](../../examples/paypal/rust/paypal.rs#L341)
 
 ### Authentication
 
@@ -315,4 +315,4 @@ Generate short-lived connector authentication token. Provides secure credentials
 | **Request** | `MerchantAuthenticationServiceCreateAccessTokenRequest` |
 | **Response** | `MerchantAuthenticationServiceCreateAccessTokenResponse` |
 
-**Examples:** [Python](../../examples/paypal/python/paypal.py#L431) · [JavaScript](../../examples/paypal/javascript/paypal.js#L406) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L338) · [Rust](../../examples/paypal/rust/paypal.rs#L403)
+**Examples:** [Python](../../examples/paypal/python/paypal.py#L350) · [JavaScript](../../examples/paypal/javascript/paypal.js#L328) · [Kotlin](../../examples/paypal/kotlin/paypal.kt#L338) · [Rust](../../examples/paypal/rust/paypal.rs#L325)
