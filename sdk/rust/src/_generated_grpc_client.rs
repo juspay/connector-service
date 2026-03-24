@@ -371,9 +371,10 @@ impl GrpcClient {
     pub async fn new(config: GrpcConfig) -> Result<Self, tonic::transport::Error> {
         // Validate config before attempting connection
         if let Err(e) = config.validate() {
-            return Err(tonic::transport::Error::from(
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
-            ));
+            return Err(tonic::transport::Error::from(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                e,
+            )));
         }
         let endpoint = config.endpoint.clone();
         let headers = Arc::new(config.into_headers());
