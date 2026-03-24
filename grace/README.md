@@ -90,7 +90,8 @@ workflow/
 ├── 2.1_links.md          # Links discovery
 ├── 2.2_techspec.md       # Tech spec generation
 ├── 2.3_codegen.md        # Code generation
-└── 2.4_pr.md             # PR creation
+├── 2.4_test.md           # Connector test creation/update
+└── 2.5_pr.md             # PR creation
 ```
 
 ---
