@@ -61,6 +61,13 @@ static RT: std::sync::LazyLock<tokio::runtime::Runtime> = std::sync::LazyLock::n
 static CHANNEL_CACHE: std::sync::LazyLock<Mutex<HashMap<String, Channel>>> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
+/// Get or create a cached gRPC channel for the given endpoint.
+///
+/// Channels are cached per endpoint URL to avoid creating new connections for each RPC.
+/// Channel cloning is O(1) due to Arc backing.
+///
+/// # Errors
+/// Returns an error if the endpoint URI is invalid or the mutex is poisoned.
 fn get_channel(endpoint: &str) -> Result<Channel, String> {
     // Fast path: already connected.
     {
