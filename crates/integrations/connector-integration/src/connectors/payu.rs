@@ -26,7 +26,7 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, UpdateMandateTokenRequestData,
-        UpdateMandateTokenResponseData,
+        UpdateMandateTokenResponseData, UpdateMandateTokenStatus,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -660,6 +660,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         // Haskell: test.payu.in/merchant/postservice?form=2 (test)
         //          info.payu.in/merchant/postservice?form=2 (prod)
         let base_url = self.base_url(&req.resource_common_data.connectors);
+        let base_url = base_url.trim_end_matches('/');
         Ok(format!("{base_url}/merchant/postservice?form=2"))
     }
 
@@ -697,22 +698,44 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         >,
         ConnectorError,
     > {
-        let response: PayuUpdateMandateTokenResponse = res
-            .response
-            .parse_struct("PayuUpdateMandateTokenResponse")
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        // PayU may return HTML error pages (HTTP 200 with non-JSON body) for
+        // invalid mandate IDs. Attempt JSON parsing first; on failure, treat
+        // the response as a Fail with the raw body as the failure reason.
+        let parse_result: Result<PayuUpdateMandateTokenResponse, _> =
+            res.response.parse_struct("PayuUpdateMandateTokenResponse");
 
-        if let Some(event) = event_builder {
-            event.set_connector_response(&response);
+        match parse_result {
+            Ok(response) => {
+                if let Some(event) = event_builder {
+                    event.set_connector_response(&response);
+                }
+
+                let router_data = ResponseRouterData {
+                    response,
+                    router_data: data.clone(),
+                    http_code: res.status_code,
+                };
+
+                RouterDataV2::try_from(router_data)
+                    .change_context(ConnectorError::ResponseHandlingFailed)
+            }
+            Err(_) => {
+                let raw_body = String::from_utf8_lossy(&res.response).to_string();
+                let failure_reason = if raw_body.len() > 500 {
+                    format!("Non-JSON response from PayU: {}...", &raw_body[..500])
+                } else {
+                    format!("Non-JSON response from PayU: {raw_body}")
+                };
+
+                Ok(RouterDataV2 {
+                    response: Ok(UpdateMandateTokenResponseData {
+                        updation_status: UpdateMandateTokenStatus::Fail,
+                        failure_reason: Some(failure_reason),
+                    }),
+                    ..data.clone()
+                })
+            }
         }
-
-        let router_data = ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        };
-
-        RouterDataV2::try_from(router_data).change_context(ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -720,23 +743,42 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         res: Response,
         _event_builder: Option<&mut events::Event>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
-        // Try to parse as the standard response - PayU may return error info
-        // in the same format
-        let response: PayuUpdateMandateTokenResponse = res
-            .response
-            .parse_struct("PayuUpdateMandateTokenResponse")
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        // PayU may return HTML error pages instead of JSON. Try JSON first,
+        // fall back to a generic error with the raw body.
+        let parse_result: Result<PayuUpdateMandateTokenResponse, _> =
+            res.response.parse_struct("PayuUpdateMandateTokenResponse");
 
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: "PAYU_UPDATE_MANDATE_TOKEN_ERROR".to_string(),
-            message: response.message,
-            reason: None,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_error_message: None,
-            network_advice_code: None,
-            network_decline_code: None,
-        })
+        match parse_result {
+            Ok(response) => Ok(ErrorResponse {
+                status_code: res.status_code,
+                code: "PAYU_UPDATE_MANDATE_TOKEN_ERROR".to_string(),
+                message: response.message,
+                reason: None,
+                attempt_status: None,
+                connector_transaction_id: None,
+                network_error_message: None,
+                network_advice_code: None,
+                network_decline_code: None,
+            }),
+            Err(_) => {
+                let raw_body = String::from_utf8_lossy(&res.response).to_string();
+                let message = if raw_body.len() > 500 {
+                    format!("Non-JSON response from PayU: {}...", &raw_body[..500])
+                } else {
+                    format!("Non-JSON response from PayU: {raw_body}")
+                };
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: "PAYU_UPDATE_MANDATE_TOKEN_ERROR".to_string(),
+                    message,
+                    reason: None,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_error_message: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                })
+            }
+        }
     }
 }
