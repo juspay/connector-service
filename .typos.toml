@@ -6,7 +6,7 @@ extend-ignore-re = [
 
 [files]
 extend-exclude = [
-    "crates/internal/ucs-connector-tests/**",
+    "crates/internal/integration-tests/**",
     "docs-generated/**",
 ]
 

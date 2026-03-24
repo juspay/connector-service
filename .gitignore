@@ -442,7 +442,7 @@ scripts/generators/code/services.desc
 .netlify
 
 # UCS Connector Test Runtime Artifacts
-crates/internal/ucs-connector-tests/report.json
+crates/internal/integration-tests/report.json
 *.test.log
 /tmp/*test*.log
 .grpc-server.pid

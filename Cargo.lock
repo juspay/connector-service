@@ -3864,6 +3864,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "integration-tests"
+version = "0.1.0"
+dependencies = [
+ "ffi",
+ "grpc-api-types",
+ "grpc-server",
+ "http 1.4.0",
+ "hyper-util",
+ "inquire",
+ "proptest",
+ "prost 0.14.3",
+ "regex",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_ignored",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.14.5",
+ "tower 0.5.3",
+ "ucs_env",
+ "uuid",
+]
+
+[[package]]
 name = "interfaces"
 version = "0.1.0"
 dependencies = [
@@ -7691,33 +7718,6 @@ name = "ucd-trie"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
-
-[[package]]
-name = "ucs-connector-tests"
-version = "0.1.0"
-dependencies = [
- "ffi",
- "grpc-api-types",
- "grpc-server",
- "http 1.4.0",
- "hyper-util",
- "inquire",
- "proptest",
- "prost 0.14.3",
- "regex",
- "reqwest 0.12.28",
- "serde",
- "serde_ignored",
- "serde_json",
- "tempfile",
- "thiserror 1.0.69",
- "tokio",
- "tokio-stream",
- "tonic 0.14.5",
- "tower 0.5.3",
- "ucs_env",
- "uuid",
-]
 
 [[package]]
 name = "ucs_cards"

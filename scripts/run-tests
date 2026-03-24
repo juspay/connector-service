@@ -55,7 +55,7 @@ error()   { echo -e "${RED}[test-prism]${NC} $*" >&2; }
 header()  { echo -e "\n${BOLD}$*${NC}"; }
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-UCS_CONFIG_DIR="${HOME}/.config/ucs-connector-tests"
+UCS_CONFIG_DIR="${HOME}/.config/integration-tests"
 SETUP_SENTINEL="${UCS_CONFIG_DIR}/setup.done"
 GRPC_PID_FILE="${REPO_ROOT}/.grpc-server.pid"
 GRPC_PORT="${GRPC_PORT:-50051}"
@@ -189,7 +189,7 @@ if [[ "${INTERFACE}" == "grpc" && "${NO_SERVER}" == "false" ]]; then
 fi
 
 # ── Build cargo command ────────────────────────────────────────────────────────
-CMD=(cargo run -p ucs-connector-tests --bin test_ucs --)
+CMD=(cargo run -p integration-tests --bin test_ucs --)
 
 # Interface
 CMD+=(--interface "${INTERFACE}")

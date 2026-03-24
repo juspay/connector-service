@@ -152,7 +152,7 @@ test-connector:
 	@if [ "$(interface)" = "grpc" ]; then $(MAKE) start-grpc; fi
 	@EXIT_CODE=0; \
 	 [ -f .env.connector-tests ] && export $$(grep -v '^#' .env.connector-tests | xargs) 2>/dev/null || true; \
-	 cargo run -p ucs-connector-tests --bin test_ucs -- \
+	 cargo run -p integration-tests --bin test_ucs -- \
 	   --connector $(connector) \
 	   --endpoint localhost:50051 \
 	   --interface $(interface) || EXIT_CODE=$$?; \
@@ -174,7 +174,7 @@ test-scenario:
 	@if [ "$(interface)" = "grpc" ]; then $(MAKE) start-grpc; fi
 	@EXIT_CODE=0; \
 	 [ -f .env.connector-tests ] && export $$(grep -v '^#' .env.connector-tests | xargs) 2>/dev/null || true; \
-	 cargo run -p ucs-connector-tests --bin test_ucs -- \
+	 cargo run -p integration-tests --bin test_ucs -- \
 	   --connector $(connector) \
 	   --suite $(suite) \
 	   --scenario $(scenario) \
@@ -186,7 +186,7 @@ test-scenario:
 # ── Cargo with environment ─────────────────────────────────────────────────────
 
 ## Run cargo commands with environment variables auto-loaded from .env.connector-tests
-## Usage: make cargo ARGS="run -p ucs-connector-tests --bin test_ucs -- --connector stripe"
+## Usage: make cargo ARGS="run -p integration-tests --bin test_ucs -- --connector stripe"
 ## Usage: make cargo ARGS="test"
 ## Usage: make cargo ARGS="build"
 cargo:
@@ -322,7 +322,7 @@ help:
 	@echo "  cargo ARGS=\"<cargo-args>\""
 	@echo "    Run cargo commands with .env.connector-tests auto-loaded (GPAY_HOSTED_URL, etc)."
 	@echo "    Use this when running cargo directly instead of via test-prism."
-	@echo "    Example: make cargo ARGS=\"run -p ucs-connector-tests --bin test_ucs -- --connector stripe\""
+	@echo "    Example: make cargo ARGS=\"run -p integration-tests --bin test_ucs -- --connector stripe\""
 	@echo "             make cargo ARGS=\"test\""
 	@echo "             make cargo ARGS=\"build --release\""
 	@echo ""

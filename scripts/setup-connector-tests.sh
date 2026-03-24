@@ -30,7 +30,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BAE_DIR="${REPO_ROOT}/browser-automation-engine"
 ENV_FILE="${REPO_ROOT}/.env.connector-tests"
 DEFAULT_CREDS="${REPO_ROOT}/.github/test/creds.json"
-UCS_CONFIG_DIR="${HOME}/.config/ucs-connector-tests"
+UCS_CONFIG_DIR="${HOME}/.config/integration-tests"
 SETUP_SENTINEL="${UCS_CONFIG_DIR}/setup.done"
 
 # ── Colours ────────────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ if [[ "${SKIP_NETLIFY}" != "1" && -z "${NETLIFY_AUTH_TOKEN:-}" ]]; then
     SKIP_NETLIFY=1
   else
     # Generate a login ticket
-    TICKET_JSON=$(cd "${BAE_DIR}" && ${NETLIFY_CMD_AUTH} login --request "ucs-connector-tests" --json 2>/dev/null || true)
+    TICKET_JSON=$(cd "${BAE_DIR}" && ${NETLIFY_CMD_AUTH} login --request "integration-tests" --json 2>/dev/null || true)
     TICKET_ID=$(echo "${TICKET_JSON}" | grep -o '"ticket_id": *"[^"]*"' | sed 's/"ticket_id": *"//;s/"//' || true)
     AUTH_URL=$(echo "${TICKET_JSON}"  | grep -o '"url": *"[^"]*"'       | sed 's/"url": *"//;s/"//' || true)
 

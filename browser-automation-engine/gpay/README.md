@@ -82,7 +82,7 @@ If you prefer to set things up yourself outside of the setup script:
 
 1. Go to https://app.netlify.com/user/applications
 2. Under **Personal access tokens**, click **New access token**
-3. Give it a name (e.g. `ucs-connector-tests`) and copy the token
+3. Give it a name (e.g. `integration-tests`) and copy the token
 4. Export it and deploy:
 
 ```bash
