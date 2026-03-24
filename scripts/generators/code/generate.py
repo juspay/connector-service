@@ -207,7 +207,14 @@ def write(path: Path, content: str) -> None:
 
 
 def service_to_client_name(service: str) -> str:
-    """'PaymentService' -> 'PaymentClient', 'MerchantAuthenticationService' -> 'MerchantAuthenticationClient'"""
+    """Convert a service name to its client name.
+
+    Args:
+        service: The service name (e.g., "PaymentService").
+
+    Returns:
+        The client name (e.g., "PaymentClient").
+    """
     return service[:-7] + "Client" if service.endswith("Service") else service + "Client"
 
 
