@@ -3239,6 +3239,54 @@ message CustomerServiceDeleteResponse {
 }
 
 // ============================================================================
+// VERIFY VPA SERVICE MESSAGES
+// ============================================================================
+
+// VPA verification status
+enum VpaVerificationStatus {
+  VPA_VERIFICATION_STATUS_UNSPECIFIED = 0;
+  VPA_VERIFICATION_STATUS_VALID = 1;
+  VPA_VERIFICATION_STATUS_INVALID = 2;
+  VPA_VERIFICATION_STATUS_UNKNOWN = 3;
+}
+
+// Request message for verifying a UPI VPA
+message PaymentServiceVerifyVpaRequest {
+  // VPA to verify
+  string vpa = 1;
+
+  // Merchant identifier
+  string merchant_id = 2;
+
+  // Optional route account
+  optional string account_id = 3;
+}
+
+// Response message for VPA verification
+message PaymentServiceVerifyVpaResponse {
+  // VPA that was verified
+  string vpa = 1;
+
+  // Verification status
+  VpaVerificationStatus status = 2;
+
+  // Customer name associated with the VPA
+  string customer_name = 3;
+
+  // Optional description
+  optional string description = 4;
+
+  // Error Information
+  optional ErrorInfo error = 5;
+  uint32 status_code = 6;
+  map<string, string> response_headers = 7;
+
+  // Raw Response/Request for debugging
+  optional SecretString raw_connector_response = 8;
+  optional SecretString raw_connector_request = 9;
+}
+
+// ============================================================================
 // CONNECTOR CONFIGURATION MESSAGES
 // ============================================================================
 

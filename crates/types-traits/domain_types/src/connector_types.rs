@@ -1657,6 +1657,29 @@ pub struct MandateRevokeResponseData {
     pub status_code: u16,
 }
 
+#[derive(Debug, Clone)]
+pub struct VerifyVpaData {
+    pub vpa: String,
+    pub merchant_id: String,
+    pub account_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct VerifyVpaResponseData {
+    pub vpa: String,
+    pub status: VpaStatus,
+    pub customer_name: String,
+    pub description: Option<String>,
+    pub status_code: u16,
+}
+
+#[derive(Debug, Clone)]
+pub enum VpaStatus {
+    Valid,
+    Invalid,
+    Unknown,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

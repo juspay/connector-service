@@ -14,8 +14,13 @@ use domain_types::{
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,
 };
+use domain_types::{
+    connector_flow::VerifyVpa,
+    connector_types::{PaymentFlowData, VerifyVpaData, VerifyVpaResponseData},
+};
 use interfaces::connector_integration_v2::ConnectorIntegrationV2;
 use interfaces::connector_types::VerifyWebhookSourceV2;
+use interfaces::connector_types::VerifyVpaV2;
 
 /// Macro to generate empty implementations of VerifyWebhookSourceV2 for connectors
 /// that don't need external webhook verification.
@@ -127,3 +132,112 @@ default_impl_verify_webhook_source_v2!(
     Ppro
 );
 // PayPal has its own implementation in paypal.rs
+
+/// Macro to generate empty implementations of VerifyVpaV2 for connectors
+/// that don't implement VPA verification.
+#[macro_export]
+macro_rules! default_impl_verify_vpa_v2 {
+    ($($connector:ident),*) => {
+        $(
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                VerifyVpaV2 for $connector<T>
+            {
+            }
+
+            impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + serde::Serialize>
+                ConnectorIntegrationV2<
+                    VerifyVpa,
+                    PaymentFlowData,
+                    VerifyVpaData,
+                    VerifyVpaResponseData,
+                > for $connector<T>
+            {
+            }
+
+        )*
+    };
+}
+
+// Generate default implementations for all connectors
+// Razorpay will get a real implementation in Phase 2 (S3 agent)
+default_impl_verify_vpa_v2!(
+    Adyen,
+    Aci,
+    Airwallex,
+    Authipay,
+    Authorizedotnet,
+    Bambora,
+    Bamboraapac,
+    Bankofamerica,
+    Barclaycard,
+    Billwerk,
+    Bluesnap,
+    Braintree,
+    Calida,
+    Cashfree,
+    Cashtocode,
+    Celero,
+    Checkout,
+    Cryptopay,
+    Cybersource,
+    Datatrans,
+    Dlocal,
+    Elavon,
+    Fiserv,
+    Fiservcommercehub,
+    Fiservemea,
+    Fiuu,
+    Forte,
+    Getnet,
+    Gigadat,
+    Globalpay,
+    Helcim,
+    Hipay,
+    Hyperpg,
+    Iatapay,
+    Jpmorgan,
+    Loonio,
+    Mifinity,
+    Mollie,
+    Multisafepay,
+    Nexinets,
+    Nexixpay,
+    Nmi,
+    Noon,
+    Novalnet,
+    Nuvei,
+    Paybox,
+    Payload,
+    Payme,
+    Paysafe,
+    Paytm,
+    Payu,
+    Phonepe,
+    Placetopay,
+    Powertranz,
+    Rapyd,
+    Razorpay,
+    RazorpayV2,
+    Redsys,
+    Revolut,
+    Revolv3,
+    Finix,
+    Shift4,
+    Silverflow,
+    Stax,
+    Stripe,
+    Trustpay,
+    Trustpayments,
+    Tsys,
+    Volt,
+    Wellsfargo,
+    Worldpay,
+    Worldpayvantiv,
+    Worldpayxml,
+    Xendit,
+    Zift,
+    Ppro,
+    Paypal,
+    Peachpayments,
+    Truelayer
+);

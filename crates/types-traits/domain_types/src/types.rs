@@ -31,7 +31,8 @@ use grpc_api_types::payments::{
     PaymentServiceCreateOrderResponse, PaymentServiceGetResponse,
     PaymentServiceIncrementalAuthorizationRequest, PaymentServiceIncrementalAuthorizationResponse,
     PaymentServiceReverseResponse, PaymentServiceSetupRecurringRequest,
-    PaymentServiceSetupRecurringResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    PaymentServiceSetupRecurringResponse, PaymentServiceVerifyVpaRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RecurringPaymentServiceRevokeRequest, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -253,7 +254,7 @@ use crate::{
         RedirectDetailsResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionToken,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, TaxInfo, WebhookDetailsResponse,
+        SubmitEvidenceData, TaxInfo, VerifyVpaData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -11321,4 +11322,78 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
         }
     };
     Ok(response)
+}
+
+// Conversion implementations for VerifyVpa flow
+impl ForeignTryFrom<PaymentServiceVerifyVpaRequest> for VerifyVpaData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: PaymentServiceVerifyVpaRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            vpa: value.vpa,
+            merchant_id: value.merchant_id,
+            account_id: value.account_id,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        PaymentServiceVerifyVpaRequest,
+        Connectors,
+        &MaskedMetadata,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (_value, connectors, metadata): (
+            PaymentServiceVerifyVpaRequest,
+            Connectors,
+            &MaskedMetadata,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "VERIFY_VPA_ID".to_string(),
+            attempt_id: "VERIFY_VPA_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Upi,
+            address: PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(&None),
+            customer_id: None,
+            connector_customer: None,
+            description: Some("VPA verification operation".to_string()),
+            return_url: None,
+            connector_feature_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
+            minor_amount_capturable: None,
+            amount: None,
+            connector_response: None,
+            recurring_mandate_payment_data: None,
+            order_details: None,
+            minor_amount_authorized: None,
+            l2_l3_data: None,
+        })
+    }
 }

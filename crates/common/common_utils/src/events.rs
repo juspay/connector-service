@@ -323,6 +323,7 @@ pub enum FlowName {
     Unknown,
     IncrementalAuthorization,
     PayoutCreate,
+    VerifyVpa,
 }
 
 impl FlowName {
@@ -354,6 +355,7 @@ impl FlowName {
             Self::SdkSessionToken => "SdkSessionToken",
             Self::IncrementalAuthorization => "IncrementalAuthorization",
             Self::PayoutCreate => "PayoutCreate",
+            Self::VerifyVpa => "VerifyVpa",
             Self::MandateRevoke => "MandateRevoke",
             Self::Unknown => "Unknown",
         }

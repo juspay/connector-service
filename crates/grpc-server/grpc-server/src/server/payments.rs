@@ -12,9 +12,9 @@ use domain_types::connector_types::ConnectorEnum;
 use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
-        CreateSessionToken, IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
+        CreateSessionToken,         IncrementalAuthorization, MandateRevoke, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SdkSessionToken, SetupMandate,
-        VerifyWebhookSource, Void, VoidPC,
+        VerifyVpa, VerifyWebhookSource, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -26,7 +26,8 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSdkSessionTokenData, PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData,
         RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, VerifyWebhookSourceFlowData,
+        SessionTokenResponseData, SetupMandateRequestData, VerifyVpaData, VerifyVpaResponseData,
+        VerifyWebhookSourceFlowData,
     },
     errors::ApplicationErrorResponse,
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -73,6 +74,7 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
+    PaymentServiceVerifyVpaRequest, PaymentServiceVerifyVpaResponse,
     PaymentServiceVoidRequest, PaymentServiceVoidResponse, PayoutMethodEligibilityRequest,
     PayoutMethodEligibilityResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
@@ -213,6 +215,13 @@ trait PaymentMethodAuthOperational {
         tonic::Response<PaymentMethodAuthenticationServicePostAuthenticateResponse>,
         tonic::Status,
     >;
+}
+
+trait VerifyVpaOperational {
+    async fn internal_verify_vpa(
+        &self,
+        request: RequestData<PaymentServiceVerifyVpaRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVerifyVpaResponse>, tonic::Status>;
 }
 
 trait RecurringPaymentOperational {
@@ -1373,6 +1382,23 @@ impl PaymentOperationsInternal for Payments {
     );
 }
 
+impl VerifyVpaOperational for Payments {
+    implement_connector_operation!(
+        fn_name: internal_verify_vpa,
+        log_prefix: "VERIFY_VPA",
+        request_type: PaymentServiceVerifyVpaRequest,
+        response_type: PaymentServiceVerifyVpaResponse,
+        flow_marker: VerifyVpa,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: VerifyVpaData,
+        response_data_type: VerifyVpaResponseData,
+        request_data_constructor: VerifyVpaData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_verify_vpa_response,
+        all_keys_required: None
+    );
+}
+
 #[tonic::async_trait]
 impl PaymentService for Payments {
     #[tracing::instrument(
@@ -2503,6 +2529,47 @@ impl PaymentService for Payments {
             |request_data: RequestData<PaymentServiceIncrementalAuthorizationRequest>| async move {
                 self.internal_incremental_authorization(request_data).await
             },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "verify_vpa",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::VerifyVpa.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::VerifyVpa.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn verify_vpa(
+        &self,
+        request: tonic::Request<PaymentServiceVerifyVpaRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVerifyVpaResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        let config = get_config_from_request(&request)?;
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            config.clone(),
+            FlowName::VerifyVpa,
+            |request_data| async move { self.internal_verify_vpa(request_data).await },
         )
         .await
     }
@@ -3876,6 +3943,69 @@ pub fn generate_mandate_revoke_response(
             response_headers,
             network_transaction_id: None,
             merchant_revoke_id: e.connector_transaction_id,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+    }
+}
+
+pub fn generate_verify_vpa_response(
+    router_data_v2: RouterDataV2<
+        VerifyVpa,
+        PaymentFlowData,
+        VerifyVpaData,
+        VerifyVpaResponseData,
+    >,
+) -> Result<PaymentServiceVerifyVpaResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
+    match router_data_v2.response {
+        Ok(response) => Ok(PaymentServiceVerifyVpaResponse {
+            vpa: response.vpa,
+            status: match response.status {
+                domain_types::connector_types::VpaStatus::Valid => {
+                    grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusValid
+                }
+                domain_types::connector_types::VpaStatus::Invalid => {
+                    grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusInvalid
+                }
+                domain_types::connector_types::VpaStatus::Unknown => {
+                    grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusUnknown
+                }
+            }
+            .into(),
+            customer_name: response.customer_name,
+            description: response.description,
+            error: None,
+            status_code: response.status_code.into(),
+            response_headers,
+            raw_connector_response,
+            raw_connector_request,
+        }),
+        Err(e) => Ok(PaymentServiceVerifyVpaResponse {
+            vpa: String::new(),
+            status: grpc_api_types::payments::VpaVerificationStatus::VpaVerificationStatusUnspecified
+                .into(),
+            customer_name: String::new(),
+            description: None,
+            error: Some(grpc_api_types::payments::ErrorInfo {
+                unified_details: None,
+                connector_details: Some(grpc_api_types::payments::ConnectorErrorDetails {
+                    code: Some(e.code),
+                    message: Some(e.message.clone()),
+                    reason: e.reason.clone(),
+                }),
+                issuer_details: None,
+            }),
+            status_code: e.status_code.into(),
+            response_headers,
             raw_connector_response,
             raw_connector_request,
         }),
