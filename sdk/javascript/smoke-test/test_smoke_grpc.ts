@@ -85,7 +85,7 @@ const FLOW_META: [string, FlowMeta][] = [
   ["handle_event",             { field: "payment",          method: "handleEvent",           builder: "_buildHandleEventRequest",          arg: "none"      }],
   ["create_access_token",      { field: "payment",          method: "createAccessToken",     builder: "_buildCreateAccessTokenRequest",    arg: "none"      }],
   ["create_session_token",     { field: "payment",          method: "createSessionToken",    builder: "_buildCreateSessionTokenRequest",   arg: "none"      }],
-  ["create_sdk_session_token", { field: "payment",          method: "createSdkSessionToken", builder: "_buildCreateSdkSessionTokenRequest", arg: "none"    }],
+  ["create_sdk_session_token", { field: "merchantAuthentication", method: "createSdkSessionToken", builder: "_buildCreateSdkSessionTokenRequest", arg: "none" }],
 ];
 const FLOW_META_MAP = new Map<string, FlowMeta>(FLOW_META);
 
