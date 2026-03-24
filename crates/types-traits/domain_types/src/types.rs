@@ -9014,7 +9014,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerServiceCreateRequest>
             name: value.customer_name.map(Secret::new),
             description: None, // description field not available in this proto
             split_payments: None,
-            phone: value.phone_number.map(Secret::new),
+            phone: None,
             preprocessing_id: None,
         })
     }

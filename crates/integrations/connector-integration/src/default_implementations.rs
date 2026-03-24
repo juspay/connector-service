@@ -221,6 +221,7 @@ default_impl_mandate_status_check_v2!(
     Placetopay,
     Powertranz,
     Rapyd,
+    Razorpay,
     RazorpayV2,
     Redsys,
     Revolut,
