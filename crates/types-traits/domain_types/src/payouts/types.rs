@@ -1,4 +1,4 @@
-use super::connector_types::PayoutFlowData;
+use super::payouts_types::PayoutFlowData;
 use crate::errors::ApplicationErrorResponse;
 use crate::types::Connectors;
 use crate::utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom};
@@ -46,7 +46,7 @@ impl
 }
 
 impl ForeignTryFrom<grpc_api_types::payouts::PayoutServiceCreateRequest>
-    for super::connector_types::PayoutCreateRequest
+    for super::payouts_types::PayoutCreateRequest
 {
     type Error = ApplicationErrorResponse;
 
@@ -157,10 +157,10 @@ impl crate::utils::ForeignFrom<common_enums::PayoutStatus>
     }
 }
 
-impl From<super::connector_types::PayoutCreateResponse>
+impl From<super::payouts_types::PayoutCreateResponse>
     for grpc_api_types::payouts::PayoutServiceCreateResponse
 {
-    fn from(response: super::connector_types::PayoutCreateResponse) -> Self {
+    fn from(response: super::payouts_types::PayoutCreateResponse) -> Self {
         let error = response
             .error_message
             .map(|msg| grpc_api_types::payouts::ErrorInfo {

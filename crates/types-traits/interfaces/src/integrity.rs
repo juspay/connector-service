@@ -20,7 +20,7 @@ use domain_types::router_request_types::VerifyWebhookSourceRequestData;
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     payouts::{
-        connector_types::PayoutCreateRequest, router_request_types::PayoutCreateIntegrityObject,
+        payouts_types::PayoutCreateRequest, router_request_types::PayoutCreateIntegrityObject,
     },
     router_request_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,

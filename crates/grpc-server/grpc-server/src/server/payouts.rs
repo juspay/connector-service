@@ -2,7 +2,7 @@ use common_utils::events::FlowName;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::PayoutCreate,
-    payouts::connector_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
+    payouts::payouts_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
     types::generate_payout_create_response,
     utils::ForeignTryFrom,
 };

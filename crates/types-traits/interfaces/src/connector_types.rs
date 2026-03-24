@@ -21,7 +21,7 @@ use domain_types::{
         SubmitEvidenceData, VerifyWebhookSourceFlowData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
-    payouts::connector_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
+    payouts::payouts_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
     router_data::ConnectorSpecificConfig,
     router_request_types::VerifyWebhookSourceRequestData,
     router_response_types::VerifyWebhookSourceResponseData,

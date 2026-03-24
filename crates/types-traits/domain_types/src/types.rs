@@ -4067,9 +4067,9 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
 pub fn generate_payout_create_response(
     router_data_v2: crate::router_data_v2::RouterDataV2<
         crate::connector_flow::PayoutCreate,
-        crate::payouts::connector_types::PayoutFlowData,
-        crate::payouts::connector_types::PayoutCreateRequest,
-        crate::payouts::connector_types::PayoutCreateResponse,
+        crate::payouts::payouts_types::PayoutFlowData,
+        crate::payouts::payouts_types::PayoutCreateRequest,
+        crate::payouts::payouts_types::PayoutCreateResponse,
     >,
 ) -> Result<
     grpc_api_types::payouts::PayoutServiceCreateResponse,
