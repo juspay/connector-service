@@ -312,7 +312,7 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
             // SAFETY: Caller guarantees `out_len` is valid (see `to_raw_buf` safety docs).
             return unsafe {
                 to_raw_buf(encode_err(&format!("invalid method string: {e}")), out_len)
-            }
+            };
         }
     };
 
