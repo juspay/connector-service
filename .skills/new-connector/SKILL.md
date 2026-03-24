@@ -89,8 +89,12 @@ waits for completion, and passes outputs to the next step.
 
 **Outputs:** connector config, list of flows, list of pre-auth flows
 
-**Gate:** If tech spec missing → invoke the `generate-tech-spec` skill to discover
-API docs and produce the spec. Do NOT proceed without a tech spec.
+**Gate (HARD STOP — no exceptions):**
+If tech spec missing → **STOP IMMEDIATELY. Do NOT proceed to Step 2.**
+Tell the user: "No tech spec found for {ConnectorName}. Please either:
+(1) Run the `generate-tech-spec` skill first, or
+(2) Provide the tech spec file manually at `grace/rulesbook/codegen/references/{connector_name}/technical_specification.md`."
+Do NOT attempt to infer API details from any other source. A tech spec is mandatory.
 
 ---
 

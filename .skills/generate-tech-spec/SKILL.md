@@ -6,7 +6,7 @@ description: >
   the grace techspec CLI to produce a structured spec. Each phase can be delegated to a
   subagent. Use before implementing a new connector with the new-connector skill.
 license: Apache-2.0
-compatibility: Requires Python 3.10+ with uv, internet access for doc discovery, and grace CLI configured.
+compatibility: Requires internet access for doc discovery. Grace CLI (Python 3.10+ with uv) optional — falls back to Claude-native generation if grace/.env is missing.
 metadata:
   author: parallal
   version: "2.0"
@@ -19,17 +19,16 @@ Produces a structured technical specification for a payment connector through tw
 independent phases, each suitable for subagent delegation:
 
 1. **Links Discovery** -- find, verify, and score the connector's backend API docs
-2. **Tech Spec Generation** -- feed verified URLs into `grace techspec` to produce the spec
+2. **Tech Spec Generation** -- feed verified URLs into `grace techspec` (or Claude-native fallback) to produce the spec
 
 The generated tech spec is the required input for the `new-connector`, `add-connector-flow`,
 and `add-payment-method` skills.
 
 ## Prerequisites
 
-- Python 3.10+ and `uv` package manager
-- Grace CLI configured: `cd grace && uv sync && source .venv/bin/activate`
-- API key in `grace/.env` (copy from `grace/.env.example`)
 - Internet access for web search and URL fetching
+- **For Grace CLI path (optional):** Python 3.10+ with `uv`, Grace CLI configured (`cd grace && uv sync && source .venv/bin/activate`), and API key in `grace/.env` (copy from `grace/.env.example`)
+- **For Claude-native path:** No additional dependencies -- used automatically when `grace/.env` is missing
 
 ## Output
 
@@ -123,12 +122,38 @@ Or save them to `data/integration-source-links.json` for the tech spec phase to 
 
 ## Phase 2: Tech Spec Generation (Subagent)
 
-**Purpose**: Feed the discovered URLs into `grace techspec` to produce a structured spec.
+**Purpose**: Generate a structured technical specification from the discovered URLs.
+
+### Environment Check
+
+Before delegating Phase 2, verify that `grace/.env` exists **and** contains real API keys
+(not placeholder values). The two critical keys are `AI_API_KEY` and `FIRECRAWL_API_KEY`:
+
+```bash
+if [ -f grace/.env ] \
+   && grep -q '^AI_API_KEY=' grace/.env \
+   && ! grep -q '^AI_API_KEY=your_' grace/.env \
+   && grep -q '^FIRECRAWL_API_KEY=' grace/.env \
+   && ! grep -q '^FIRECRAWL_API_KEY=your_' grace/.env; then
+  echo "GRACE_ENV_READY"
+else
+  echo "GRACE_ENV_MISSING"
+fi
+```
+
+- **If `GRACE_ENV_READY`** --> Use **Path A: Grace CLI** (standard path)
+- **If `GRACE_ENV_MISSING`** --> Use **Path B: Claude-Native** (alternative path)
+
+This catches: missing `.env`, empty `.env`, or `.env` with default placeholder values.
+
+---
+
+### Path A: Grace CLI Tech Spec (when grace/.env exists)
 
 **Can be delegated to a subagent.** The full subagent prompt is in
 `references/techspec-generation.md`. Give the subagent the connector name and flow.
 
-### What the tech spec subagent does
+#### What the Grace CLI subagent does
 
 1. **Extracts URLs** from `data/integration-source-links.json` for the connector
 2. **Creates a URL file** (`{connector_name}.txt`) with one URL per line
@@ -140,7 +165,7 @@ Or save them to `data/integration-source-links.json` for the tech spec phase to 
    ```
 4. **Verifies** the spec was generated at `grace/rulesbook/codegen/references/specs/`
 
-### How to invoke the tech spec subagent
+#### How to invoke the Grace CLI subagent
 
 ```
 Subagent prompt:
@@ -151,7 +176,7 @@ Subagent prompt:
     FLOW: {Flow}                (e.g., Card, BankDebit)"
 ```
 
-### Grace techspec CLI reference
+#### Grace techspec CLI reference
 
 ```
 grace techspec <ConnectorName> [options]
@@ -176,69 +201,42 @@ Input methods:
 - The `-e` flag is recommended for enhanced extraction
 - The command can take up to 20 minutes -- do not interrupt
 
-### Manual alternative (no grace CLI)
+---
 
-If `grace techspec` is not available, create the spec manually by reading the connector's
-API docs and writing it in this structure:
+### Path B: Claude-Native Tech Spec (when grace/.env is missing)
 
-```markdown
-# {ConnectorName} Technical Specification
+**Can be delegated to a subagent.** The full subagent prompt is in
+`references/techspec-generation-native.md`. Give the subagent the connector name and flow.
 
-## Overview
-- Base URL: https://api.connector.com/v1
-- Authentication: Bearer token via Authorization header
-- Amount Format: Minor units (integer cents)
-- Content Type: application/json
+#### What the Claude-native subagent does
 
-## Authentication
-- Type: HeaderKey / SignatureKey / BodyKey
-- Header: Authorization: Bearer {api_key}
+1. **Reads URLs** from `data/integration-source-links.json` for the connector
+2. **Scrapes each URL** one by one using WebFetch, saving scraped content to markdown files
+   at `grace/rulesbook/codegen/references/{connector}/source_{N}.md`
+3. **Generates the tech spec** by synthesizing all scraped content into the standard format
+   and writing to `grace/rulesbook/codegen/references/specs/{ConnectorName}.md`
+4. **Enhances the spec** by re-reading each source file and enriching missing details
+   (equivalent to grace's enhance step)
+5. **Runs field/sequence analysis** identifying API call sequences, field dependencies,
+   and UNDECIDED fields (equivalent to grace's analysis step)
+6. **Verifies** the output file exists and contains all required sections
 
-## Endpoints
+#### How to invoke the Claude-native subagent
 
-### Authorize (POST /payments)
-- Request: { amount, currency, payment_method, ... }
-- Response: { id, status, amount, ... }
-- Statuses: succeeded, pending, failed, requires_action
+```
+Subagent prompt:
+  "Read and follow the workflow in .skills/generate-tech-spec/references/techspec-generation-native.md
 
-### Capture (POST /payments/{id}/capture)
-- Request: { amount }
-- Response: { id, status }
-
-### Refund (POST /refunds)
-- Request: { payment_id, amount }
-- Response: { id, status }
-
-### Void (POST /payments/{id}/cancel)
-- Request: {}
-- Response: { id, status }
-
-### Payment Sync (GET /payments/{id})
-- Response: { id, status, amount, ... }
-
-### Refund Sync (GET /refunds/{id})
-- Response: { id, status, amount, ... }
-
-## Status Mappings
-| Connector Status | UCS AttemptStatus |
-|-----------------|-------------------|
-| succeeded       | Charged           |
-| pending         | Pending           |
-| failed          | Failure           |
-
-## Error Format
-{ "error": { "code": "...", "message": "..." } }
-
-## Webhooks
-- Signature: HMAC-SHA256 of payload
-- Events: payment.succeeded, payment.failed, refund.succeeded
-
-## Supported Payment Methods
-- Card (Visa, Mastercard, Amex)
-- Wallet (Apple Pay, Google Pay)
+  Variables:
+    CONNECTOR: {ConnectorName}  (exact casing)
+    FLOW: {Flow}                (e.g., Card, BankDebit)"
 ```
 
-Save to: `grace/rulesbook/codegen/references/{connector_name}/technical_specification.md`
+#### Limitations vs Grace CLI
+
+- Scraping uses WebFetch which may not handle JavaScript-rendered pages as well as Firecrawl
+- Processing is sequential (one URL at a time) rather than parallel
+- No mock server generation (the `-m` flag equivalent is not supported)
 
 ---
 
@@ -270,4 +268,5 @@ After the tech spec is ready, use the appropriate skill:
 | File | Purpose |
 |------|---------|
 | `references/links-discovery.md` | Full subagent prompt for Phase 1 (link finding + verification) |
-| `references/techspec-generation.md` | Full subagent prompt for Phase 2 (grace techspec execution) |
+| `references/techspec-generation.md` | Full subagent prompt for Phase 2 Path A (grace techspec execution) |
+| `references/techspec-generation-native.md` | Full subagent prompt for Phase 2 Path B (Claude-native, no grace CLI) |

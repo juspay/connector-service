@@ -34,8 +34,10 @@ Extract and report:
    - PaymentMethodToken: tokenization before authorize → YES/NO
    - CreateSessionToken: session init before payment → YES/NO
 
-If the tech spec is missing or incomplete, report FAILED with what's missing.
-The orchestrator must then invoke the generate-tech-spec skill before retrying.
+If the tech spec is missing → IMMEDIATELY return FAILED. Do NOT continue.
+Reason: "Tech spec not found. Run generate-tech-spec skill first, or provide the
+tech spec manually. Cannot proceed without a tech spec — do NOT infer API details
+from any other source."
 
 Output format:
   CONNECTOR: {ConnectorName}

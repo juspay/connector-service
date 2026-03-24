@@ -23,8 +23,12 @@ Instructions:
 
 2a. Check tech spec exists at:
     grace/rulesbook/codegen/references/{connector_name}/technical_specification.md
+    or: grace/rulesbook/codegen/references/specs/{ConnectorName}.md
     or: grace/rulesbook/codegen/references/specs/{connector_name}.md
-    If missing → FAILED with reason "Tech spec not found. Run generate-tech-spec skill first."
+    If NONE of these exist → IMMEDIATELY return FAILED. Do NOT continue to steps 3-5.
+    Reason: "Tech spec not found. Run generate-tech-spec skill first, or provide the
+    tech spec manually. Cannot proceed without a tech spec — do NOT infer API details
+    from existing connector code."
 
 2. Read the connector file and identify which flows are already in create_all_prerequisites!
    List them as EXISTING_FLOWS.
