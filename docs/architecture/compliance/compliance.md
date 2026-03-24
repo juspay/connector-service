@@ -1,12 +1,11 @@
 # PCI Compliance
 
 ## How Prism handles compliance?
-Hyperswitch Prism offers multiple flavors to manage PCI DSS (Payment Card Industry Data Security Standard) compliance. Prism provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of three modes:
+Hyperswitch Prism offers multiple flavors to manage PCI DSS (Payment Card Industry Data Security Standard) compliance. Prism provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of three modes, with each mode is supported by a specific payment client.
 
 - Outsource the PCI data handling to payment processors  (example: Stripe, Adyen, Braintree etc.,), so that you dont have to manage compliance
 - Outsource the PCI data handling to processor agnostic PCI vaults (example: VGS, Tokenex, Juspay etc.,)
 - Self-manage the PCI compliance by handling raw card data
-
 
 The choice you make here determines your risk profile, operational burden, and agility. It affects:
 
@@ -24,11 +23,11 @@ Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **inde
 | **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Hyperswitch Vault as a vault layer | Supports two proxy patterns (Network, Application) with zero to minimal code changes |
 | **In-House Vault** | You have your own PCI-certified card vault infrastructure | PCI-Enabled Mode lets you send raw card data through while maintaining full control |
 
-| PCI Mode | PCI Scope | Description |
+| PCI Mode for Payment Clients | PCI Scope | Description |
 |------|-----------|-------------|
-| **Standard** | You do not have to manage PCI compliance | Payment processor vault handles card data |
-| **Proxy** | You do not have to manage PCI compliance | Third-party vault handles card data |
-| **Direct** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
+| **Standard Payment Client** | You do not have to manage PCI compliance | Payment processor vault handles card data |
+| **Proxy Payment Client** | You do not have to manage PCI compliance | Third-party vault handles card data |
+| **Payment Client** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
 
 
 ---
