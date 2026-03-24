@@ -505,5 +505,12 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             private_key: s(),
             base_url: None,
         },
+        ConnectorEnum::Fiservcommercehub => ConnectorSpecificConfig::Fiservcommercehub {
+            api_key: k(),
+            secret: s(),
+            merchant_id: m(),
+            terminal_id: id(),
+            base_url: None,
+        },
     }
 }

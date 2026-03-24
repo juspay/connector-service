@@ -677,6 +677,13 @@ pub enum ConnectorSpecificConfig {
         merchant_id: Secret<String>,
         base_url: Option<String>,
     },
+    Fiservcommercehub {
+        api_key: Secret<String>,
+        secret: Secret<String>,
+        merchant_id: Secret<String>,
+        terminal_id: Secret<String>,
+        base_url: Option<String>,
+    },
 }
 
 impl ConnectorSpecificConfig {
@@ -961,6 +968,12 @@ impl ConnectorSpecificConfig {
             Ppro {
                 api_key,
                 merchant_id
+            },
+            Fiservcommercehub {
+                api_key,
+                secret,
+                merchant_id,
+                terminal_id
             },
             Trustly {
                 username,
@@ -1339,6 +1352,12 @@ impl ConnectorSpecificConfig {
                 Ppro {
                     api_key,
                     merchant_id
+                },
+                Fiservcommercehub {
+                    api_key,
+                    secret,
+                    merchant_id,
+                    terminal_id
                 },
                 Trustly {
                     username,
@@ -2743,6 +2762,21 @@ impl ForeignTryFrom<(&ConnectorAuthType, &connector_types::ConnectorEnum)>
                 ConnectorAuthType::BodyKey { api_key, key1 } => Ok(ConnectorSpecificConfig::Ppro {
                     api_key: api_key.clone(),
                     merchant_id: key1.clone(),
+                    base_url: None,
+                }),
+                _ => Err(err().into()),
+            },
+            ConnectorEnum::Fiservcommercehub => match auth {
+                ConnectorAuthType::MultiAuthKey {
+                    api_key,
+                    key1,
+                    api_secret,
+                    key2,
+                } => Ok(Self::Fiservcommercehub {
+                    api_key: api_key.clone(),
+                    secret: api_secret.clone(),
+                    merchant_id: key1.clone(),
+                    terminal_id: key2.clone(),
                     base_url: None,
                 }),
                 _ => Err(err().into()),

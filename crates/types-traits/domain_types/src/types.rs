@@ -362,6 +362,7 @@ pub struct Connectors {
     pub hyperpg: ConnectorParams,
     pub zift: ConnectorParams,
     pub revolv3: ConnectorParams,
+    pub fiservcommercehub: ConnectorParams,
     pub truelayer: ConnectorParams,
     pub peachpayments: ConnectorParams,
     pub finix: ConnectorParams,
@@ -4021,7 +4022,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 Some(attempt_status) => {
                     grpc_api_types::payments::PaymentStatus::foreign_from(attempt_status)
                 }
-                None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
 
             PaymentServiceAuthorizeResponse {
@@ -4537,8 +4538,8 @@ impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::Paym
                 Self::PartialChargedAndChargeable
             }
             common_enums::AttemptStatus::IntegrityFailure => Self::Failure,
-            common_enums::AttemptStatus::Unspecified => Self::AttemptStatusUnspecified,
-            common_enums::AttemptStatus::Unknown => Self::AttemptStatusUnspecified,
+            common_enums::AttemptStatus::Unspecified => Self::Unspecified,
+            common_enums::AttemptStatus::Unknown => Self::Unspecified,
         }
     }
 }
@@ -4610,7 +4611,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentStatus> for common_enums::A
             grpc_api_types::payments::PaymentStatus::PartialChargedAndChargeable => {
                 Ok(Self::PartialChargedAndChargeable)
             }
-            grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified => Ok(Self::Unknown),
+            grpc_api_types::payments::PaymentStatus::Unspecified => Ok(Self::Unknown),
         }
     }
 }
@@ -4727,7 +4728,7 @@ pub fn generate_payment_void_response(
                 Some(attempt_status) => {
                     grpc_api_types::payments::PaymentStatus::foreign_from(attempt_status)
                 }
-                None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
             Ok(PaymentServiceVoidResponse {
                 connector_transaction_id: extract_connector_request_reference_id(
@@ -4832,7 +4833,7 @@ pub fn generate_payment_void_post_capture_response(
                 Some(attempt_status) => {
                     grpc_api_types::payments::PaymentStatus::foreign_from(attempt_status)
                 }
-                None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
             Ok(PaymentServiceReverseResponse {
                 connector_transaction_id: extract_connector_request_reference_id(
@@ -5069,7 +5070,7 @@ pub fn generate_payment_sync_response(
                 Some(attempt_status) => {
                     grpc_api_types::payments::PaymentStatus::foreign_from(attempt_status)
                 }
-                None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
             Ok(PaymentServiceGetResponse {
                 connector_transaction_id: extract_connector_request_reference_id(
@@ -6966,7 +6967,7 @@ pub fn generate_payment_capture_response(
                 Some(attempt_status) => {
                     grpc_api_types::payments::PaymentStatus::foreign_from(attempt_status)
                 }
-                None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
             Ok(PaymentServiceCaptureResponse {
                 connector_transaction_id: extract_connector_request_reference_id(
@@ -7961,7 +7962,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 Some(attempt_status) => {
                     grpc_api_types::payments::PaymentStatus::foreign_from(attempt_status)
                 }
-                None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
             PaymentServiceSetupRecurringResponse {
                 connector_recurring_payment_id: None,
@@ -9436,7 +9437,7 @@ pub fn generate_repeat_payment_response<T: PaymentMethodDataTypes>(
                 Some(attempt_status) => {
                     grpc_api_types::payments::PaymentStatus::foreign_from(attempt_status)
                 }
-                None => grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified,
+                None => grpc_api_types::payments::PaymentStatus::Unspecified,
             };
             Ok(
                 grpc_api_types::payments::RecurringPaymentServiceChargeResponse {
