@@ -64,9 +64,9 @@ generate-proto: install-deps
 	@echo "Generating static protobuf JS module..."
 	@mkdir -p $(GENERATED_OUT)
 	@cd $(SDK_ROOT) && ./node_modules/.bin/pbjs \
-		-t static-module -w commonjs --no-delimited --no-convert --alt-comment \
+		-t static-module -w commonjs --no-delimited --alt-comment \
 		-p $(PROTO_DIR) \
-		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payment_methods.proto \
+		$(PROTO_DIR)/payment.proto $(PROTO_DIR)/payouts.proto $(PROTO_DIR)/payment_methods.proto \
 		$(PROTO_DIR)/sdk_config.proto \
 		-o $(GENERATED_OUT)/proto.js
 	@echo "Proto JS generated: $(GENERATED_OUT)/proto.js"
@@ -90,7 +90,7 @@ generate-all: generate-proto generate-bindings generate-flows
 # ---------------------------------------------------------------------------
 generate-flows: install-codegen-deps
 	@echo "Generating JavaScript flow methods..."
-	@cd $(REPO_ROOT)/sdk/codegen && python3 generate.py --lang javascript
+	@python3 $(REPO_ROOT)/scripts/generators/code/generate.py --lang javascript
 	@echo "JavaScript flow methods generated."
 
 # ---------------------------------------------------------------------------
@@ -157,7 +157,7 @@ test-package: build-ffi-lib generate-all build-ts pack-archive
 	else \
 		echo "  Note: creds.json not found, test will use placeholder credentials"; \
 	fi
-	@cd /tmp/test-hyperswitch-js && npx tsc && node test_smoke.js --connectors $(CONNECTORS)
+	@cd /tmp/test-hyperswitch-js && npx tsc && NODE_PATH=/tmp/test-hyperswitch-js/node_modules node test_smoke.js --connectors $(CONNECTORS) --examples-dir $(REPO_ROOT)/examples
 	@echo "Running composite flow test..."
 	@cp $(SDK_ROOT)/smoke-test/test_smoke_composite.ts /tmp/test-hyperswitch-js/
 	@cd /tmp/test-hyperswitch-js && npx ts-node test_smoke_composite.ts

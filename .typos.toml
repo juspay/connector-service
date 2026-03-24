@@ -10,6 +10,8 @@ extend-exclude = [
     "backend/ucs-connector-tests/test_report/**",
     "backend/ucs-connector-tests/test_report.md",
     "backend/ucs-connector-tests/test_result.md",
+    "crates/internal/ucs-connector-tests/**",
+    "docs-generated/**",
 ]
 
 [default.extend-words]

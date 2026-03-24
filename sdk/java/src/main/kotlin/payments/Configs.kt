@@ -26,3 +26,6 @@ typealias FfiConnectorHttpRequest = SdkConfig.FfiConnectorHttpRequest
 typealias FfiConnectorHttpResponse = SdkConfig.FfiConnectorHttpResponse
 typealias HttpDefault = SdkConfig.HttpDefault
 typealias NetworkErrorCode = SdkConfig.NetworkErrorCode
+typealias FfiResult = SdkConfig.FfiResult
+typealias IntegrationErrorProto = SdkConfig.IntegrationError
+typealias ConnectorResponseTransformationErrorProto = SdkConfig.ConnectorResponseTransformationError
