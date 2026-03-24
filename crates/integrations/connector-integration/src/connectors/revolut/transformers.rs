@@ -15,7 +15,10 @@ use domain_types::{
 
 use crate::types::ResponseRouterData;
 use common_enums::AttemptStatus;
-use common_utils::{custom_serde, types::{MinorUnit, Money}};
+use common_utils::{
+    custom_serde,
+    types::{MinorUnit, Money},
+};
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

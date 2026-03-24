@@ -5025,11 +5025,12 @@ pub fn generate_payment_sync_response(
                     .amount
                     .as_ref()
                     .map(|money| {
-                        grpc_api_types::payments::Currency::foreign_try_from(money.currency)
-                            .map(|currency| grpc_api_types::payments::Money {
+                        grpc_api_types::payments::Currency::foreign_try_from(money.currency).map(
+                            |currency| grpc_api_types::payments::Money {
                                 minor_amount: money.amount.get_amount_as_i64(),
                                 currency: currency as i32,
-                            })
+                            },
+                        )
                     })
                     .transpose()?;
 
