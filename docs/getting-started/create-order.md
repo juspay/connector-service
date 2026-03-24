@@ -14,7 +14,7 @@ Once you implement this basic plumbing, you will be able to switch the request t
 
 - Library installed and configured (see [Installation and Configuration](./installation.md))
 
-Create an order to get a `session_token` (client secret) from Stripe.
+Create an order to get a `sessionToken` (client secret) from Stripe. The library will initiate the payment intent API of Stripe.
 
 {% tabs %}
 
@@ -120,7 +120,7 @@ echo "Client Secret: " . ($order->getSessionToken()?->getClientSecret() ?? 'N/A'
 
 - Library installed and configured (see [Installation and Configuration](./installation.md))
 
-Create an order with Adyen.
+Create an order to get a `sessionToken` (session_id, session_data) from Adyen. The library will initiate the sessions API of Adyen.
 
 {% tabs %}
 
@@ -223,8 +223,6 @@ echo "Session Token: " . $order->getSessionToken() . "\n";
 {% endtabs %}
 
 
-
-
 ## What Just Happened?
 
 The library helped you create a Payment Order with the specified payment processor. You will receive a `connectorOrderId` and optionally a `sessionToken` in the response (Stripe returns a client secret, Adyen returns different session data).
@@ -244,7 +242,7 @@ The order is in `STARTED` state, ready for the next step - Authorize.
 
 ## How to use the secret to trigger the payment processor's checkout?
 
-Now, pass the `sessionToken` to your frontend and use it to initiate Stripe Elements or Adyen Card Component for PCI compliant card element. The users will be able to key in the card details on the Stripe Element/ Adyen Card Component and you will get a tokenized `payment_method_id`.
+Now, pass the `sessionToken` data to your frontend and use it to initiate Stripe Elements or Adyen Card Component for PCI compliant card element. The users will be able to key in the card details on the Stripe Element/ Adyen Card Component and you will get a tokenized `payment_method_id`.
 
 You can proceed to the making the [first payment](./first-payment.md)
 
