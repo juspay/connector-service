@@ -1700,68 +1700,6 @@ pub struct RefundFlowData {
     pub payment_method: Option<PaymentMethod>,
 }
 
-#[derive(Debug, Clone)]
-pub struct PayoutFlowData {
-    pub merchant_id: common_utils::id_type::MerchantId,
-    pub status: common_enums::PayoutStatus,
-    pub payout_id: String,
-    pub connectors: Connectors,
-    pub connector_request_reference_id: String,
-    pub raw_connector_response: Option<Secret<String>>,
-    pub connector_response_headers: Option<http::HeaderMap>,
-    pub raw_connector_request: Option<Secret<String>>,
-    pub access_token: Option<AccessTokenResponseData>,
-    pub test_mode: Option<bool>,
-}
-
-impl RawConnectorRequestResponse for PayoutFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
-        self.raw_connector_response = response;
-    }
-
-    fn get_raw_connector_response(&self) -> Option<Secret<String>> {
-        self.raw_connector_response.clone()
-    }
-
-    fn get_raw_connector_request(&self) -> Option<Secret<String>> {
-        self.raw_connector_request.clone()
-    }
-
-    fn set_raw_connector_request(&mut self, request: Option<Secret<String>>) {
-        self.raw_connector_request = request;
-    }
-}
-
-impl ConnectorResponseHeaders for PayoutFlowData {
-    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
-        self.connector_response_headers = headers;
-    }
-
-    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
-        self.connector_response_headers.as_ref()
-    }
-}
-
-impl PayoutFlowData {
-    pub fn get_access_token(&self) -> Result<String, Error> {
-        self.access_token
-            .as_ref()
-            .map(|token_data| token_data.access_token.clone().expose())
-            .ok_or_else(missing_field_err("access_token"))
-    }
-
-    pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
-        self.access_token
-            .clone()
-            .ok_or_else(missing_field_err("access_token"))
-    }
-
-    pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
-        self.access_token = access_token;
-        self
-    }
-}
-
 impl RawConnectorRequestResponse for RefundFlowData {
     fn set_raw_connector_response(&mut self, response: Option<Secret<String>>) {
         self.raw_connector_response = response;

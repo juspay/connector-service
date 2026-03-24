@@ -188,28 +188,3 @@ pub struct ApplePayDecrypt {
     /// The card's network
     pub card_network: Option<common_enums::CardNetwork>,
 }
-
-#[derive(Debug, Clone)]
-pub struct PayoutCreateRequest {
-    pub merchant_payout_id: Option<String>,
-    pub connector_quote_id: Option<String>,
-    pub connector_payout_id: Option<String>,
-    pub amount: common_utils::types::MinorUnit,
-    pub source_currency: common_enums::Currency,
-    pub destination_currency: common_enums::Currency,
-    pub priority: Option<common_enums::PayoutPriority>,
-    pub connector_payout_method_id: Option<String>,
-    pub webhook_url: Option<String>,
-    pub payout_method_data: Option<PayoutMethodData>,
-    // Add additional nested structures as needed
-}
-
-#[derive(Debug, Clone)]
-pub struct PayoutCreateResponse {
-    pub merchant_payout_id: Option<String>,
-    pub payout_status: common_enums::PayoutStatus,
-    pub connector_payout_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
-    pub status_code: u16,
-}

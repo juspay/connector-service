@@ -4,8 +4,7 @@ use crate::macros::{req_transformer, res_transformer};
 
 use domain_types::{
     connector_flow::PayoutCreate,
-    connector_types::PayoutFlowData,
-    payout_types::{PayoutCreateRequest, PayoutCreateResponse},
+    payouts::connector_types::{PayoutCreateRequest, PayoutCreateResponse, PayoutFlowData},
 };
 
 // payout create request transformer
