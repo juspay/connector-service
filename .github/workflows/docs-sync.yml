@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - sdk-ref-updation
+      - docs-review2203
     paths:
       - 'docs/**'
       - 'docs-generated/**'
