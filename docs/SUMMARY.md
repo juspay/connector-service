@@ -15,15 +15,11 @@
   - [Error Handling](architecture/concepts/error-handling.md)
   - [Error Mapping](architecture/concepts/error-mapping.md)
   - [ID and Object Modelling](architecture/concepts/id-and-object-modelling.md)
-  - [Modes of Usage](architecture/concepts/library-modes-of-usage.md)
+  - [Modes of Usage](architecture/concepts/modes-of-usage.md)
   - [Domain specific language](architecture/concepts/specs-and-dsl.md)
   - [Integrity and Source Verification](architecture/frameworks/integrity-and-source-verification.md)
   - [Money Struct](architecture/frameworks/money-struct.md)
   - [Versioning](architecture/versioning.md)
-  - [Code Generation](architecture/autogeneration-frameworks/code-generation.md)
-  - [Docs Generation](architecture/autogeneration-frameworks/docs-generation.md)
-  - [SDK Generation](architecture/autogeneration-frameworks/sdk-generation.md)
-  - [Test Generation](architecture/autogeneration-frameworks/test-generation.md)
 
 - [API Reference Overview](api-reference/README.md)
   - [Payment Service Overview](api-reference/services/payment-service/README.md)
@@ -63,6 +59,3 @@
     - [Create SDK Session Token](api-reference/services/merchant-authentication-service/create-sdk-session-token.md)
 
   - [Domain Schema](api-reference/domain-schema/README.md)
-
-## Blogs
-- [Why We Built a Unified Payment Integration Library](blogs/why-we-built-a-unified-payment-integration-library.md)

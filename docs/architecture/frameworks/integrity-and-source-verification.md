@@ -11,9 +11,6 @@ Prism provides strong **run-time checks** to eliminate both risks. This section 
 | **Integrity** | Amount, currency, and transaction ID match your records | Data tampering |
 | **Source** | Cryptographic signature using shared secrets | Impersonation, forged webhooks |
 
-## What are the risks?
-- Interim of the implementation
-
 ### Data Tampering (Integrity Risk)
 
 An attacker intercepting a webhook can modify the payload before it reaches your server. The attacker will be able to exploit by:
@@ -27,8 +24,6 @@ It is possible for attackers can forge webhooks that appear to come from payment
 - Mimicking refund notifications, to manipulate your accounting systems
 
 Prism provides built-in verification for both risks, and it is strongly recommended to enable them and test them before using on production.
-
----
 
 ## How Prism helps with Integrity and Source Verification?
 
@@ -205,5 +200,4 @@ const client = new ConnectorServiceClient({
 
 ## Next Steps
 
-- [Source Verification](./source-verification.md) — Verify redirect responses and 3DS callbacks
 - [Error Handling](../architecture/error-handling.md) — Handle verification failures in your application
