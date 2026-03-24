@@ -25,73 +25,38 @@ Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **inde
 
 | PCI Mode for Payment Clients | PCI Scope | Description |
 |------|-----------|-------------|
-| **Tokenize Payment Client** | You do not have to manage PCI compliance | Payment processor vault handles card data |
+| **Tokenized Payment Client** | You do not have to manage PCI compliance | Payment processor vault handles card data |
+| **Proxied Payment Client** | You do not have to manage PCI compliance | Third-party vault handles card data |
 | **Standard Payment Client** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
-| **Proxy Payment Client** | You do not have to manage PCI compliance | Third-party vault handles card data |
 
 ---
 
-## Direct
+## Tokenized Payment Client
 
-In this mode, your application receives and processes raw card data. You are responsible for PCI DSS compliance.
-
-### When to Use
-- You have existing PCI DSS certification
-- You need direct control over card data
-- You want to minimize third-party dependencies
-
-### Flow Diagram
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant FE as Merchant Frontend
-    participant BE as Merchant Backend
-    participant Prism as Connector Service
-    participant PSP as Payment Provider
-
-    Note over FE,PSP: PCI-Enabled Mode - Merchant handles card data
-
-    FE->>FE: Collect card details
-    FE->>BE: Send card data + payment request
-    BE->>Prism: authorize(card_number, exp, cvc, amount)
-    Prism->>Prism: Transform to PSP format
-    Prism->>PSP: POST /payment_intents (PSP-specific payload)
-    PSP-->>Prism: Authorization response
-    Prism-->>BE: Unified response
-    BE-->>FE: Payment result
-```
-
-### Key Characteristics
-- Raw card data flows through your infrastructure
-- Full PCI DSS compliance required
-- Direct control over payment flow
+In this mode, you will leverage the payment processor's hosted card element to collect and tokenize card data. The processor vault handles card data, significantly reducing your PCI scope.
+- Card data is tokenized via processor-hosted elements
+- Processor vault handles raw card data
+- You only handle the processor token (e.g., `pm_xxx`, `src_xxx`)
 - No additional vault subscription needed
+- Works with Stripe, Adyen, and other processors that provide hosted card elements
 
----
-
-## Standard
-
-In this mode, you use the payment processor's hosted card element to collect and tokenize card data. The processor vault handles card data, significantly reducing your PCI scope.
-
-### When to Use
-- You want minimal PCI compliance burden (SAQ A or A-EP)
+### When to use the Tokenized Payment Client?
+- You want zero PCI compliance burden
 - You prefer using processor-hosted fields for card collection
-- You're starting with a single payment processor
+- You're starting off with a single payment processor, with future plans to enable more processors
 
 ### Flow Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant FE as Merchant Frontend
-    participant BE as Merchant Backend
+    participant FE as Your Frontend
+    participant BE as Your Backend
     participant PSP as Payment Provider (Stripe/Adyen)
     participant Prism as Prism
 
     Note over FE,PSP: Standard Mode - PSP handles card data
 
-    rect rgb(200, 220, 255)
         Note over FE,PSP: Step 1-2: Create Order & Get Session Token
         FE->>BE: Request payment session
         BE->>Prism: createOrder(amount, currency)
@@ -101,7 +66,6 @@ sequenceDiagram
         BE-->>FE: session_token
     end
 
-    rect rgb(200, 220, 255)
         Note over FE,PSP: Step 3-5: Tokenize Card via Processor Element
         FE->>FE: Initialize processor card element (Stripe Elements/Adyen Card Component)
         FE->>PSP: Render card input fields
@@ -109,7 +73,6 @@ sequenceDiagram
         PSP-->>FE: processor_token (payment_method_id)
     end
 
-    rect rgb(200, 220, 255)
         Note over FE,PSP: Step 6-10: Authorize with Processor Token
         FE->>BE: Send processor_token + payment request
         BE->>Prism: authorize(processor_token, amount)
@@ -121,21 +84,13 @@ sequenceDiagram
     end
 ```
 
-### Key Characteristics
-- Card data is tokenized via processor-hosted elements
-- Processor vault handles raw card data
-- You only handle the processor token (e.g., `pm_xxx`, `src_xxx`)
-- Minimal PCI scope (SAQ A or A-EP)
-- No additional vault subscription needed
-- Works with Stripe, Adyen, and other processors that provide hosted card elements
-
 ---
 
-## Proxy mode
+## Proxied Payment Client
 
 In this mode, a third-party vault handles card data. Your application only handles tokens, significantly reducing PCI scope.
 
-### When to Use
+### When to Use the Proxied Payment Client?
 - You want to minimize PCI compliance burden
 - You prefer not to handle raw card data
 
@@ -143,20 +98,20 @@ In this mode, a third-party vault handles card data. Your application only handl
 
 In general there are two types of Proxy pattern and Prism supports both:
 
-| Proxy Pattern | You Send | UCS Handles | Popular Vault Providers |
+| Proxy Pattern | You Send | Prism Handles | Popular Vault Providers |
 |---------------|----------|-------------|-------------------------|
-| **[Network Proxy](./network-proxy.md)** | Token to UCS | Routes to proxy URL; proxy detokenizes transparently | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
-| **[Application Proxy](./application-proxy.md)** | Token to UCS | Transforms token into vault-specific format (headers, expressions, or wrapped requests) | **Hyperswitch Vault**, **TokenEx**, **Basis Theory** |
+| **[Network Proxy](./network-proxy.md)** | Token | Routing to proxy URL; proxy detokenizes transparently | **VGS**: URL-based routing (`tntxxx.sandbox.verygoodproxy.com`)<br>**Evervault**: HTTP CONNECT relay with client-side encryption |
+| **[Application Proxy](./application-proxy.md)** | Token | Transforming token into vault-specific format (headers, expressions, or wrapped requests) | **Hyperswitch Vault**, **TokenEx**, **Basis Theory** |
 
 ### Flow Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant FE as Merchant Frontend
+    participant FE as Your Frontend
     participant VSDK as Vault SDK
     participant Vault as PCI Vault
-    participant BE as Merchant Backend
+    participant BE as Your Backend
     participant Prism as Prism
     participant PSP as Payment Provider
 
@@ -186,6 +141,45 @@ sequenceDiagram
 
 ---
 
+## Standard Payment Client
+
+In this mode, your application receives and processes raw card data. You will have to self-manage the PCI DSS compliance.
+
+### When to use the Standard Payment Client?
+- You have existing PCI DSS certification
+- You need direct control over card data
+- You want to minimize third-party dependencies
+
+### Flow Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant FE as Your Frontend
+    participant BE as Your Backend
+    participant Prism as Connector Service
+    participant PSP as Payment Provider
+
+    Note over FE,PSP: PCI-Enabled Mode - Your handles card data
+
+    FE->>FE: Collect card details
+    FE->>BE: Send card data + payment request
+    BE->>Prism: authorize(card_number, exp, cvc, amount)
+    Prism->>Prism: Transform to PSP format
+    Prism->>PSP: POST /payment_intents (PSP-specific payload)
+    PSP-->>Prism: Authorization response
+    Prism-->>BE: Unified response
+    BE-->>FE: Payment result
+```
+
+### Key Characteristics
+- Raw card data flows through your infrastructure
+- Full PCI DSS compliance required
+- Direct control over payment flow
+- No additional vault subscription needed
+
+---
+
 ## Which PCI mode to choose for which use case?
 
 | Use Case | Recommended Mode | Rationale |
@@ -195,15 +189,3 @@ sequenceDiagram
 | **Expanding Multi-PSP strategy without changing your existing vault vendor** | Proxy mode | Prism can help minimize your development effort while scaling to multiple processors |
 | **Marketplace/SaaS platform supporting multi-PSP** | Standard | Prism can help connect to multiple PSPs with minimal coding and maintenance effort |
 | **Enterprise with existing PCI certification** | Direct | Leverage existing investment into PCI compliance and maintain full control |
-
-
-
-## Documentation Index
-
-| Document | Description |
-|----------|-------------|
-| [README.md](./README.md) | This file—overview and comparison |
-| [network-proxy.md](./network-proxy.md) | VGS, Evervault integration (zero code changes) |
-| [application-proxy.md](./application-proxy.md) | Basis Theory, TokenEx, Hyperswitch Vault integration (UCS handles routing) |
-
----
