@@ -61,9 +61,10 @@
 
 syntax = "proto3";
 
-package ucs.v2;
+package types;
 
 import "payment.proto";
+import "payouts.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 

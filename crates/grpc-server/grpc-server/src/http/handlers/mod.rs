@@ -1,4 +1,3 @@
-pub mod composite;
 pub mod disputes;
 pub mod health;
 pub mod macros;

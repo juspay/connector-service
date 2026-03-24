@@ -6,11 +6,8 @@ use common_utils::events::FlowName;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::VerifyWebhookSource,
-    connector_types::{
-        PaymentFlowData, VerifyWebhookSourceFlowData,
-    },
-    router_data::ConnectorSpecificAuth,
-    errors::ApplicationErrorResponse,
+    connector_types::VerifyWebhookSourceFlowData,
+    router_data::ConnectorSpecificConfig,
     payment_method_data::DefaultPCIHolder,
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
@@ -22,13 +19,10 @@ use external_services::service::EventProcessingParams;
 use grpc_api_types::payments::{
     event_service_server::EventService, EventServiceHandleRequest, EventServiceHandleResponse,
 };
-use interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2,
-    verification::ConnectorSourceVerificationSecrets,
-};
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use ucs_env::{
     configs::Config,
-    error::{ErrorSwitch, IntoGrpcStatus, ResultExtGrpc},
+    error::{IntoGrpcStatus, ResultExtGrpc},
 };
 
 #[derive(Debug, Clone)]
@@ -67,7 +61,7 @@ impl EventService for EventServiceImpl {
                     let metadata_payload = request_data.extracted_metadata;
                     let connector = metadata_payload.connector;
                     let _request_id = &metadata_payload.request_id;
-                    let connector_auth_details = &metadata_payload.connector_auth_type;
+                    let connector_config = &metadata_payload.connector_config;
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)
@@ -102,7 +96,7 @@ impl EventService for EventServiceImpl {
                             &connector_data,
                             &request_details,
                             webhook_secrets.clone(),
-                            connector_auth_details,
+                            connector_config,
                             &metadata_payload,
                             &service_name_clone,
                         )
@@ -113,7 +107,7 @@ impl EventService for EventServiceImpl {
                             .verify_webhook_source(
                                 request_details.clone(),
                                 webhook_secrets.clone(),
-                                Some(connector_auth_details.clone()),
+                                Some(connector_config.clone()),
                             )
                         {
                             Ok(result) => result,
@@ -133,7 +127,7 @@ impl EventService for EventServiceImpl {
                             connector_data,
                             request_details,
                             webhook_secrets,
-                            Some(connector_auth_details.clone()),
+                            Some(connector_config.clone()),
                             source_verified,
                         )
                         .into_grpc_status()?;
@@ -153,7 +147,7 @@ async fn verify_webhook_source_external(
     connector_data: &ConnectorData<DefaultPCIHolder>,
     request_details: &domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: &ConnectorSpecificAuth,
+    connector_config: &ConnectorSpecificConfig,
     metadata_payload: &utils::MetadataPayload,
     service_name: &str,
 ) -> Result<bool, tonic::Status> {
@@ -175,6 +169,7 @@ async fn verify_webhook_source_external(
         webhook_headers: request_details.headers.clone(),
         webhook_body: request_details.body.clone(),
         merchant_secret,
+        webhook_uri: None,
     };
 
     let verify_webhook_router_data = RouterDataV2::<
@@ -185,7 +180,7 @@ async fn verify_webhook_source_external(
     > {
         flow: std::marker::PhantomData,
         resource_common_data: verify_webhook_flow_data,
-        connector_auth_type: connector_auth_details.clone(),
+        connector_config: connector_config.clone(),
         request: verify_webhook_request,
         response: Err(ErrorResponse::default()),
     };
