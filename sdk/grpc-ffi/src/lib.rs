@@ -310,6 +310,8 @@ pub unsafe extern "C" fn hyperswitch_grpc_call(
 #[no_mangle]
 pub unsafe extern "C" fn hyperswitch_grpc_free(ptr: *mut u8, len: u32) {
     if !ptr.is_null() {
+        // SAFETY: Caller guarantees `ptr` was returned by `hyperswitch_grpc_call`
+        // and `len` matches the `out_len` value written by that call.
         unsafe {
             drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
                 ptr,
