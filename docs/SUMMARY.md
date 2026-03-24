@@ -9,28 +9,23 @@
 
 ## Architecture
 - [Architecture Overview](architecture/README.md)
-- [PCI Compliance](architecture/compliance/compliance.md)
-- [Versioning](architecture/versioning.md)
-- [Core Components](architecture/concepts/core-components.md)
-- [Connector Settings and Overrides](architecture/concepts/connector-settings-and-overrides.md)
-- [Connectors Services Subservices Methods](architecture/concepts/connectors-services-subservices-methods.md)
-- [Environment Settings](architecture/concepts/environment-settings.md)
-- [Error Handling](architecture/concepts/error-handling.md)
-- [Error Mapping](architecture/concepts/error-mapping.md)
-- [ID and Object Modelling](architecture/concepts/id-and-object-modelling.md)
-- [Modes of Usage](architecture/concepts/library-modes-of-usage.md)
-- [Specs and DSL](architecture/concepts/specs-and-dsl.md)
-
-### Frameworks
-- [Integrity and Source Verification](architecture/frameworks/integrity-and-source-verification.md)
-- [Money Struct](architecture/frameworks/money-struct.md)
-
-### Autogeneration Frameworks
-- [Code Generation](architecture/autogeneration-frameworks/code-generation.md)
-- [Docs Generation](architecture/autogeneration-frameworks/docs-generation.md)
-- [SDK Generation](architecture/autogeneration-frameworks/sdk-generation.md)
-- [Test Generation](architecture/autogeneration-frameworks/test-generation.md)
-
+  - [Core Components](architecture/concepts/core-components.md)
+  - [PCI Compliance](architecture/compliance/compliance.md)
+  - [Connector Settings and Overrides](architecture/concepts/connector-settings-and-overrides.md)
+  - [Connectors, Services and Methods](architecture/concepts/connectors-services-subservices-methods.md)
+  - [Environment Settings](architecture/concepts/environment-settings.md)
+  - [Error Handling](architecture/concepts/error-handling.md)
+  - [Error Mapping](architecture/concepts/error-mapping.md)
+  - [ID and Object Modelling](architecture/concepts/id-and-object-modelling.md)
+  - [Modes of Usage](architecture/concepts/library-modes-of-usage.md)
+  - [Domain specific language](architecture/concepts/specs-and-dsl.md)
+  - [Integrity and Source Verification](architecture/frameworks/integrity-and-source-verification.md)
+  - [Money Struct](architecture/frameworks/money-struct.md)
+  - [Versioning](architecture/versioning.md)
+  - [Code Generation](architecture/autogeneration-frameworks/code-generation.md)
+  - [Docs Generation](architecture/autogeneration-frameworks/docs-generation.md)
+  - [SDK Generation](architecture/autogeneration-frameworks/sdk-generation.md)
+  - [Test Generation](architecture/autogeneration-frameworks/test-generation.md)
 
 ## API Reference
 - [API Reference Overview](api-reference/README.md)

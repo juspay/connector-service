@@ -256,25 +256,29 @@ jobs:
 
           echo "Generated prism/SUMMARY.md"
 
-          # Update root SUMMARY.md to include PRISM section
+          # Update root SUMMARY.md to include PRISM section with full structure
           if [ -f "SUMMARY.md" ]; then
             # Check if PRISM section already exists
             if grep -q "## PRISM" SUMMARY.md; then
-              echo "PRISM section already exists in root SUMMARY.md"
-            else
-              # Add PRISM section at the end of root SUMMARY.md
-              cat >> SUMMARY.md << 'PRISM_SECTION'
-
-          ## PRISM
-          - [Overview](prism/README.md)
-          - [Getting Started](prism/getting-started/installation.md)
-          - [Architecture](prism/architecture/README.md)
-          - [API Reference](prism/api-reference/README.md)
-          - [Connectors](prism/connectors/README.md)
-          - [SDKs](prism/sdks/node/README.md)
-          PRISM_SECTION
-              echo "Added PRISM section to root SUMMARY.md"
+              echo "PRISM section already exists in root SUMMARY.md - removing old section"
+              # Remove existing PRISM section (from ## PRISM to end of file or next ## at same level)
+              sed -i '/^## PRISM$/,$d' SUMMARY.md
             fi
+
+            # Generate full PRISM section from local SUMMARY.md with prism/ prefix
+            echo "" >> SUMMARY.md
+            echo "## PRISM" >> SUMMARY.md
+
+            # Copy docs/SUMMARY.md content (skip # Summary header), add prism/ prefix to all links
+            # Also increase heading levels by one (## -> ###, ### -> ####, #### -> #####)
+            # Order matters: process higher levels first to avoid double-replacement
+            tail -n +2 ../docs/SUMMARY.md | \
+              sed 's/^#### /##### /g; s/^### /#### /g; s/^## /### /g; s/](/](prism\//g' >> SUMMARY.md
+
+            echo "Added full PRISM section to root SUMMARY.md"
+            echo ""
+            echo "PRISM section preview (first 30 lines):"
+            grep -A 30 "^## PRISM$" SUMMARY.md | head -30
           else
             echo "WARNING: Root SUMMARY.md not found"
           fi
