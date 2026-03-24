@@ -90,6 +90,7 @@ mod tests {
                     review_key: None,
                     base_url: None,
                     dispute_base_url: None,
+                    endpoint_prefix: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,
@@ -286,6 +287,7 @@ mod tests {
                     review_key: None,
                     base_url: None,
                     dispute_base_url: None,
+                    endpoint_prefix: None,
                 },
                 request: PaymentsAuthorizeData {
                     payment_channel: None,

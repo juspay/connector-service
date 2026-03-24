@@ -51,6 +51,8 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
         ConnectorEnum::Mifinity => ConnectorSpecificConfig::Mifinity {
             key: k(),
             base_url: None,
+            brand_id: None,
+            destination_account_number: None,
         },
         ConnectorEnum::Multisafepay => ConnectorSpecificConfig::Multisafepay {
             api_key: k(),
@@ -199,6 +201,8 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             api_key: k(),
             tenant_id: s(),
             base_url: None,
+            client_merchant_reference_id: None,
+            merchant_payment_method_route_id: None,
         },
         ConnectorEnum::Ppro => ConnectorSpecificConfig::Ppro {
             api_key: k(),
@@ -247,12 +251,25 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             base_url: None,
             merchant_account_id: None,
             merchant_config_currency: None,
+            apple_pay_supported_networks: vec![],
+            apple_pay_merchant_capabilities: vec![],
+            apple_pay_label: None,
+            gpay_merchant_name: None,
+            gpay_merchant_id: None,
+            gpay_allowed_auth_methods: vec![],
+            gpay_allowed_card_networks: vec![],
+            paypal_client_id: None,
+            gpay_gateway_merchant_id: None,
         },
         ConnectorEnum::Truelayer => ConnectorSpecificConfig::Truelayer {
             client_id: id(),
             client_secret: s(),
             base_url: None,
             secondary_base_url: None,
+            merchant_account_id: None,
+            account_holder_name: None,
+            private_key: None,
+            kid: None,
         },
         ConnectorEnum::Worldpay => ConnectorSpecificConfig::Worldpay {
             username: u(),
@@ -267,6 +284,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             review_key: None,
             base_url: None,
             dispute_base_url: None,
+            endpoint_prefix: None,
         },
         ConnectorEnum::Bankofamerica => ConnectorSpecificConfig::BankOfAmerica {
             api_key: k(),
@@ -340,6 +358,7 @@ pub(crate) fn dummy_auth(connector: &ConnectorEnum) -> ConnectorSpecificConfig {
             access_token: Secret::new("probe_access_token".to_string()),
             campaign_id: id(),
             base_url: None,
+            site: None,
         },
         ConnectorEnum::Hyperpg => ConnectorSpecificConfig::Hyperpg {
             username: u(),
