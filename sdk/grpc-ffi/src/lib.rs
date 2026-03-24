@@ -144,6 +144,16 @@ fn encode_err(msg: &str) -> Vec<u8> {
 
 // ── gRPC dispatch (reuses cached channel) ────────────────────────────────────
 
+/// Dispatch a gRPC call to the appropriate service method.
+///
+/// This function routes the request to the correct gRPC client based on the method name,
+/// decodes the protobuf request, makes the gRPC call, and returns the encoded response.
+///
+/// # Errors
+/// Returns a `String` error if:
+/// - The method is unknown
+/// - Request decoding fails
+/// - The gRPC call fails
 async fn dispatch(method: &str, cfg: GrpcConfigInput, req_bytes: &[u8]) -> Result<Vec<u8>, String> {
     let headers = build_headers(&cfg);
     let channel = get_channel(&cfg.endpoint)?;
