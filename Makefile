@@ -134,7 +134,7 @@ docs-check:
 	python3 scripts/generators/docs/generate.py --check
 
 # Shared shell function: detect AI editors, prompt if multiple, set up symlink
-define DETECT_EDITOR
+define AI_AGENT
 	editors=""; \
 	command -v claude >/dev/null 2>&1 && editors="$$editors claude"; \
 	command -v opencode >/dev/null 2>&1 && editors="$$editors opencode"; \
@@ -183,7 +183,7 @@ endef
 
 ## Launch AI editor with skills
 ai:
-	@$(DETECT_EDITOR); \
+	@$(AI_AGENT); \
 	case $$choice in \
 		claude|opencode|codex) exec $$choice ;; \
 		cursor|windsurf) exec $$choice . ;; \
@@ -191,22 +191,22 @@ ai:
 
 ## Generate a technical specification for a connector
 gen-tech-spec:
-	@$(DETECT_EDITOR); \
+	@$(AI_AGENT); \
 	$(call LAUNCH_SKILL,generate-tech-spec)
 
 ## Implement a new connector from scratch
 new-connector:
-	@$(DETECT_EDITOR); \
+	@$(AI_AGENT); \
 	$(call LAUNCH_SKILL,new-connector)
 
 ## Add payment flow(s) to an existing connector
 add-flow:
-	@$(DETECT_EDITOR); \
+	@$(AI_AGENT); \
 	$(call LAUNCH_SKILL,add-connector-flow)
 
 ## Add payment method support to an existing connector
 add-payment-method:
-	@$(DETECT_EDITOR); \
+	@$(AI_AGENT); \
 	$(call LAUNCH_SKILL,add-payment-method)
 
 ## Show this help
