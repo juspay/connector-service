@@ -119,13 +119,10 @@ impl GrpcClient {
     ///
     /// # Panics
     /// Panics if the config fails validation (empty endpoint, connector, etc.).
-    /// Use [`GrpcConfig::validate`] to check config before calling this method.
     pub async fn new(config: GrpcConfig) -> Result<Self, tonic::transport::Error> {
-        // Validate config before attempting connection
+        // Validate config before attempting connection - panic on invalid config
         if let Err(e) = config.validate() {
-            return Err(tonic::transport::Error::from(
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, e)
-            ));
+            panic!("GrpcConfig validation failed: {e}");
         }
         let endpoint = config.endpoint.clone();
         let headers = Arc::new(config.into_headers());
