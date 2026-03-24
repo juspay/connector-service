@@ -1,6 +1,6 @@
 use common_enums;
 use common_utils::consts;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::PproRouterData;
@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors,
     mandates::MandateDataType,
-    payment_method_data::PaymentMethodDataTypes,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
 };
@@ -53,6 +53,41 @@ pub struct PproPaymentsRequest {
     pub consumer: Option<PproConsumer>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication_settings: Option<Vec<PproAuthenticationSettings>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instrument: Option<PproPaymentInstrument>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auto_capture: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhooks_url: Option<String>,
+}
+
+/// Instrument object sent to PPRO for card payments.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PproPaymentInstrument {
+    pub r#type: PproPaymentInstrumentType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card: Option<PproCardDetails>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PproPaymentInstrumentType {
+    RawCard,
+}
+
+/// Card details for PPRO RAW_CARD instrument type.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PproCardDetails {
+    pub number: Secret<String>,
+    pub cvv: Secret<String>,
+    pub expiry_month: Secret<String>,
+    pub expiry_year: Secret<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub holder_name: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brand: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -97,6 +132,23 @@ pub struct PproConsumer {
     pub email: Option<common_utils::pii::Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub country: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub billing_address: Option<PproBillingAddress>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PproBillingAddress {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address_line1: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub city: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub postal_code: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub country: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -123,29 +175,54 @@ where
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let payment_method = match router_data.request.payment_method_type {
-            Some(common_enums::PaymentMethodType::BancontactCard) => "BANCONTACT".to_string(),
-            Some(common_enums::PaymentMethodType::UpiIntent) => "UPI".to_string(),
-            Some(common_enums::PaymentMethodType::AliPay) => "ALIPAY".to_string(),
-            Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
-            Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
-            Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
-            Some(common_enums::PaymentMethodType::Wero) => "WERO".to_string(),
-            Some(common_enums::PaymentMethodType::Ideal) => "IDEAL".to_string(),
-            Some(common_enums::PaymentMethodType::Trustly) => "TRUSTLY".to_string(),
-            Some(common_enums::PaymentMethodType::Blik) => "BLIK".to_string(),
-            Some(ref pm) => {
-                return Err(errors::ConnectorError::NotSupported {
-                    message: format!("payment method {pm} is not supported by PPRO"),
-                    connector: "ppro",
-                }
-                .into())
+
+        // Determine payment_method string and optional instrument from payment method data
+        let (payment_method, instrument) = match &router_data.request.payment_method_data {
+            PaymentMethodData::Card(card_data) => {
+                let card_network = card_data.card_network.as_ref().map(|n| n.to_string());
+                let instrument = PproPaymentInstrument {
+                    r#type: PproPaymentInstrumentType::RawCard,
+                    card: Some(PproCardDetails {
+                        number: Secret::new(card_data.card_number.peek().to_string()),
+                        cvv: card_data.card_cvc.clone(),
+                        expiry_month: card_data.card_exp_month.clone(),
+                        expiry_year: card_data.get_expiry_year_4_digit(),
+                        holder_name: card_data.card_holder_name.clone(),
+                        brand: card_network,
+                    }),
+                };
+                ("CARD".to_string(), Some(instrument))
             }
-            None => {
-                return Err(errors::ConnectorError::MissingRequiredField {
-                    field_name: "payment_method_type",
-                }
-                .into())
+            _ => {
+                // Existing payment method type mapping for non-card flows
+                let pm = match router_data.request.payment_method_type {
+                    Some(common_enums::PaymentMethodType::BancontactCard) => {
+                        "BANCONTACT".to_string()
+                    }
+                    Some(common_enums::PaymentMethodType::UpiIntent) => "UPI".to_string(),
+                    Some(common_enums::PaymentMethodType::AliPay) => "ALIPAY".to_string(),
+                    Some(common_enums::PaymentMethodType::WeChatPay) => "WECHATPAY".to_string(),
+                    Some(common_enums::PaymentMethodType::MbWay) => "MBWAY".to_string(),
+                    Some(common_enums::PaymentMethodType::Satispay) => "SATISPAY".to_string(),
+                    Some(common_enums::PaymentMethodType::Wero) => "WERO".to_string(),
+                    Some(common_enums::PaymentMethodType::Ideal) => "IDEAL".to_string(),
+                    Some(common_enums::PaymentMethodType::Trustly) => "TRUSTLY".to_string(),
+                    Some(common_enums::PaymentMethodType::Blik) => "BLIK".to_string(),
+                    Some(ref pm) => {
+                        return Err(errors::ConnectorError::NotSupported {
+                            message: format!("payment method {pm} is not supported by PPRO"),
+                            connector: "ppro",
+                        }
+                        .into())
+                    }
+                    None => {
+                        return Err(errors::ConnectorError::MissingRequiredField {
+                            field_name: "payment_method_type",
+                        }
+                        .into())
+                    }
+                };
+                (pm, None)
             }
         };
 
@@ -154,29 +231,18 @@ where
             value: common_utils::MinorUnit::new(router_data.request.amount.get_amount_as_i64()),
         };
 
+        // For card payments, autoCapture maps from capture_method.
+        // For non-card (redirect) flows, autoCapture is not applicable.
+        let auto_capture = if instrument.is_some() {
+            Some(matches!(
+                router_data.request.capture_method,
+                Some(common_enums::CaptureMethod::Automatic) | None
+            ))
+        } else {
+            None
+        };
+
         // Currently only Redirect authentication is requested.
-        // TODO: When adding other authentication flows, extend this list based on payment method:
-        //
-        // authentication_settings.push(PproAuthenticationSettings {
-        //     r#type: PproAuthenticationType::ScanCode,
-        //     settings: None,
-        // });
-        // authentication_settings.push(PproAuthenticationSettings {
-        //     r#type: PproAuthenticationType::MultiFactor,
-        //     settings: None,
-        // });
-        // authentication_settings.push(PproAuthenticationSettings {
-        //     r#type: PproAuthenticationType::AppNotification,
-        //     settings: None,
-        // });
-        // authentication_settings.push(PproAuthenticationSettings {
-        //     r#type: PproAuthenticationType::AppIntent,
-        //     settings: Some(PproAuthSettingsDetails {
-        //         return_url: None,
-        //         scan_by: None,
-        //         mobile_intent_uri: router_data.request.router_return_url.clone(),
-        //     }),
-        // });
         let authentication_settings =
             router_data
                 .request
@@ -195,11 +261,28 @@ where
             .resource_common_data
             .get_billing_address()
             .ok()
-            .map(|billing| PproConsumer {
-                name: billing.get_full_name().ok(),
-                email: router_data.resource_common_data.get_billing_email().ok(),
-                country: billing.country.map(|c| c.to_string()),
+            .map(|billing| {
+                let billing_address = if instrument.is_some() {
+                    // Include billing address for card payments
+                    Some(PproBillingAddress {
+                        address_line1: billing.line1.clone(),
+                        city: billing.city.as_ref().map(|c| c.peek().to_string()),
+                        state: billing.state.clone(),
+                        postal_code: billing.zip.clone(),
+                        country: billing.country.map(|c| c.to_string()),
+                    })
+                } else {
+                    None
+                };
+                PproConsumer {
+                    name: billing.get_full_name().ok(),
+                    email: router_data.resource_common_data.get_billing_email().ok(),
+                    country: billing.country.map(|c| c.to_string()),
+                    billing_address,
+                }
             });
+
+        let webhooks_url = router_data.request.webhook_url.clone();
 
         Ok(Self {
             payment_method,
@@ -212,6 +295,9 @@ where
             amount,
             consumer,
             authentication_settings,
+            instrument,
+            auto_capture,
+            webhooks_url,
         })
     }
 }
@@ -947,6 +1033,7 @@ where
                 }),
                 email: router_data.request.email.clone(),
                 country: billing.country.map(|c| c.to_string()),
+                billing_address: None,
             });
 
         let start_date = router_data
@@ -1059,7 +1146,7 @@ where
         // iDEAL requires debitMandateId for recurring agreements
         Some(common_enums::PaymentMethodType::Ideal) => {
             let bank_name = match &router_data.request.payment_method_data {
-                domain_types::payment_method_data::PaymentMethodData::BankRedirect(
+                PaymentMethodData::BankRedirect(
                     domain_types::payment_method_data::BankRedirectData::Ideal { bank_name },
                 ) => *bank_name,
                 _ => None,
