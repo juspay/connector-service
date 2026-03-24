@@ -1,21 +1,22 @@
-# PCI Compliance with Connector Service
+# PCI Compliance
 
-> How connector-service handles PCI compliance through multiple integration patterns
+## How Prism handles compliance?
+Hyperswitch Prism offers multiple flavors to manage PCI DSS (Payment Card Industry Data Security Standard) compliance. Prism provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of three modes:
 
----
+- Outsource the PCI data handling to payment processors  (example: Stripe, Adyen, Braintree etc.,), so that you dont have to manage compliance
+- Outsource the PCI data handling to processor agnostic PCI vaults (example: VGS, Tokenex, Juspay etc.,)
+- Self-manage the PCI compliance by handling raw card data
 
-## Overview
 
-PCI DSS (Payment Card Industry Data Security Standard) compliance is not just a configuration option—it's a **business-critical architectural decision** that affects:
+The choice you make here determines your risk profile, operational burden, and agility. It affects:
 
 1. **Security liability** — Handling raw card data makes you responsible for breaches
 2. **Compliance cost** — Full SAQ D certification costs $50K–$500K+ annually in audits, infrastructure, and security tools
 3. **Time to market** — Achieving PCI certification can take 6–12 months
 4. **Operational overhead** — Ongoing security patches, monitoring, and audits
 
-The choice you make here determines your risk profile, operational burden, and agility.
 
-Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **independent third-party vault** (VGS, Basis Theory, TokenEx, Hyperswitch Vault), or **self-managed PCI compliance** with your own card vault—**Connector Service has you covered**.
+Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **independent third-party vault** (VGS, Basis Theory, TokenEx, Juspay), or **self-managed PCI compliance** with your own card vault—**Connector Service has you covered**.
 
 | Scenario | Your Strategy | Connector Service Solves |
 |----------|---------------|--------------------------|
@@ -23,16 +24,16 @@ Whether you choose a **PSP-native vault** (Stripe Vault, Adyen Vault), an **inde
 | **Independent Third-Party Vault** | You use VGS, Basis Theory, TokenEx, or Hyperswitch Vault as a vault layer | Supports two proxy patterns (Network, Application) with zero to minimal code changes |
 | **In-House Vault** | You have your own PCI-certified card vault infrastructure | PCI-Enabled Mode lets you send raw card data through while maintaining full control |
 
-Connector Service (connector-service) provides flexible PCI compliance options for merchants. Depending on your compliance requirements and infrastructure, you can operate in one of two modes:
-
-| Mode | PCI Scope | Description |
+| PCI Mode | PCI Scope | Description |
 |------|-----------|-------------|
-| **PCI-Enabled Mode** | Full SAQ D | Your application handles raw card data |
-| **PCI-Disabled Mode** | Reduced (SAQ A/A-EP) | Third-party vault handles card data |
+| **Standard** | You do not have to manage PCI compliance | Payment processor vault handles card data |
+| **Proxy** | You do not have to manage PCI compliance | Third-party vault handles card data |
+| **Direct** | You will have to self-manage PCI compliance with full SAQ D certification | Your application handles raw card data |
+
 
 ---
 
-## Mode 1: PCI-Enabled Mode
+## Direct
 
 In this mode, your application receives and processes raw card data. You are responsible for PCI DSS compliance.
 
@@ -48,18 +49,18 @@ sequenceDiagram
     autonumber
     participant FE as Merchant Frontend
     participant BE as Merchant Backend
-    participant connector-service as Connector Service
+    participant Prism as Connector Service
     participant PSP as Payment Provider
 
     Note over FE,PSP: PCI-Enabled Mode - Merchant handles card data
 
     FE->>FE: Collect card details
     FE->>BE: Send card data + payment request
-    BE->>connector-service: authorize(card_number, exp, cvc, amount)
-    connector-service->>connector-service: Transform to PSP format
-    connector-service->>PSP: POST /payment_intents (PSP-specific payload)
-    PSP-->>connector-service: Authorization response
-    connector-service-->>BE: Unified response
+    BE->>Prism: authorize(card_number, exp, cvc, amount)
+    Prism->>Prism: Transform to PSP format
+    Prism->>PSP: POST /payment_intents (PSP-specific payload)
+    PSP-->>Prism: Authorization response
+    Prism-->>BE: Unified response
     BE-->>FE: Payment result
 ```
 
@@ -71,17 +72,78 @@ sequenceDiagram
 
 ---
 
-## Mode 2: PCI-Disabled Mode (Vault Integration)
+## Standard
+
+In this mode, you use the payment processor's hosted card element to collect and tokenize card data. The processor vault handles card data, significantly reducing your PCI scope.
+
+### When to Use
+- You want minimal PCI compliance burden (SAQ A or A-EP)
+- You prefer using processor-hosted fields for card collection
+- You're starting with a single payment processor
+
+### Flow Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant FE as Merchant Frontend
+    participant BE as Merchant Backend
+    participant PSP as Payment Provider (Stripe/Adyen)
+    participant Prism as Prism
+
+    Note over FE,PSP: Standard Mode - PSP handles card data
+
+    rect rgb(200, 220, 255)
+        Note over FE,PSP: Step 1-2: Create Order & Get Session Token
+        FE->>BE: Request payment session
+        BE->>Prism: createOrder(amount, currency)
+        Prism->>PSP: Create payment session
+        PSP-->>Prism: session_token (client_secret)
+        Prism-->>BE: session_token
+        BE-->>FE: session_token
+    end
+
+    rect rgb(200, 220, 255)
+        Note over FE,PSP: Step 3-5: Tokenize Card via Processor Element
+        FE->>FE: Initialize processor card element (Stripe Elements/Adyen Card Component)
+        FE->>PSP: Render card input fields
+        PSP->>PSP: Tokenize card data securely
+        PSP-->>FE: processor_token (payment_method_id)
+    end
+
+    rect rgb(200, 220, 255)
+        Note over FE,PSP: Step 6-10: Authorize with Processor Token
+        FE->>BE: Send processor_token + payment request
+        BE->>Prism: authorize(processor_token, amount)
+        Prism->>Prism: Transform to PSP format
+        Prism->>PSP: POST /payments (with processor_token)
+        PSP-->>Prism: Authorization response
+        Prism-->>BE: Unified response
+        BE-->>FE: Payment result
+    end
+```
+
+### Key Characteristics
+- Card data is tokenized via processor-hosted elements
+- Processor vault handles raw card data
+- You only handle the processor token (e.g., `pm_xxx`, `src_xxx`)
+- Minimal PCI scope (SAQ A or A-EP)
+- No additional vault subscription needed
+- Works with Stripe, Adyen, and other processors that provide hosted card elements
+
+---
+
+## Proxy mode
 
 In this mode, a third-party vault handles card data. Your application only handles tokens, significantly reducing PCI scope.
 
 ### When to Use
 - You want to minimize PCI compliance burden
 - You prefer not to handle raw card data
-- You want to outsource security to specialists
 
-### Requirement
-**You must subscribe to a third-party PCI vault service.** connector-service supports two integration patterns:
+**You will have to subscribe to a third-party PCI vault service.** 
+
+In general there are two types of Proxy pattern and Prism supports both:
 
 | Proxy Pattern | You Send | UCS Handles | Popular Vault Providers |
 |---------------|----------|-------------|-------------------------|
@@ -97,7 +159,7 @@ sequenceDiagram
     participant VSDK as Vault SDK
     participant Vault as PCI Vault
     participant BE as Merchant Backend
-    participant connector-service as Connector Service
+    participant Prism as Prism
     participant PSP as Payment Provider
 
     Note over FE,Vault: Frontend: Card Collection (Zero PCI Scope)
@@ -108,13 +170,13 @@ sequenceDiagram
 
     Note over BE,PSP: Backend: Payment Processing via UCS
     FE->>BE: Send vault_token + payment request
-    BE->>connector-service: authorize(vault_token, amount, connector)
-    Note over connector-service: UCS routes to proxy URL (Network)<br/>or transforms to vault format (Application)
-    connector-service->>Vault: Proxy request with token
+    BE->>Prism: authorize(vault_token, amount, connector)
+    Note over Prism: UCS routes to proxy URL (Network)<br/>or transforms to vault format (Application)
+    Prism->>Vault: Proxy request with token
     Vault->>PSP: Forward with detokenized card data
     PSP-->>Vault: Authorization response
-    Vault-->>connector-service: Return response
-    connector-service-->>BE: Unified response
+    Vault-->>Prism: Return response
+    Prism-->>BE: Unified response
     BE-->>FE: Payment result
 ```
 
@@ -126,215 +188,17 @@ sequenceDiagram
 
 ---
 
-## PCI Modes Explained
-
-### PCI-Enabled Mode (Full SAQ D)
-
-| Aspect | Details |
-|--------|---------|
-| **What happens** | Your application receives and transmits raw card data (PAN, CVV, expiry) |
-| **PCI Scope** | Full SAQ D — your entire infrastructure is in scope |
-| **When to use** | • You already have PCI DSS certification<br>• You operate your own card vault<br>• You need direct control over card data for compliance/regulatory reasons<br>• You want to minimize third-party dependencies |
-| **Trade-off** | Higher compliance burden, but maximum flexibility and control |
-
-### PCI-Disabled Mode (Reduced SAQ A/A-EP)
-
-| Aspect | Details |
-|--------|---------|
-| **What happens** | A third-party vault tokenizes card data; you only handle tokens |
-| **PCI Scope** | Reduced SAQ A or A-EP — card data never touches your servers |
-| **When to use** | • You want to minimize PCI compliance burden<br>• You prefer outsourcing security to specialists<br>• You need faster time-to-market without certification delays<br>• You use a PSP vault or independent vault provider |
-| **Trade-off** | Subscription cost for vault service, but drastically reduced compliance overhead |
-
----
-
-## Mapping Recommended PCI Modes to Use Cases
+## Which PCI mode to choose for which use case?
 
 | Use Case | Recommended Mode | Rationale |
 |----------|------------------|-----------|
-| **Early-stage startup, moving from single-PSP to multi-PSP** | PCI-Disabled | Launch quickly without 6–12 month certification delays |
-| **Expanding Multi-PSP strategy without changing your existing vault vendor** | PCI-Disabled + Independent Vault | Token portability across PSPs (e.g., TokenEx format-preserving tokens) |
-| **High-security requirements** | PCI-Enabled + In-House Vault | Full data sovereignty and audit control |
-| **Marketplace/SaaS platform supporting multi-PSP** | PCI-Disabled + Application Proxy | UCS handles multiple vault providers seamlessly |
-| **Enterprise with existing PCI certification** | PCI-Enabled | Leverage existing investment; maintain control |
-
----
-
-## The Confidence Factor
-
-Connector Service abstracts the complexity regardless of your PCI strategy. You integrate once with connector-service, and it handles:
-
-- **Token format translation** — PSP-specific tokens, vault tokens, or raw cards all normalize to a unified interface
-- **Proxy pattern selection** — Network or Application based on your vault provider
-- **Connector-level flexibility** — Use PCI-Enabled for your in-house vault in one region, PCI-Disabled with a third party vault provider in another
-
-Your PCI choice is a business decision—Connector Service ensures it's never a technical blocker.
-
----
-
-## Proxy Pattern Comparison
-
-Choose the right proxy pattern based on your requirements:
-
-| Aspect | [Network Proxy](./network-proxy.md) | [Application Proxy](./application-proxy.md) |
-|--------|-------------------------------------|---------------------------------------------|
-| **Providers** | VGS, Evervault | Basis Theory, TokenEx, Hyperswitch Vault |
-| **You send to UCS** | Token | Token |
-| **UCS transforms** | ❌ No—routes to proxy URL only | ✅ Yes—formats token for vault-specific protocol |
-| **Vault receives** | Token (transparent detokenization) | Token in vault format (headers/`{ }`/`{{ }}`/`{{$}}`) |
-| **Code Changes** | **None** | Minimal |
-| **PCI Scope** | SAQ A/A-EP ✅ | SAQ A/A-EP ✅ |
-
-**Key difference:** Both patterns send tokens to UCS. Network Proxy simply routes to the vault's proxy URL (the vault handles detokenization transparently). Application Proxy requires UCS to transform tokens into vault-specific formats—headers for TokenEx/Basis Theory, wrapped requests for Hyperswitch Vault.
-
----
-
-## Quick Decision Guide
-
-<details>
-<summary><b>Which Proxy Pattern Should I Use?</b></summary>
-
-Both patterns require you to **send tokens to UCS**. The difference is what UCS does with them:
-
-### Choose Network Proxy (VGS, Evervault) if:
-- ✅ You want **zero code changes**—UCS just routes to the proxy URL
-- ✅ You need the **fastest integration**
-- ✅ You already use VGS/Evervault infrastructure
-- ✅ You want **client-side encryption** (Evervault)
-
-**How it works:** You send `tok_sandbox_xxx` → UCS routes to `tntxxx.verygoodproxy.com` → VGS detokenizes transparently → PSP receives raw card data.
-
-### Choose Application Proxy (Basis Theory, TokenEx, Hyperswitch Vault) if:
-- ✅ You want **unified integration** regardless of vault provider
-- ✅ You prefer UCS to handle vault-specific token formatting
-- ✅ You want to switch vault providers without changing your code
-- ✅ You work with **multiple PSPs**
-
-**How it works:** You send `4242123456784242` → UCS transforms to vault format (adds `TX-URL` header + `{ }` markers for TokenEx) → Vault detokenizes → PSP receives raw card data.
-
-</details>
-
----
-
-## Code Example Comparison
-
-Here's how a payment call looks across all scenarios:
-
-<details>
-<summary><b>Scenario 1: Using independent third-party vault through Network Proxy (example: VGS)</b></summary>
-
-```bash
-# Change URL only—VGS handles detokenization automatically
-curl "https://tntSANDBOX.sandbox.verygoodproxy.com/v1/payment_intents" \
-  -H "Authorization: Bearer sk_test_xxx" \
-  -d "amount=1000" \
-  -d "currency=usd" \
-  -d "payment_method_data[card][number]=tok_sandbox_4242xxxxxxxx4242" \
-  -d "payment_method_data[card][exp_month]=12" \
-  -d "confirm=true"
-```
-</details>
-
-<details>
-<summary><b>Scenario 2: Using independent third-party vault through Application Proxy (example: Hyperswitch Vault, TokenEx, Basis Theory)</b></summary>
-
-```bash
-# Send tokens to UCS—UCS handles vault-specific routing and transformations
-curl "https://api.connector-service.juspay.net/payments" \
-  -H "Authorization: Bearer ${UCS_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 1000,
-    "currency": "USD",
-    "connector": "stripe",
-    "payment_method": {
-      "type": "card",
-      "card": {
-        "token": "pm_0196f252baa1736190bf0fc81b9651ea"
-      }
-    }
-  }'
-```
-
-**What happens behind the scenes:**
-- **Hyperswitch Vault**: UCS constructs wrapped request with `{{$variable}}` expressions
-- **TokenEx**: UCS adds `TX-URL` and `TX-Method` headers, wraps token in `{ }`
-- **Basis Theory**: UCS adds `BT-PROXY-URL` header, uses `{{ token.property }}` expressions
-
-</details>
-
-<details>
-<summary><b>Scenario 3: Using in-house vault with self-managed PCI compliance</b></summary>
-
-```bash
-# Direct to Stripe—your server sees raw card data
-curl "https://api.stripe.com/v1/payment_intents" \
-  -H "Authorization: Bearer sk_test_xxx" \
-  -d "amount=1000" \
-  -d "currency=usd" \
-  -d "payment_method_data[card][number]=4242424242424242" \
-  -d "payment_method_data[card][exp_month]=12" \
-  -d "confirm=true"
-```
-</details>
+| **Early-stage startup, starting with a single PSP** | Standard | Prism gives you the freedom to switch processors in the future when you need it |
+| **Early-stage business, moving from single-PSP to multi-PSP** | Proxy mode | Prism can help you scale to multiple processors, without locking all your customer cards with one payment processor |
+| **Expanding Multi-PSP strategy without changing your existing vault vendor** | Proxy mode | Prism can help minimize your development effort while scaling to multiple processors |
+| **Marketplace/SaaS platform supporting multi-PSP** | Standard | Prism can help connect to multiple PSPs with minimal coding and maintenance effort |
+| **Enterprise with existing PCI certification** | Direct | Leverage existing investment into PCI compliance and maintain full control |
 
 
----
-
-## Data Flow Comparison
-
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                         INHOUSE CARD VAULT                                       │
-│  Frontend → Backend (raw card) → connector-service (raw card) → Stripe (raw card)│
-│                                                                                  │
-│  PCI Scope: SAQ D (Full) ❌                                                      │
-└──────────────────────────────────────────────────────────────────────────────────┘
-
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                      NETWORK PROXY                                                    │
-│  Frontend → Backend (token) → UCS → Network Proxy → PSP                               │
-│                                    ↑                                                  │
-│              UCS routes to proxy URL only (no token transformation)                   │
-│              VGS/Evervault detokenizes transparently                                  │
-│                                                                                       │
-│  PCI Scope: SAQ A/A-EP ✅  Code Changes: None                                         │
-└───────────────────────────────────────────────────────────────────────────────────────┘
-
-┌───────────────────────────────────────────────────────────────────────────────────────┐
-│                   APPLICATION PROXY                                                   │
-│  Frontend → Backend (token) → UCS → Vault Proxy → PSP                                 │
-│                                    ↑                                                  │
-│              UCS transforms token → vault-specific format:                            │
-│              • TokenEx: `{token}` markers + TX-* headers                              │
-│              • Basis Theory: `{{token.property}}` + BT-PROXY-URL header               │
-│              • Hyperswitch: `{{$variable}}` in wrapped request body                   │
-│                                                                                       │
-│  PCI Scope: SAQ A/A-EP ✅  Works with: Basis Theory, TokenEx, Hyperswitch Vault       │
-└───────────────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Configuration Summary
-
-| Pattern | Config Key | Primary Setting | Providers |
-|---------|------------|-----------------|-----------|
-| Network Proxy | `vault.mode` | `network_proxy` | VGS, Evervault |
-| Application Proxy | `vault.mode` | `application_proxy` | Basis Theory, TokenEx, Hyperswitch Vault |
-
----
-
-## Next Steps
-
-1. **Choose your mode** based on PCI requirements
-2. **If PCI-Disabled**: Select a [proxy pattern](#proxy-pattern-comparison) based on your needs
-3. **Subscribe to a vault provider** (VGS, Evervault, Basis Theory, TokenEx, or Hyperswitch Vault)
-4. **Configure connector-service** with vault credentials
-5. **Implement Vault SDK** in your frontend
-6. **Test with sandbox** credentials before going live
-
----
 
 ## Documentation Index
 
