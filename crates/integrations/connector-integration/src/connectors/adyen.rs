@@ -6,6 +6,7 @@ use std::{
     sync::LazyLock,
 };
 
+use base64::Engine;
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
@@ -18,7 +19,6 @@ use common_utils::{
     pii::SecretSerdeValue,
     types::StringMinorUnit,
 };
-use base64::Engine;
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,

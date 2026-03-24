@@ -15,11 +15,11 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        CardDetailUpdate, MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodUpdate,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, CardDetailUpdate, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, MandateReference, MandateReferenceId, PaymentFlowData,
+        PaymentMethodUpdate, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::{
@@ -4918,7 +4918,8 @@ pub struct AdyenAmountWH {
 pub(crate) fn get_adyen_mandate_reference_from_webhook(
     notif: &AdyenNotificationRequestItemWH,
 ) -> Option<Box<MandateReference>> {
-    notif.additional_data
+    notif
+        .additional_data
         .recurring_detail_reference
         .as_ref()
         .map(|mandate_id| {
@@ -4933,7 +4934,8 @@ pub(crate) fn get_adyen_mandate_reference_from_webhook(
 pub(crate) fn get_adyen_network_txn_id_from_webhook(
     notif: &AdyenNotificationRequestItemWH,
 ) -> Option<String> {
-    notif.additional_data
+    notif
+        .additional_data
         .network_tx_reference
         .as_ref()
         .map(|network_tx_id| network_tx_id.peek().to_string())
@@ -4944,7 +4946,8 @@ pub(crate) fn get_adyen_payment_method_update_from_webhook(
 ) -> Option<PaymentMethodUpdate> {
     // Align with HS semantics: if Adyen provides an expiry date, it's a strong signal this
     // notification is meant to update stored card details (e.g., account updater).
-    notif.additional_data
+    notif
+        .additional_data
         .expiry_date
         .as_ref()
         .and_then(|expiry_date| {

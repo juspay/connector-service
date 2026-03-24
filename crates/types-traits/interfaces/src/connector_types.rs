@@ -447,10 +447,8 @@ pub trait IncomingWebhook {
         &self,
         _request: RequestDetails,
         _error_kind: Option<IncomingWebhookFlowError>,
-    ) -> Result<
-        ApplicationResponse<Value>,
-        error_stack::Report<domain_types::errors::ConnectorError>,
-    > {
+    ) -> Result<ApplicationResponse<Value>, error_stack::Report<domain_types::errors::ConnectorError>>
+    {
         Ok(ApplicationResponse::StatusOk)
     }
 }

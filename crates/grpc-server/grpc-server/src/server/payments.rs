@@ -71,8 +71,7 @@ use grpc_api_types::payments::{
     PaymentServiceReverseRequest, PaymentServiceReverseResponse,
     PaymentServiceSetupRecurringRequest, PaymentServiceSetupRecurringResponse,
     PaymentServiceVerifyRedirectResponseRequest, PaymentServiceVerifyRedirectResponseResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RecurringPaymentServiceChargeRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RecurringPaymentServiceChargeRequest,
     RecurringPaymentServiceChargeResponse, RecurringPaymentServiceRevokeRequest,
     RecurringPaymentServiceRevokeResponse, RefundResponse,
 };
@@ -1906,7 +1905,6 @@ impl PaymentService for Payments {
         .await
     }
 
-
     #[tracing::instrument(
         name = "verify_redirect_response",
         fields(
@@ -2547,7 +2545,6 @@ impl PaymentMethodService for PaymentMethod {
         )
         .await
     }
-
 }
 
 impl MerchantAuthentication {

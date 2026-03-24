@@ -8,8 +8,8 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    DisputeResponse, EventContent, EventServiceHandleResponse, PaymentServiceGetResponse,
-    RefundResponse, EventStatus, WebhookEventType,
+    DisputeResponse, EventContent, EventServiceHandleResponse, EventStatus,
+    PaymentServiceGetResponse, RefundResponse, WebhookEventType,
 };
 
 use crate::types::ConnectorData;
@@ -260,8 +260,6 @@ pub fn get_disputes_webhook_content<
     )?;
 
     Ok(EventContent {
-        content: Some(
-            grpc_api_types::payments::event_content::Content::DisputesResponse(response),
-        ),
+        content: Some(grpc_api_types::payments::event_content::Content::DisputesResponse(response)),
     })
 }
