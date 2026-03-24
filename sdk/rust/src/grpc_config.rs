@@ -69,6 +69,37 @@ pub struct GrpcConfig {
 }
 
 impl GrpcConfig {
+    /// Validates the configuration.
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - `endpoint` is empty or not a valid URI
+    /// - `connector` is empty
+    /// - `auth_type` is empty
+    /// - `api_key` is empty
+    pub fn validate(&self) -> Result<(), String> {
+        if self.endpoint.is_empty() {
+            return Err("endpoint cannot be empty".to_string());
+        }
+        // Basic URI validation - must start with http:// or https://
+        if !self.endpoint.starts_with("http://") && !self.endpoint.starts_with("https://") {
+            return Err(format!(
+                "endpoint must start with 'http://' or 'https://', got: {}",
+                self.endpoint
+            ));
+        }
+        if self.connector.is_empty() {
+            return Err("connector cannot be empty".to_string());
+        }
+        if self.auth_type.is_empty() {
+            return Err("auth_type cannot be empty".to_string());
+        }
+        if self.api_key.expose().is_empty() {
+            return Err("api_key cannot be empty".to_string());
+        }
+        Ok(())
+    }
+
     pub(crate) fn into_headers(self) -> HashMap<String, String> {
         let mut h = HashMap::new();
         h.insert("x-connector".into(), self.connector);
