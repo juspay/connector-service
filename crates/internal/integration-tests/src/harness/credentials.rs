@@ -208,7 +208,7 @@ mod tests {
         // Simulate what load_connector_config does for a stripe-like entry.
         let block: serde_json::Map<String, serde_json::Value> =
             serde_json::from_str(r#"{"api_key":{"value":"sk_test"},"metadata":{"google_pay":{}}}"#)
-                .unwrap();
+                .expect("test JSON should parse");
 
         let strip: HashSet<&str> = STRIP_FIELDS.iter().copied().collect();
         let mut cleaned = block;
