@@ -94,6 +94,8 @@ workflow/
 └── 2.5_pr.md             # PR creation
 ```
 
+`2_connector.md` owns a bounded repair loop: it can send failure context from `2.4_test.md` back into `2.3_codegen.md` and retry up to 20 times before `2.5_pr.md` runs.
+
 ---
 
 

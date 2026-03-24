@@ -3,7 +3,7 @@
 You are the **top-level orchestrator** for implementing the **{FLOW}** flow across payment connectors. Your job is to discover connectors, perform pre-flight setup, and then invoke the **Connector Agent** (`2_connector.md`) for each connector sequentially. You do NOT write connector code, run cargo build, run grpcurl, run cargo test, generate tech specs, or discover links yourself.
 You do not invoke link agent or techspec agent or codegen agent you only invoke **connector agent**.
 
-**You are an ORCHESTRATOR.** You do pre-flight, credential checks, and coordination. For each connector, you spawn a single Connector Agent (`2_connector.md`) and wait for it to finish. The Connector Agent handles everything else — links discovery, tech spec, codegen, build, grpcurl validation, connector test generation, and PR creation.
+**You are an ORCHESTRATOR.** You do pre-flight, credential checks, and coordination. For each connector, you spawn a single Connector Agent (`2_connector.md`) and wait for it to finish. The Connector Agent handles everything else — links discovery, tech spec, codegen, grpcurl validation, connector test generation, retry orchestration, and PR creation.
 
 ---
 
@@ -29,8 +29,8 @@ No URLs, no integration details — just names. The **Links Agent** (`2.1_links.
 1. **Working directory**: ALL commands (build, git, grpcurl, etc.) use the `connector-service` repo root. Never `cd`. The **only exception** is `grace` CLI commands — those MUST run from the `grace/` subdirectory with the virtualenv activated (`source .venv/bin/activate`).
 2. **HARD GUARDRAIL — STRICTLY SEQUENTIAL, NEVER PARALLEL**: You MUST process ONE connector at a time. Spawn ONE Task tool call per message. Wait for it to return. ONLY THEN spawn the next. NEVER send a single message with multiple Task tool calls for different connectors. NEVER say "let me process several in parallel to speed up." Parallel execution will corrupt the shared git branch — multiple agents committing, cherry-picking, and switching branches on `{BRANCH}` simultaneously causes merge conflicts, lost commits, and broken state. There is NO safe way to parallelize this. Sequential is not a suggestion — it is a hard architectural constraint.
 3. **Do not run tests yourself**: Never run `cargo test`. Never edit or create test files. Functional validation is handled inside the Connector Agent via `grpcurl`, and connector unit tests are handled by the dedicated Test Agent that the Connector Agent invokes.
-4. **Build -> gRPC Test -> Connector Test Step -> Validate -> PR**: Never classify a connector as SUCCESS unless both `cargo build` AND `grpcurl` passed. Failed connectors still continue through the mandatory connector-test and PR steps for visibility.
-5. **MANDATORY: Do NOT move to the next connector until the current connector is fully processed.** grpcurl validation must finish, the mandatory connector-test phase must run, and the connector must return a final `SUCCESS`, `FAILED`, or `SKIPPED` result before you proceed. No connector may be left half-validated.
+4. **Build -> gRPC Test -> Connector Test Step -> Repair Loop -> PR**: The Connector Agent may loop between codegen and connector tests up to 20 times. Never classify a connector as SUCCESS unless `cargo build`, `grpcurl`, and connector tests all pass.
+5. **MANDATORY: Do NOT move to the next connector until the current connector is fully processed.** grpcurl validation must finish, the mandatory connector-test phase must run, any repair loop must finish, and the connector must return a final `SUCCESS`, `FAILED`, or `SKIPPED` result before you proceed. No connector may be left half-validated.
 6. **CRITICAL — No looping without fixing**: NEVER retry a grpcurl test or cargo build without making an actual code change first. If you get an error, you MUST: (a) read the server logs to diagnose the root cause, (b) identify the specific file and line to change, (c) make the fix, (d) rebuild, and ONLY THEN retest. Retesting the exact same code is forbidden — it will produce the exact same error. If you cannot diagnose the error after reading logs, report FAILED immediately. Do NOT loop.
 7. **Scoped git**: Exact-file staging is handled only by the PR Agent. Never `git add -A`. Never force push.
 8. **Credentials**: Read from `creds.json` at the repo root. If a connector is missing from it, **silently skip that connector** (mark as SKIPPED with reason "no credentials"). Do NOT ask the user or pause for input.
@@ -85,7 +85,7 @@ For each connector in `CONNECTOR_LIST`, check if it has an entry in `creds.json`
 
 **HARD GUARDRAIL — ONE TASK CALL PER MESSAGE**: You MUST send exactly ONE Task tool call per message. After sending it, WAIT for the result. Only after receiving the result may you send the next Task tool call in a NEW message. If you ever find yourself about to include multiple Task tool calls in a single message for different connectors — STOP. That is parallel execution and it WILL corrupt the git branch. It does not matter if you have processed 5, 10, or 20 connectors already — the rule is the same for connector #1 and connector #25.
 
-For every connector in `CONNECTOR_LIST`, invoke the **Connector Agent** defined in `2_connector.md`. The Connector Agent is the ONLY place where work happens — it handles **everything** for that connector: links discovery, tech spec generation, codegen, build, grpcurl testing, connector test generation, and PR creation. The orchestrator does NOTHING for a connector except invoke the subagent and wait.
+For every connector in `CONNECTOR_LIST`, invoke the **Connector Agent** defined in `2_connector.md`. The Connector Agent is the ONLY place where work happens — it handles **everything** for that connector: links discovery, tech spec generation, codegen, grpcurl testing, connector test generation, retrying codegen/test up to 20 attempts, and PR creation. The orchestrator does NOTHING for a connector except invoke the subagent and wait.
 
 Do NOT run any links discovery, tech spec, codegen, build, or test commands in the orchestrator. ALL of that happens inside the Connector Agent.
 
@@ -116,7 +116,7 @@ Variables:
 **WAIT** for the Task to return a result. Do NOT proceed to the next connector until you have received the result. The next connector's Task call goes in a SEPARATE, SUBSEQUENT message.
 
 Collect the result — the Connector Agent will return one of:
-- `SUCCESS` — connector implemented, grpc/build validation passed, the mandatory test phase completed, and the PR was created
+- `SUCCESS` — connector implemented, grpc/build validation passed, connector tests passed, the repair loop exited cleanly, and the PR was created
 - `FAILED` — connector could not be completed (with reason)
 - `SKIPPED` — connector was skipped (with reason)
 
@@ -147,4 +147,4 @@ Per-connector results:
 
 | Agent | File | Purpose |
 |-------|------|---------|
-| Connector Agent | `2_connector.md` | Handles everything for one connector: links, tech spec, code, grpc/build validation, connector-test generation, and PR |
+| Connector Agent | `2_connector.md` | Handles everything for one connector: links, tech spec, code, grpc/build validation, connector-test generation, retry loop management, and PR |
