@@ -27,7 +27,7 @@ private fun buildGetRequest(connectorTransactionIdStr: String): PaymentServiceGe
         }
         stateBuilder.apply {  // State Information
             accessTokenBuilder.apply {  // Access token obtained from connector
-                token = "probe_access_token"  // The token string.
+                tokenBuilder.value = "probe_access_token"  // The token string.
                 expiresInSeconds = 3600L  // Expiration timestamp (seconds since epoch)
                 tokenType = "Bearer"  // Token type (e.g., "Bearer", "Basic").
             }
